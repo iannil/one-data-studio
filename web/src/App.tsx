@@ -5,11 +5,15 @@ import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/CallbackPage';
 import DatasetsPage from './pages/datasets/DatasetsPage';
+import DocumentsPage from './pages/documents/DocumentsPage';
 import ChatPage from './pages/chat/ChatPage';
 import WorkflowsPage from './pages/workflows/WorkflowsPage';
 import WorkflowExecutePage from './pages/workflows/WorkflowExecutePage';
 import WorkflowEditorPage from './pages/workflows/WorkflowEditorPage';
 import MetadataPage from './pages/metadata/MetadataPage';
+import SchedulesPage from './pages/schedules/SchedulesPage';
+import AgentsPage from './pages/agents/AgentsPage';
+import Text2SQLPage from './pages/text2sql/Text2SQLPage';
 import HomePage from './pages/HomePage';
 
 function AppRoutes() {
@@ -31,12 +35,16 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="datasets" element={<DatasetsPage />} />
         <Route path="datasets/:id" element={<DatasetsPage />} />
+        <Route path="documents" element={<DocumentsPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="workflows/new" element={<WorkflowEditorPage />} />
         <Route path="workflows/:workflowId/edit" element={<WorkflowEditorPage />} />
         <Route path="workflows/:workflowId/executions" element={<WorkflowExecutePage />} />
         <Route path="metadata" element={<MetadataPage />} />
+        <Route path="schedules" element={<SchedulesPage />} />
+        <Route path="agents" element={<AgentsPage />} />
+        <Route path="text2sql" element={<Text2SQLPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

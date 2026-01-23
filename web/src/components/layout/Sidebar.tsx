@@ -6,6 +6,10 @@ import {
   NodeIndexOutlined,
   TableOutlined,
   HomeOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined,
+  RobotOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 
 const menuItems = [
@@ -18,6 +22,11 @@ const menuItems = [
     key: '/datasets',
     icon: <DatabaseOutlined />,
     label: '数据集管理',
+  },
+  {
+    key: '/documents',
+    icon: <FileTextOutlined />,
+    label: '文档管理',
   },
   {
     key: '/chat',
@@ -34,6 +43,21 @@ const menuItems = [
     icon: <TableOutlined />,
     label: '元数据',
   },
+  {
+    key: '/schedules',
+    icon: <ClockCircleOutlined />,
+    label: '调度管理',
+  },
+  {
+    key: '/agents',
+    icon: <RobotOutlined />,
+    label: 'Agent 实验室',
+  },
+  {
+    key: '/text2sql',
+    icon: <CodeOutlined />,
+    label: 'Text2SQL',
+  },
 ];
 
 interface SidebarProps {
@@ -48,9 +72,13 @@ function Sidebar({ collapsed }: SidebarProps) {
   const getSelectedKey = () => {
     const pathname = location.pathname;
     if (pathname.startsWith('/datasets')) return '/datasets';
+    if (pathname.startsWith('/documents')) return '/documents';
     if (pathname.startsWith('/chat')) return '/chat';
     if (pathname.startsWith('/workflows')) return '/workflows';
     if (pathname.startsWith('/metadata')) return '/metadata';
+    if (pathname.startsWith('/schedules')) return '/schedules';
+    if (pathname.startsWith('/agents')) return '/agents';
+    if (pathname.startsWith('/text2sql')) return '/text2sql';
     return pathname;
   };
 
