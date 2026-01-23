@@ -1,0 +1,54 @@
+# Prometheus 配置
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# 告警规则（可选）
+rule_files:
+  # - "alerts.yml"
+
+# 抓取配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Alldata API 监控（需要应用暴露 /metrics 端点）
+  - job_name: 'alldata-api'
+    static_configs:
+      - targets: ['alldata-api:8080']
+    metrics_path: '/metrics'
+
+  # vLLM 模型服务监控
+  - job_name: 'vllm-serving'
+    static_configs:
+      - targets: ['vllm-serving:8000']
+    metrics_path: '/metrics'
+
+  # Bisheng API 监控
+  - job_name: 'bisheng-api'
+    static_configs:
+      - targets: ['bisheng-api:8081']
+    metrics_path: '/metrics'
+
+  # MySQL 监控（需要 mysqld_exporter）
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+
+  # Redis 监控（需要 redis_exporter）
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # MinIO 监控
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['minio:9000']
+    metrics_path: '/minio/v2/metrics/cluster'
+
+  # Node Exporter（主机监控）
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']

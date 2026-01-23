@@ -1,0 +1,282 @@
+# ONE-DATA-STUDIO Helm Chart Values
+# 全局配置
+
+global:
+  # 镜像仓库
+  imageRegistry: ""
+
+  # 镜像拉取密钥
+  imagePullSecrets: []
+
+  # 环境标签
+  environment: "dev"
+
+  # 存储配置
+  storageClass:
+    data: "standard-hdd"
+    database: "fast-ssd"
+
+# ============================================
+# 基础设施
+# ============================================
+
+infrastructure:
+  enabled: true
+
+  # MinIO 对象存储
+  minio:
+    enabled: true
+    image:
+      repository: quay.io/minio/minio
+      tag: RELEASE.2023-12-23T07-19-11Z
+    persistence:
+      size: 100Gi
+      storageClass: standard-hdd
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+    credentials:
+      rootUser: admin
+      rootPassword: admin123456  # 生产环境应使用 secret
+
+  # MySQL 数据库
+  mysql:
+    enabled: true
+    image:
+      repository: mysql
+      tag: 8.0
+    persistence:
+      size: 50Gi
+      storageClass: fast-ssd
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+    database:
+      name: one_data
+      user: one_data
+      password: OneDataPassword123!  # 生产环境应使用 secret
+
+  # Redis 缓存
+  redis:
+    enabled: true
+    image:
+      repository: redis
+      tag: 7.0-alpine
+    persistence:
+      size: 10Gi
+      storageClass: fast-ssd
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    password: RedisPassword123!  # 生产环境应使用 secret
+
+  # Milvus 向量数据库（可选）
+  milvus:
+    enabled: false
+    image:
+      repository: milvusdb/milvus
+      tag: v2.3.0
+    persistence:
+      size: 30Gi
+      storageClass: fast-ssd
+
+# ============================================
+# Alldata 平台
+# ============================================
+
+alldata:
+  enabled: true
+  namespace: one-data-alldata
+
+  image:
+    repository: one-data/alldata-api
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 2
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: alldata.example.com
+    tls: false
+
+# ============================================
+# Cube Studio 平台
+# ============================================
+
+cube:
+  enabled: true
+  namespace: one-data-cube
+
+  # 模型服务配置
+  modelServing:
+    enabled: true
+    image:
+      repository: vllm/vllm-openai
+      tag: v0.3.0
+      pullPolicy: IfNotPresent
+
+    replicaCount: 1
+
+    # 模型配置
+    model:
+      name: Qwen/Qwen-0.5B-Chat
+      maxModelLen: 2048
+      tensorParallelSize: 1
+
+    # GPU 配置（可选）
+    gpu:
+      enabled: false
+      count: 1
+      type: nvidia.com/gpu
+
+    resources:
+      requests:
+        memory: 4Gi
+        cpu: 1000m
+      limits:
+        memory: 8Gi
+        cpu: 4000m
+
+    service:
+      type: ClusterIP
+      port: 8000
+
+    ingress:
+      enabled: true
+      className: nginx
+      host: cube.example.com
+      tls: false
+
+  # JupyterHub 配置（可选）
+  jupyterhub:
+    enabled: false
+    image:
+      repository: jupyterhub
+      tag: 3.0.0
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+
+# ============================================
+# Bisheng 平台
+# ============================================
+
+bisheng:
+  enabled: true
+  namespace: one-data-bisheng
+
+  image:
+    repository: one-data/bisheng-api
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 2
+
+  # 外部服务依赖
+  dependencies:
+    alldataApiUrl: http://alldata-api.one-data-alldata.svc.cluster.local:8080
+    cubeApiUrl: http://vllm-serving.one-data-cube.svc.cluster.local:8000
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+
+  service:
+    type: ClusterIP
+    port: 8081
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: bisheng.example.com
+    tls: false
+
+# ============================================
+# 监控
+# ============================================
+
+monitoring:
+  enabled: false
+  namespace: one-data-system
+
+  prometheus:
+    enabled: false
+    persistence:
+      size: 20Gi
+
+  grafana:
+    enabled: false
+    persistence:
+      size: 5Gi
+    adminPassword: admin123  # 生产环境应使用 secret
+
+# ============================================
+# 安全
+# ============================================
+
+security:
+  # Keycloak 配置（可选）
+  keycloak:
+    enabled: false
+    image:
+      repository: quay.io/keycloak/keycloak
+      tag: 23.0
+
+  # Istio 注入
+  istio:
+    enabled: false
+    gateway:
+      enabled: false
+
+# ============================================
+# 资源配额
+# ============================================
+
+resourceQuota:
+  enabled: false
+  requests:
+    cpu: "16"
+    memory: "32Gi"
+    nvidia.com/gpu: "2"
+  limits:
+    cpu: "32"
+    memory: "64Gi"
+    nvidia.com/gpu: "4"

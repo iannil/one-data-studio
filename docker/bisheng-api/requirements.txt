@@ -1,0 +1,41 @@
+# Bisheng API 依赖
+# Sprint 4.5: 添加 MySQL 数据持久化
+# Phase 6: Sprint 6.1-6.4 - 添加工作流执行引擎、向量数据库、文档处理
+# Phase 7: Sprint 7.1-7.4 - Agent 编排、控制流、调度系统
+
+# Web 框架
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# 数据库
+SQLAlchemy==2.0.23
+pymysql==1.1.0
+cryptography==41.0.7
+
+# 对象存储
+minio==7.2.0
+
+# HTTP 客户端
+requests==2.31.0
+
+# 认证
+PyJWT==2.8.0
+
+# 数据库迁移
+alembic==1.13.0
+
+# 工具
+python-dotenv==1.0.0
+
+# Phase 6 新增依赖
+pymilvus==2.3.7           # Milvus 向量数据库客户端
+langchain==0.1.14         # 文档处理框架
+langchain-text-splitters==0.2.2  # 文档切分
+flask-socketio==5.3.6     # WebSocket 支持
+python-socketio==5.11.0
+aiohttp==3.9.5            # 异步 HTTP
+aiofiles==23.2.1          # 异步文件操作
+
+# Phase 7 新增依赖
+apscheduler==3.10.4       # 调度器
+croniter==2.0.1           # Cron 表达式解析

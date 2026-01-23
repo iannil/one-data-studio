@@ -1,0 +1,27 @@
+# Istio 基础安装配置
+# Sprint 3.5: API 网关和服务网格
+
+---
+# Istio Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    istio-injection: enabled
+
+---
+# Istio Operator (使用 istioctl 安装时不需要)
+# 这里提供基础的 Istio 安装配置参考
+# 实际安装: istioctl install --set profile=default -f k8s/infrastructure/istio/istio-install.yaml
+
+# 注意: 这是一个示例配置，生产环境请使用 istioctl 安装
+# 安装命令示例:
+# istioctl install --set profile=default \
+#   --set values.pilot.autoscaleEnabled=true \
+#   --set values.pilot.autoscaleMin=2 \
+#   --set values.pilot.autoscaleMax=5 \
+#   --set values.global.proxy.resources.requests.cpu="100m" \
+#   --set values.global.proxy.resources.requests.memory="128Mi" \
+#   --set values.global.proxy.resources.limits.cpu="500m" \
+#   --set values.global.proxy.resources.limits.memory="512Mi"

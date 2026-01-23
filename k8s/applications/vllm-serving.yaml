@@ -1,0 +1,184 @@
+# vLLM 模型服务部署配置
+# 提供 OpenAI 兼容的 LLM 推理 API
+# 注意：此版本使用 Mock 服务用于 PoC 验证（无需 GPU）
+
+---
+# vLLM Mock API ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-mock-config
+  namespace: one-data-cube
+data:
+  app.py: |
+    from flask import Flask, jsonify, request
+    import random
+
+    app = Flask(__name__)
+
+    @app.route("/health")
+    def health():
+        return jsonify({"status": "ok"})
+
+    @app.route("/v1/models")
+    def list_models():
+        return jsonify({
+            "object": "list",
+            "data": [
+                {
+                    "id": "gpt2",
+                    "object": "model",
+                    "created": 1234567890,
+                    "owned_by": "cube-studio"
+                }
+            ]
+        })
+
+    @app.route("/v1/chat/completions", methods=["POST"])
+    def chat_completions():
+        data = request.json
+        messages = data.get("messages", [])
+        user_message = ""
+        for msg in messages:
+            if msg.get("role") == "user":
+                user_message = msg.get("content", "")
+                break
+
+        # 模拟响应
+        responses = [
+            f"您好！我收到了您的问题：{user_message}",
+            f"关于'{user_message}'，这是一个很好的问题。",
+            f"我理解您想了解关于'{user_message}'的内容。",
+            f"感谢您的提问：{user_message}"
+        ]
+        response_text = random.choice(responses)
+
+        return jsonify({
+            "id": "chatcmpl-" + str(random.randint(100000, 999999)),
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": data.get("model", "gpt2"),
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response_text
+                },
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": len(user_message),
+                "completion_tokens": len(response_text),
+                "total_tokens": len(user_message) + len(response_text)
+            }
+        })
+
+    if __name__ == "__main__":
+        app.run(host="0.0.0.0", port=8000)
+
+---
+# vLLM Mock Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-serving
+  namespace: one-data-cube
+  labels:
+    app: vllm-serving
+    component: model-serving
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-serving
+  template:
+    metadata:
+      labels:
+        app: vllm-serving
+        component: model-serving
+    spec:
+      containers:
+      - name: vllm
+        image: python:3.10-slim
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          pip install flask -q && \
+          python /app/app.py
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        ports:
+        - name: http
+          containerPort: 8000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /app
+      volumes:
+      - name: config
+        configMap:
+          name: vllm-mock-config
+
+---
+# vLLM Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-serving
+  namespace: one-data-cube
+  labels:
+    app: vllm-serving
+spec:
+  selector:
+    app: vllm-serving
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
+
+---
+# vLLM Ingress (可选 - 用于外部访问)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vllm-serving-ingress
+  namespace: one-data-cube
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: cube.example.com
+    http:
+      paths:
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: vllm-serving
+            port:
+              number: 8000
+# GPU 部署已移除 - 此 PoC 使用 Mock 服务
+# 生产环境如有 GPU 可添加真实的 vLLM GPU 部署

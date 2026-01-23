@@ -1,0 +1,15 @@
+# OpenAI 代理服务依赖
+# Sprint 1.2
+
+# Web 框架
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# OpenAI SDK
+openai==1.12.0
+
+# HTTP 客户端
+requests==2.31.0
+
+# 工具
+python-dotenv==1.0.0

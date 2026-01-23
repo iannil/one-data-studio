@@ -1,0 +1,504 @@
+# Grafana 监控仪表板部署配置
+# Sprint 3.2: 可视化监控
+
+---
+# Grafana PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: one-data-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Grafana ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: one-data-system
+data:
+  grafana.ini: |
+    [server]
+    root_url = http://grafana.one-data.local
+    serve_from_sub_path = false
+
+    [database]
+    type = sqlite3
+    path = /var/lib/grafana/grafana.db
+
+    [security]
+    admin_user = admin
+    admin_password = GrafanaAdmin123!
+
+    [users]
+    default_theme = dark
+    viewing_mode = dark
+
+    [auth.anonymous]
+    enabled = false
+
+    [session]
+    provider = memory
+
+    [log]
+    mode = console
+    level = info
+
+    [log.console]
+    format = text
+
+    [metrics]
+    enabled = true
+
+    [grafana_net]
+    url = https://grafana.net
+
+---
+# Grafana Dashboard ConfigMaps
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: one-data-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  api-performance.json: |
+    {
+      "dashboard": {
+        "title": "API 性能监控",
+        "tags": ["api", "performance"],
+        "timezone": "browser",
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "请求速率 (QPS)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=~\"alldata-api|bisheng-api|openai-proxy\"}[5m])) by (job)",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "请求/秒"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "错误率",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (job) / sum(rate(http_requests_total[5m])) by (job)",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "错误率",
+                "format": "percentunit"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "P95 延迟",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "延迟 (秒)"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "P99 延迟",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "延迟 (秒)"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "活跃连接数",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "http_active_connections{job=~\"alldata-api|bisheng-api|openai-proxy\"}",
+                "legendFormat": "{{job}}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  system-overview.json: |
+    {
+      "dashboard": {
+        "title": "系统概览",
+        "tags": ["system", "overview"],
+        "timezone": "browser",
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "CPU 使用率",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)",
+                "legendFormat": "{{instance}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "CPU 使用率",
+                "format": "percentunit"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "内存使用率",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
+                "legendFormat": "{{instance}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "内存使用率",
+                "format": "percentunit"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "磁盘使用率",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "1 - node_filesystem_avail_bytes{fstype!=\"tmpfs\"} / node_filesystem_size_bytes",
+                "legendFormat": "{{instance}}:{{mountpoint}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "磁盘使用率",
+                "format": "percentunit"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "网络 I/O",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(node_network_receive_bytes_total[5m])",
+                "legendFormat": "{{instance}}: 接收"
+              },
+              {
+                "expr": "rate(node_network_transmit_bytes_total[5m])",
+                "legendFormat": "{{instance}}: 发送"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Pod 数量",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(kube_pod_status_phase{phase=\"Running\"})",
+                "legendFormat": "运行中"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "节点数量",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "count(up{job=\"kubernetes-nodes\"})",
+                "legendFormat": "节点"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+  model-metrics.json: |
+    {
+      "dashboard": {
+        "title": "模型服务监控",
+        "tags": ["model", "llm", "inference"],
+        "timezone": "browser",
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "推理请求速率",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(model_inference_requests_total[5m])) by (model)",
+                "legendFormat": "{{model}}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "推理延迟 (P95)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(model_inference_duration_seconds_bucket[5m])) by (le, model))",
+                "legendFormat": "{{model}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Token 吞吐量",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(model_inference_tokens_total[5m])) by (model)",
+                "legendFormat": "{{model}}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Token 使用量（累计）",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(model_inference_tokens_total) by (model)",
+                "legendFormat": "{{model}}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: one-data-system
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+    spec:
+      serviceAccountName: grafana
+      securityContext:
+        fsGroup: 472
+        runAsGroup: 472
+        runAsUser: 472
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.2.2
+        ports:
+        - name: web
+          containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: grafana-credentials
+              key: admin-user
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-credentials
+              key: admin-password
+        - name: GF_INSTALL_PLUGINS
+          value: ""
+        - name: GF_PATHS_PLUGINS
+          value: /var/lib/grafana/plugins
+        - name: GF_PATHS_PROVISIONING
+          value: /etc/grafana/provisioning
+        - name: GF_ANALYTICS_REPORTING_ENABLED
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+          value: "false"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/grafana/grafana.ini
+          subPath: grafana.ini
+        - name: dashboards
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: dashboard-definitions
+          mountPath: /etc/grafana/provisioning/dashboards/definitions
+        - name: data
+          mountPath: /var/lib/grafana
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: config
+        configMap:
+          name: grafana-config
+      - name: dashboards
+        configMap:
+          name: grafana-dashboard-provisioning
+      - name: dashboard-definitions
+        configMap:
+          name: grafana-dashboards
+      - name: data
+        persistentVolumeClaim:
+          claimName: grafana-data
+
+---
+# Grafana Dashboard Provisioning Config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provisioning
+  namespace: one-data-system
+data:
+  dashboards.yml: |
+    apiVersion: 1
+
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/definitions
+
+  datasources.yml: |
+    apiVersion: 1
+
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: one-data-system
+  labels:
+    app: grafana
+spec:
+  type: ClusterIP
+  selector:
+    app: grafana
+  ports:
+  - name: web
+    port: 3000
+    targetPort: 3000
+
+---
+# Grafana ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: one-data-system
+
+---
+# Grafana Credentials Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-credentials
+  namespace: one-data-system
+type: Opaque
+stringData:
+  admin-user: "admin"
+  admin-password: "GrafanaAdmin123!"  # 生产环境请使用强密码
+
+---
+# Grafana Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: one-data-system
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.one-data.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000

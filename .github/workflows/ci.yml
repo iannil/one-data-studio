@@ -1,0 +1,202 @@
+# ONE-DATA-STUDIO CI/CD Pipeline
+# 自动化测试和部署流程
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: one-data-studio
+
+jobs:
+  # ============================================
+  # 代码检查
+  # ============================================
+  lint:
+    name: 代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          pip install flake8 black isort mypy
+          pip install flask requests
+
+      - name: 运行 Black 检查
+        run: black --check examples/
+
+      - name: 运行 Flake8 检查
+        run: flake8 examples/ --max-line-length=100
+
+      - name: 运行 isort 检查
+        run: isort --check-only examples/
+
+  # ============================================
+  # YAML 验证
+  # ============================================
+  validate-yaml:
+    name: YAML 验证
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
+
+      - name: 验证 K8s manifests
+        run: |
+          kubeval --ignore-missing-schemas k8s/base/*.yaml
+          kubeval --ignore-missing-schemas k8s/infrastructure/*.yaml
+          kubeval --ignore-missing-schemas k8s/applications/*.yaml
+
+      - name: 验证 Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml config
+
+  # ============================================
+  # 构建镜像
+  # ============================================
+  build:
+    name: 构建镜像
+    runs-on: ubuntu-latest
+    needs: [lint, validate-yaml]
+    strategy:
+      matrix:
+        service: [alldata-api, bisheng-api]
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 构建并推送
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================
+  # K8s 部署测试
+  # ============================================
+  deploy-test:
+    name: K8s 部署测试
+    runs-on: ubuntu-latest
+    needs: [build]
+    # 仅在 main 分支运行
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 创建 Kind 集群
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: one-data-test
+          config: k8s/kind-config.yaml
+
+      - name: 部署基础资源
+        run: |
+          kubectl apply -f k8s/base/namespaces.yaml
+          kubectl apply -f k8s/base/storage-classes.yaml
+
+      - name: 部署基础设施
+        run: |
+          kubectl apply -f k8s/infrastructure/minio.yaml
+          kubectl apply -f k8s/infrastructure/mysql.yaml
+          kubectl apply -f k8s/infrastructure/redis.yaml
+
+      - name: 等待基础设施就绪
+        run: |
+          kubectl wait --for=condition=ready pod -l app=minio -n one-data-infra --timeout=300s
+          kubectl wait --for=condition=ready pod -l app=mysql -n one-data-infra --timeout=300s
+          kubectl wait --for=condition=ready pod -l app=redis -n one-data-infra --timeout=300s
+
+      - name: 部署应用服务
+        run: |
+          kubectl apply -f k8s/applications/alldata-api-mock.yaml
+          kubectl apply -f k8s/applications/bisheng-api-mock.yaml
+
+      - name: 等待应用就绪
+        run: |
+          kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-alldata --timeout=120s
+          kubectl wait --for=condition=ready pod -l app=bisheng-api -n one-data-bisheng --timeout=120s
+
+      - name: 运行集成测试
+        run: |
+          # 测试 Alldata API
+          kubectl port-forward -n one-data-alldata svc/alldata-api 8080:8080 &
+          sleep 5
+          curl -f http://localhost:8080/api/v1/health
+
+          # 测试 Bisheng API
+          kubectl port-forward -n one-data-bisheng svc/bisheng-api 8081:8081 &
+          sleep 5
+          curl -f http://localhost:8081/api/v1/health
+
+      - name: 收集日志
+        if: failure()
+        run: |
+          kubectl logs -n one-data-alldata deployment/alldata-api
+          kubectl logs -n one-data-bisheng deployment/bisheng-api
+
+  # ============================================
+  # 安全扫描
+  # ============================================
+  security-scan:
+    name: 安全扫描
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 运行 Trivy 扫描
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 上传扫描结果
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'

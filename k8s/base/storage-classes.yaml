@@ -1,0 +1,38 @@
+# ONE-DATA-STUDIO 存储类配置
+# 定义不同性能等级的存储
+
+---
+# 快速 SSD 存储 - 用于数据库
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+provisioner: driver.longhorn.io  # 示例：使用 Longhorn
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+
+---
+# 标准 HDD 存储 - 用于数据湖
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard-hdd
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "2"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+
+---
+# 本地存储 - 用于模型缓存
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer

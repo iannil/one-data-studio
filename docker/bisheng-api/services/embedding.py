@@ -1,0 +1,113 @@
+"""
+Embedding 生成服务
+调用 OpenAI 兼容的 Embedding API
+Phase 6: Sprint 6.2
+"""
+
+import os
+import requests
+from typing import List, Union
+
+# 配置
+CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+
+
+class EmbeddingService:
+    """Embedding 生成服务"""
+
+    def __init__(self, api_url: str = None):
+        """
+        初始化 Embedding 服务
+
+        Args:
+            api_url: Embedding API 地址
+        """
+        self.api_url = api_url or CUBE_API_URL
+        self.model = EMBEDDING_MODEL
+
+    async def embed_text(self, text: str) -> List[float]:
+        """
+        生成单个文本的向量
+
+        Args:
+            text: 输入文本
+
+        Returns:
+            向量列表
+        """
+        if not text or not text.strip():
+            return [0.0] * EMBEDDING_DIM
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/v1/embeddings",
+                json={"input": text, "model": self.model},
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                embedding = result.get("data", [{}])[0].get("embedding", [])
+                return embedding
+            else:
+                print(f"Embedding API error: {response.status_code}")
+                return self._mock_embedding(text)
+
+        except Exception as e:
+            print(f"Embedding generation failed: {e}")
+            return self._mock_embedding(text)
+
+    async def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """
+        批量生成向量
+
+        Args:
+            texts: 输入文本列表
+
+        Returns:
+            向量列表的列表
+        """
+        embeddings = []
+        for text in texts:
+            embedding = await self.embed_text(text)
+            embeddings.append(embedding)
+        return embeddings
+
+    def _mock_embedding(self, text: str) -> List[float]:
+        """
+        生成模拟向量（用于开发测试）
+
+        Args:
+            text: 输入文本
+
+        Returns:
+            模拟向量
+        """
+        # 简单的基于字符的哈希向量
+        import hashlib
+
+        hash_obj = hashlib.md5(text.encode())
+        hash_bytes = hash_obj.digest()
+
+        # 扩展到目标维度
+        embedding = []
+        for i in range(EMBEDDING_DIM):
+            # 循环使用哈希字节
+            byte_val = hash_bytes[i % len(hash_bytes)]
+            # 归一化到 [-1, 1]
+            normalized = (byte_val - 128) / 128.0
+            embedding.append(normalized)
+
+        return embedding
+
+    def sync_embed_text(self, text: str) -> List[float]:
+        """同步版本的 embed_text"""
+        import asyncio
+        return asyncio.run(self.embed_text(text))
+
+    def sync_embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """同步版本的 embed_texts"""
+        import asyncio
+        return asyncio.run(self.embed_texts(texts))

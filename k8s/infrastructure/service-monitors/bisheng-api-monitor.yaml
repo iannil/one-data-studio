@@ -1,0 +1,17 @@
+# Bisheng API ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bisheng-api
+  namespace: one-data-bisheng
+  labels:
+    app: bisheng-api
+spec:
+  selector:
+    matchLabels:
+      app: bisheng-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

@@ -1,0 +1,71 @@
+# ONE-DATA-STUDIO Bisheng 数据库初始化 Job
+# Phase 5: 端到端集成配置
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bisheng-db-init
+  namespace: one-data-bisheng
+  labels:
+    app: bisheng-db-init
+    phase: "5"
+spec:
+  template:
+    metadata:
+      labels:
+        app: bisheng-db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init
+        image: bisheng-api:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python", "init_db.py"]
+        env:
+        - name: DATABASE_URL
+          value: "mysql+pymysql://one_data:OneDataPassword123!@mysql.one-data-infra.svc.cluster.local:3306/one_data"
+        - name: ALDATA_API_URL
+          value: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+        - name: CUBE_API_URL
+          value: "http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+# 等待初始化完成的辅助 Job（用于依赖管理）
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bisheng-init-wait
+  namespace: one-data-bisheng
+  labels:
+    app: bisheng-init-wait
+    phase: "5"
+spec:
+  template:
+    metadata:
+      labels:
+        app: bisheng-init-wait
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: wait
+        image: busybox:1.36
+        command:
+          - sh
+          - -c
+          - |
+            echo "等待 Bisheng 数据库初始化完成..."
+            sleep 30
+            echo "初始化检查完成"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi

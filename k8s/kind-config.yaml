@@ -1,0 +1,57 @@
+# Kind 集群配置
+# 用于本地开发和测试
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: one-data
+
+# 节点配置
+nodes:
+  # 主节点 (control plane)
+  - role: control-plane
+    image: kindest/node:v1.31.0
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    # 端口映射 (用于本地访问)
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8443
+        protocol: TCP
+      # MinIO Console
+      - containerPort: 9001
+        hostPort: 9001
+        protocol: TCP
+      # Grafana
+      - containerPort: 3000
+        hostPort: 3000
+        protocol: TCP
+
+  # 工作节点 1
+  - role: worker
+    image: kindest/node:v1.31.0
+    labels:
+      node-type: worker
+
+  # 工作节点 2 (可选 - 用于高可用测试)
+  - role: worker
+    image: kindest/node:v1.31.0
+    labels:
+      node-type: worker
+      # 标记为 GPU 节点 (模拟，实际需要 GPU 支持)
+      # gpu: "true"
+
+# 网络配置
+networking:
+  disableDefaultCNI: false
+  # 使用 Kind 默认的 kindnet
+  kubeProxyMode: "iptables"
+
+# Pod 子网配置
+# podSubnet 配置已移除 - Kind 使用默认子网

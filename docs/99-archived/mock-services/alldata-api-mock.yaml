@@ -1,0 +1,327 @@
+# Alldata API 模拟服务
+# 用于 PoC 阶段验证数据集注册与查询功能
+
+---
+# Alldata API ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alldata-api-config
+  namespace: one-data-alldata
+data:
+  # 使用 Python 脚本模拟 API 服务
+  app.py: |
+    from flask import Flask, jsonify, request
+    from datetime import datetime
+    from typing import Dict, List
+    import os
+
+    app = Flask(__name__)
+
+    # 模拟数据集存储
+    datasets: Dict[str, dict] = {
+        "ds-001": {
+            "dataset_id": "ds-001",
+            "name": "sales_data_v1.0",
+            "description": "销售数据清洗结果",
+            "storage_type": "s3",
+            "storage_path": "s3://etl-output/sales/2024-01/",
+            "format": "parquet",
+            "schema": {
+                "columns": [
+                    {"name": "id", "type": "INT64", "description": "记录ID"},
+                    {"name": "customer_id", "type": "INT64", "description": "客户ID"},
+                    {"name": "amount", "type": "DECIMAL(10,2)", "description": "金额"},
+                    {"name": "created_at", "type": "TIMESTAMP", "description": "创建时间"}
+                ]
+            },
+            "statistics": {
+                "row_count": 1000000,
+                "size_bytes": 52428800
+            },
+            "tags": ["sales", "cleansed", "2024q1"],
+            "status": "active",
+            "created_at": "2024-01-23T10:00:00Z"
+        }
+    }
+
+    @app.route("/api/v1/health")
+    def health():
+        """健康检查接口"""
+        return jsonify({
+            "code": 0,
+            "message": "healthy",
+            "service": "alldata-api",
+            "version": "1.0.0"
+        })
+
+    @app.route("/api/v1/datasets", methods=["GET"])
+    def list_datasets():
+        """获取数据集列表"""
+        tag_filter = request.args.get("tags")
+        status_filter = request.args.get("status")
+
+        result = list(datasets.values())
+
+        if tag_filter:
+            result = [d for d in result if tag_filter in d.get("tags", [])]
+        if status_filter:
+            result = [d for d in result if d.get("status") == status_filter]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result,
+            "total": len(result)
+        })
+
+    @app.route("/api/v1/datasets/<dataset_id>", methods=["GET"])
+    def get_dataset(dataset_id: str):
+        """获取数据集详情"""
+        ds = datasets.get(dataset_id)
+        if ds:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": ds
+            })
+        return jsonify({
+            "code": 40401,
+            "message": f"Dataset {dataset_id} not found"
+        }), 404
+
+    @app.route("/api/v1/datasets", methods=["POST"])
+    def create_dataset():
+        """注册新数据集"""
+        data = request.json
+        if not data or not data.get("name"):
+            return jsonify({
+                "code": 40001,
+                "message": "Dataset name is required"
+            }), 400
+
+        dataset_id = f"ds-{len(datasets) + 1:03d}"
+        datasets[dataset_id] = {
+            "dataset_id": dataset_id,
+            "name": data.get("name"),
+            "description": data.get("description", ""),
+            "storage_type": data.get("storage_type", "s3"),
+            "storage_path": data.get("storage_path"),
+            "format": data.get("format", "csv"),
+            "schema": data.get("schema", {}),
+            "statistics": data.get("statistics", {}),
+            "tags": data.get("tags", []),
+            "status": "active",
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        }
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "dataset_id": dataset_id,
+                "status": "active"
+            }
+        }), 201
+
+    @app.route("/api/v1/datasets/<dataset_id>", methods=["PUT"])
+    def update_dataset(dataset_id: str):
+        """更新数据集"""
+        ds = datasets.get(dataset_id)
+        if not ds:
+            return jsonify({
+                "code": 40401,
+                "message": f"Dataset {dataset_id} not found"
+            }), 404
+
+        data = request.json
+        if "description" in data:
+            ds["description"] = data["description"]
+        if "tags" in data:
+            ds["tags"] = data["tags"]
+        ds["updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": ds
+        })
+
+    @app.route("/api/v1/datasets/<dataset_id>", methods=["DELETE"])
+    def delete_dataset(dataset_id: str):
+        """删除数据集"""
+        if dataset_id in datasets:
+            del datasets[dataset_id]
+            return jsonify({
+                "code": 0,
+                "message": "success"
+            })
+        return jsonify({
+            "code": 40401,
+            "message": f"Dataset {dataset_id} not found"
+        }), 404
+
+    @app.route("/api/v1/datasets/<dataset_id>/credentials", methods=["POST"])
+    def get_credentials(dataset_id: str):
+        """获取数据集访问凭证"""
+        if dataset_id not in datasets:
+            return jsonify({
+                "code": 40401,
+                "message": f"Dataset {dataset_id} not found"
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "access_key": "tmp-access-key",
+                "secret_key": "tmp-secret-key",
+                "endpoint": "minio.one-data-infra.svc.cluster.local:9000",
+                "expires_at": "2024-01-24T10:00:00Z"
+            }
+        })
+
+    @app.route("/api/v1/metadata/databases", methods=["GET"])
+    def list_databases():
+        """获取数据库列表"""
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "databases": [
+                    {
+                        "name": "sales_dw",
+                        "description": "销售数据仓库",
+                        "owner": "data_team"
+                    },
+                    {
+                        "name": "user_dw",
+                        "description": "用户数据仓库",
+                        "owner": "data_team"
+                    }
+                ]
+            }
+        })
+
+    @app.route("/api/v1/metadata/databases/<database>/tables", methods=["GET"])
+    def list_tables(database: str):
+        """获取表列表"""
+        tables = [
+            {
+                "name": "orders",
+                "description": "订单表",
+                "row_count": 10000000,
+                "updated_at": "2024-01-23T09:00:00Z"
+            },
+            {
+                "name": "customers",
+                "description": "客户表",
+                "row_count": 1000000,
+                "updated_at": "2024-01-23T09:00:00Z"
+            }
+        ]
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"tables": tables}
+        })
+
+    @app.route("/api/v1/metadata/databases/<database>/tables/<table>", methods=["GET"])
+    def get_table_schema(database: str, table: str):
+        """获取表结构"""
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "table_name": table,
+                "database": database,
+                "columns": [
+                    {"name": "id", "type": "BIGINT", "nullable": False, "description": "主键ID"},
+                    {"name": "customer_id", "type": "BIGINT", "nullable": False, "description": "客户ID"},
+                    {"name": "amount", "type": "DECIMAL(10,2)", "nullable": False, "description": "金额"},
+                    {"name": "created_at", "type": "TIMESTAMP", "nullable": False, "description": "创建时间"}
+                ],
+                "sample_data": [
+                    {"id": 1, "customer_id": 1001, "amount": 299.99, "created_at": "2024-01-01T10:00:00Z"}
+                ]
+            }
+        })
+
+    if __name__ == "__main__":
+        app.run(host="0.0.0.0", port=8080, debug=True)
+
+---
+# Alldata API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alldata-api
+  template:
+    metadata:
+      labels:
+        app: alldata-api
+    spec:
+      containers:
+      - name: api
+        image: python:3.10-slim
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          pip install flask -q && \
+          python /app/app.py
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "true"
+        ports:
+        - name: http
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /app
+      volumes:
+      - name: config
+        configMap:
+          name: alldata-api-config
+
+---
+# Alldata API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+spec:
+  selector:
+    app: alldata-api
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP

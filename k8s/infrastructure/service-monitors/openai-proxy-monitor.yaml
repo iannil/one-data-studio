@@ -1,0 +1,17 @@
+# OpenAI Proxy ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openai-proxy
+  namespace: one-data-cube
+  labels:
+    app: openai-proxy
+spec:
+  selector:
+    matchLabels:
+      app: openai-proxy
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

@@ -1,0 +1,17 @@
+# Alldata API ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+spec:
+  selector:
+    matchLabels:
+      app: alldata-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

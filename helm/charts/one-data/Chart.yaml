@@ -1,0 +1,19 @@
+apiVersion: v2
+name: one-data
+description: ONE-DATA-STUDIO - 企业级 DataOps + MLOps + LLMOps 平台
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - dataops
+  - ml
+  - llm
+  - kubernetes
+
+maintainers:
+  - name: ONE-DATA-STUDIO Team
+    email: team@example.com
+
+sources:
+  - https://github.com/example/one-data-studio

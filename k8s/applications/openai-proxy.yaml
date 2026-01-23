@@ -1,0 +1,129 @@
+# OpenAI 代理服务部署
+# Sprint 1.2: 真实 OpenAI API 调用
+
+---
+# OpenAI API Key Secret (需要用户配置)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-secret
+  namespace: one-data-cube
+type: Opaque
+stringData:
+  # 请在使用前替换为真实的 OpenAI API Key
+  api-key: "your-openai-api-key-here"
+  # 可选：使用 Azure OpenAI 或其他兼容服务
+  # base-url: "https://api.openai.com/v1"
+
+---
+# OpenAI Proxy Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openai-proxy
+  namespace: one-data-cube
+  labels:
+    app: openai-proxy
+    version: v1.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openai-proxy
+  template:
+    metadata:
+      labels:
+        app: openai-proxy
+        version: v1.0
+    spec:
+      containers:
+      - name: proxy
+        image: openai-proxy:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "true"
+        - name: PORT
+          value: "8000"
+        # OpenAI 配置
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-secret
+              key: api-key
+        - name: OPENAI_BASE_URL
+          value: "https://api.openai.com/v1"
+        # 可选：使用 Azure OpenAI
+        # - name: OPENAI_BASE_URL
+        #   value: "https://your-resource.openai.azure.com/openai/deployments/your-deployment"
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+---
+# OpenAI Proxy Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openai-proxy
+  namespace: one-data-cube
+  labels:
+    app: openai-proxy
+spec:
+  selector:
+    app: openai-proxy
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP
+
+---
+# OpenAI Proxy Ingress (可选)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openai-ingress
+  namespace: one-data-cube
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: openai.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openai-proxy
+            port:
+              number: 8000

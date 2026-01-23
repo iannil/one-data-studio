@@ -1,0 +1,29 @@
+# Alldata API 依赖
+# Sprint 1.1 持久化版本
+
+# Web 框架
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# 数据库
+SQLAlchemy==2.0.23
+pymysql==1.1.0
+cryptography==41.0.7
+
+# 对象存储
+minio==7.2.0
+
+# HTTP 客户端
+requests==2.31.0
+
+# 认证
+PyJWT==2.8.0
+
+# 监控
+prometheus-flask-exporter==0.23.1
+
+# 工具
+python-dotenv==1.0.0
+
+# 数据库迁移
+alembic==1.13.0

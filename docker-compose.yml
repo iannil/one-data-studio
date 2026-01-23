@@ -1,0 +1,357 @@
+# ONE-DATA-STUDIO 本地开发环境
+# 使用 Docker Compose 快速启动所有服务（无需 K8s）
+# Phase 5: 端到端集成配置
+
+version: "3.8"
+
+services:
+  # ============================================
+  # 基础设施层
+  # ============================================
+
+  # MinIO - 对象存储
+  minio:
+    image: quay.io/minio/minio:RELEASE.2023-12-23T07-19-11Z
+    container_name: one-data-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123456
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - one-data
+
+  # MySQL - 业务数据库
+  mysql:
+    image: mysql:8.0
+    container_name: one-data-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: MyRootPassword123!
+      MYSQL_DATABASE: one_data
+      MYSQL_USER: one_data
+      MYSQL_PASSWORD: OneDataPassword123!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - one-data
+
+  # Redis - 缓存
+  redis:
+    image: redis:7.0-alpine
+    container_name: one-data-redis
+    command: redis-server --requirepass RedisPassword123!
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - one-data
+
+  # ============================================
+  # 数据库初始化层
+  # ============================================
+
+  # Alldata 数据库初始化
+  alldata-init:
+    build:
+      context: ./docker/alldata-api
+      dockerfile: Dockerfile
+    container_name: one-data-alldata-init
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: admin123456
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: one_data
+      MYSQL_USER: one_data
+      MYSQL_PASSWORD: OneDataPassword123!
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: RedisPassword123!
+    command: python init_db.py
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - one-data
+
+  # Bisheng 数据库初始化
+  bisheng-init:
+    build:
+      context: ./docker/bisheng-api
+      dockerfile: Dockerfile
+    container_name: one-data-bisheng-init
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: one_data
+      MYSQL_USER: one_data
+      MYSQL_PASSWORD: OneDataPassword123!
+      ALDATA_API_URL: http://alldata-api:8080
+      CUBE_API_URL: http://vllm-serving:8000
+    command: python init_db.py
+    depends_on:
+      mysql:
+        condition: service_healthy
+      alldata-init:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - one-data
+
+  # ============================================
+  # 应用服务层
+  # ============================================
+
+  # Alldata API (模拟)
+  alldata-api:
+    build:
+      context: ./docker/alldata-api
+      dockerfile: Dockerfile
+    container_name: one-data-alldata-api
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: admin123456
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: one_data
+      MYSQL_USER: one_data
+      MYSQL_PASSWORD: OneDataPassword123!
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: RedisPassword123!
+    ports:
+      - "8080:8080"
+    depends_on:
+      minio:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      alldata-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - one-data
+
+  # vLLM 模型服务
+  # 注意：需要 GPU 支持，无 GPU 可使用 CPU 模式
+  vllm-serving:
+    image: vllm/vllm-openai:v0.3.0
+    container_name: one-data-vllm
+    # 如有 GPU，取消以下注释
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    command: >
+      --model Qwen/Qwen-0.5B-Chat
+      --host 0.0.0.0
+      --port 8000
+      --dtype auto
+    environment:
+      HF_TOKEN: ""  # 如需访问私有模型
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    # vLLM 不依赖其他服务，可独立启动
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # 模型下载需要时间
+    networks:
+      - one-data
+
+  # Bisheng API (模拟)
+  bisheng-api:
+    build:
+      context: ./docker/bisheng-api
+      dockerfile: Dockerfile
+    container_name: one-data-bisheng-api
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: one_data
+      MYSQL_USER: one_data
+      MYSQL_PASSWORD: OneDataPassword123!
+      ALDATA_API_URL: http://alldata-api:8080
+      CUBE_API_URL: http://vllm-serving:8000
+    ports:
+      - "8081:8080"
+    depends_on:
+      alldata-api:
+        condition: service_healthy
+      vllm-serving:
+        condition: service_healthy
+      bisheng-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - one-data
+
+  # ============================================
+  # 前端开发服务
+  # ============================================
+
+  # Web 前端（开发模式）
+  web:
+    build:
+      context: ./web
+      target: development
+      dockerfile: Dockerfile
+    container_name: one-data-web
+    environment:
+      - VITE_API_ALLDATA_URL=http://alldata-api:8080
+      - VITE_API_BISHENG_URL=http://bisheng-api:8081
+      - VITE_API_CUBE_URL=http://vllm-serving:8000
+      - VITE_AUTH_MODE=mock
+      - VITE_ENABLE_MOCK_LOGIN=true
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    depends_on:
+      alldata-api:
+        condition: service_healthy
+      bisheng-api:
+        condition: service_healthy
+    networks:
+      - one-data
+    profiles:
+      - dev
+
+  # ============================================
+  # 监控层（可选）
+  # ============================================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: one-data-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - one-data
+    profiles:
+      - monitoring
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: one-data-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - one-data
+    profiles:
+      - monitoring
+
+  # ============================================
+  # 向量数据库层 (Phase 6)
+  # ============================================
+
+  # Etcd - Milvus 依赖
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: one-data-etcd
+    command:
+      - etcd
+      - -advertise-client-urls=http://0.0.0.0:2379
+      - -listen-client-urls=http://0.0.0.0:2379
+      - -data-dir=/etcd
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd-data:/etcd
+    networks:
+      - one-data
+    profiles:
+      - milvus
+
+  # Milvus 向量数据库 (Standalone 模式)
+  milvus:
+    image: milvusdb/milvus:v2.3.7
+    container_name: one-data-milvus
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus-data:/var/lib/milvus
+    depends_on:
+      - etcd
+    networks:
+      - one-data
+    profiles:
+      - milvus
+
+networks:
+  one-data:
+    driver: bridge
+
+volumes:
+  minio-data:
+  mysql-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  etcd-data:
+  milvus-data:

@@ -1,0 +1,57 @@
+# ONE-DATA-STUDIO 基础命名空间配置
+# 此文件定义平台所需的所有命名空间
+
+---
+# 系统命名空间 - 存放 Keycloak、监控等
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-system
+  labels:
+    name: one-data-system
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: restricted
+
+---
+# 基础设施命名空间 - 存放存储、中间件
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-infra
+  labels:
+    name: one-data-infra
+    pod-security.kubernetes.io/enforce: baseline
+
+---
+# Alldata 平台命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-alldata
+  labels:
+    name: one-data-alldata
+    app: alldata
+    istio-injection: enabled
+
+---
+# Cube Studio 平台命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-cube
+  labels:
+    name: one-data-cube
+    app: cube-studio
+    istio-injection: enabled
+
+---
+# Bisheng 平台命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-bisheng
+  labels:
+    name: one-data-bisheng
+    app: bisheng
+    istio-injection: enabled
