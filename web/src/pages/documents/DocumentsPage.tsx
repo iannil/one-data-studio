@@ -13,7 +13,9 @@ import {
   Upload,
   Tag,
   Drawer,
+  Alert,
 } from 'antd';
+import type { RowSelection } from 'antd/es/table';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -35,8 +37,10 @@ function DocumentsPage() {
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<IndexedDocument | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string | undefined>();
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [uploadForm] = Form.useForm();
   const [fileList, setFileList] = useState<any[]>([]);
 
@@ -74,6 +78,25 @@ function DocumentsPage() {
     },
   });
 
+  // 批量删除文档
+  const batchDeleteMutation = useMutation({
+    mutationFn: bisheng.batchDeleteDocuments,
+    onSuccess: (data: any) => {
+      const { deleted_count, failed_count, failed_ids } = data.data || {};
+      if (failed_count > 0) {
+        message.warning(`已删除 ${deleted_count} 个文档，${failed_count} 个文档删除失败`);
+      } else {
+        message.success(`成功删除 ${deleted_count} 个文档`);
+      }
+      setIsBatchDeleteModalOpen(false);
+      setSelectedRowKeys([]);
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+    onError: (error: any) => {
+      message.error(`批量删除失败: ${error.message || '未知错误'}`);
+    },
+  });
+
   const handleUpload = async () => {
     const values = uploadForm.getFieldsValue();
 
@@ -101,6 +124,25 @@ function DocumentsPage() {
 
   const handleDelete = (docId: string) => {
     deleteMutation.mutate(docId);
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的文档');
+      return;
+    }
+    setIsBatchDeleteModalOpen(true);
+  };
+
+  const confirmBatchDelete = () => {
+    batchDeleteMutation.mutate(selectedRowKeys as string[]);
+  };
+
+  const rowSelection: RowSelection<IndexedDocument> = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
   };
 
   const uploadProps: UploadProps = {
@@ -242,6 +284,14 @@ function DocumentsPage() {
               ))}
             </Select>
             <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+              disabled={selectedRowKeys.length === 0}
+            >
+              批量删除 {selectedRowKeys.length > 0 && `(${selectedRowKeys.length})`}
+            </Button>
+            <Button
               type="primary"
               icon={<UploadOutlined />}
               onClick={() => setIsUploadModalOpen(true)}
@@ -255,6 +305,7 @@ function DocumentsPage() {
           columns={columns}
           dataSource={documentsData?.data?.documents || []}
           rowKey="doc_id"
+          rowSelection={rowSelection}
           loading={isLoading}
           pagination={{
             showSizeChanger: true,
@@ -387,6 +438,51 @@ function DocumentsPage() {
           </div>
         )}
       </Drawer>
+
+      {/* 批量删除确认模态框 */}
+      <Modal
+        title="批量删除文档"
+        open={isBatchDeleteModalOpen}
+        onOk={confirmBatchDelete}
+        onCancel={() => setIsBatchDeleteModalOpen(false)}
+        confirmLoading={batchDeleteMutation.isPending}
+        okButtonProps={{ danger: true }}
+        okText="确认删除"
+        cancelText="取消"
+      >
+        <Alert
+          message="警告"
+          description="删除后文档将从向量数据库中移除，无法恢复"
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <p>
+          即将删除 <strong>{selectedRowKeys.length}</strong> 个文档，确认要继续吗？
+        </p>
+        {selectedRowKeys.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <p style={{ marginBottom: 8, fontWeight: 'bold' }}>将删除以下文档：</p>
+            <div
+              style={{
+                maxHeight: 200,
+                overflowY: 'auto',
+                background: '#f5f5f5',
+                padding: 12,
+                borderRadius: 4,
+              }}
+            >
+              {documentsData?.data?.documents
+                .filter((doc: IndexedDocument) => selectedRowKeys.includes(doc.doc_id))
+                .map((doc: IndexedDocument) => (
+                  <div key={doc.doc_id} style={{ marginBottom: 4, fontSize: 12 }}>
+                    • {doc.file_name}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

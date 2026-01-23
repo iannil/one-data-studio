@@ -1,5 +1,5 @@
 import { Timeline } from 'antd';
-import { ClockCircleOutlined, ToolOutlined, EyeOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, ToolOutlined, EyeOutlined, CheckCircleOutlined, FileTextOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { AgentStep } from '@/services/bisheng';
 
 interface StepsViewerProps {
@@ -27,6 +27,16 @@ const stepConfig = {
     icon: <CheckCircleOutlined />,
     color: '#722ed1',
     label: '最终',
+  },
+  plan: {
+    icon: <FileTextOutlined />,
+    color: '#13c2c2',
+    label: '计划',
+  },
+  error: {
+    icon: <CloseCircleOutlined />,
+    color: '#ff4d4f',
+    label: '错误',
   },
 };
 
@@ -65,7 +75,9 @@ function StepsViewer({ steps, loading }: StepsViewerProps) {
               <div
                 style={{
                   padding: '8px 12px',
-                  background: step.type === 'final' ? '#f9f0ff' : '#f5f5f5',
+                  background: step.type === 'final' ? '#f9f0ff' :
+                             step.type === 'plan' ? '#e6fffb' :
+                             step.type === 'error' ? '#fff1f0' : '#f5f5f5',
                   borderRadius: '6px',
                   fontSize: '14px',
                   whiteSpace: 'pre-wrap',

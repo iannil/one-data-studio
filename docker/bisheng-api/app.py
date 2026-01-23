@@ -23,7 +23,7 @@ import asyncio
 import requests
 import uuid
 from datetime import datetime
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, Response
 
 # 添加共享模块路径
 sys.path.insert(0, '/app/shared')
@@ -35,7 +35,10 @@ from models import get_db, Workflow, Conversation, Message, WorkflowExecution, E
 from engine import WorkflowExecutor, register_execution, unregister_execution, stop_execution
 
 # 导入服务
-from services import VectorStore, EmbeddingService, DocumentService
+from services import VectorStore, EmbeddingService, DocumentService, AGENT_TEMPLATE_AVAILABLE
+
+if AGENT_TEMPLATE_AVAILABLE:
+    from services import get_agent_template_service
 
 # 导入 Agent 相关模块
 try:
@@ -335,6 +338,54 @@ def create_workflow():
         db.close()
 
 
+@app.route("/api/v1/workflows/<workflow_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.WORKFLOW, Operation.CREATE)
+def update_workflow(workflow_id):
+    """更新工作流（需要认证）"""
+    data = request.json
+    if not data:
+        return jsonify({"code": 40001, "message": "Request body is required"}), 400
+
+    db = get_db_session()
+    try:
+        wf = db.query(Workflow).filter(
+            (Workflow.workflow_id == workflow_id) | (Workflow.id == workflow_id)
+        ).first()
+
+        if not wf:
+            return jsonify({"code": 40401, "message": "Workflow not found"}), 404
+
+        # 更新字段
+        if "name" in data:
+            wf.name = data["name"]
+        if "description" in data:
+            wf.description = data["description"]
+        if "type" in data:
+            wf.type = data["type"]
+        if "status" in data:
+            wf.status = data["status"]
+        if "definition" in data:
+            definition = data["definition"]
+            if isinstance(definition, dict):
+                wf.definition = json.dumps(definition, ensure_ascii=False)
+            else:
+                wf.definition = definition
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": wf.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
 @app.route("/api/v1/workflows/<workflow_id>", methods=["DELETE"])
 @require_jwt()
 @require_permission(Resource.WORKFLOW, Operation.CREATE)
@@ -367,10 +418,19 @@ def list_conversations():
 
     db = get_db_session()
     try:
-        conversations = db.query(Conversation).filter(
+        # 使用 joinedload 预加载消息关系以提高性能
+        from sqlalchemy.orm import joinedload
+        conversations = db.query(Conversation).options(
+            joinedload(Conversation.messages)
+        ).filter(
             Conversation.user_id == user_id
         ).order_by(Conversation.updated_at.desc()).limit(limit).all()
-        result = [conv.to_dict(include_messages=False) for conv in conversations]
+
+        result = []
+        for conv in conversations:
+            conv_dict = conv.to_dict(include_messages=False)
+            conv_dict["message_count"] = len(conv.messages)
+            result.append(conv_dict)
 
         return jsonify({
             "code": 0,
@@ -434,6 +494,75 @@ def create_conversation():
         db.close()
 
 
+@app.route("/api/v1/conversations/<conversation_id>", methods=["DELETE"])
+@require_jwt()
+def delete_conversation(conversation_id):
+    """删除会话"""
+    user_id = get_user_id()
+
+    db = get_db_session()
+    try:
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_id == conversation_id,
+            Conversation.user_id == user_id
+        ).first()
+
+        if not conversation:
+            return jsonify({"code": 40401, "message": "Conversation not found"}), 404
+
+        # 级联删除消息（已配置 cascade="all, delete-orphan"）
+        db.delete(conversation)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/conversations/<conversation_id>", methods=["PUT"])
+@require_jwt()
+def update_conversation(conversation_id):
+    """更新会话（重命名等）"""
+    user_id = get_user_id()
+    data = request.json
+    new_title = data.get("title", "").strip()
+
+    if not new_title:
+        return jsonify({"code": 40001, "message": "Title is required"}), 400
+
+    db = get_db_session()
+    try:
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_id == conversation_id,
+            Conversation.user_id == user_id
+        ).first()
+
+        if not conversation:
+            return jsonify({"code": 40401, "message": "Conversation not found"}), 404
+
+        conversation.title = new_title
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "conversation_id": conversation_id,
+                "title": conversation.title
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
 @app.route("/api/v1/conversations/<conversation_id>/messages", methods=["GET"])
 @require_jwt()
 def get_messages(conversation_id):
@@ -454,32 +583,121 @@ def get_messages(conversation_id):
         db.close()
 
 
+def get_default_schema() -> str:
+    """默认 Schema（回退方案）"""
+    return """
+orders 表:
+- id: INT (主键)
+- customer_id: INT
+- amount: DECIMAL(10,2)
+- status: VARCHAR(50)
+- created_at: TIMESTAMP
+
+customers 表:
+- id: INT (主键)
+- name: VARCHAR(255)
+- email: VARCHAR(255)
+
+products 表:
+- id: INT (主键)
+- name: VARCHAR(255)
+- price: DECIMAL(10,2)
+- stock: INT
+"""
+
+
+def build_schema_from_metadata(database: str, selected_tables: list = None) -> str:
+    """从 Alldata 元数据构建 Schema 字符串
+
+    Args:
+        database: 数据库名称
+        selected_tables: 选中的表列表（为空则获取所有表）
+
+    Returns:
+        格式化的 Schema 字符串
+    """
+    try:
+        # 获取请求头中的 Authorization
+        headers = {}
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            headers["Authorization"] = auth_header
+
+        # 获取表列表
+        tables_response = requests.get(
+            f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables",
+            headers=headers,
+            timeout=10
+        )
+
+        if tables_response.status_code != 200:
+            print(f"获取表列表失败: {tables_response.status_code}")
+            return get_default_schema()
+
+        tables_data = tables_response.json()
+        available_tables = tables_data.get("data", {}).get("tables", [])
+
+        if not available_tables:
+            return get_default_schema()
+
+        # 过滤选中的表
+        tables_to_query = selected_tables if selected_tables else [t["name"] for t in available_tables]
+
+        schema_parts = []
+        for table_info in available_tables:
+            table_name = table_info["name"]
+            if table_name not in tables_to_query:
+                continue
+
+            # 获取表详情
+            detail_response = requests.get(
+                f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables/{table_name}",
+                headers=headers,
+                timeout=10
+            )
+
+            if detail_response.status_code == 200:
+                detail_data = detail_response.json()
+                table_detail = detail_data.get("data", {})
+
+                # 构建表 Schema
+                schema_parts.append(f"{table_name} 表:")
+                for col in table_detail.get("columns", []):
+                    pk = " (主键)" if col.get("primary_key") else ""
+                    nullable = " NULL" if col.get("nullable") else " NOT NULL"
+                    schema_parts.append(f"- {col['name']}: {col['type']}{pk}{nullable}")
+                    if col.get("description"):
+                        schema_parts.append(f"  描述: {col['description']}")
+
+                # 添加关系信息
+                for rel in table_detail.get("relations", []):
+                    if rel["from_table"] == table_name:
+                        schema_parts.append(f"  外键: {rel['from_column']} -> {rel['to_table']}.{rel['to_column']}")
+
+                schema_parts.append("")  # 空行分隔
+
+        return "\n".join(schema_parts) if schema_parts else get_default_schema()
+
+    except Exception as e:
+        print(f"获取元数据失败: {e}")
+        return get_default_schema()
+
+
 @app.route("/api/v1/sql/generate", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
 def generate_sql():
-    """Text-to-SQL 生成（需要认证）"""
+    """Text-to-SQL 生成（使用 Alldata 动态 Schema）"""
     data = request.json
     question = data.get("question", "")
     database = data.get("database", "sales_dw")
+    selected_tables = data.get("selected_tables", [])
 
     if not question:
         return jsonify({"code": 40001, "message": "Question is required"}), 400
 
-    # 模拟表结构（实际应从 Alldata 元数据服务获取）
-    schema = """
-    orders 表:
-    - id: INT (主键)
-    - customer_id: INT
-    - amount: DECIMAL(10,2)
-    - status: VARCHAR(50)
-    - created_at: TIMESTAMP
-
-    customers 表:
-    - id: INT (主键)
-    - name: VARCHAR(255)
-    - email: VARCHAR(255)
-    """
+    # 从 Alldata 元数据服务获取 Schema
+    schema = build_schema_from_metadata(database, selected_tables)
 
     try:
         response = requests.post(
@@ -507,6 +725,75 @@ def generate_sql():
                 "message": "success",
                 "data": {
                     "sql": sql,
+                    "confidence": 0.85,
+                    "tables_used": selected_tables if selected_tables else [],
+                    "database": database,
+                    "user": get_user_id()
+                }
+            })
+        else:
+            return jsonify({
+                "code": 50002,
+                "message": f"Upstream error: {response.status_code}"
+            }), 503
+    except Exception as e:
+        return jsonify({"code": 50002, "message": str(e)}), 503
+
+
+@app.route("/api/v1/text2sql", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.CHAT, Operation.EXECUTE)
+def text2sql():
+    """Text-to-SQL 生成（别名端点，与 /api/v1/sql/generate 相同）
+
+    前端调用参数：
+    - natural_language: 自然语言查询（映射到 question）
+    - database: 数据库名称（可选）
+    - selected_tables: 选中的表列表（可选）
+    """
+    data = request.json
+    # 将前端的 natural_language 映射为 question
+    data["question"] = data.get("natural_language", "")
+
+    # 复用 generate_sql 的逻辑
+    question = data.get("question", "")
+    database = data.get("database", "sales_dw")
+    selected_tables = data.get("selected_tables", [])
+
+    if not question:
+        return jsonify({"code": 40001, "message": "Question is required"}), 400
+
+    # 从 Alldata 元数据服务获取 Schema
+    schema = build_schema_from_metadata(database, selected_tables)
+
+    try:
+        response = requests.post(
+            f"{CUBE_API_URL}/v1/chat/completions",
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": f"你是一个数据分析师助手。请根据以下数据库元数据生成 SQL 查询：\n\n数据库：{database}\n表结构：\n{schema}\n\n请只返回 SQL 语句，不要包含任何解释。"
+                    },
+                    {"role": "user", "content": question}
+                ],
+                "max_tokens": 500
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            result = response.json()
+            sql = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            # 清理 SQL（移除 markdown 代码块标记）
+            sql = sql.replace("```sql", "").replace("```", "").strip()
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "sql": sql,
+                    "confidence": 0.85,
+                    "tables_used": selected_tables if selected_tables else [],
                     "database": database,
                     "user": get_user_id()
                 }
@@ -833,14 +1120,17 @@ def upload_document():
 
     db = get_db_session()
     try:
+        # 先生成 doc_id
+        doc_id = f"doc-{uuid.uuid4().hex[:12]}"
+
         # 创建文档服务
         doc_service = DocumentService()
 
-        # 处理文档
+        # 处理文档（在 metadata 中包含 doc_id 用于后续删除）
         docs = doc_service.create_document_from_upload(
             filename=file_name,
             content=content,
-            metadata={"title": title, "uploaded_by": get_user_id()}
+            metadata={"title": title, "uploaded_by": get_user_id(), "doc_id": doc_id}
         )
 
         # 生成向量
@@ -856,7 +1146,6 @@ def upload_document():
         vector_store.insert(collection_name, texts, embeddings, metadata_list)
 
         # 保存文档记录
-        doc_id = f"doc-{uuid.uuid4().hex[:12]}"
         indexed_doc = IndexedDocument(
             doc_id=doc_id,
             collection_name=collection_name,
@@ -955,23 +1244,96 @@ def get_document(doc_id):
 @app.route("/api/v1/documents/<doc_id>", methods=["DELETE"])
 @require_jwt()
 def delete_document(doc_id):
-    """删除文档"""
+    """删除文档（含向量数据）"""
     db = get_db_session()
     try:
         doc = db.query(IndexedDocument).filter(
             IndexedDocument.doc_id == doc_id
         ).first()
 
-        if doc:
-            # 从向量数据库删除（TODO: 实现按ID删除）
-            # vector_store.delete(doc.collection_name, ids=[...])
+        if not doc:
+            return jsonify({"code": 40401, "message": "Document not found"}), 404
 
-            db.delete(doc)
-            db.commit()
+        # 从向量数据库删除向量
+        vector_store = VectorStore()
+        delete_success = vector_store.delete_by_doc_id(doc.collection_name, doc_id)
 
-            return jsonify({"code": 0, "message": "Document deleted"})
+        if not delete_success:
+            # 记录警告但继续删除数据库记录
+            print(f"警告: 向量删除失败，但继续删除数据库记录: doc_id={doc_id}")
 
-        return jsonify({"code": 40401, "message": "Document not found"}), 404
+        # 删除数据库记录
+        db.delete(doc)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "Document deleted successfully",
+            "data": {
+                "doc_id": doc_id,
+                "vectors_deleted": delete_success
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        print(f"删除文档失败: {e}")
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/documents/batch", methods=["DELETE"])
+@require_jwt()
+def batch_delete_documents():
+    """批量删除文档（含向量数据）"""
+    data = request.json
+    doc_ids = data.get("doc_ids", [])
+
+    if not doc_ids:
+        return jsonify({"code": 40001, "message": "doc_ids is required"}), 400
+
+    if not isinstance(doc_ids, list):
+        return jsonify({"code": 40002, "message": "doc_ids must be a list"}), 400
+
+    db = get_db_session()
+    try:
+        vector_store = VectorStore()
+        deleted_count = 0
+        failed_ids = []
+
+        for doc_id in doc_ids:
+            try:
+                doc = db.query(IndexedDocument).filter(
+                    IndexedDocument.doc_id == doc_id
+                ).first()
+
+                if not doc:
+                    failed_ids.append(doc_id)
+                    continue
+
+                # 从向量数据库删除向量
+                vector_store.delete_by_doc_id(doc.collection_name, doc_id)
+
+                # 删除数据库记录
+                db.delete(doc)
+                deleted_count += 1
+
+            except Exception as e:
+                print(f"删除文档失败 {doc_id}: {e}")
+                failed_ids.append(doc_id)
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "Batch delete completed",
+            "data": {
+                "deleted_count": deleted_count,
+                "failed_count": len(failed_ids),
+                "failed_ids": failed_ids
+            }
+        })
 
     except Exception as e:
         db.rollback()
@@ -1217,6 +1579,81 @@ async def run_agent():
         return jsonify({"code": 50001, "message": str(e)}), 500
 
 
+@app.route("/api/v1/agent/run-stream", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.CHAT, Operation.EXECUTE)
+def run_agent_stream():
+    """Agent 流式执行 (SSE)
+
+    返回 Server-Sent Events 流，实时发送 Agent 执行步骤
+    """
+    if not TOOLS_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent module not available"
+        }), 503
+
+    data = request.json
+    query = data.get("query", "")
+    agent_type = data.get("agent_type", "react")
+    model = data.get("model", "gpt-4o-mini")
+    max_iterations = data.get("max_iterations", 10)
+
+    if not query:
+        return jsonify({"code": 40001, "message": "Query is required"}), 400
+
+    def generate():
+        """SSE 生成器函数"""
+        try:
+            import asyncio
+
+            async def run_agent_async():
+                """异步执行 Agent 并收集事件"""
+                registry = get_tool_registry()
+                agent = create_agent(
+                    agent_type=agent_type,
+                    model=model,
+                    max_iterations=max_iterations,
+                    tool_registry=registry,
+                    verbose=False
+                )
+
+                events = []
+                async for event in agent.run_stream(query):
+                    events.append(event)
+
+                return events
+
+            # 在新的事件循环中运行异步代码
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            try:
+                events = loop.run_until_complete(run_agent_async())
+
+                for event in events:
+                    # 格式化为 SSE
+                    event_json = json.dumps(event, ensure_ascii=False)
+                    yield f"data: {event_json}\n\n"
+
+            finally:
+                loop.close()
+
+        except Exception as e:
+            error_event = {"type": "error", "message": str(e)}
+            yield f"data: {json.dumps(error_event, ensure_ascii=False)}\n\n"
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # 禁用 Nginx 缓冲
+            "Connection": "keep-alive",
+        }
+    )
+
+
 # ============================================
 # 工作流调度 API (Phase 7: Sprint 7.4)
 # ============================================
@@ -1249,7 +1686,7 @@ def list_schedules(workflow_id):
 @app.route("/api/v1/workflows/<workflow_id>/schedules", methods=["POST"])
 @require_jwt()
 def create_schedule(workflow_id):
-    """创建调度配置"""
+    """创建调度配置 (P4: 支持重试和超时配置)"""
     data = request.json
     schedule_type = data.get("type", "cron")
 
@@ -1274,17 +1711,24 @@ def create_schedule(workflow_id):
             interval_seconds=data.get("interval_seconds"),
             event_trigger=data.get("event_trigger"),
             enabled=data.get("enabled", True),
+            paused=data.get("paused", False),  # P4: 支持暂停状态
+            # P4: 重试配置
+            max_retries=data.get("max_retries", 0),
+            retry_delay_seconds=data.get("retry_delay_seconds", 60),
+            retry_backoff_base=data.get("retry_backoff_base", 2),
+            # P4: 超时配置
+            timeout_seconds=data.get("timeout_seconds", 3600),
             created_by=get_user_id()
         )
 
         db.add(schedule)
         db.commit()
 
-        # 注册到调度器
+        # 注册到调度器 (P4: 使用 add_schedule_from_model)
         try:
             from services.scheduler import get_scheduler
             scheduler = get_scheduler()
-            scheduler.add_schedule(schedule)
+            scheduler.add_schedule_from_model(schedule)
         except Exception as e:
             # 调度器注册失败，但仍保存数据库记录
             print(f"Scheduler registration failed: {e}")
@@ -1433,6 +1877,516 @@ def list_all_schedules():
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
+
+
+# ============================================
+# P4: 调度管理增强 API - 暂停/恢复、统计、重试配置
+# ============================================
+
+@app.route("/api/v1/schedules/<schedule_id>/pause", methods=["POST"])
+@require_jwt()
+def pause_schedule(schedule_id):
+    """暂停调度 (P4)
+
+    暂停后，调度不会被触发，但保留配置
+    可以通过 resume 恢复
+    """
+    db = get_db_session()
+    try:
+        from models import WorkflowSchedule
+
+        schedule = db.query(WorkflowSchedule).filter(
+            WorkflowSchedule.schedule_id == schedule_id
+        ).first()
+
+        if not schedule:
+            return jsonify({"code": 40401, "message": "Schedule not found"}), 404
+
+        # 更新数据库状态
+        schedule.paused = True
+        db.commit()
+
+        # 暂停调度器中的作业
+        try:
+            from services.scheduler import get_scheduler
+            scheduler = get_scheduler()
+            scheduler.pause_schedule(schedule_id)
+        except Exception as e:
+            print(f"Failed to pause schedule in scheduler: {e}")
+
+        return jsonify({
+            "code": 0,
+            "message": "Schedule paused",
+            "data": {
+                "schedule_id": schedule_id,
+                "paused": True
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/schedules/<schedule_id>/resume", methods=["POST"])
+@require_jwt()
+def resume_schedule(schedule_id):
+    """恢复调度 (P4)
+
+    恢复已暂停的调度
+    """
+    db = get_db_session()
+    try:
+        from models import WorkflowSchedule
+
+        schedule = db.query(WorkflowSchedule).filter(
+            WorkflowSchedule.schedule_id == schedule_id
+        ).first()
+
+        if not schedule:
+            return jsonify({"code": 40401, "message": "Schedule not found"}), 404
+
+        if not schedule.paused:
+            return jsonify({"code": 40002, "message": "Schedule is not paused"}), 400
+
+        # 更新数据库状态
+        schedule.paused = False
+        db.commit()
+
+        # 恢复调度器中的作业
+        try:
+            from services.scheduler import get_scheduler
+            scheduler = get_scheduler()
+            scheduler.resume_schedule(schedule_id)
+        except Exception as e:
+            print(f"Failed to resume schedule in scheduler: {e}")
+
+        return jsonify({
+            "code": 0,
+            "message": "Schedule resumed",
+            "data": {
+                "schedule_id": schedule_id,
+                "paused": False
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/schedules/<schedule_id>/statistics", methods=["GET"])
+@require_jwt()
+def get_schedule_statistics(schedule_id):
+    """获取调度统计信息 (P4)
+
+    返回：
+    - 总执行次数
+    - 成功/失败次数
+    - 平均执行时间
+    - 成功率
+    - 最近执行记录
+    """
+    db = get_db_session()
+    try:
+        from models import WorkflowSchedule, WorkflowExecution
+
+        # 验证调度存在
+        schedule = db.query(WorkflowSchedule).filter(
+            WorkflowSchedule.schedule_id == schedule_id
+        ).first()
+
+        if not schedule:
+            return jsonify({"code": 40401, "message": "Schedule not found"}), 404
+
+        # 从执行跟踪器获取内存中的统计
+        try:
+            from services.scheduler import get_execution_tracker
+            tracker = get_execution_tracker()
+            stats = tracker.get_statistics(schedule_id)
+        except Exception as e:
+            print(f"Failed to get tracker statistics: {e}")
+            stats = {
+                "schedule_id": schedule_id,
+                "total_executions": 0,
+                "successful_executions": 0,
+                "failed_executions": 0,
+                "average_execution_time_ms": 0,
+                "last_execution_status": None,
+                "last_execution_at": None,
+                "success_rate": 0.0,
+            }
+
+        # 从数据库获取额外的执行历史
+        executions = db.query(WorkflowExecution).filter(
+            WorkflowExecution.workflow_id == schedule.workflow_id
+        ).order_by(WorkflowExecution.created_at.desc()).limit(50).all()
+
+        # 计算数据库中的统计
+        db_stats = {
+            "total_executions": len(executions),
+            "successful_executions": sum(1 for e in executions if e.status == "completed"),
+            "failed_executions": sum(1 for e in executions if e.status == "failed"),
+        }
+
+        if executions:
+            durations = [e.duration_ms for e in executions if e.duration_ms]
+            db_stats["average_execution_time_ms"] = int(sum(durations) / len(durations)) if durations else 0
+            db_stats["last_execution_status"] = executions[0].status
+            db_stats["last_execution_at"] = executions[0].created_at.isoformat() if executions[0].created_at else None
+        else:
+            db_stats["average_execution_time_ms"] = 0
+            db_stats["last_execution_status"] = None
+            db_stats["last_execution_at"] = None
+
+        # 计算成功率
+        if db_stats["total_executions"] > 0:
+            db_stats["success_rate"] = round(
+                db_stats["successful_executions"] / db_stats["total_executions"] * 100, 2
+            )
+        else:
+            db_stats["success_rate"] = 0.0
+
+        # 合并统计信息（优先使用数据库中的数据）
+        combined_stats = {
+            **stats,
+            **db_stats,
+        }
+
+        # 添加最近执行记录
+        combined_stats["recent_executions"] = [
+            {
+                "execution_id": e.execution_id,
+                "status": e.status,
+                "started_at": e.started_at.isoformat() if e.started_at else None,
+                "completed_at": e.completed_at.isoformat() if e.completed_at else None,
+                "duration_ms": e.duration_ms,
+                "error": e.error,
+            }
+            for e in executions[:10]
+        ]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": combined_stats
+        })
+
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/schedules/<schedule_id>/retry-config", methods=["PUT"])
+@require_jwt()
+def update_schedule_retry_config(schedule_id):
+    """更新调度重试配置 (P4)
+
+    可更新字段：
+    - max_retries: 最大重试次数
+    - retry_delay_seconds: 重试延迟秒数
+    - retry_backoff_base: 退避基数
+    - timeout_seconds: 超时时间
+    """
+    data = request.json
+
+    db = get_db_session()
+    try:
+        from models import WorkflowSchedule
+
+        schedule = db.query(WorkflowSchedule).filter(
+            WorkflowSchedule.schedule_id == schedule_id
+        ).first()
+
+        if not schedule:
+            return jsonify({"code": 40401, "message": "Schedule not found"}), 404
+
+        # 更新重试配置
+        if "max_retries" in data:
+            schedule.max_retries = max(0, min(data["max_retries"], 10))  # 限制 0-10
+
+        if "retry_delay_seconds" in data:
+            schedule.retry_delay_seconds = max(0, min(data["retry_delay_seconds"], 3600))
+
+        if "retry_backoff_base" in data:
+            schedule.retry_backoff_base = max(1, min(data["retry_backoff_base"], 10))
+
+        if "timeout_seconds" in data:
+            schedule.timeout_seconds = max(60, min(data["timeout_seconds"], 86400))  # 1分钟到1天
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "Retry config updated",
+            "data": {
+                "schedule_id": schedule_id,
+                "max_retries": schedule.max_retries,
+                "retry_delay_seconds": schedule.retry_delay_seconds,
+                "retry_backoff_base": schedule.retry_backoff_base,
+                "timeout_seconds": schedule.timeout_seconds,
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
+# Agent 模板管理 API (P1 - Agent 模板管理)
+# ============================================
+
+@app.route("/api/v1/agent/templates", methods=["GET"])
+@require_jwt()
+def list_agent_templates():
+    """列出 Agent 模板"""
+    if not AGENT_TEMPLATE_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent template service not available"
+        }), 503
+
+    agent_type = request.args.get("agent_type")
+    limit = int(request.args.get("limit", 50))
+
+    try:
+        service = get_agent_template_service()
+        templates = service.list_templates(limit=limit, agent_type=agent_type)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "templates": templates,
+                "total": len(templates)
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/agent/templates/<template_id>", methods=["GET"])
+@require_jwt()
+def get_agent_template(template_id):
+    """获取单个 Agent 模板"""
+    if not AGENT_TEMPLATE_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent template service not available"
+        }), 503
+
+    try:
+        service = get_agent_template_service()
+        template = service.get_template(template_id)
+
+        if template:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": template
+            })
+        return jsonify({"code": 40401, "message": "Template not found"}), 404
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/agent/templates", methods=["POST"])
+@require_jwt()
+def create_agent_template():
+    """创建 Agent 模板"""
+    if not AGENT_TEMPLATE_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent template service not available"
+        }), 503
+
+    data = request.json
+    name = data.get("name")
+
+    if not name:
+        return jsonify({"code": 40001, "message": "Template name is required"}), 400
+
+    try:
+        service = get_agent_template_service()
+        template = service.create_template(
+            name=name,
+            description=data.get("description"),
+            agent_type=data.get("agent_type", "react"),
+            model=data.get("model", "gpt-4o-mini"),
+            max_iterations=data.get("max_iterations", 10),
+            system_prompt=data.get("system_prompt"),
+            selected_tools=data.get("selected_tools", []),
+            created_by=get_user_id()
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": template
+        }), 201
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/agent/templates/<template_id>", methods=["DELETE"])
+@require_jwt()
+def delete_agent_template(template_id):
+    """删除 Agent 模板"""
+    if not AGENT_TEMPLATE_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent template service not available"
+        }), 503
+
+    try:
+        service = get_agent_template_service()
+        success = service.delete_template(template_id)
+
+        if success:
+            return jsonify({"code": 0, "message": "success"})
+        return jsonify({"code": 40401, "message": "Template not found"}), 404
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/agent/templates/<template_id>", methods=["PUT"])
+@require_jwt()
+def update_agent_template(template_id):
+    """更新 Agent 模板"""
+    if not AGENT_TEMPLATE_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Agent template service not available"
+        }), 503
+
+    data = request.json
+
+    try:
+        service = get_agent_template_service()
+        template = service.update_template(
+            template_id=template_id,
+            name=data.get("name"),
+            description=data.get("description"),
+            agent_type=data.get("agent_type"),
+            model=data.get("model"),
+            max_iterations=data.get("max_iterations"),
+            system_prompt=data.get("system_prompt"),
+            selected_tools=data.get("selected_tools")
+        )
+
+        if template:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": template
+            })
+        return jsonify({"code": 40401, "message": "Template not found"}), 404
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+# ============================================
+# P5: Token 管理端点
+# ============================================
+
+@app.route("/api/v1/auth/refresh", methods=["POST"])
+def refresh_token():
+    """刷新访问 Token"""
+    data = request.json
+    refresh_token_value = data.get("refresh_token")
+
+    if not refresh_token_value:
+        return jsonify({"code": 40001, "message": "refresh_token is required"}), 400
+
+    try:
+        # 使用 auth 模块刷新 token
+        if AUTH_ENABLED:
+            from auth import refresh_token as do_refresh
+            result = do_refresh(refresh_token_value)
+            if result:
+                return jsonify({
+                    "code": 0,
+                    "message": "success",
+                    "data": {
+                        "access_token": result.get("access_token"),
+                        "refresh_token": result.get("refresh_token"),
+                        "expires_in": result.get("expires_in"),
+                        "token_type": result.get("token_type", "Bearer")
+                    }
+                })
+        return jsonify({"code": 40101, "message": "Invalid refresh token"}), 401
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/auth/logout", methods=["POST"])
+@require_jwt()
+def logout():
+    """登出用户"""
+    data = request.json
+    refresh_token_value = data.get("refresh_token")
+
+    try:
+        # 使用 auth 模块登出
+        if AUTH_ENABLED:
+            from auth import logout_user
+            token = request.headers.get("Authorization", "").replace("Bearer ", "")
+            logout_user(token)
+
+        return jsonify({"code": 0, "message": "Logged out successfully"})
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/auth/me", methods=["GET"])
+@require_jwt()
+def get_current_user_info():
+    """获取当前用户信息"""
+    if AUTH_ENABLED:
+        from auth import get_current_user
+        user = get_current_user()
+        if user:
+            return jsonify({"code": 0, "message": "success", "data": user})
+
+    return jsonify({"code": 40100, "message": "Not authenticated"}), 401
+
+
+@app.route("/api/v1/auth/permissions", methods=["GET"])
+@require_jwt()
+def get_user_permissions():
+    """获取当前用户权限列表"""
+    if AUTH_ENABLED:
+        from auth import check_permission, Resource, Operation
+        user_roles = g.roles if hasattr(g, 'roles') else []
+
+        permissions = {}
+        for resource in [Resource.WORKFLOW, Resource.CHAT, Resource.AGENT,
+                        Resource.SCHEDULE, Resource.DOCUMENT, Resource.EXECUTION,
+                        Resource.TEMPLATE]:
+            permissions[resource] = []
+            for operation in [Operation.CREATE, Operation.READ, Operation.UPDATE,
+                            Operation.DELETE, Operation.EXECUTE, Operation.MANAGE]:
+                if check_permission(resource, operation, user_roles):
+                    permissions[resource].append(operation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "roles": user_roles,
+                "permissions": permissions
+            }
+        })
+
+    return jsonify({"code": 40100, "message": "Not authenticated"}), 401
 
 
 @app.errorhandler(401)

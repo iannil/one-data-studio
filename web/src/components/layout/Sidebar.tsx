@@ -10,6 +10,7 @@ import {
   ClockCircleOutlined,
   RobotOutlined,
   CodeOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 
 const menuItems = [
@@ -58,6 +59,11 @@ const menuItems = [
     icon: <CodeOutlined />,
     label: 'Text2SQL',
   },
+  {
+    key: '/executions',
+    icon: <HistoryOutlined />,
+    label: '执行历史',
+  },
 ];
 
 interface SidebarProps {
@@ -79,6 +85,7 @@ function Sidebar({ collapsed }: SidebarProps) {
     if (pathname.startsWith('/schedules')) return '/schedules';
     if (pathname.startsWith('/agents')) return '/agents';
     if (pathname.startsWith('/text2sql')) return '/text2sql';
+    if (pathname.startsWith('/executions')) return '/executions';
     return pathname;
   };
 

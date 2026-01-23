@@ -15,6 +15,7 @@ import SchedulesPage from './pages/schedules/SchedulesPage';
 import AgentsPage from './pages/agents/AgentsPage';
 import Text2SQLPage from './pages/text2sql/Text2SQLPage';
 import HomePage from './pages/HomePage';
+import ExecutionsDashboard from './pages/executions/ExecutionsDashboard';
 
 function AppRoutes() {
   return (
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="schedules" element={<SchedulesPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="text2sql" element={<Text2SQLPage />} />
+        <Route path="executions" element={<ExecutionsDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

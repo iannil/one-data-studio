@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Select,
@@ -15,6 +15,7 @@ import {
   Empty,
   Spin,
   Alert,
+  Checkbox,
 } from 'antd';
 import {
   SendOutlined,
@@ -28,9 +29,10 @@ import {
   DeleteOutlined,
   PlayCircleOutlined,
   DatabaseOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import alldata from '@/services/alldata';
+import alldata, { type TableInfo } from '@/services/alldata';
 import { text2Sql } from '@/services/bisheng';
 import type { Text2SqlResponse } from '@/services/bisheng';
 
@@ -61,6 +63,8 @@ const EXAMPLE_QUERIES = [
 function Text2SQLPage() {
   // 输入状态
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
+  const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [tableSearchText, setTableSearchText] = useState('');
   const [naturalLanguage, setNaturalLanguage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -88,6 +92,27 @@ function Text2SQLPage() {
 
   const databases = databasesData?.data?.databases || [];
 
+  // 获取选中数据库的表列表
+  const { data: tablesData, isLoading: tablesLoading } = useQuery({
+    queryKey: ['tables', selectedDatabase],
+    queryFn: () => alldata.getTables(selectedDatabase),
+    enabled: !!selectedDatabase,
+  });
+
+  const tables = tablesData?.data?.tables || [];
+
+  // 过滤后的表列表
+  const filteredTables = tables.filter((table) =>
+    table.name.toLowerCase().includes(tableSearchText.toLowerCase()) ||
+    (table.description && table.description.toLowerCase().includes(tableSearchText.toLowerCase()))
+  );
+
+  // 当数据库改变时，清空已选择的表
+  useEffect(() => {
+    setSelectedTables([]);
+    setTableSearchText('');
+  }, [selectedDatabase]);
+
   // 保存历史记录到 localStorage
   const saveHistory = (history: QueryHistory[]) => {
     localStorage.setItem('text2sql_history', JSON.stringify(history.slice(0, 50))); // 最多保存50条
@@ -108,6 +133,7 @@ function Text2SQLPage() {
       const response = await text2Sql({
         natural_language: inputQuery,
         database: selectedDatabase || undefined,
+        selected_tables: selectedTables.length > 0 ? selectedTables : undefined,
       });
 
       if (response.data) {
@@ -193,6 +219,9 @@ function Text2SQLPage() {
     });
     if (item.database) {
       setSelectedDatabase(item.database);
+    }
+    if (item.tablesUsed && item.tablesUsed.length > 0) {
+      setSelectedTables(item.tablesUsed);
     }
     setExecuteResult(null);
   };
@@ -294,6 +323,87 @@ function Text2SQLPage() {
                   ))}
                 </Select>
               </div>
+
+              {/* 表选择区域 - 新增 */}
+              {selectedDatabase && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text strong>选择涉及的表（可选）</Text>
+                    <Space size="small">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        已选 {selectedTables.length} / {tables.length} 张表
+                      </Text>
+                      {selectedTables.length > 0 && (
+                        <Button size="small" type="link" onClick={() => setSelectedTables([])}>
+                          清空
+                        </Button>
+                      )}
+                    </Space>
+                  </div>
+
+                  {/* 搜索框 */}
+                  <Input
+                    placeholder="搜索表名..."
+                    prefix={<SearchOutlined />}
+                    value={tableSearchText}
+                    onChange={(e) => setTableSearchText(e.target.value)}
+                    style={{ marginBottom: 8 }}
+                    allowClear
+                  />
+
+                  {/* 表选择器 */}
+                  <div
+                    style={{
+                      maxHeight: 200,
+                      overflowY: 'auto',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 6,
+                      padding: 8,
+                    }}
+                  >
+                    {tablesLoading ? (
+                      <div style={{ textAlign: 'center', padding: 16 }}>
+                        <Spin size="small" />
+                      </div>
+                    ) : filteredTables.length === 0 ? (
+                      <Empty description={tableSearchText ? '未找到匹配的表' : '该数据库暂无表'} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    ) : (
+                      <Space direction="vertical" style={{ width: '100%' }} size="small">
+                        {filteredTables.map((table) => (
+                          <Checkbox
+                            key={table.name}
+                            checked={selectedTables.includes(table.name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTables([...selectedTables, table.name]);
+                              } else {
+                                setSelectedTables(selectedTables.filter((t) => t !== table.name));
+                              }
+                            }}
+                          >
+                            <Space size={4}>
+                              <Text strong>{table.name}</Text>
+                              {table.description && (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  - {table.description}
+                                </Text>
+                              )}
+                              {table.row_count !== undefined && (
+                                <Tag color="default" style={{ fontSize: 11, margin: 0 }}>
+                                  {table.row_count.toLocaleString()} 行
+                                </Tag>
+                              )}
+                            </Space>
+                          </Checkbox>
+                        ))}
+                      </Space>
+                    )}
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+                    留空则自动使用所有表生成 SQL
+                  </Text>
+                </div>
+              )}
 
               {/* 示例查询 */}
               <div>

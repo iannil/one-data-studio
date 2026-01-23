@@ -11,6 +11,9 @@ import {
   Divider,
   List,
   Avatar,
+  Dropdown,
+  Modal,
+  Popconfirm,
 } from 'antd';
 import {
   SendOutlined,
@@ -18,10 +21,14 @@ import {
   DeleteOutlined,
   RobotOutlined,
   UserOutlined,
+  EditOutlined,
+  MoreOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import cube from '@/services/cube';
-import bisheng from '@/services/bisheng';
+import bisheng, { type Conversation, type ConversationMessage } from '@/services/bisheng';
 import type { ChatMessage } from '@/services/cube';
 
 const { TextArea } = Input;
@@ -31,7 +38,17 @@ interface Message extends ChatMessage {
   id: string;
 }
 
+interface SessionItem extends Conversation {
+  message_count?: number;
+}
+
 function ChatPage() {
+  // 会话状态
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
+  // 聊天状态
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [model, setModel] = useState<string>('qwen-14b-chat');
@@ -39,6 +56,11 @@ function ChatPage() {
   const [maxTokens, setMaxTokens] = useState<number>(2048);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+
+  // 重命名相关状态
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -55,15 +77,174 @@ function ChatPage() {
     queryFn: bisheng.getPromptTemplates,
   });
 
+  // 加载会话列表
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
+  // 加载会话列表
+  const loadSessions = async () => {
+    try {
+      setIsLoadingSessions(true);
+      const response = await bisheng.getConversations();
+      if (response.code === 0 && response.data?.conversations) {
+        const sessionList = response.data.conversations.map((conv) => ({
+          ...conv,
+          message_count: conv.message_count || 0,
+        }));
+        setSessions(sessionList);
+
+        // 如果没有选中的会话且有会话列表，自动选择第一个
+        if (!currentConversationId && sessionList.length > 0) {
+          await selectSession(sessionList[0].conversation_id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  // 选择会话
+  const selectSession = async (conversationId: string) => {
+    try {
+      setCurrentConversationId(conversationId);
+      const response = await bisheng.getConversation(conversationId);
+      if (response.code === 0 && response.data) {
+        const sessionData = response.data;
+        // 转换消息格式
+        const messageList: Message[] = (sessionData.messages || []).map((msg: ConversationMessage) => ({
+          id: msg.message_id || `msg-${Date.now()}`,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          created_at: msg.created_at,
+        }));
+        setMessages(messageList);
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      message.error('加载会话失败');
+    }
+  };
+
+  // 新建会话
+  const handleNewConversation = () => {
+    setCurrentConversationId(null);
+    setMessages([]);
+    setStreamingContent('');
+  };
+
+  // 创建新会话（第一次发送消息时）
+  const createNewConversation = async (firstMessage: string) => {
+    try {
+      const title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? '...' : '');
+      const response = await bisheng.createConversation(title);
+      if (response.code === 0 && response.data?.conversation_id) {
+        const newId = response.data.conversation_id;
+        setCurrentConversationId(newId);
+        await loadSessions(); // 刷新会话列表
+        return newId;
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+    }
+    return null;
+  };
+
+  // 删除会话
+  const handleDeleteSession = async (conversationId: string) => {
+    try {
+      await bisheng.deleteConversation(conversationId);
+      message.success('会话已删除');
+
+      // 如果删除的是当前会话，清空消息
+      if (currentConversationId === conversationId) {
+        handleNewConversation();
+      }
+
+      await loadSessions();
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      message.error('删除会话失败');
+    }
+  };
+
+  // 打开重命名对话框
+  const openRenameModal = (conversationId: string, currentTitle: string) => {
+    setRenamingSessionId(conversationId);
+    setNewSessionTitle(currentTitle);
+    setRenameModalVisible(true);
+  };
+
+  // 确认重命名
+  const handleRenameSession = async () => {
+    if (!renamingSessionId || !newSessionTitle.trim()) {
+      message.warning('请输入会话标题');
+      return;
+    }
+
+    try {
+      await bisheng.renameConversation(renamingSessionId, newSessionTitle.trim());
+      message.success('重命名成功');
+      setRenameModalVisible(false);
+      await loadSessions();
+    } catch (error) {
+      console.error('Failed to rename conversation:', error);
+      message.error('重命名失败');
+    }
+  };
+
+  // 会话操作菜单
+  const getSessionMenuItems = (session: SessionItem): MenuProps['items'] => [
+    {
+      key: 'rename',
+      label: '重命名',
+      icon: <EditOutlined />,
+      onClick: () => openRenameModal(session.conversation_id, session.title),
+    },
+    {
+      key: 'delete',
+      label: '删除',
+      icon: <DeleteOutlined />,
+      danger: true,
+      onClick: () => handleDeleteSession(session.conversation_id),
+    },
+  ];
+
+  // 格式化时间
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return '今天';
+    } else if (days === 1) {
+      return '昨天';
+    } else if (days < 7) {
+      return `${days}天前`;
+    } else {
+      return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim()) {
       message.warning('请输入消息内容');
       return;
+    }
+
+    // 如果没有当前会话，创建新会话
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = await createNewConversation(input);
     }
 
     const userMessage: Message = {
@@ -74,6 +255,7 @@ function ChatPage() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
     setStreamingContent('');
@@ -96,7 +278,7 @@ function ChatPage() {
           messages: [
             { role: 'system', content: '你是一个智能助手，请用中文回答问题。' },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
-            { role: 'user', content: input },
+            { role: 'user', content: currentInput },
           ],
           temperature,
           max_tokens: maxTokens,
@@ -137,39 +319,86 @@ function ChatPage() {
     }
   };
 
-  const handleNewConversation = () => {
-    setMessages([]);
-    setStreamingContent('');
-  };
-
-  const handleDeleteMessage = (messageId: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
-  };
-
   return (
-    <div style={{ padding: '24px', height: 'calc(100vh - 64px)', display: 'flex' }}>
-      {/* 左侧会话列表 */}
-      <Card
-        title="会话列表"
-        style={{ width: 280, marginRight: 16, display: 'flex', flexDirection: 'column' }}
-        bodyStyle={{ flex: 1, overflow: 'auto' }}
-        extra={
-          <Button type="text" icon={<PlusOutlined />} onClick={handleNewConversation} />
-        }
-      >
-        <List
-          dataSource={[]} // TODO: 从 API 获取历史会话
-          renderItem={() => (
-            <List.Item>
-              <List.Item.Meta
-                avatar={<Avatar icon={<RobotOutlined />} />}
-                title="新对话"
-                description="暂无消息"
-              />
-            </List.Item>
+    <>
+      <div style={{ padding: '24px', height: 'calc(100vh - 64px)', display: 'flex' }}>
+        {/* 左侧会话列表 */}
+        <Card
+          title="会话列表"
+          style={{ width: 280, marginRight: 16, display: 'flex', flexDirection: 'column' }}
+          bodyStyle={{ flex: 1, overflow: 'auto', padding: 0 }}
+          extra={
+            <Button
+              type="text"
+              icon={<PlusOutlined />}
+              onClick={handleNewConversation}
+              title="新建会话"
+            />
+          }
+        >
+          {isLoadingSessions ? (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+              加载中...
+            </div>
+          ) : sessions.length === 0 ? (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+              <HistoryOutlined style={{ fontSize: 24, marginBottom: 8 }} />
+              <p>暂无历史会话</p>
+            </div>
+          ) : (
+            <List
+              dataSource={sessions}
+              renderItem={(session) => (
+                <List.Item
+                  style={{
+                    cursor: 'pointer',
+                    padding: '12px 16px',
+                    backgroundColor:
+                      currentConversationId === session.conversation_id ? '#e6f4ff' : 'transparent',
+                    borderBottom: '1px solid #f0f0f0',
+                  }}
+                  onClick={() => selectSession(session.conversation_id)}
+                >
+                  <List.Item.Meta
+                    avatar={<Avatar icon={<RobotOutlined />} size="small" />}
+                    title={
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span
+                          style={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {session.title || '未命名会话'}
+                        </span>
+                      </div>
+                    }
+                    description={
+                      <span style={{ fontSize: 12 }}>
+                        {formatTime(session.updated_at)} · {session.message_count || 0} 条消息
+                      </span>
+                    }
+                  />
+                  <Dropdown
+                    menu={{ items: getSessionMenuItems(session) }}
+                    trigger={['click']}
+                    placement="bottomRight"
+                  >
+                    <Button
+                      type="text"
+                      icon={<MoreOutlined />}
+                      size="small"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </Dropdown>
+                </List.Item>
+              )}
+            />
           )}
-        />
-      </Card>
+        </Card>
 
       {/* 中间聊天区域 */}
       <Card
@@ -375,6 +604,26 @@ function ChatPage() {
         </Space>
       </Card>
     </div>
+
+      {/* 重命名会话对话框 */}
+      <Modal
+        title="重命名会话"
+        open={renameModalVisible}
+        onOk={handleRenameSession}
+        onCancel={() => setRenameModalVisible(false)}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Input
+          value={newSessionTitle}
+          onChange={(e) => setNewSessionTitle(e.target.value)}
+          placeholder="请输入会话标题"
+          maxLength={100}
+          onPressEnter={handleRenameSession}
+          autoFocus
+        />
+      </Modal>
+    </>
   );
 }
 

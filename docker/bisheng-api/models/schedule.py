@@ -36,12 +36,23 @@ class WorkflowSchedule(Base):
     # 事件触发参数
     event_trigger = Column(String(64), nullable=True)
 
-    # 状态
+    # 状态 (P4: 新增 paused 状态支持暂停)
     enabled = Column(Boolean, default=True, nullable=False)
+    paused = Column(Boolean, default=False, nullable=False)
 
     # 运行时间记录
     next_run_at = Column(TIMESTAMP, nullable=True)
     last_run_at = Column(TIMESTAMP, nullable=True)
+
+    # P4: 失败重试配置
+    max_retries = Column(Integer, default=0, nullable=False)
+    retry_count = Column(Integer, default=0, nullable=False)
+    retry_delay_seconds = Column(Integer, default=60, nullable=False)
+    retry_backoff_base = Column(Integer, default=2, nullable=False)
+    last_retry_at = Column(TIMESTAMP, nullable=True)
+
+    # P4: 超时控制（秒）
+    timeout_seconds = Column(Integer, default=3600, nullable=False)
 
     # 元数据
     description = Column(Text, nullable=True)
@@ -60,8 +71,15 @@ class WorkflowSchedule(Base):
             "interval_seconds": self.interval_seconds,
             "event_trigger": self.event_trigger,
             "enabled": self.enabled,
+            "paused": self.paused,
             "next_run_at": self.next_run_at.isoformat() if self.next_run_at else None,
             "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None,
+            "max_retries": self.max_retries,
+            "retry_count": self.retry_count,
+            "retry_delay_seconds": self.retry_delay_seconds,
+            "retry_backoff_base": self.retry_backoff_base,
+            "last_retry_at": self.last_retry_at.isoformat() if self.last_retry_at else None,
+            "timeout_seconds": self.timeout_seconds,
             "description": self.description,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,

@@ -46,7 +46,7 @@ class AgentStep:
     """Agent 执行步骤"""
 
     def __init__(self, step_type: str, content: str, tool_output: Any = None):
-        self.step_type = step_type  # thought, action, observation, final
+        self.step_type = step_type  # thought, action, observation, final, plan, error
         self.content = content
         self.tool_output = tool_output
         self.timestamp = datetime.now()
@@ -58,6 +58,25 @@ class AgentStep:
             "tool_output": self.tool_output,
             "timestamp": self.timestamp.isoformat()
         }
+
+
+class StreamingCallback:
+    """流式回调类，用于实时发送步骤"""
+
+    def __init__(self):
+        self.queue = []
+
+    def emit(self, step_type: str, content: str, tool_output: Any = None):
+        """发送一个步骤"""
+        step = AgentStep(step_type, content, tool_output)
+        self.queue.append(step.to_dict())
+        return step
+
+    def get_and_clear(self) -> List[Dict[str, Any]]:
+        """获取并清空队列"""
+        items = self.queue.copy()
+        self.queue.clear()
+        return items
 
 
 class ReActAgent:
@@ -262,6 +281,82 @@ class ReActAgent:
             "steps": [s.to_dict() for s in self.steps]
         }
 
+    async def run_stream(self, query: str):
+        """流式执行 ReAct 循环，实时 yield 步骤
+
+        Args:
+            query: 用户问题
+
+        Yields:
+            Agent 执行步骤字典
+        """
+        self.steps = []
+
+        tools_description = self._build_tools_description()
+        tool_names = ", ".join(self._get_tool_names())
+
+        # 发送开始事件
+        yield {"type": "start", "message": "开始执行 Agent", "agent_type": "react"}
+
+        for iteration in range(self.max_iterations):
+            # 构建提示
+            history = self._format_history()
+            prompt = REACT_PROMPT_TEMPLATE.format(
+                tool_names=tool_names,
+                tools_description=tools_description,
+                query=query,
+                history=history
+            )
+
+            # 发送思考前状态
+            yield {"type": "iteration", "iteration": iteration + 1, "max_iterations": self.max_iterations}
+
+            # 调用 LLM
+            llm_output = await self._call_llm(prompt)
+
+            # 检查是否有最终答案
+            final_answer = self._check_final_answer(llm_output)
+            if final_answer:
+                self.steps.append(AgentStep("final", final_answer))
+                yield {"type": "step", "data": AgentStep("final", final_answer).to_dict()}
+                yield {"type": "end", "success": True, "answer": final_answer, "iterations": iteration + 1}
+                return
+
+            # 解析 Thought
+            thought_match = re.search(r'Thought:\s*(.*?)(?=\n\s*Action:|Final Answer:|$)', llm_output, re.DOTALL | re.IGNORECASE)
+            if thought_match:
+                thought = thought_match.group(1).strip()
+                self.steps.append(AgentStep("thought", thought))
+                yield {"type": "step", "data": AgentStep("thought", thought).to_dict()}
+
+            # 解析 Action
+            tool_name, parameters = self._parse_action(llm_output)
+
+            if tool_name:
+                action_str = f"{tool_name}({json.dumps(parameters, ensure_ascii=False)})"
+                self.steps.append(AgentStep("action", action_str))
+                yield {"type": "step", "data": AgentStep("action", action_str).to_dict()}
+
+                # 执行工具
+                yield {"type": "tool_start", "tool": tool_name}
+                tool_result = await self.tool_registry.execute(tool_name, **parameters)
+
+                # 格式化观察结果
+                if isinstance(tool_result, dict):
+                    if tool_result.get("success"):
+                        observation = json.dumps(tool_result, ensure_ascii=False)
+                    else:
+                        observation = f"Error: {tool_result.get('error', 'Unknown error')}"
+                else:
+                    observation = str(tool_result)
+
+                self.steps.append(AgentStep("observation", observation, tool_result))
+                yield {"type": "step", "data": AgentStep("observation", observation, tool_result).to_dict()}
+                yield {"type": "tool_end", "tool": tool_name}
+
+        # 达到最大迭代次数
+        yield {"type": "end", "success": False, "error": "Max iterations reached", "iterations": self.max_iterations}
+
 
 class FunctionCallingAgent:
     """基于 Function Calling 的 Agent
@@ -381,6 +476,108 @@ class FunctionCallingAgent:
             "iterations": self.max_iterations,
             "steps": [s.to_dict() for s in self.steps]
         }
+
+    async def run_stream(self, query: str):
+        """流式执行 Function Calling 循环，实时 yield 步骤
+
+        Args:
+            query: 用户问题
+
+        Yields:
+            Agent 执行步骤字典
+        """
+        self.steps = []
+
+        messages = [
+            {"role": "system", "content": "你是一个有帮助的 AI 助手，可以使用工具来帮助用户解决问题。"},
+            {"role": "user", "content": query}
+        ]
+
+        # 发送开始事件
+        yield {"type": "start", "message": "开始执行 Agent", "agent_type": "function_calling"}
+
+        for iteration in range(self.max_iterations):
+            # 发送迭代状态
+            yield {"type": "iteration", "iteration": iteration + 1, "max_iterations": self.max_iterations}
+
+            # 调用 LLM
+            try:
+                response = requests.post(
+                    f"{self.llm_api_url}/v1/chat/completions",
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "tools": self.tool_registry.get_function_schemas(),
+                        "tool_choice": "auto",
+                        "temperature": 0.1,
+                        "max_tokens": 1000
+                    },
+                    timeout=30
+                )
+
+                if response.status_code != 200:
+                    yield {"type": "error", "message": f"LLM API error: {response.status_code}"}
+                    yield {"type": "end", "success": False, "error": f"LLM API error: {response.status_code}"}
+                    return
+
+                result = response.json()
+                message = result.get("choices", [{}])[0].get("message", {})
+
+                # 记录助手回复
+                assistant_message = {
+                    "role": "assistant",
+                    "content": message.get("content"),
+                    "tool_calls": message.get("tool_calls")
+                }
+                messages.append(assistant_message)
+
+                tool_calls = message.get("tool_calls")
+
+                # 如果没有工具调用，说明已经有最终答案
+                if not tool_calls:
+                    final_answer = message.get("content", "")
+                    self.steps.append(AgentStep("final", final_answer))
+                    yield {"type": "step", "data": AgentStep("final", final_answer).to_dict()}
+                    yield {"type": "end", "success": True, "answer": final_answer, "iterations": iteration + 1}
+                    return
+
+                # 执行工具调用
+                for tool_call in tool_calls:
+                    function_name = tool_call.get("function", {}).get("name")
+                    function_args = json.loads(tool_call.get("function", {}).get("arguments", "{}"))
+
+                    action_str = f"{function_name}({json.dumps(function_args, ensure_ascii=False)})"
+                    self.steps.append(AgentStep("action", action_str))
+                    yield {"type": "step", "data": AgentStep("action", action_str).to_dict()}
+
+                    # 执行工具
+                    yield {"type": "tool_start", "tool": function_name}
+                    tool_result = await self.tool_registry.execute(function_name, **function_args)
+
+                    # 格式化结果
+                    if isinstance(tool_result, dict):
+                        observation = json.dumps(tool_result, ensure_ascii=False)
+                    else:
+                        observation = str(tool_result)
+
+                    self.steps.append(AgentStep("observation", observation, tool_result))
+                    yield {"type": "step", "data": AgentStep("observation", observation, tool_result).to_dict()}
+                    yield {"type": "tool_end", "tool": function_name}
+
+                    # 添加工具响应消息
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.get("id"),
+                        "content": observation
+                    })
+
+            except Exception as e:
+                yield {"type": "error", "message": str(e)}
+                yield {"type": "end", "success": False, "error": str(e)}
+                return
+
+        # 达到最大迭代次数
+        yield {"type": "end", "success": False, "error": "Max iterations reached", "iterations": self.max_iterations}
 
 
 class PlanExecuteAgent:
@@ -503,6 +700,47 @@ class PlanExecuteAgent:
             "plan": self.plan,
             "steps": [s.to_dict() for s in self.steps]
         }
+
+    async def run_stream(self, query: str):
+        """流式执行计划-执行流程，实时 yield 步骤
+
+        Args:
+            query: 用户问题
+
+        Yields:
+            Agent 执行步骤字典
+        """
+        self.steps = []
+
+        # 发送开始事件
+        yield {"type": "start", "message": "开始执行 Agent", "agent_type": "plan_execute"}
+
+        # 制定计划
+        yield {"type": "status", "message": "正在制定执行计划..."}
+        self.plan = await self._make_plan(query)
+        self.steps.append(AgentStep("plan", json.dumps(self.plan, ensure_ascii=False)))
+        yield {"type": "step", "data": AgentStep("plan", json.dumps(self.plan, ensure_ascii=False)).to_dict()}
+
+        if self.verbose:
+            print(f"\n=== Plan ===")
+            for i, step in enumerate(self.plan, 1):
+                print(f"{i}. {step}")
+
+        # 使用 Function Calling Agent 执行
+        agent = FunctionCallingAgent(
+            llm_api_url=self.llm_api_url,
+            model=self.model,
+            max_iterations=10,
+            tool_registry=self.tool_registry,
+            verbose=self.verbose
+        )
+
+        # 流式执行子代理
+        async for event in agent.run_stream(query):
+            yield event
+
+        # 合并步骤
+        self.steps.extend(agent.steps)
 
 
 # Agent 工厂

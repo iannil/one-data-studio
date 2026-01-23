@@ -139,7 +139,9 @@ function WorkflowEditorPage() {
         })),
       };
 
-      if (workflowId === 'new') {
+      const isCreateMode = workflowId === 'new';
+
+      if (isCreateMode) {
         // 创建新工作流
         const response = await bishengService.createWorkflow({
           name: workflowName || '未命名工作流',
@@ -154,8 +156,16 @@ function WorkflowEditorPage() {
         }
       } else {
         // 更新现有工作流
-        // 这里需要调用更新接口（如果后端支持）
-        message.info('更新功能待实现');
+        const response = await bishengService.updateWorkflow(workflowId, {
+          name: workflowName || '未命名工作流',
+          description: workflowDescription,
+          type: 'custom',
+          definition: JSON.stringify(definition),
+        });
+        if (response.code === 0) {
+          message.success('工作流更新成功');
+          setHasChanges(false);
+        }
       }
     } catch (error) {
       message.error('保存失败');

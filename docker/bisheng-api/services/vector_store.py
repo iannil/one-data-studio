@@ -66,9 +66,10 @@ class VectorStore:
             else:
                 return Collection(name)
 
-        # 定义字段
+        # 定义字段（添加 doc_id 字段用于按文档删除）
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=64),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=64),
             FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dimension),
             FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="metadata", dtype=DataType.VARCHAR, max_length=65535),
@@ -88,6 +89,9 @@ class VectorStore:
         }
         collection.create_index("embedding", index_params)
 
+        # 为 doc_id 字段创建索引以加速删除查询
+        collection.create_index("doc_id", index_params={"index_type": "INVERTED"})
+
         return collection
 
     def insert(self, collection_name: str, texts: List[str],
@@ -99,7 +103,7 @@ class VectorStore:
             collection_name: 集合名称
             texts: 文本列表
             embeddings: 向量列表
-            metadata: 元数据列表
+            metadata: 元数据列表（每个元数据应包含 doc_id 用于按文档删除）
 
         Returns:
             插入的文档数量
@@ -113,9 +117,11 @@ class VectorStore:
         # 准备数据
         ids = [f"{collection_name}-{i}" for i in range(len(texts))]
         metadata_json = [json.dumps(m or {}, ensure_ascii=False) for m in (metadata or [{}] * len(texts))]
+        # 从 metadata 中提取 doc_id（如果存在）
+        doc_ids = [m.get("doc_id", "") for m in (metadata or [{}] * len(texts))]
 
-        # 插入数据
-        data = [ids, embeddings, texts, metadata_json]
+        # 插入数据（新 schema: id, doc_id, embedding, text, metadata）
+        data = [ids, doc_ids, embeddings, texts, metadata_json]
         collection.insert(data)
 
         # 刷新以确保数据可搜索
@@ -187,6 +193,33 @@ class VectorStore:
             collection.delete(f"id in {ids}")
 
         return len(ids) if ids else 0
+
+    def delete_by_doc_id(self, collection_name: str, doc_id: str) -> bool:
+        """
+        按文档ID删除对应的向量数据
+
+        Args:
+            collection_name: 集合名称
+            doc_id: 文档ID (metadata中存储的doc_id)
+
+        Returns:
+            bool: 删除是否成功
+        """
+        try:
+            if not utility.has_collection(collection_name):
+                print(f"Collection {collection_name} does not exist")
+                return False
+
+            collection = Collection(collection_name)
+            # 使用 metadata 过滤删除所有属于该文档的向量
+            # Milvus 的表达式语法：doc_id == "xxx"
+            collection.delete(expr=f'doc_id == "{doc_id}"')
+            # 刷新以确保删除生效
+            collection.flush()
+            return True
+        except Exception as e:
+            print(f"删除向量失败: collection={collection_name}, doc_id={doc_id}, error={e}")
+            return False
 
     def drop_collection(self, collection_name: str):
         """删除集合"""

@@ -1,7 +1,7 @@
 """
 节点执行器
 支持节点类型：input, retriever, llm, output, agent, tool_call, condition, loop
-Phase 6: Sprint 6.1
+Phase 6: Sprint 6.1 - 扩展节点 (http, filter, database)
 Phase 7: Sprint 7.1-7.2 - Agent 编排与控制流
 """
 
@@ -13,6 +13,14 @@ from typing import Dict, Any, List
 
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+
+# 导入向量检索服务
+try:
+    from ..services.vector_store import VectorStore
+    from ..services.embedding import EmbeddingService
+    VECTOR_AVAILABLE = True
+except ImportError:
+    VECTOR_AVAILABLE = False
 
 # 导入 Agent 相关模块
 try:
@@ -27,6 +35,13 @@ try:
     CONTROL_FLOW_AVAILABLE = True
 except ImportError:
     CONTROL_FLOW_AVAILABLE = False
+
+# 导入扩展节点 (Phase 6: Sprint 6.1)
+try:
+    from .extension_nodes import EXTENSION_NODES
+    EXTENSION_NODES_AVAILABLE = True
+except ImportError:
+    EXTENSION_NODES_AVAILABLE = False
 
 
 class BaseNode(ABC):
@@ -71,18 +86,101 @@ class InputNode(BaseNode):
 
 
 class RetrieverNode(BaseNode):
-    """检索节点 - 从向量数据库检索文档（占位实现）"""
+    """检索节点 - 从向量数据库检索文档
+
+    配置参数：
+    - collection: 向量集合名称 (默认: documents)
+    - top_k: 返回结果数量 (默认: 5)
+    - query_from: 查询文本来源 (默认: input)
+    - score_threshold: 相似度阈值 (可选，过滤低相关结果)
+    """
 
     def __init__(self, node_id: str, config: Dict[str, Any] = None):
         super().__init__(node_id, "retriever", config)
         self.collection_name = config.get("collection", "documents")
         self.top_k = config.get("top_k", 5)
         self.query_key = config.get("query_from", "input")
+        self.score_threshold = config.get("score_threshold", 0.0)
+
+        # 初始化向量检索服务
+        self.vector_store = None
+        self.embedding_service = None
+
+        if VECTOR_AVAILABLE:
+            try:
+                self.vector_store = VectorStore()
+                self.embedding_service = EmbeddingService()
+            except Exception as e:
+                print(f"Failed to initialize vector services: {e}")
 
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行检索"""
         # 获取查询文本
+        query = self._get_query(context)
+
+        # 如果向量服务不可用，返回模拟数据
+        if not self.vector_store or not self.embedding_service:
+            return {
+                self.node_id: {
+                    "query": query,
+                    "documents": self._mock_results(query),
+                    "fallback": True,
+                    "message": "Vector service not available"
+                }
+            }
+
+        # 生成查询向量
+        try:
+            query_embedding = await self.embedding_service.embed_text(query)
+        except Exception as e:
+            print(f"Embedding generation failed: {e}")
+            return {
+                self.node_id: {
+                    "query": query,
+                    "documents": self._mock_results(query),
+                    "fallback": True,
+                    "error": str(e)
+                }
+            }
+
+        # 向量检索
+        try:
+            results = self.vector_store.search(
+                collection_name=self.collection_name,
+                query_embedding=query_embedding,
+                top_k=self.top_k
+            )
+
+            # 应用相似度阈值过滤
+            if self.score_threshold > 0:
+                results = [
+                    r for r in results
+                    if r.get("score", 0) >= self.score_threshold
+                ]
+
+            return {
+                self.node_id: {
+                    "query": query,
+                    "documents": results,
+                    "count": len(results)
+                }
+            }
+
+        except Exception as e:
+            print(f"Vector search failed: {e}")
+            return {
+                self.node_id: {
+                    "query": query,
+                    "documents": self._mock_results(query),
+                    "fallback": True,
+                    "error": str(e)
+                }
+            }
+
+    def _get_query(self, context: Dict[str, Any]) -> str:
+        """获取查询文本"""
         query = ""
+
         if "." in self.query_key:
             # 支持从其他节点获取，如 "input.value"
             parts = self.query_key.split(".")
@@ -94,9 +192,11 @@ class RetrieverNode(BaseNode):
         if not query:
             query = context.get("_initial_input", {}).get("query", "")
 
-        # TODO: Sprint 6.2 - 集成真实的向量检索
-        # 当前使用模拟数据
-        mock_documents = [
+        return query
+
+    def _mock_results(self, query: str) -> List[Dict[str, Any]]:
+        """生成模拟检索结果（降级方案）"""
+        return [
             {
                 "text": f"关于 '{query}' 的检索结果 1：ONE-DATA-STUDIO 是一个企业级 AI 平台。",
                 "score": 0.95
@@ -105,14 +205,7 @@ class RetrieverNode(BaseNode):
                 "text": f"关于 '{query}' 的检索结果 2：平台包含数据治理、模型训练、应用编排三大模块。",
                 "score": 0.87
             }
-        ]
-
-        return {
-            self.node_id: {
-                "query": query,
-                "documents": mock_documents[:self.top_k]
-            }
-        }
+        ][:self.top_k]
 
 
 class LLMNode(BaseNode):
@@ -516,6 +609,10 @@ NODE_REGISTRY = {
 # 合并控制流节点
 if CONTROL_FLOW_AVAILABLE:
     NODE_REGISTRY.update(CONTROL_FLOW_NODES)
+
+# 合并扩展节点 (Phase 6: Sprint 6.1)
+if EXTENSION_NODES_AVAILABLE:
+    NODE_REGISTRY.update(EXTENSION_NODES)
 
 
 def get_node_executor(node: Dict[str, Any]) -> BaseNode:
