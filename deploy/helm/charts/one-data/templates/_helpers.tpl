@@ -190,3 +190,26 @@ DO NOT use this in production - always provide explicit passwords
 {{- randAlphaNum 16 }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create image pull secrets
+*/}}
+{{- define "one-data.imagePullSecrets" -}}
+{{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "one-data.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "one-data.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
