@@ -13,13 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
-COPY requirements.txt .
+COPY services/alldata-api/requirements.txt .
 
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 复制共享模块
+COPY services/shared/ /app/shared/
+
 # 复制应用代码
-COPY src/ /app/src/
+COPY services/alldata-api/src/ /app/src/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

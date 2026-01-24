@@ -5,14 +5,14 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 安装依赖
-COPY docker/bisheng-api/requirements.txt /app/
+COPY services/bisheng-api/requirements.txt /app/
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # 复制共享认证模块
-COPY docker/shared/ /app/shared/
+COPY services/shared/ /app/shared/
 
 # 复制应用代码
-COPY docker/bisheng-api/app.py /app/
+COPY services/bisheng-api/app.py /app/
 
 EXPOSE 8081
 

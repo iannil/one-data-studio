@@ -87,8 +87,8 @@
 - 工作流编辑器实际逻辑待完善
 
 #### 后端
-- 向量检索功能使用模拟数据 (`docker/bisheng-api/engine/nodes.py:97`)
-- 向量数据库删除功能待实现 (`docker/bisheng-api/app.py:966`)
+- 向量检索功能使用模拟数据 (`services/bisheng-api/engine/nodes.py:97`)
+- 向量数据库删除功能待实现 (`services/bisheng-api/app.py:966`)
 
 ---
 

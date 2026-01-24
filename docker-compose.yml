@@ -135,8 +135,8 @@ services:
   # Alldata 数据库初始化
   alldata-init:
     build:
-      context: ./docker/alldata-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/services/alldata-api/Dockerfile
     container_name: one-data-alldata-init
     environment:
       MINIO_ENDPOINT: minio:9000
@@ -161,8 +161,8 @@ services:
   # Bisheng 数据库初始化
   bisheng-init:
     build:
-      context: ./docker/bisheng-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/services/bisheng-api/Dockerfile
     container_name: one-data-bisheng-init
     environment:
       MYSQL_HOST: mysql
@@ -189,8 +189,8 @@ services:
   # Alldata API (模拟)
   alldata-api:
     build:
-      context: ./docker/alldata-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/services/alldata-api/Dockerfile
     container_name: one-data-alldata-api
     environment:
       MINIO_ENDPOINT: minio:9000
@@ -264,8 +264,8 @@ services:
   # Bisheng API (模拟)
   bisheng-api:
     build:
-      context: ./docker/bisheng-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/services/bisheng-api/Dockerfile
     container_name: one-data-bisheng-api
     environment:
       MYSQL_HOST: mysql

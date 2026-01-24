@@ -73,7 +73,7 @@
 
 ## 后端实现
 
-### Alldata API (docker/alldata-api/)
+### Alldata API (services/alldata-api/)
 
 | 模块 | 文件 | 状态 | 说明 |
 |------|------|------|------|
@@ -92,7 +92,7 @@
 | `/api/v1/metadata` | GET | ✅ 完成 | 元数据查询 |
 | `/api/v1/health` | GET | ✅ 完成 | 健康检查 |
 
-### OpenAI Proxy (docker/openai-proxy/)
+### OpenAI Proxy (services/openai-proxy/)
 
 | 模块 | 文件 | 状态 | 说明 |
 |------|------|------|------|
@@ -108,7 +108,7 @@
 | `/v1/chat/completions` | POST | ✅ 完成 | 聊天补全（支持流式） |
 | `/health` | GET | ✅ 完成 | 健康检查 |
 
-### Bisheng API (docker/bisheng-api/)
+### Bisheng API (services/bisheng-api/)
 
 | 模块 | 文件 | 状态 | 说明 |
 |------|------|------|------|
@@ -190,14 +190,14 @@
 | ID | 功能 | 模块 | 位置 | 说明 |
 |----|------|------|------|------|
 | T001 | 聊天历史记录 | 前端 | `web/src/pages/chat/ChatPage.tsx:161` | 从 API 获取历史会话列表 |
-| T002 | 向量检索功能 | 后端 | `docker/bisheng-api/engine/nodes.py:97` | 集成真实的向量检索 |
+| T002 | 向量检索功能 | 后端 | `services/bisheng-api/engine/nodes.py:97` | 集成真实的向量检索 |
 | T003 | 工作流编辑器 | 前端 | `web/src/pages/workflows/` | 实现可视化编辑器逻辑 |
 
 ### 中优先级 (P1)
 
 | ID | 功能 | 模块 | 位置 | 说明 |
 |----|------|------|------|------|
-| T004 | 向量数据库删除 | 后端 | `docker/bisheng-api/app.py:966` | 实现按 ID 删除向量 |
+| T004 | 向量数据库删除 | 后端 | `services/bisheng-api/app.py:966` | 实现按 ID 删除向量 |
 | T005 | 端到端测试 | 测试 | `scripts/` | 完善测试覆盖 |
 | T006 | Demo 数据准备 | 数据 | - | 准备演示数据 |
 
@@ -229,12 +229,12 @@
 1. **向量检索**
    - 问题：使用模拟数据，未连接真实向量数据库
    - 影响：RAG 功能无法正常工作
-   - 位置：`docker/bisheng-api/engine/nodes.py:97`
+   - 位置：`services/bisheng-api/engine/nodes.py:97`
 
 2. **向量删除**
    - 问题：仅删除数据库记录，未删除向量索引
    - 影响：向量数据库中存在孤立数据
-   - 位置：`docker/bisheng-api/app.py:966`
+   - 位置：`services/bisheng-api/app.py:966`
 
 ### 部署
 

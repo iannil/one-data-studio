@@ -73,8 +73,8 @@
 |------|------|--------|--------|
 | 聊天历史记录 API | `web/src/pages/chat/ChatPage.tsx:161` | P1 | Sprint 4 |
 | 工作流编辑器逻辑 | `web/src/pages/workflows/` | P1 | Sprint 4 |
-| 向量数据库删除 | `docker/bisheng-api/app.py:966` | P2 | Sprint 6 |
-| 向量检索功能 | `docker/bisheng-api/engine/nodes.py:97` | P1 | Sprint 4 |
+| 向量数据库删除 | `services/bisheng-api/app.py:966` | P2 | Sprint 6 |
+| 向量检索功能 | `services/bisheng-api/engine/nodes.py:97` | P1 | Sprint 4 |
 
 ---
 

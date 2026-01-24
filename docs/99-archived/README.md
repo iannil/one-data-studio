@@ -25,7 +25,7 @@
 
 **归档原因**: Alldata API 真实服务已实现完成，Mock 服务不再需要。
 
-**替代方案**: 使用 `docker/alldata-api/` 中的真实 API 服务。
+**替代方案**: 使用 `services/alldata-api/` 中的真实 API 服务。
 
 ---
 
@@ -35,7 +35,7 @@
 
 **归档原因**: Bisheng API 真实服务已实现完成，Mock 服务不再需要。
 
-**替代方案**: 使用 `docker/bisheng-api/` 中的真实 API 服务。
+**替代方案**: 使用 `services/bisheng-api/` 中的真实 API 服务。
 
 ---
 

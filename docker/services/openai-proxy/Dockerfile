@@ -6,13 +6,13 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 复制依赖文件
-COPY requirements.txt .
+COPY services/openai-proxy/requirements.txt .
 
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码
-COPY src/ /app/src/
+COPY services/openai-proxy/main.py /app/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -26,4 +26,4 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
 EXPOSE 8000
 
 # 启动命令
-CMD ["python", "-u", "src/main.py"]
+CMD ["python", "-u", "main.py"]

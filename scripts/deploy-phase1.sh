@@ -38,10 +38,10 @@ build_images() {
     log_info "开始构建 Docker 镜像..."
 
     log_info "构建 Alldata API 镜像..."
-    docker build -t alldata-api:latest docker/alldata-api/
+    docker build -t alldata-api:latest -f docker/services/alldata-api/Dockerfile .
 
     log_info "构建 OpenAI Proxy 镜像..."
-    docker build -t openai-proxy:latest docker/openai-proxy/
+    docker build -t openai-proxy:latest -f docker/services/openai-proxy/Dockerfile .
 
     # 加载镜像到 Kind 集群
     log_info "加载镜像到 Kind 集群..."
@@ -61,7 +61,7 @@ init_database() {
 
     # 执行初始化 SQL
     log_info "执行数据库初始化脚本..."
-    kubectl exec -n one-data-infra mysql-0 -- mysql -uone_data -pOneDataPassword123! < docker/alldata-api/migrations/init_schema.sql || true
+    kubectl exec -n one-data-infra mysql-0 -- mysql -uone_data -pOneDataPassword123! < services/alldata-api/migrations/init_schema.sql || true
 
     log_info "数据库初始化完成"
 }
