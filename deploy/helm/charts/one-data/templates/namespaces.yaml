@@ -1,0 +1,46 @@
+# ONE-DATA-STUDIO Namespace Definitions
+# Creates namespaces for all platform components
+
+{{- if .Values.alldata.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.alldata.namespace | default "one-data-alldata" }}
+  labels:
+    {{- include "one-data.labels" . | nindent 4 }}
+    component: alldata
+{{- end }}
+
+{{- if .Values.bisheng.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.bisheng.namespace | default "one-data-bisheng" }}
+  labels:
+    {{- include "one-data.labels" . | nindent 4 }}
+    component: bisheng
+{{- end }}
+
+{{- if .Values.cube.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.cube.namespace | default "one-data-cube" }}
+  labels:
+    {{- include "one-data.labels" . | nindent 4 }}
+    component: cube
+{{- end }}
+
+{{- if .Values.monitoring.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.monitoring.namespace | default "one-data-system" }}
+  labels:
+    {{- include "one-data.labels" . | nindent 4 }}
+    component: monitoring
+{{- end }}

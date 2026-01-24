@@ -11,6 +11,7 @@
  */
 
 import { apiClient } from './api';
+import { logError } from './logger';
 
 // ============= 类型定义 =============
 
@@ -179,7 +180,7 @@ export function parseJwtToken(token: string): UserInfo | null {
       roles: [...new Set(roles)], // 去重
     };
   } catch (e) {
-    console.error('Failed to parse JWT token:', e);
+    logError('Failed to parse JWT token', 'Auth', e);
     return null;
   }
 }
@@ -310,7 +311,7 @@ export async function handleCallback(code: string, state: string): Promise<boole
   // 验证状态
   const storedState = sessionStorage.getItem('oauth_state');
   if (state !== storedState) {
-    console.error('Invalid state parameter');
+    logError('Invalid state parameter', 'Auth');
     return false;
   }
 
@@ -350,7 +351,7 @@ export async function handleCallback(code: string, state: string): Promise<boole
 
     return true;
   } catch (e) {
-    console.error('Callback handling failed:', e);
+    logError('Callback handling failed', 'Auth', e);
     return false;
   }
 }
@@ -375,7 +376,7 @@ export async function refreshAccessToken(): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.error('Token refresh failed:', response.status);
+      logError(`Token refresh failed: ${response.status}`, 'Auth');
       return false;
     }
 
@@ -400,7 +401,7 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     return false;
   } catch (e) {
-    console.error('Token refresh failed:', e);
+    logError('Token refresh failed', 'Auth', e);
     clearAuthData();
     return false;
   }

@@ -13,6 +13,7 @@
 
 import { QueryClient, MutationCache, QueryCache, Query } from '@tanstack/react-query';
 import { message } from 'antd';
+import { logError } from './logger';
 
 /**
  * 查询缓存键定义
@@ -141,7 +142,7 @@ function createQueryCache() {
       const sanitizedKey = Array.isArray(query.queryKey)
         ? query.queryKey.slice(0, 2).join('/')
         : 'unknown';
-      console.error(`Query error for [${sanitizedKey}]:`, error instanceof Error ? error.message : 'Unknown error');
+      logError(`Query error for [${sanitizedKey}]`, 'QueryCache', error instanceof Error ? error.message : 'Unknown error');
 
       // 只对非静默查询显示错误消息
       if (query.meta?.errorMessage !== false) {
@@ -197,7 +198,7 @@ function createMutationCache() {
     onError: (error, _variables, _context, mutation) => {
       // Global mutation error handling - avoid logging sensitive variables
       const mutationKey = mutation.options.mutationKey?.[0] || 'unknown';
-      console.error(`Mutation error for [${mutationKey}]:`, error instanceof Error ? error.message : 'Unknown error');
+      logError(`Mutation error for [${mutationKey}]`, 'MutationCache', error instanceof Error ? error.message : 'Unknown error');
 
       if (mutation.meta?.errorMessage !== false) {
         const errorMessage = (error as Error)?.message || '操作失败';

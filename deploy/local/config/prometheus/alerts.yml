@@ -1,0 +1,224 @@
+# ONE-DATA-STUDIO Prometheus Alert Rules
+# Production alerting for service health and performance
+
+groups:
+  - name: service_health
+    rules:
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute."
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is above 5% on {{ $labels.job }} ({{ $value | humanizePercentage }})."
+
+      # High latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on {{ $labels.job }}"
+          description: "95th percentile latency is above 2 seconds on {{ $labels.job }}."
+
+  - name: infrastructure
+    rules:
+      # MySQL connection issues
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL is down"
+          description: "MySQL database has been unreachable for more than 1 minute."
+
+      - alert: MySQLHighConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL connection usage is high"
+          description: "MySQL connection usage is above 80% ({{ $value | humanizePercentage }})."
+
+      # Redis connection issues
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for more than 1 minute."
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is above 90% ({{ $value | humanizePercentage }})."
+
+      # MinIO storage issues
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO object storage has been unreachable for more than 1 minute."
+
+      - alert: MinIOHighDiskUsage
+        expr: minio_disk_storage_used_bytes / minio_disk_storage_total_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MinIO disk usage is high"
+          description: "MinIO disk usage is above 85% ({{ $value | humanizePercentage }})."
+
+  - name: application
+    rules:
+      # API-specific alerts
+      - alert: AlldataAPIDown
+        expr: up{job="alldata-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alldata API is down"
+          description: "Alldata API has been unreachable for more than 1 minute."
+
+      - alert: BishengAPIDown
+        expr: up{job="bisheng-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Bisheng API is down"
+          description: "Bisheng API has been unreachable for more than 1 minute."
+
+      - alert: CubeAPIDown
+        expr: up{job="cube-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cube API is down"
+          description: "Cube API has been unreachable for more than 1 minute."
+
+      - alert: OpenAIProxyDown
+        expr: up{job="openai-proxy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenAI Proxy is down"
+          description: "OpenAI Proxy has been unreachable for more than 1 minute."
+
+  - name: resources
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 85% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)."
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)."
+
+      # Disk space running low
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk usage is above 85% on {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)."
+
+  - name: slo
+    rules:
+      # SLO: API Availability (99.9%)
+      - alert: SLOAvailabilityBudgetBurn
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[1h])) /
+            sum(rate(http_requests_total[1h]))
+          ) > 0.001
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SLO availability budget is burning too fast"
+          description: "Error rate is {{ $value | humanizePercentage }}, above 0.1% SLO threshold."
+
+      # SLO: API Latency P99 < 1s
+      - alert: SLOLatencyBudgetBurn
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SLO latency budget is burning on {{ $labels.job }}"
+          description: "99th percentile latency is {{ $value | humanizeDuration }}, above 1s SLO threshold."
+
+  - name: security
+    rules:
+      # High rate of authentication failures
+      - alert: HighAuthenticationFailures
+        expr: rate(http_requests_total{status="401"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of authentication failures on {{ $labels.job }}"
+          description: "{{ $value | printf \"%.1f\" }} auth failures per second. Possible brute force attack."
+
+      # High rate of authorization failures
+      - alert: HighAuthorizationFailures
+        expr: rate(http_requests_total{status="403"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of authorization failures on {{ $labels.job }}"
+          description: "{{ $value | printf \"%.1f\" }} authorization failures per second."
+
+      # Unusual high request rate (possible DDoS)
+      - alert: UnusualHighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual high request rate on {{ $labels.job }}"
+          description: "Request rate is {{ $value | printf \"%.0f\" }} req/s. Possible DDoS or misconfigured client."

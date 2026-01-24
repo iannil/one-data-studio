@@ -1,314 +1,18 @@
-# Bisheng API - 持久化版本
+# Bisheng API - Production Deployment
 # Sprint 1.2: 集成 OpenAI 代理服务
-
----
-# Bisheng API ConfigMap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: bisheng-api-config
-  namespace: one-data-bisheng
-data:
-  app.py: |
-    import os
-    import requests
-    from flask import Flask, jsonify, request
-
-    app = Flask(__name__)
-
-    # 配置
-    ALDATA_API_URL = os.getenv(
-        "ALDATA_API_URL",
-        "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
-    )
-    # 更新：使用 OpenAI 代理服务
-    CUBE_API_URL = os.getenv(
-        "CUBE_API_URL",
-        "http://openai-proxy.one-data-cube.svc.cluster.local:8000"
-    )
-
-    @app.route("/api/v1/health")
-    def health():
-        """健康检查"""
-        return jsonify({
-            "code": 0,
-            "message": "healthy",
-            "service": "bisheng-api",
-            "version": "1.1.0",
-            "connections": {
-                "alldata_api": ALDATA_API_URL,
-                "cube_api": CUBE_API_URL
-            }
-        })
-
-    @app.route("/api/v1/chat", methods=["POST"])
-    def chat():
-        """聊天接口 - 调用 OpenAI 代理服务"""
-        data = request.json
-        message = data.get("message", "")
-        if not message:
-            return jsonify({"code": 40001, "message": "Message is required"}), 400
-
-        # 支持自定义 Prompt 模板
-        prompt_template = data.get("prompt_template", "chat")
-
-        try:
-            # 调用 OpenAI 代理服务（OpenAI 兼容 API）
-            response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
-                json={
-                    "model": data.get("model", "gpt-4o-mini"),
-                    "messages": [{"role": "user", "content": message}],
-                    "max_tokens": data.get("max_tokens", 500),
-                    "temperature": data.get("temperature", 0.7),
-                    "prompt_template": prompt_template
-                },
-                timeout=60
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                reply = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                return jsonify({
-                    "code": 0,
-                    "message": "success",
-                    "data": {
-                        "reply": reply,
-                        "model": result.get("model"),
-                        "usage": result.get("usage", {})
-                    }
-                })
-            else:
-                return jsonify({
-                    "code": 50001,
-                    "message": f"Model service error: {response.status_code}",
-                    "detail": response.text
-                }), 500
-
-        except requests.RequestException as e:
-            return jsonify({
-                "code": 50002,
-                "message": f"Failed to connect to model service: {str(e)}"
-            }), 503
-
-    @app.route("/api/v1/datasets", methods=["GET"])
-    def list_datasets():
-        """获取数据集列表 - 调用 Alldata API"""
-        try:
-            response = requests.get(
-                f"{ALDATA_API_URL}/api/v1/datasets",
-                timeout=10
-            )
-            return jsonify(response.json()), response.status_code
-        except requests.RequestException as e:
-            return jsonify({
-                "code": 50003,
-                "message": f"Failed to connect to Alldata API: {str(e)}"
-            }), 503
-
-    @app.route("/api/v1/datasets/<dataset_id>", methods=["GET"])
-    def get_dataset(dataset_id: str):
-        """获取数据集详情 - 调用 Alldata API"""
-        try:
-            response = requests.get(
-                f"{ALDATA_API_URL}/api/v1/datasets/{dataset_id}",
-                timeout=10
-            )
-            return jsonify(response.json()), response.status_code
-        except requests.RequestException as e:
-            return jsonify({
-                "code": 50003,
-                "message": f"Failed to connect to Alldata API: {str(e)}"
-            }), 503
-
-    @app.route("/api/v1/rag/query", methods=["POST"])
-    def rag_query():
-        """RAG 查询接口"""
-        data = request.json
-        question = data.get("question", "")
-
-        # RAG 流程
-        # 1. 从向量数据库检索相关文档（当前 Mock）
-        # 2. 构建带上下文的 Prompt
-        # 3. 调用模型生成回答
-
-        # 模拟检索到的上下文
-        context = """
-        ONE-DATA-STUDIO 是一个融合了 Alldata（数据治理）、Cube Studio（模型训练）、Bisheng（应用编排）的企业级 AI 平台。
-
-        四层架构：
-        - L1: 基础设施层（Kubernetes）
-        - L2: 数据底座层（Alldata）
-        - L3: 算法引擎层（Cube Studio）
-        - L4: 应用编排层（Bisheng）
-        """
-
-        try:
-            # 使用 rag 模板调用 OpenAI 代理
-            response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
-                json={
-                    "model": data.get("model", "gpt-4o-mini"),
-                    "prompt_template": "rag",
-                    "context": {"context": context, "question": question},
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": f"你是一个基于 RAG 的智能助手。请根据以下上下文回答用户问题：\n{context}"
-                        },
-                        {"role": "user", "content": question}
-                    ],
-                    "max_tokens": 800,
-                    "temperature": 0.5
-                },
-                timeout=60
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                reply = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                return jsonify({
-                    "code": 0,
-                    "message": "success",
-                    "data": {
-                        "answer": reply,
-                        "sources": ["docs/one-data-studio.md"],
-                        "usage": result.get("usage", {})
-                    }
-                })
-            else:
-                return jsonify({
-                    "code": 50001,
-                    "message": f"Model service error: {response.status_code}",
-                    "detail": response.text
-                }), 500
-
-        except requests.RequestException as e:
-            return jsonify({
-                "code": 50002,
-                "message": f"Failed to connect to model service: {str(e)}"
-            }), 503
-
-    @app.route("/api/v1/text2sql", methods=["POST"])
-    def text2sql():
-        """Text-to-SQL 查询接口"""
-        data = request.json
-        question = data.get("question", "")
-        database = data.get("database", "sales_dw")
-
-        # 获取数据库元数据
-        try:
-            metadata_response = requests.get(
-                f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables",
-                timeout=10
-            )
-
-            if metadata_response.status_code != 200:
-                return jsonify({
-                    "code": 50004,
-                    "message": f"Failed to get metadata for database: {database}"
-                }), 500
-
-            metadata = metadata_response.json()
-            tables = metadata.get("data", {}).get("tables", [])
-
-            # 构建表结构描述
-            schema = ""
-            for table in tables[:5]:  # 限制表数量
-                schema += f"表名: {table['name']}, 描述: {table.get('description', '')}\n"
-
-                # 获取列信息
-                cols_response = requests.get(
-                    f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables/{table['name']}",
-                    timeout=10
-                )
-                if cols_response.status_code == 200:
-                    cols_data = cols_response.json()
-                    columns = cols_data.get("data", {}).get("columns", [])
-                    for col in columns[:10]:  # 限制列数量
-                        schema += f"  - {col['name']}: {col['type']}\n"
-
-            # 调用 OpenAI 生成 SQL
-            response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
-                json={
-                    "model": data.get("model", "gpt-4o-mini"),
-                    "prompt_template": "sql",
-                    "context": {"database": database, "schema": schema, "question": question},
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": f"你是一个 SQL 专家。请根据以下数据库元数据生成 SQL 查询：\n数据库：{database}\n{schema}\n请只返回 SQL 语句，不要包含任何解释。"
-                        },
-                        {"role": "user", "content": question}
-                    ],
-                    "max_tokens": 500,
-                    "temperature": 0.3
-                },
-                timeout=60
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                sql = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                # 清理 SQL（移除 markdown 代码块标记）
-                sql = sql.strip().replace("```sql", "").replace("```", "")
-
-                return jsonify({
-                    "code": 0,
-                    "message": "success",
-                    "data": {
-                        "sql": sql.strip(),
-                        "database": database,
-                        "explanation": "基于元数据生成的 SQL 查询"
-                    }
-                })
-            else:
-                return jsonify({
-                    "code": 50001,
-                    "message": f"Model service error: {response.status_code}"
-                }), 500
-
-        except requests.RequestException as e:
-            return jsonify({
-                "code": 50002,
-                "message": f"Request error: {str(e)}"
-            }), 503
-
-    @app.route("/api/v1/workflows", methods=["GET"])
-    def list_workflows():
-        """获取工作流列表"""
-        workflows = [
-            {
-                "id": "wf-001",
-                "name": "知识问答助手",
-                "description": "基于 RAG 的文档问答",
-                "status": "running",
-                "type": "rag"
-            },
-            {
-                "id": "wf-002",
-                "name": "数据分析助手",
-                "description": "Text-to-SQL 数据查询",
-                "status": "running",
-                "type": "text2sql"
-            },
-            {
-                "id": "wf-003",
-                "name": "智能客服",
-                "description": "基于 OpenAI 的对话服务",
-                "status": "running",
-                "type": "chat"
-            }
-        ]
-        return jsonify({
-            "code": 0,
-            "message": "success",
-            "data": {"workflows": workflows}
-        })
-
-    if __name__ == "__main__":
-        app.run(host="0.0.0.0", port=8080, debug=True)
+#
+# ============================================
+# PRODUCTION DEPLOYMENT CONFIGURATION
+# ============================================
+# This deployment uses pre-built Docker images.
+# Application code is built into the image via CI/CD pipeline.
+#
+# Build the Docker image:
+#   docker build -t bisheng-api:v1.0.0 -f deploy/dockerfiles/bisheng-api/Dockerfile .
+#
+# For local development, use docker-compose instead:
+#   docker-compose -f deploy/local/docker-compose.yml up bisheng-api
+# ============================================
 
 ---
 # Bisheng API Deployment
@@ -389,13 +93,8 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-        volumeMounts:
-        - name: config
-          mountPath: /app
-      volumes:
-      - name: config
-        configMap:
-          name: bisheng-api-config
+        # Note: Pre-built image contains application code
+        # No ConfigMap volume mount needed for production
 
 ---
 # Bisheng API Service
@@ -415,13 +114,25 @@ spec:
 
 ---
 # Bisheng Ingress
+# SECURITY: TLS is required for production deployments
+# Configure cert-manager for automatic certificate management
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: bisheng-ingress
   namespace: one-data-bisheng
+  annotations:
+    # SECURITY: Force HTTPS redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Enable cert-manager for automatic TLS certificates
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - bisheng.example.com
+    secretName: bisheng-tls-secret
   rules:
   - host: bisheng.example.com
     http:

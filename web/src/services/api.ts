@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { message } from 'antd';
+import { getCsrfToken } from './auth';
 
 // API 响应基础类型
 export interface ApiResponse<T = any> {
@@ -24,6 +25,9 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // SECURITY: Include credentials (HttpOnly cookies) with all requests
+  // This is required for the HttpOnly cookie-based authentication to work
+  withCredentials: true,
 });
 
 // 请求拦截器
@@ -33,11 +37,19 @@ apiClient.interceptors.request.use(
     config.headers = config.headers || {};
     config.headers['X-Request-ID'] = generateRequestId();
 
-    // 从 localStorage 获取 token（如果有的话）
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    // SECURITY: Add CSRF token for state-changing requests
+    // Token is stored in a non-HttpOnly cookie that JavaScript can read
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() || '')) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
     }
+
+    // NOTE: Authentication is now handled via HttpOnly cookies set by the server.
+    // We no longer read tokens from localStorage (which was vulnerable to XSS).
+    // The browser automatically includes HttpOnly cookies in requests when
+    // withCredentials is true.
 
     return config;
   },
@@ -72,8 +84,10 @@ function handleApiError(error: AxiosError<ApiError>): void {
     switch (status) {
       case 401:
         message.error('未授权，请重新登录');
-        // 清除 token 并跳转到登录页
-        localStorage.removeItem('access_token');
+        // Clear session storage data (token expiry tracking)
+        // Note: HttpOnly cookies are cleared by the server via logout endpoint
+        sessionStorage.removeItem('token_expires_at');
+        sessionStorage.removeItem('user_info');
         break;
       case 403:
         message.error('无权限访问该资源');

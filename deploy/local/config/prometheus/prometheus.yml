@@ -7,9 +7,18 @@ global:
   external_labels:
     monitor: 'one-data-studio'
 
-# 告警规则（可选）
+# Alertmanager 配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+      # 可选：设置告警发送超时
+      timeout: 10s
+
+# 告警规则
 rule_files:
-  # - "alerts.yml"
+  - "alerts.yml"
 
 # 抓取配置
 scrape_configs:
@@ -21,7 +30,7 @@ scrape_configs:
   # Alldata API 监控
   - job_name: 'alldata-api'
     static_configs:
-      - targets: ['alldata-api:5000']
+      - targets: ['alldata-api:8001']
     metrics_path: '/metrics'
     relabel_configs:
       - source_labels: [__address__]
@@ -31,7 +40,7 @@ scrape_configs:
   # Bisheng API 监控
   - job_name: 'bisheng-api'
     static_configs:
-      - targets: ['bisheng-api:5001']
+      - targets: ['bisheng-api:8000']
     metrics_path: '/metrics'
     relabel_configs:
       - source_labels: [__address__]
@@ -41,7 +50,7 @@ scrape_configs:
   # Cube API 监控
   - job_name: 'cube-api'
     static_configs:
-      - targets: ['cube-api:5003']
+      - targets: ['cube-api:8002']
     metrics_path: '/metrics'
     relabel_configs:
       - source_labels: [__address__]

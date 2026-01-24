@@ -31,6 +31,30 @@ KEYCLOAK_URL = os.getenv(
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "one-data-studio")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "web-frontend")
 
+# Environment configuration
+ENVIRONMENT = os.getenv("ENVIRONMENT", "").lower()
+IS_PRODUCTION = ENVIRONMENT in ("production", "prod")
+
+# SECURITY: In production, optional=True only applies to explicitly whitelisted endpoints
+# Configure via environment variable (comma-separated paths)
+# Example: PUBLIC_API_ENDPOINTS=/api/v1/health,/api/v1/public/*
+PUBLIC_API_ENDPOINTS = set(
+    endpoint.strip()
+    for endpoint in os.getenv("PUBLIC_API_ENDPOINTS", "").split(",")
+    if endpoint.strip()
+)
+
+# SECURITY: Strict authentication mode for production
+# When enabled, optional=True is ignored unless endpoint is explicitly public
+STRICT_AUTH_MODE = os.getenv("STRICT_AUTH_MODE", "true" if IS_PRODUCTION else "false").lower() == "true"
+
+# JWT audience validation - comma-separated list of allowed audiences
+# SECURITY: Always configure this for production to prevent token misuse
+JWT_ALLOWED_AUDIENCES = os.getenv(
+    "JWT_ALLOWED_AUDIENCES",
+    "account,web-frontend"  # Default audiences for Keycloak
+).split(",")
+
 # Token 缓存
 _public_key_cache = None
 _public_key_cache_time = 0
@@ -105,14 +129,15 @@ def decode_jwt_token(token: str) -> Optional[Dict]:
             return None
 
         # 验证并解码 Token
+        # SECURITY: Audience verification enabled to prevent cross-client token abuse
         payload = jwt.decode(
             token,
             public_key,
             algorithms=["RS256"],
-            audience=["account"],
+            audience=JWT_ALLOWED_AUDIENCES,
             issuer=f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}",
             options={
-                "verify_aud": False,  # Keycloak 可能有多个 audience
+                "verify_aud": True,  # SECURITY: Always verify audience in production
                 "verify_exp": True,
             }
         )
@@ -194,12 +219,35 @@ def get_user_roles(payload: Dict) -> List[str]:
     return roles
 
 
+def _is_public_endpoint(path: str) -> bool:
+    """
+    Check if the endpoint is explicitly marked as public.
+
+    Args:
+        path: Request path
+
+    Returns:
+        True if endpoint is public
+    """
+    import fnmatch
+
+    for pattern in PUBLIC_API_ENDPOINTS:
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
+
+
 def require_jwt(optional: bool = False):
     """
     JWT 认证装饰器
 
     Args:
         optional: 是否可选（True 时未认证也能通过，但 g.user 为 None）
+
+    SECURITY NOTE:
+        In production (STRICT_AUTH_MODE=true), optional=True is only honored
+        if the endpoint is explicitly listed in PUBLIC_API_ENDPOINTS.
+        This prevents accidental exposure of data through misconfigured endpoints.
 
     Usage:
         @app.route("/api/v1/datasets")
@@ -212,11 +260,24 @@ def require_jwt(optional: bool = False):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
+            # Determine if authentication is truly optional
+            # In strict mode, optional is only honored for explicit public endpoints
+            is_optional = optional
+            if STRICT_AUTH_MODE and optional:
+                path = request.path
+                if not _is_public_endpoint(path):
+                    # Log warning about optional auth being ignored
+                    logger.warning(
+                        f"STRICT_AUTH_MODE: optional=True ignored for endpoint {path}. "
+                        f"Add to PUBLIC_API_ENDPOINTS if this should be public."
+                    )
+                    is_optional = False
+
             # 提取 Token
             token = extract_token_from_request(request)
 
             if not token:
-                if optional:
+                if is_optional:
                     g.user = None
                     g.roles = []
                     g.user_id = None
@@ -231,7 +292,7 @@ def require_jwt(optional: bool = False):
             payload = decode_jwt_token(token)
 
             if not payload:
-                if optional:
+                if is_optional:
                     g.user = None
                     g.roles = []
                     g.user_id = None

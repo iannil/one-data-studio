@@ -136,6 +136,19 @@ REQUIRED: grafana.adminPassword when monitoring.grafana.enabled
 {{- end }}
 
 {{/*
+Validate JWT secret key
+REQUIRED: services.jwtSecretKey for all service authentication
+*/}}
+{{- define "one-data.validateJwtSecret" -}}
+{{- if not .Values.services.jwtSecretKey }}
+{{- fail "ERROR: services.jwtSecretKey is required. Set via --set or values override. Generate with: openssl rand -base64 32" }}
+{{- end }}
+{{- if and (lt (len .Values.services.jwtSecretKey) 32) (include "one-data.isProduction" .) }}
+{{- fail "ERROR: JWT secret key must be at least 32 characters in production. Generate with: openssl rand -base64 32" }}
+{{- end }}
+{{- end }}
+
+{{/*
 Validate TLS configuration in production
 Warns if TLS is not enabled for ingress in production environment
 */}}
@@ -162,6 +175,7 @@ This should be called from the main templates to ensure all validations run
 {{- include "one-data.validateMysqlCredentials" . }}
 {{- include "one-data.validateRedisCredentials" . }}
 {{- include "one-data.validateGrafanaCredentials" . }}
+{{- include "one-data.validateJwtSecret" . }}
 {{- include "one-data.validateTLS" . }}
 {{- end }}
 

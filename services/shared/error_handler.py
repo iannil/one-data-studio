@@ -29,9 +29,9 @@ class ErrorCode:
     UNAUTHORIZED = 20001
     TOKEN_EXPIRED = 20002
     TOKEN_INVALID = 20003
-    INSUFFICIENT_PERMISSIONS = 20003
-    USER_NOT_FOUND = 20004
-    ACCOUNT_DISABLED = 20005
+    INSUFFICIENT_PERMISSIONS = 20004  # Fixed: was duplicate of TOKEN_INVALID
+    USER_NOT_FOUND = 20005
+    ACCOUNT_DISABLED = 20006
 
     # 资源错误 (3xxxx)
     RESOURCE_NOT_FOUND = 30001
@@ -232,17 +232,25 @@ def error_response(
     return response, http_status
 
 
-def handle_exception(e: Exception, include_traceback: bool = False) -> Tuple[Dict[str, Any], int]:
+def handle_exception(e: Exception, include_traceback: bool = None) -> Tuple[Dict[str, Any], int]:
     """
     统一异常处理
 
     Args:
         e: 异常对象
-        include_traceback: 是否包含堆栈跟踪（仅开发环境）
+        include_traceback: 是否包含堆栈跟踪。如果为 None，自动根据环境判断
+                          （生产环境自动禁用，其他环境自动启用）
 
     Returns:
         Flask 响应元组
     """
+    import os
+
+    # SECURITY: Auto-detect traceback inclusion based on environment
+    if include_traceback is None:
+        env = os.getenv("ENVIRONMENT", "").lower()
+        include_traceback = env not in ("production", "prod")
+
     # APIError 子类
     if isinstance(e, APIError):
         logger.warning(f"API Error: {e.code} - {e.message}")
@@ -354,14 +362,20 @@ def validate_field(data: Dict[str, Any], field: str, condition, error_message: s
 
 # Flask 错误处理器注册器
 
-def register_error_handlers(app, include_traceback: bool = False):
+def register_error_handlers(app, include_traceback: bool = None):
     """
     注册 Flask 错误处理器
 
     Args:
         app: Flask 应用实例
-        include_traceback: 是否在生产环境包含堆栈跟踪
+        include_traceback: 是否包含堆栈跟踪。如果为 None，自动根据环境判断
     """
+    import os
+
+    # SECURITY: Auto-detect traceback inclusion based on environment
+    if include_traceback is None:
+        env = os.getenv("ENVIRONMENT", "").lower()
+        include_traceback = env not in ("production", "prod")
 
     @app.errorhandler(APIError)
     def handle_api_error(e):

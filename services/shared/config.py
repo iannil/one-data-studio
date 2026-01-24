@@ -330,6 +330,25 @@ class JWTConfig:
         if not self.secret_key:
             raise ValueError("JWT_SECRET_KEY environment variable is required. Please set a secure secret key.")
 
+        # Validate key strength in production
+        env = os.getenv("ENVIRONMENT", "").lower()
+        if env in ("production", "prod"):
+            if len(self.secret_key) < 32:
+                raise ValueError(
+                    "JWT_SECRET_KEY is too short for production. "
+                    "Please use a secret key of at least 32 characters."
+                )
+            # SECURITY: Reject keys with common weak patterns in production
+            weak_patterns = ["secret", "password", "123", "test", "dev", "example", "changeme", "default"]
+            key_lower = self.secret_key.lower()
+            for pattern in weak_patterns:
+                if pattern in key_lower:
+                    raise ValueError(
+                        f"JWT_SECRET_KEY contains weak pattern '{pattern}'. "
+                        "Please use a cryptographically secure random key in production. "
+                        "Generate with: openssl rand -base64 32"
+                    )
+
         # 生成密钥 ID
         self._key_id = self._generate_key_id(self.secret_key)
 

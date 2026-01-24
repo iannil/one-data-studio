@@ -10,6 +10,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { message } from 'antd';
+import { logError } from '../services/logger';
 import {
   isAuthenticated,
   getAccessToken,
@@ -166,7 +167,7 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
             await refresh();
           }
         } catch (e) {
-          console.error('Token check failed:', e);
+          logError('Token check failed', 'AuthContext', e);
         }
       }
     }, refreshInterval / 2); // 更频繁地检查

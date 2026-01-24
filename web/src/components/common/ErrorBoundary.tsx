@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { Button, Result, Typography } from 'antd';
+import { logError } from '@/services/logger';
 
 const { Paragraph, Text } = Typography;
 
@@ -55,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
 
     // 记录错误到控制台 (生产环境应该发送到错误追踪服务)
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    logError('ErrorBoundary caught an error', 'ErrorBoundary', error);
   }
 
   handleReset = (): void => {

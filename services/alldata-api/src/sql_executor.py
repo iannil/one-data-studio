@@ -25,6 +25,13 @@ logger = logging.getLogger(__name__)
 # 只允许字母、数字和下划线，必须以字母开头
 DATABASE_NAME_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9_]{0,63}$')
 
+# Database whitelist for additional security
+# Set via DATABASE_WHITELIST environment variable (comma-separated)
+# If empty/not set, only pattern validation is used
+DATABASE_WHITELIST = set(
+    db.strip() for db in os.getenv('DATABASE_WHITELIST', '').split(',') if db.strip()
+)
+
 
 class QueryStatus(Enum):
     """查询状态"""
@@ -181,6 +188,15 @@ class SQLSanitizer:
                 "letters, numbers, and underscores (max 64 chars)"
             )
 
+        # Additional whitelist check if configured
+        # SECURITY: In production, it's recommended to set DATABASE_WHITELIST
+        if DATABASE_WHITELIST and database not in DATABASE_WHITELIST:
+            logger.warning(f"Database '{database}' not in whitelist")
+            return False, (
+                f"Database '{database}' is not in the allowed whitelist. "
+                "Contact administrator if access is required."
+            )
+
         return True, None
 
 
@@ -307,6 +323,8 @@ class SQLExecutor:
 
                 # 选择数据库 - 使用反引号转义已验证的数据库名
                 # 注意：数据库名已通过 validate_database_name 验证，只包含安全字符
+                # Defense-in-depth: Assert that database name matches safe pattern
+                assert DATABASE_NAME_PATTERN.match(database), f"Database name failed safety assertion: {database}"
                 conn.execute(text(f"USE `{database}`"))
 
                 # 执行查询 - 使用 text() 包装已清洗的 SQL

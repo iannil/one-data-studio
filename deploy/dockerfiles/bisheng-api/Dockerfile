@@ -1,12 +1,37 @@
 # Bisheng API Dockerfile
 # Sprint 1.3 + Sprint 3.1: 添加 JWT 认证
-FROM python:3.10.14-slim
+# 多阶段构建 - 减少镜像体积和攻击面
+
+# ============ 构建阶段 ============
+# SECURITY: Using pinned Python version. For production, consider using image digest:
+# FROM python:3.10.14-slim@sha256:<digest> AS builder
+FROM python:3.10.14-slim AS builder
+
+WORKDIR /build
+
+# 复制依赖文件
+COPY services/bisheng-api/requirements.txt .
+
+# 创建虚拟环境并安装依赖
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ============ 运行阶段 ============
+FROM python:3.10.14-slim AS runtime
+
+# Image labels for traceability
+LABEL org.opencontainers.image.title="Bisheng API"
+LABEL org.opencontainers.image.description="ONE-DATA-STUDIO LLMOps Application Orchestration API"
+LABEL org.opencontainers.image.version="1.1.0"
+LABEL org.opencontainers.image.vendor="ONE-DATA-STUDIO"
+LABEL org.opencontainers.image.source="https://github.com/one-data-studio/one-data-studio"
 
 WORKDIR /app
 
-# 安装依赖
-COPY services/bisheng-api/requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# 从构建阶段复制虚拟环境
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # 复制共享认证模块
 COPY services/shared/ /app/shared/

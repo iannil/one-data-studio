@@ -1100,5 +1100,14 @@ if __name__ == "__main__":
     except Exception as e:
         logger.warning(f"数据库初始化跳过: {e}")
 
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+
+    # SECURITY WARNING: Debug mode exposes sensitive information
+    if debug:
+        logger.warning(
+            "⚠️  WARNING: Debug mode is ENABLED. This should NEVER be used in production! "
+            "Debug mode exposes detailed error information and may enable remote code execution."
+        )
+
     logger.info(f"Starting Cube API on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=os.getenv("DEBUG", "false").lower() == "true")
+    app.run(host="0.0.0.0", port=port, debug=debug)

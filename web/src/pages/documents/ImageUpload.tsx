@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload';
 import ImageViewer from '../common/ImageViewer';
+import { logError } from '@/services/logger';
 
 const { Dragger } = Upload;
 const { Text, Title } = Typography;
@@ -151,7 +152,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         } catch (err) {
           file.status = 'error';
           file.error = err;
-          console.error(`Upload failed for ${file.name}:`, err);
+          logError(`Upload failed for ${file.name}`, 'ImageUpload', err);
         }
 
         setFileList([...fileList]);
@@ -168,7 +169,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setFileList((prev) => prev.filter((f) => f.status !== 'done'));
     } catch (error) {
       message.error('上传过程中发生错误');
-      console.error('Upload error:', error);
+      logError('Upload error', 'ImageUpload', error);
     } finally {
       setUploading(false);
     }
@@ -188,7 +189,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       message.success('图片已删除');
     } catch (error) {
       message.error('删除失败');
-      console.error('Delete error:', error);
+      logError('Delete error', 'ImageUpload', error);
     }
   };
 

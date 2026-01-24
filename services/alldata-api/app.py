@@ -76,7 +76,19 @@ try:
     )
     VALIDATION_ENABLED = True
 except ImportError:
+    # Check if we're in production - validation is required in production
+    if os.getenv('ENVIRONMENT', '').lower() in ('production', 'prod'):
+        raise ImportError(
+            "Validation module is required in production. "
+            "Ensure shared/validation.py is present and all dependencies are installed."
+        )
+
     VALIDATION_ENABLED = False
+    import logging
+    logging.getLogger(__name__).warning(
+        "Validation module not available. Running without input validation. "
+        "This is NOT safe for production use."
+    )
     # 装饰器空实现
     def validate_request(*args, **kwargs):
         def decorator(fn):
@@ -142,10 +154,38 @@ def check_auth_skip():
     return None
 
 
+# Import resilience utilities for production reliability
+try:
+    from shared.resilience import (
+        get_db_session_with_retry,
+        RetryConfig,
+        redis_with_circuit_breaker,
+        get_redis_circuit_breaker
+    )
+    RESILIENCE_ENABLED = True
+except ImportError:
+    RESILIENCE_ENABLED = False
+    import logging
+    logging.getLogger(__name__).warning(
+        "Resilience module not available. Running without retry/circuit breaker support."
+    )
+
+
 def get_db_session():
-    """获取数据库会话"""
+    """获取数据库会话（生产环境带重试）"""
     from models import SessionLocal
-    return SessionLocal()
+
+    if RESILIENCE_ENABLED:
+        # 使用带重试的会话获取
+        retry_config = RetryConfig(
+            max_retries=3,
+            base_delay=1.0,
+            max_delay=10.0
+        )
+        return get_db_session_with_retry(SessionLocal, retry_config)
+    else:
+        # 回退到简单的会话获取
+        return SessionLocal()
 
 
 @app.route("/api/v1/health")
@@ -452,6 +492,19 @@ def list_columns(database, table):
 # Sprint 7: Query Execution APIs
 # ============================================
 
+# Import SQL sanitizer for secure query execution
+try:
+    from src.sql_executor import SQLSanitizer
+    SQL_SANITIZER_AVAILABLE = True
+except ImportError:
+    SQL_SANITIZER_AVAILABLE = False
+    import logging
+    logging.getLogger(__name__).warning(
+        "SQLSanitizer not available. Using basic SQL validation. "
+        "For production, ensure src/sql_executor.py is available."
+    )
+
+
 @app.route("/api/v1/query/execute", methods=["POST"])
 @require_jwt()
 @check_sql_injection('sql')
@@ -459,6 +512,7 @@ def execute_query():
     """
     执行 SQL 查询
     Sprint 7: 前端期望的查询执行接口
+    使用 SQLSanitizer 进行完整安全检查
     """
     data = request.json
     if not data or not data.get("sql"):
@@ -469,14 +523,38 @@ def execute_query():
     limit = min(data.get("limit", 100), 1000)  # 最大1000行
     timeout = min(data.get("timeout", 30), 60)  # 最大60秒
 
-    # 安全检查：只允许 SELECT 语句
-    sql_upper = sql.upper().strip()
-    if not sql_upper.startswith("SELECT"):
-        return jsonify({
-            "code": 40003,
-            "message": "Only SELECT queries are allowed",
-            "error": "invalid_query_type"
-        }), 400
+    # 使用 SQLSanitizer 进行完整安全检查
+    if SQL_SANITIZER_AVAILABLE:
+        # 完整安全检查
+        is_safe, error_msg = SQLSanitizer.is_safe(sql)
+        if not is_safe:
+            return jsonify({
+                "code": 40003,
+                "message": f"SQL validation failed: {error_msg}",
+                "error": "invalid_query"
+            }), 400
+
+        # 清洗 SQL
+        sql = SQLSanitizer.sanitize(sql)
+    else:
+        # 回退到基本检查（仅用于开发环境）
+        sql_upper = sql.upper().strip()
+        if not sql_upper.startswith("SELECT"):
+            return jsonify({
+                "code": 40003,
+                "message": "Only SELECT queries are allowed",
+                "error": "invalid_query_type"
+            }), 400
+
+        # 基本危险关键字检查
+        dangerous_keywords = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'INSERT', 'UPDATE']
+        for keyword in dangerous_keywords:
+            if f' {keyword} ' in f' {sql_upper} ' or sql_upper.startswith(keyword):
+                return jsonify({
+                    "code": 40003,
+                    "message": f"Dangerous keyword detected: {keyword}",
+                    "error": "invalid_query"
+                }), 400
 
     db = get_db_session()
     try:
@@ -905,4 +983,35 @@ def internal_error(error):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
     debug = os.getenv("DEBUG", "false").lower() == "true"
+    environment = os.getenv("ENVIRONMENT", "").lower()
+    is_production = environment in ("production", "prod")
+
+    # SECURITY: Block debug mode in production
+    if debug and is_production:
+        import logging
+        logging.error(
+            "❌ FATAL: Debug mode is enabled in production environment. "
+            "This is a critical security risk. Set DEBUG=false or unset ENVIRONMENT=production."
+        )
+        import sys
+        sys.exit(1)
+
+    # SECURITY: Enforce AUTH_MODE in production
+    if is_production and not AUTH_MODE:
+        import logging
+        logging.error(
+            "❌ FATAL: AUTH_MODE is disabled in production environment. "
+            "Authentication must be enabled in production. Set AUTH_MODE=true."
+        )
+        import sys
+        sys.exit(1)
+
+    # SECURITY WARNING: Debug mode exposes sensitive information
+    if debug:
+        import logging
+        logging.warning(
+            "⚠️  WARNING: Debug mode is ENABLED. This should NEVER be used in production! "
+            "Debug mode exposes detailed error information and may enable remote code execution."
+        )
+
     app.run(host="0.0.0.0", port=port, debug=debug)

@@ -14,6 +14,7 @@
 #   helm install one-data ./deploy/helm/charts/one-data \
 #     -f values.yaml \
 #     -f values-production.yaml \
+#     --set services.jwtSecretKey=$(openssl rand -base64 32) \
 #     --set infrastructure.minio.credentials.rootUser=$MINIO_USER \
 #     --set infrastructure.minio.credentials.rootPassword=$MINIO_PASS \
 #     --set infrastructure.mysql.database.password=$MYSQL_PASS \
@@ -127,6 +128,16 @@ infrastructure:
       storageClass: fast-ssd
 
 # ============================================
+# 共享服务配置
+# ============================================
+
+services:
+  # JWT Secret Key - REQUIRED for all service authentication
+  # IMPORTANT: Generate a secure key with: openssl rand -base64 32
+  # DO NOT use default/weak values in production
+  jwtSecretKey: ""  # REQUIRED: set via JWT_SECRET_KEY environment variable
+
+# ============================================
 # Alldata 平台
 # ============================================
 
@@ -164,8 +175,10 @@ alldata:
     enabled: true
     className: nginx
     host: alldata.example.com
-    # SECURITY: Enable TLS for production deployments
-    tls: false  # Set to true and configure cert-manager for production
+    # SECURITY: TLS enabled by default for production security
+    # Requires cert-manager or manually configured TLS secrets
+    tls: true
+    tlsSecretName: alldata-tls
 
 # ============================================
 # Cube Studio 平台
@@ -213,7 +226,9 @@ cube:
       enabled: true
       className: nginx
       host: cube.example.com
-      tls: false
+      # SECURITY: TLS enabled by default for production security
+      tls: true
+      tlsSecretName: cube-tls
 
   # JupyterHub 配置（可选）
   jupyterhub:
@@ -262,24 +277,27 @@ bisheng:
     enabled: true
     className: nginx
     host: bisheng.example.com
-    # SECURITY: Enable TLS for production deployments
-    tls: false  # Set to true and configure cert-manager for production
+    # SECURITY: TLS enabled by default for production security
+    # Requires cert-manager or manually configured TLS secrets
+    tls: true
+    tlsSecretName: bisheng-tls
 
 # ============================================
 # 监控
 # ============================================
 
 monitoring:
-  enabled: false
+  # IMPORTANT: Monitoring enabled by default for production observability
+  enabled: true
   namespace: one-data-system
 
   prometheus:
-    enabled: false
+    enabled: true
     persistence:
       size: 20Gi
 
   grafana:
-    enabled: false
+    enabled: true
     persistence:
       size: 5Gi
     # REQUIRED: Must be set via --set or values override

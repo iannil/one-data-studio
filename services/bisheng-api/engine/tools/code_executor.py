@@ -139,6 +139,11 @@ class CodeExecutorTool(BaseTool):
     - 执行超时限制
     - 禁止危险操作
     - 内存使用限制
+
+    PRODUCTION NOTE:
+    This tool can be disabled in production by setting DISABLE_CODE_EXECUTOR=true.
+    It is recommended to disable this in production unless there is a specific
+    trusted use case, and additional isolation (Docker containers) is in place.
     """
 
     name = "code_executor"
@@ -181,6 +186,33 @@ class CodeExecutorTool(BaseTool):
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
         self.enable_restricted = config.get("enable_restricted", True) if config else True
+
+        # Check if code execution is disabled
+        # SECURITY: In production, code execution is disabled by default unless explicitly enabled
+        env = os.getenv("ENVIRONMENT", "").lower()
+        is_production = env in ("production", "prod")
+
+        # In production: default to disabled (must set ENABLE_CODE_EXECUTOR=true to enable)
+        # In other environments: default to enabled (can set DISABLE_CODE_EXECUTOR=true to disable)
+        if is_production:
+            self.disabled = os.getenv("ENABLE_CODE_EXECUTOR", "false").lower() != "true"
+            if self.disabled:
+                logger.info(
+                    "Code executor is disabled in production (default). "
+                    "Set ENABLE_CODE_EXECUTOR=true to enable (not recommended without container isolation)."
+                )
+            else:
+                logger.warning(
+                    "⚠️  WARNING: Code executor is ENABLED in production. "
+                    "Ensure Docker container isolation is in place for security."
+                )
+        else:
+            self.disabled = os.getenv("DISABLE_CODE_EXECUTOR", "false").lower() == "true"
+            if self.disabled:
+                logger.warning(
+                    "Code executor is disabled via DISABLE_CODE_EXECUTOR environment variable. "
+                    "All code execution requests will be rejected."
+                )
 
     def _create_safe_globals(self, user_variables: Dict[str, Any] = None) -> Dict[str, Any]:
         """创建安全的全局变量环境"""
@@ -250,6 +282,13 @@ class CodeExecutorTool(BaseTool):
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """执行代码"""
+        # Check if disabled in production
+        if self.disabled:
+            return {
+                "success": False,
+                "error": "Code execution is disabled in this environment for security reasons."
+            }
+
         code = kwargs.get("code")
         timeout = min(kwargs.get("timeout", self.DEFAULT_TIMEOUT), self.MAX_TIMEOUT)
         variables = kwargs.get("variables", {})

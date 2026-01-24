@@ -8,9 +8,27 @@ import logging
 import sys
 import time
 import requests
+from requests.exceptions import RequestException
 from typing import Dict, List, Optional
 
-# 配置日志
+# 配置测试专用日志格式（保留颜色输出）
+class ColoredFormatter(logging.Formatter):
+    """测试输出的彩色日志格式化器"""
+    def format(self, record):
+        # 测试输出不带时间戳和级别前缀
+        return record.getMessage()
+
+# 配置测试输出 handler
+test_handler = logging.StreamHandler(sys.stdout)
+test_handler.setFormatter(ColoredFormatter())
+
+# 配置测试日志
+test_logger = logging.getLogger("test_output")
+test_logger.setLevel(logging.INFO)
+test_logger.addHandler(test_handler)
+test_logger.propagate = False
+
+# 配置调试日志
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -35,34 +53,33 @@ class TestResult:
 
     def pass_test(self, name: str):
         self.passed += 1
-        print(f"{Colors.GREEN}✓{Colors.NC} {name}")
+        test_logger.info(f"{Colors.GREEN}✓{Colors.NC} {name}")
 
     def fail_test(self, name: str, reason: str = ""):
         self.failed += 1
-        print(f"{Colors.RED}✗{Colors.NC} {name}")
+        test_logger.info(f"{Colors.RED}✗{Colors.NC} {name}")
         if reason:
-            print(f"  {Colors.RED}原因: {reason}{Colors.NC}")
+            test_logger.info(f"  {Colors.RED}原因: {reason}{Colors.NC}")
         self.failures.append((name, reason))
 
     def skip_test(self, name: str, reason: str = ""):
         self.skipped += 1
-        print(f"{Colors.CYAN}○{Colors.NC} {name}")
+        test_logger.info(f"{Colors.CYAN}○{Colors.NC} {name}")
         if reason:
-            print(f"  {Colors.CYAN}跳过: {reason}{Colors.NC}")
+            test_logger.info(f"  {Colors.CYAN}跳过: {reason}{Colors.NC}")
 
     def summary(self):
         total = self.passed + self.failed
-        print(f"\n{'='*60}")
-        print(f"测试结果: {self.passed}/{total} 通过", end="")
+        test_logger.info(f"\n{'='*60}")
+        summary_msg = f"测试结果: {self.passed}/{total} 通过"
         if self.skipped > 0:
-            print(f", {self.skipped} 跳过")
-        else:
-            print()
+            summary_msg += f", {self.skipped} 跳过"
+        test_logger.info(summary_msg)
         if self.failures:
-            print(f"\n{Colors.RED}失败的测试:{Colors.NC}")
+            test_logger.info(f"\n{Colors.RED}失败的测试:{Colors.NC}")
             for name, reason in self.failures:
-                print(f"  - {name}: {reason}")
-        print(f"{'='*60}")
+                test_logger.info(f"  - {name}: {reason}")
+        test_logger.info(f"{'='*60}")
         return self.failed == 0
 
 
@@ -276,8 +293,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"Chat completion request failed: {e}")
         return None
 
     def get_prompt_templates(self) -> Optional[List]:
@@ -285,8 +302,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.cube_url}/api/v1/templates", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("templates", [])
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"Get prompt templates failed: {e}")
         return None
 
     # ============================================
@@ -303,8 +320,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"Bisheng chat failed: {e}")
         return None
 
     def bisheng_list_datasets(self) -> Optional[List]:
@@ -312,8 +329,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.bisheng_url}/api/v1/datasets", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"Bisheng list datasets failed: {e}")
         return None
 
     def rag_query(self, question: str) -> Optional[Dict]:
@@ -325,8 +342,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"RAG query failed: {e}")
         return None
 
     def text2sql(self, question: str, database: str = "sales_dw") -> Optional[Dict]:
@@ -338,8 +355,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"Text2SQL failed: {e}")
         return None
 
     def list_workflows(self) -> Optional[List]:
@@ -347,20 +364,20 @@ class OneDataTestClient:
             r = self.session.get(f"{self.bisheng_url}/api/v1/workflows", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("workflows", [])
-        except Exception:
-            pass
+        except RequestException as e:
+            logger.debug(f"List workflows failed: {e}")
         return None
 
 
 def run_tests(client: OneDataTestClient, result: TestResult):
     """运行所有测试"""
 
-    print(f"{Colors.BLUE}=== ONE-DATA-STUDIO Phase 1 集成测试 ==={Colors.NC}\n")
+    test_logger.info(f"{Colors.BLUE}=== ONE-DATA-STUDIO Phase 1 集成测试 ==={Colors.NC}\n")
 
     # ============================================
     # 1. 健康检查测试
     # ============================================
-    print(f"{Colors.YELLOW}[1/8] 健康检查{Colors.NC}")
+    test_logger.info(f"{Colors.YELLOW}[1/8] 健康检查{Colors.NC}")
 
     alldata_health = client.check_alldata_health()
     if alldata_health:
@@ -391,7 +408,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 2. Alldata 数据集 CRUD 测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[2/8] Alldata 数据集 CRUD{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[2/8] Alldata 数据集 CRUD{Colors.NC}")
 
     datasets = client.list_datasets()
     if datasets is not None:
@@ -449,7 +466,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 3. Alldata 元数据 API 测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[3/8] Alldata 元数据 API{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[3/8] Alldata 元数据 API{Colors.NC}")
 
     databases = client.list_databases()
     if databases:
@@ -476,7 +493,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 4. Alldata 版本管理测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[4/8] 数据集版本管理{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[4/8] 数据集版本管理{Colors.NC}")
 
     # 使用示例数据集 ds-001
     versions = client.list_dataset_versions("ds-001")
@@ -498,7 +515,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 5. MinIO 文件上传 API 测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[5/8] MinIO 文件上传 API{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[5/8] MinIO 文件上传 API{Colors.NC}")
 
     upload_info = client.get_upload_url("ds-001", "test.csv")
     if upload_info and upload_info.get("upload_url"):
@@ -509,7 +526,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 6. OpenAI Proxy 测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[6/8] OpenAI Proxy{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[6/8] OpenAI Proxy{Colors.NC}")
 
     models = client.list_models()
     if models:
@@ -536,7 +553,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 7. Bisheng 应用层测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[7/8] Bisheng 应用层{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[7/8] Bisheng 应用层{Colors.NC}")
 
     # 调用聊天接口
     bisheng_result = client.bisheng_chat("你好")
@@ -562,7 +579,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     # 8. 端到端集成测试
     # ============================================
-    print(f"\n{Colors.YELLOW}[8/8] 端到端集成{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[8/8] 端到端集成{Colors.NC}")
 
     # RAG 查询
     rag_result = client.rag_query("什么是 ONE-DATA-STUDIO?")
@@ -594,16 +611,16 @@ def main():
     )
 
     # 等待服务启动
-    print(f"{Colors.BLUE}等待服务启动...{Colors.NC}")
+    test_logger.info(f"{Colors.BLUE}等待服务启动...{Colors.NC}")
     for i in range(30):
         if client.check_alldata_health():
-            print(f"{Colors.GREEN}服务已就绪{Colors.NC}")
+            test_logger.info(f"{Colors.GREEN}服务已就绪{Colors.NC}")
             break
         if i % 5 == 0:
-            print(f"  等待中... ({i*2}s)")
+            test_logger.info(f"  等待中... ({i*2}s)")
         time.sleep(2)
     else:
-        print(f"{Colors.YELLOW}警告: 部分服务未响应，继续测试...{Colors.NC}")
+        test_logger.info(f"{Colors.YELLOW}警告: 部分服务未响应，继续测试...{Colors.NC}")
 
     # 运行测试
     result = TestResult()

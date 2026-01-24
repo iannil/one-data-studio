@@ -38,6 +38,7 @@ import {
   ClearOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { logError } from '@/services/logger';
 import type { MenuProps } from 'antd';
 
 import FlowCanvas, { Node, Edge, FlowCanvasRef } from '../../components/workflow/FlowCanvas';
@@ -215,7 +216,7 @@ function WorkflowEditorPage() {
             initHistory(loadedNodes, loadedEdges);
           } catch (parseError) {
             message.error('工作流定义格式错误，无法解析');
-            console.error('Failed to parse workflow definition:', parseError);
+            logError('Failed to parse workflow definition', 'WorkflowEditorPage', parseError);
           }
         }
       }

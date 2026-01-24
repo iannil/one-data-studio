@@ -28,6 +28,7 @@ import {
 import type { MenuProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import cube, { type ChatCompletionUsage } from '@/services/cube';
+import { logError } from '@/services/logger';
 import bisheng, { type Conversation, type ConversationMessage, saveMessage, getConversationUsage } from '@/services/bisheng';
 import type { ChatMessage } from '@/services/cube';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -117,7 +118,7 @@ function ChatPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load sessions:', error);
+      logError('Failed to load sessions', 'ChatPage', error);
     } finally {
       setIsLoadingSessions(false);
     }
@@ -143,7 +144,7 @@ function ChatPage() {
         loadTokenUsage(conversationId);
       }
     } catch (error) {
-      console.error('Failed to load conversation:', error);
+      logError('Failed to load conversation', 'ChatPage', error);
       message.error('加载会话失败');
     }
   };
@@ -160,7 +161,7 @@ function ChatPage() {
         });
       }
     } catch (error) {
-      console.error('Failed to load token usage:', error);
+      logError('Failed to load token usage', 'ChatPage', error);
     }
   };
 
@@ -184,7 +185,7 @@ function ChatPage() {
         return newId;
       }
     } catch (error) {
-      console.error('Failed to create conversation:', error);
+      logError('Failed to create conversation', 'ChatPage', error);
     }
     return null;
   };
@@ -202,7 +203,7 @@ function ChatPage() {
 
       await loadSessions();
     } catch (error) {
-      console.error('Failed to delete conversation:', error);
+      logError('Failed to delete conversation', 'ChatPage', error);
       message.error('删除会话失败');
     }
   };
@@ -227,7 +228,7 @@ function ChatPage() {
       setRenameModalVisible(false);
       await loadSessions();
     } catch (error) {
-      console.error('Failed to rename conversation:', error);
+      logError('Failed to rename conversation', 'ChatPage', error);
       message.error('重命名失败');
     }
   };
@@ -315,7 +316,7 @@ function ChatPage() {
         model,
       }).catch((err) => {
         // Log error but don't block the chat - message is already displayed locally
-        console.error('Failed to save user message:', err instanceof Error ? err.message : 'Unknown error');
+        logError('Failed to save user message', 'ChatPage', err instanceof Error ? err.message : 'Unknown error');
       });
     }
 
@@ -388,7 +389,7 @@ function ChatPage() {
               })
               .catch((err) => {
                 // Log error but don't disrupt the user experience
-                console.error('Failed to save assistant message:', err instanceof Error ? err.message : 'Unknown error');
+                logError('Failed to save assistant message', 'ChatPage', err instanceof Error ? err.message : 'Unknown error');
               });
           }
         },

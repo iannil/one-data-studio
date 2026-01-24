@@ -3134,4 +3134,13 @@ def not_found(error):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8081))
     debug = os.getenv("DEBUG", "false").lower() == "true"
+
+    # SECURITY WARNING: Debug mode exposes sensitive information
+    if debug:
+        import logging
+        logging.warning(
+            "⚠️  WARNING: Debug mode is ENABLED. This should NEVER be used in production! "
+            "Debug mode exposes detailed error information and may enable remote code execution."
+        )
+
     app.run(host="0.0.0.0", port=port, debug=debug)

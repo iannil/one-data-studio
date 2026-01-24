@@ -35,14 +35,17 @@ commonLabels:
   app.kubernetes.io/managed-by: kustomize
   app.kubernetes.io/version: "1.0.0"
 
+# Image tags - IMPORTANT: Use semantic versions or Git SHA for production
+# NEVER use 'latest' in production to ensure reproducible deployments
+# Update these tags for each release
 images:
   - name: one-data-studio/bisheng-api
-    newTag: latest
+    newTag: v1.0.0
   - name: one-data-studio/alldata-api
-    newTag: latest
+    newTag: v1.0.0
   - name: one-data-studio/openai-proxy
-    newTag: latest
+    newTag: v1.0.0
   - name: one-data-studio/cube-api
-    newTag: latest
+    newTag: v1.0.0
   - name: one-data-studio/web-frontend
-    newTag: latest
+    newTag: v1.0.0

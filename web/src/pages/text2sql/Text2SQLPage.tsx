@@ -36,6 +36,7 @@ import { useQuery } from '@tanstack/react-query';
 import alldata, { type TableInfo } from '@/services/alldata';
 import { text2Sql } from '@/services/bisheng';
 import type { Text2SqlResponse } from '@/services/bisheng';
+import { logError } from '@/services/logger';
 
 const { TextArea } = Input;
 const { Title, Text, Paragraph } = Typography;
@@ -158,7 +159,7 @@ function Text2SQLPage() {
       }
     } catch (error) {
       message.error('生成 SQL 失败，请重试');
-      console.error('Text2SQL error:', error);
+      logError('Text2SQL error', 'Text2SQLPage', error);
     } finally {
       setIsGenerating(false);
     }
@@ -189,7 +190,7 @@ function Text2SQLPage() {
       }
     } catch (error) {
       message.error('执行 SQL 失败，请检查 SQL 语法');
-      console.error('Execute SQL error:', error);
+      logError('Execute SQL error', 'Text2SQLPage', error);
     } finally {
       setIsExecuting(false);
     }
@@ -268,7 +269,17 @@ function Text2SQLPage() {
   };
 
   // SQL 语法高亮（简单实现）
+  // SECURITY: Input is escaped before highlighting, and DOMPurify sanitizes the output
   const highlightSQL = (sql: string) => {
+    // First, escape HTML entities to prevent XSS from the SQL content itself
+    const escapeHtml = (text: string) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    let highlighted = escapeHtml(sql);
+
     const keywords = [
       'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
       'ON', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'ORDER BY', 'GROUP BY',
@@ -277,19 +288,29 @@ function Text2SQLPage() {
       'AVG', 'MAX', 'MIN', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'UNION', 'ALL'
     ];
 
-    let highlighted = sql;
     keywords.forEach((keyword) => {
       const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
       highlighted = highlighted.replace(regex, `<span style="color: #1677ff; font-weight: bold;">${keyword}</span>`);
     });
 
-    // 高亮字符串
+    // 高亮字符串（already escaped, so safe)
     highlighted = highlighted.replace(/'([^']*)'/g, `<span style="color: #52c41a;">'$1'</span>`);
 
     // 高亮数字
     highlighted = highlighted.replace(/\b(\d+)\b/g, `<span style="color: #fa8c16;">$1</span>`);
 
     return highlighted;
+  };
+
+  // DOMPurify configuration for SQL display - allow only safe styling
+  const sanitizeConfig = {
+    ALLOWED_TAGS: ['span'],
+    ALLOWED_ATTR: ['style'],
+  };
+
+  // Safe render helper for highlighted SQL
+  const renderHighlightedSQL = (sql: string) => {
+    return DOMPurify.sanitize(highlightSQL(sql), sanitizeConfig);
   };
 
   return (
@@ -496,7 +517,7 @@ function Text2SQLPage() {
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
                         }}
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightSQL(sqlResult.sql)) }}
+                        dangerouslySetInnerHTML={{ __html: renderHighlightedSQL(sqlResult.sql) }}
                       />
                     </div>
 
