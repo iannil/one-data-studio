@@ -40,8 +40,10 @@ infrastructure:
         memory: 2Gi
         cpu: 1000m
     credentials:
-      rootUser: admin
-      rootPassword: admin123456  # 生产环境应使用 secret
+      # REQUIRED: Must be set via --set or values override
+      # DO NOT use default values in production
+      rootUser: ""  # Required: set via MINIO_ROOT_USER
+      rootPassword: ""  # Required: set via MINIO_ROOT_PASSWORD
 
   # MySQL 数据库
   mysql:
@@ -62,7 +64,8 @@ infrastructure:
     database:
       name: one_data
       user: one_data
-      password: OneDataPassword123!  # 生产环境应使用 secret
+      # REQUIRED: Must be set via --set or values override
+      password: ""  # Required: set via MYSQL_PASSWORD
 
   # Redis 缓存
   redis:
@@ -80,7 +83,8 @@ infrastructure:
       limits:
         memory: 1Gi
         cpu: 500m
-    password: RedisPassword123!  # 生产环境应使用 secret
+    # REQUIRED: Must be set via --set or values override
+    password: ""  # Required: set via REDIS_PASSWORD
 
   # Milvus 向量数据库（可选）
   milvus:
@@ -246,7 +250,8 @@ monitoring:
     enabled: false
     persistence:
       size: 5Gi
-    adminPassword: admin123  # 生产环境应使用 secret
+    # REQUIRED: Must be set via --set or values override
+    adminPassword: ""  # Required: set via GRAFANA_ADMIN_PASSWORD
 
 # ============================================
 # 安全

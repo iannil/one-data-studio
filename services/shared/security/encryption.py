@@ -308,7 +308,8 @@ class EncryptionService:
         try:
             version, _, _ = self._parse_encrypted_string(ciphertext)
             return version
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to detect encryption version: {e}")
             return None
 
     @property

@@ -193,7 +193,11 @@ def chat_completions():
 
     if not client:
         # Mock 响应（用于测试）
-        logger.warning("OpenAI client not available, returning mock response")
+        logger.warning(
+            "OpenAI client not available, returning mock response. "
+            "Set OPENAI_API_KEY environment variable for production use. "
+            "Mock responses are for development/testing only."
+        )
         user_message = ""
         for msg in messages:
             if msg.get("role") == "user":

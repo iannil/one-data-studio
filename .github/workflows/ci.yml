@@ -38,13 +38,13 @@ jobs:
           pip install flask requests
 
       - name: 运行 Black 检查
-        run: black --check services/ examples/ || true
+        run: black --check services/ examples/
 
       - name: 运行 Flake8 检查
-        run: flake8 services/ examples/ --max-line-length=100 --ignore=E501,W503 || true
+        run: flake8 services/ examples/ --max-line-length=100 --ignore=E501,W503
 
       - name: 运行 isort 检查
-        run: isort --check-only services/ examples/ || true
+        run: isort --check-only services/ examples/
 
   # ============================================
   # Python 单元测试
@@ -100,18 +100,19 @@ jobs:
           MYSQL_USER: test_user
           MYSQL_PASSWORD: testpassword
           MYSQL_DATABASE: one_data_test
+          DATABASE_URL: mysql+pymysql://test_user:testpassword@localhost:3306/one_data_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          JWT_SECRET_KEY: test-secret-key-for-ci
           PYTHONPATH: ${{ github.workspace }}/services
         run: |
           pytest tests/ \
             --cov=services \
             --cov-report=xml \
             --cov-report=html \
-            --cov-fail-under=60 \
+            --cov-fail-under=80 \
             -v \
-            --tb=short \
-            || true
+            --tb=short
 
       - name: 上传覆盖率报告
         uses: codecov/codecov-action@v3
@@ -150,15 +151,15 @@ jobs:
 
       - name: 运行 ESLint
         working-directory: web
-        run: npm run lint || true
+        run: npm run lint
 
       - name: 运行 TypeScript 检查
         working-directory: web
-        run: npm run type-check || true
+        run: npm run type-check
 
       - name: 运行 Vitest 测试
         working-directory: web
-        run: npm run test -- --coverage || true
+        run: npm run test -- --coverage
 
       - name: 上传前端覆盖率
         uses: actions/upload-artifact@v3

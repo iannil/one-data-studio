@@ -30,6 +30,7 @@ import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import bisheng, { type WorkflowExecution, type Workflow } from '@/services/bisheng';
 import ExecutionLogsModal from './ExecutionLogsModal';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 dayjs.extend(duration);
 dayjs.extend(relativeTime);
@@ -391,22 +392,6 @@ function ExecutionsDashboard() {
       />
 
       {/* 执行详情弹窗 */}
-      <Card
-        title="执行详情"
-        style={{
-          position: 'fixed',
-          right: '-100%',
-          top: 0,
-          height: '100vh',
-          width: '500px',
-          zIndex: 1000,
-          transition: 'right 0.3s ease',
-          overflow: 'auto',
-        }}
-        styles={{
-          body: { padding: '24px' },
-        }}
-      />
       <Modal
         title="执行详情"
         open={detailModalOpen}
@@ -531,4 +516,13 @@ function ExecutionsDashboard() {
   );
 }
 
-export default ExecutionsDashboard;
+// 使用 ErrorBoundary 包裹导出组件
+function ExecutionsDashboardWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <ExecutionsDashboard />
+    </ErrorBoundary>
+  );
+}
+
+export default ExecutionsDashboardWithErrorBoundary;

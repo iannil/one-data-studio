@@ -4,10 +4,15 @@ ONE-DATA-STUDIO 集成测试
 Phase 1: 持久化版本测试
 """
 
+import logging
 import sys
 import time
 import requests
 from typing import Dict, List, Optional
+
+# 配置日志
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class Colors:
@@ -28,22 +33,22 @@ class TestResult:
         self.skipped = 0
         self.failures = []
 
-    def pass(self, name: str):
+    def pass_test(self, name: str):
         self.passed += 1
         print(f"{Colors.GREEN}✓{Colors.NC} {name}")
 
-    def fail(self, name: str, reason: str = ""):
+    def fail_test(self, name: str, reason: str = ""):
         self.failed += 1
         print(f"{Colors.RED}✗{Colors.NC} {name}")
         if reason:
             print(f"  {Colors.RED}原因: {reason}{Colors.NC}")
         self.failures.append((name, reason))
 
-    def skip(self, name: str, reason: str = ""):
+    def skip_test(self, name: str, reason: str = ""):
         self.skipped += 1
         print(f"{Colors.CYAN}○{Colors.NC} {name}")
         if reason:
-            print(f"  {CYAN}跳过: {reason}{Colors.NC}")
+            print(f"  {Colors.CYAN}跳过: {reason}{Colors.NC}")
 
     def summary(self):
         total = self.passed + self.failed
@@ -84,8 +89,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.alldata_url}/api/v1/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Alldata health check failed: {e}")
         return {}
 
     def check_cube_health(self) -> Dict:
@@ -93,8 +98,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.cube_url}/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Cube health check failed: {e}")
         return {}
 
     def check_bisheng_health(self) -> Dict:
@@ -102,8 +107,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.bisheng_url}/api/v1/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Bisheng health check failed: {e}")
         return {}
 
     # ============================================
@@ -114,8 +119,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.alldata_url}/api/v1/datasets", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"List datasets failed: {e}")
         return None
 
     def create_dataset(self, name: str, path: str, **kwargs) -> Optional[str]:
@@ -134,8 +139,8 @@ class OneDataTestClient:
             )
             if r.status_code in (200, 201):
                 return r.json().get("data", {}).get("dataset_id")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Create dataset failed: {e}")
         return None
 
     def get_dataset(self, dataset_id: str) -> Optional[Dict]:
@@ -143,8 +148,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.alldata_url}/api/v1/datasets/{dataset_id}", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Get dataset {dataset_id} failed: {e}")
         return None
 
     def update_dataset(self, dataset_id: str, **kwargs) -> bool:
@@ -155,14 +160,16 @@ class OneDataTestClient:
                 timeout=5
             )
             return r.status_code == 200
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Update dataset {dataset_id} failed: {e}")
             return False
 
     def delete_dataset(self, dataset_id: str) -> bool:
         try:
             r = self.session.delete(f"{self.alldata_url}/api/v1/datasets/{dataset_id}", timeout=5)
             return r.status_code == 200
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Delete dataset {dataset_id} failed: {e}")
             return False
 
     def get_upload_url(self, dataset_id: str, file_name: str) -> Optional[Dict]:
@@ -174,8 +181,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json().get("data")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Get upload URL for {dataset_id}/{file_name} failed: {e}")
         return None
 
     def list_databases(self) -> Optional[List]:
@@ -183,8 +190,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.alldata_url}/api/v1/metadata/databases", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("databases", [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"List databases failed: {e}")
         return None
 
     def list_tables(self, database: str) -> Optional[List]:
@@ -195,8 +202,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json().get("data", {}).get("tables", [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"List tables for {database} failed: {e}")
         return None
 
     def get_table_schema(self, database: str, table: str) -> Optional[Dict]:
@@ -207,8 +214,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json().get("data")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Get table schema {database}.{table} failed: {e}")
         return None
 
     def list_dataset_versions(self, dataset_id: str) -> Optional[List]:
@@ -219,8 +226,8 @@ class OneDataTestClient:
             )
             if r.status_code == 200:
                 return r.json().get("data", {}).get("versions", [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"List versions for {dataset_id} failed: {e}")
         return None
 
     def create_dataset_version(self, dataset_id: str, **kwargs) -> Optional[Dict]:
@@ -232,8 +239,8 @@ class OneDataTestClient:
             )
             if r.status_code in (200, 201):
                 return r.json().get("data")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Create version for {dataset_id} failed: {e}")
         return None
 
     # ============================================
@@ -244,8 +251,8 @@ class OneDataTestClient:
             r = self.session.get(f"{self.cube_url}/v1/models", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"List models failed: {e}")
         return None
 
     def chat_completion(self, message: str, model: Optional[str] = None, **kwargs) -> Optional[Dict]:
@@ -357,29 +364,29 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 
     alldata_health = client.check_alldata_health()
     if alldata_health:
-        result.pass("Alldata API 健康检查")
+        result.pass_test("Alldata API 健康检查")
         db_status = alldata_health.get("database", "unknown")
-        result.pass(f"Alldata 数据库连接 ({db_status})",
+        result.pass_test(f"Alldata 数据库连接 ({db_status})",
                    "数据库未连接" if db_status != "connected" else "")
     else:
-        result.fail("Alldata API 健康检查", "服务未响应")
+        result.fail_test("Alldata API 健康检查", "服务未响应")
 
     cube_health = client.check_cube_health()
     if cube_health:
-        result.pass("OpenAI Proxy 健康检查")
+        result.pass_test("OpenAI Proxy 健康检查")
         openai_configured = cube_health.get("openai_configured", False)
         if openai_configured:
-            result.pass("OpenAI API 已配置")
+            result.pass_test("OpenAI API 已配置")
         else:
-            result.skip("OpenAI API 已配置", "未配置真实 API Key（将使用 Mock 模式）")
+            result.skip_test("OpenAI API 已配置", "未配置真实 API Key（将使用 Mock 模式）")
     else:
-        result.fail("OpenAI Proxy 健康检查", "服务未响应")
+        result.fail_test("OpenAI Proxy 健康检查", "服务未响应")
 
     bisheng_health = client.check_bisheng_health()
     if bisheng_health:
-        result.pass("Bisheng API 健康检查")
+        result.pass_test("Bisheng API 健康检查")
     else:
-        result.fail("Bisheng API 健康检查", "服务未响应")
+        result.fail_test("Bisheng API 健康检查", "服务未响应")
 
     # ============================================
     # 2. Alldata 数据集 CRUD 测试
@@ -388,10 +395,10 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 
     datasets = client.list_datasets()
     if datasets is not None:
-        result.pass("获取数据集列表")
+        result.pass_test("获取数据集列表")
         initial_count = len(datasets)
     else:
-        result.fail("获取数据集列表", "API 调用失败")
+        result.fail_test("获取数据集列表", "API 调用失败")
         initial_count = 0
 
     # 创建数据集（带 Schema）
@@ -408,36 +415,36 @@ def run_tests(client: OneDataTestClient, result: TestResult):
         }
     )
     if ds_id:
-        result.pass(f"创建数据集 ({ds_id})")
+        result.pass_test(f"创建数据集 ({ds_id})")
     else:
-        result.fail("创建数据集", "API 调用失败")
+        result.fail_test("创建数据集", "API 调用失败")
 
     # 获取数据集详情
     if ds_id:
         ds_detail = client.get_dataset(ds_id)
         if ds_detail:
-            result.pass("获取数据集详情")
+            result.pass_test("获取数据集详情")
             schema = ds_detail.get("schema", {})
             if schema.get("columns"):
-                result.pass("数据集包含 Schema 定义")
+                result.pass_test("数据集包含 Schema 定义")
             else:
-                result.fail("数据集包含 Schema 定义", "Schema 为空")
+                result.fail_test("数据集包含 Schema 定义", "Schema 为空")
         else:
-            result.fail("获取数据集详情", "API 调用失败")
+            result.fail_test("获取数据集详情", "API 调用失败")
 
     # 更新数据集
     if ds_id:
         if client.update_dataset(ds_id, description="更新后的描述"):
-            result.pass("更新数据集")
+            result.pass_test("更新数据集")
         else:
-            result.fail("更新数据集", "API 调用失败")
+            result.fail_test("更新数据集", "API 调用失败")
 
     # 删除数据集
     if ds_id:
         if client.delete_dataset(ds_id):
-            result.pass("删除数据集")
+            result.pass_test("删除数据集")
         else:
-            result.fail("删除数据集", "API 调用失败")
+            result.fail_test("删除数据集", "API 调用失败")
 
     # ============================================
     # 3. Alldata 元数据 API 测试
@@ -446,25 +453,25 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 
     databases = client.list_databases()
     if databases:
-        result.pass(f"获取数据库列表 ({len(databases)} 个)")
+        result.pass_test(f"获取数据库列表 ({len(databases)} 个)")
     else:
-        result.fail("获取数据库列表", "API 调用失败")
+        result.fail_test("获取数据库列表", "API 调用失败")
 
     if databases:
         db_name = databases[0].get("name")
         tables = client.list_tables(db_name)
         if tables:
-            result.pass(f"获取表列表 ({len(tables)} 个)")
+            result.pass_test(f"获取表列表 ({len(tables)} 个)")
         else:
-            result.fail("获取表列表", "API 调用失败")
+            result.fail_test("获取表列表", "API 调用失败")
 
         if tables:
             table_name = tables[0].get("name")
             schema = client.get_table_schema(db_name, table_name)
             if schema and schema.get("columns"):
-                result.pass("获取表结构 Schema")
+                result.pass_test("获取表结构 Schema")
             else:
-                result.fail("获取表结构 Schema", "API 调用失败或无数据")
+                result.fail_test("获取表结构 Schema", "API 调用失败或无数据")
 
     # ============================================
     # 4. Alldata 版本管理测试
@@ -474,9 +481,9 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # 使用示例数据集 ds-001
     versions = client.list_dataset_versions("ds-001")
     if versions is not None:
-        result.pass("获取数据集版本列表")
+        result.pass_test("获取数据集版本列表")
     else:
-        result.fail("获取数据集版本列表", "API 调用失败")
+        result.fail_test("获取数据集版本列表", "API 调用失败")
 
     new_version = client.create_dataset_version(
         "ds-001",
@@ -484,9 +491,9 @@ def run_tests(client: OneDataTestClient, result: TestResult):
         description="2月份数据"
     )
     if new_version:
-        result.pass(f"创建数据集版本 ({new_version.get('version_id')})")
+        result.pass_test(f"创建数据集版本 ({new_version.get('version_id')})")
     else:
-        result.fail("创建数据集版本", "API 调用失败")
+        result.fail_test("创建数据集版本", "API 调用失败")
 
     # ============================================
     # 5. MinIO 文件上传 API 测试
@@ -495,9 +502,9 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 
     upload_info = client.get_upload_url("ds-001", "test.csv")
     if upload_info and upload_info.get("upload_url"):
-        result.pass("获取上传预签名 URL")
+        result.pass_test("获取上传预签名 URL")
     else:
-        result.fail("获取上传预签名 URL", "API 调用失败")
+        result.fail_test("获取上传预签名 URL", "API 调用失败")
 
     # ============================================
     # 6. OpenAI Proxy 测试
@@ -506,25 +513,25 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 
     models = client.list_models()
     if models:
-        result.pass(f"列出模型 ({len(models)} 个)")
+        result.pass_test(f"列出模型 ({len(models)} 个)")
     else:
-        result.fail("列出模型", "API 调用失败")
+        result.fail_test("列出模型", "API 调用失败")
 
     response = client.chat_completion("1+1=")
     if response:
-        result.pass("聊天补全")
+        result.pass_test("聊天补全")
         content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
         if content:
-            result.pass("获取回复内容")
+            result.pass_test("获取回复内容")
     else:
-        result.fail("聊天补全", "API 调用失败")
+        result.fail_test("聊天补全", "API 调用失败")
 
     # Prompt 模板
     templates = client.get_prompt_templates()
     if templates:
-        result.pass(f"获取 Prompt 模板 ({len(templates)} 个)")
+        result.pass_test(f"获取 Prompt 模板 ({len(templates)} 个)")
     else:
-        result.fail("获取 Prompt 模板", "API 调用失败")
+        result.fail_test("获取 Prompt 模板", "API 调用失败")
 
     # ============================================
     # 7. Bisheng 应用层测试
@@ -534,23 +541,23 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # 调用聊天接口
     bisheng_result = client.bisheng_chat("你好")
     if bisheng_result and bisheng_result.get("code") == 0:
-        result.pass("Bisheng 聊天接口")
+        result.pass_test("Bisheng 聊天接口")
     else:
-        result.fail("Bisheng 聊天接口", "API 调用失败")
+        result.fail_test("Bisheng 聊天接口", "API 调用失败")
 
     # 查询数据集
     bisheng_datasets = client.bisheng_list_datasets()
     if bisheng_datasets is not None:
-        result.pass("Bisheng 查询数据集")
+        result.pass_test("Bisheng 查询数据集")
     else:
-        result.fail("Bisheng 查询数据集", "API 调用失败")
+        result.fail_test("Bisheng 查询数据集", "API 调用失败")
 
     # 工作流列表
     workflows = client.list_workflows()
     if workflows:
-        result.pass(f"获取工作流列表 ({len(workflows)} 个)")
+        result.pass_test(f"获取工作流列表 ({len(workflows)} 个)")
     else:
-        result.fail("获取工作流列表", "API 调用失败")
+        result.fail_test("获取工作流列表", "API 调用失败")
 
     # ============================================
     # 8. 端到端集成测试
@@ -560,22 +567,22 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # RAG 查询
     rag_result = client.rag_query("什么是 ONE-DATA-STUDIO?")
     if rag_result and rag_result.get("code") == 0:
-        result.pass("RAG 查询")
+        result.pass_test("RAG 查询")
         answer = rag_result.get("data", {}).get("answer", "")
         if answer:
-            result.pass("RAG 返回回答")
+            result.pass_test("RAG 返回回答")
     else:
-        result.fail("RAG 查询", "API 调用失败")
+        result.fail_test("RAG 查询", "API 调用失败")
 
     # Text-to-SQL
     sql_result = client.text2sql("查询最近的订单")
     if sql_result and sql_result.get("code") == 0:
-        result.pass("Text-to-SQL 查询")
+        result.pass_test("Text-to-SQL 查询")
         sql = sql_result.get("data", {}).get("sql", "")
         if sql:
-            result.pass("返回 SQL 语句")
+            result.pass_test("返回 SQL 语句")
     else:
-        result.fail("Text-to-SQL 查询", "API 调用失败")
+        result.fail_test("Text-to-SQL 查询", "API 调用失败")
 
 
 def main():

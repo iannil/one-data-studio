@@ -35,6 +35,7 @@ import StepsViewer from './StepsViewer';
 import ToolExecuteModal from './ToolExecuteModal';
 import SchemaViewer from './SchemaViewer';
 import AgentTemplatesModal from './AgentTemplatesModal';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -803,4 +804,13 @@ function AgentsPage() {
   );
 }
 
-export default AgentsPage;
+// 使用 ErrorBoundary 包裹导出组件
+function AgentsPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <AgentsPage />
+    </ErrorBoundary>
+  );
+}
+
+export default AgentsPageWithErrorBoundary;

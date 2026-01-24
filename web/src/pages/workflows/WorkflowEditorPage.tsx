@@ -1,15 +1,19 @@
 /**
  * 工作流编辑页面
  * Phase 7: Sprint 7.3
+ * Sprint 4: 添加撤销/重做和缩放功能
  *
  * 可视化工作流编辑器，支持：
  * - 拖拽创建节点
  * - 连接节点
  * - 配置节点属性
  * - 保存和运行工作流
+ * - 撤销/重做操作
+ * - 视图缩放
+ * - 连接验证
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -36,10 +40,11 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 
-import FlowCanvas, { Node, Edge } from '../../components/workflow/FlowCanvas';
+import FlowCanvas, { Node, Edge, FlowCanvasRef } from '../../components/workflow/FlowCanvas';
 import NodePalette, { nodeTypes } from '../../components/workflow/NodePalette';
 import NodeConfigPanel from '../../components/workflow/NodeConfigPanel';
 import * as bishengService from '../../services/bisheng';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface WorkflowDefinition {
   version: string;
@@ -47,9 +52,19 @@ interface WorkflowDefinition {
   edges: any[];
 }
 
+// 历史记录项
+interface HistoryItem {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+// 最大历史记录数量
+const MAX_HISTORY_SIZE = 50;
+
 function WorkflowEditorPage() {
   const { workflowId } = useParams();
   const navigate = useNavigate();
+  const flowCanvasRef = useRef<FlowCanvasRef>(null);
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -61,13 +76,99 @@ function WorkflowEditorPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfig, setShowConfig] = useState(true);
 
+  // 历史记录状态（撤销/重做）
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isHistoryAction = useRef(false);
+
+  // 初始化历史记录
+  const initHistory = useCallback((initialNodes: Node[], initialEdges: Edge[]) => {
+    setHistory([{ nodes: initialNodes, edges: initialEdges }]);
+    setHistoryIndex(0);
+  }, []);
+
+  // 添加历史记录
+  const pushHistory = useCallback((newNodes: Node[], newEdges: Edge[]) => {
+    if (isHistoryAction.current) {
+      isHistoryAction.current = false;
+      return;
+    }
+
+    setHistory((prev) => {
+      // 如果当前不是最新状态，裁剪后续历史
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ nodes: newNodes, edges: newEdges });
+
+      // 限制历史记录大小
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+        newHistory.shift();
+      }
+
+      return newHistory;
+    });
+    setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY_SIZE - 1));
+  }, [historyIndex]);
+
+  // 撤销操作
+  const handleUndo = useCallback(() => {
+    if (historyIndex <= 0) return;
+
+    isHistoryAction.current = true;
+    const prevIndex = historyIndex - 1;
+    const prevState = history[prevIndex];
+
+    setNodes(prevState.nodes);
+    setEdges(prevState.edges);
+    setHistoryIndex(prevIndex);
+    setHasChanges(true);
+  }, [history, historyIndex]);
+
+  // 重做操作
+  const handleRedo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+
+    isHistoryAction.current = true;
+    const nextIndex = historyIndex + 1;
+    const nextState = history[nextIndex];
+
+    setNodes(nextState.nodes);
+    setEdges(nextState.edges);
+    setHistoryIndex(nextIndex);
+    setHasChanges(true);
+  }, [history, historyIndex]);
+
+  // 键盘快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+        e.preventDefault();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        handleRedo();
+        e.preventDefault();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        handleSave();
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   // 加载工作流定义
   useEffect(() => {
     if (workflowId && workflowId !== 'new') {
       loadWorkflow(workflowId);
     } else {
       // 新建工作流，添加默认节点
-      setNodes([
+      const defaultNodes: Node[] = [
         {
           id: 'input-1',
           type: 'input',
@@ -80,9 +181,11 @@ function WorkflowEditorPage() {
           position: { x: 100, y: 300 },
           data: { label: '输出', config: { output_key: 'result' } },
         },
-      ]);
+      ];
+      setNodes(defaultNodes);
+      initHistory(defaultNodes, []);
     }
-  }, [workflowId]);
+  }, [workflowId, initHistory]);
 
   // 加载工作流
   const loadWorkflow = async (id: string) => {
@@ -103,12 +206,12 @@ function WorkflowEditorPage() {
             definition = wf.definition;
           }
 
-          if (definition.nodes) {
-            setNodes(definition.nodes);
-          }
-          if (definition.edges) {
-            setEdges(definition.edges);
-          }
+          const loadedNodes = definition.nodes || [];
+          const loadedEdges = definition.edges || [];
+
+          setNodes(loadedNodes);
+          setEdges(loadedEdges);
+          initHistory(loadedNodes, loadedEdges);
         }
       }
     } catch (error) {
@@ -198,13 +301,15 @@ function WorkflowEditorPage() {
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
     setHasChanges(true);
-  }, []);
+    pushHistory(newNodes, edges);
+  }, [edges, pushHistory]);
 
   // 处理边变化
   const handleEdgesChange = useCallback((newEdges: Edge[]) => {
     setEdges(newEdges);
     setHasChanges(true);
-  }, []);
+    pushHistory(nodes, newEdges);
+  }, [nodes, pushHistory]);
 
   // 添加节点
   const handleAddNode = useCallback((nodeType: string, config: Record<string, any>) => {
@@ -217,9 +322,11 @@ function WorkflowEditorPage() {
         config,
       },
     };
-    setNodes((nds) => [...nds, newNode]);
+    const newNodes = [...nodes, newNode];
+    setNodes(newNodes);
     setHasChanges(true);
-  }, []);
+    pushHistory(newNodes, edges);
+  }, [nodes, edges, pushHistory]);
 
   // 更新节点配置
   const handleNodeUpdate = useCallback((nodeId: string, config: Record<string, any>) => {
@@ -335,24 +442,44 @@ function WorkflowEditorPage() {
     }
   };
 
+  // 缩放功能
+  const handleZoomIn = useCallback(() => {
+    flowCanvasRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    flowCanvasRef.current?.zoomOut();
+  }, []);
+
+  const handleFitView = useCallback(() => {
+    flowCanvasRef.current?.fitView();
+  }, []);
+
   // 工具栏菜单项
   const viewMenuItems: MenuProps['items'] = [
     {
       key: 'zoom-in',
       label: '放大',
       icon: <ZoomInOutlined />,
+      onClick: handleZoomIn,
     },
     {
       key: 'zoom-out',
       label: '缩小',
       icon: <ZoomOutOutlined />,
+      onClick: handleZoomOut,
     },
     {
       key: 'fit',
       label: '适应屏幕',
       icon: <FitScreenOutlined />,
+      onClick: handleFitView,
     },
   ];
+
+  // 检查撤销/重做可用性
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   if (loading) {
     return (
@@ -367,12 +494,24 @@ function WorkflowEditorPage() {
       {/* 顶部工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b">
         <Space>
-          <Button icon={<UndoOutlined />} disabled>
-            撤销
-          </Button>
-          <Button icon={<RedoOutlined />} disabled>
-            重做
-          </Button>
+          <Tooltip title="撤销 (Ctrl+Z)">
+            <Button
+              icon={<UndoOutlined />}
+              disabled={!canUndo}
+              onClick={handleUndo}
+            >
+              撤销
+            </Button>
+          </Tooltip>
+          <Tooltip title="重做 (Ctrl+Shift+Z / Ctrl+Y)">
+            <Button
+              icon={<RedoOutlined />}
+              disabled={!canRedo}
+              onClick={handleRedo}
+            >
+              重做
+            </Button>
+          </Tooltip>
           <div className="w-px h-6 bg-gray-300 mx-2" />
           <Badge dot={hasChanges}>
             <Button
@@ -437,6 +576,7 @@ function WorkflowEditorPage() {
         <div className="flex-1 bg-gray-100">
           <ReactFlowWrapper>
             <FlowCanvas
+              canvasRef={flowCanvasRef}
               nodes={nodes}
               edges={edges}
               onNodesChange={handleNodesChange}
@@ -468,4 +608,13 @@ function ReactFlowWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default WorkflowEditorPage;
+// 使用 ErrorBoundary 包裹导出组件
+function WorkflowEditorPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <WorkflowEditorPage />
+    </ErrorBoundary>
+  );
+}
+
+export default WorkflowEditorPageWithErrorBoundary;

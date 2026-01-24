@@ -742,7 +742,8 @@ def validate_url(value: str, allowed_schemes: Optional[List[str]] = None) -> Val
 
         return ValidationResult(is_valid=True, errors=[])
 
-    except Exception:
+    except Exception as e:
+        logger.debug(f"URL validation failed for '{value}': {e}")
         return ValidationResult(is_valid=False, errors=["Invalid URL"])
 
 

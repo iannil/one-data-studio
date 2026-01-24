@@ -95,6 +95,11 @@ services:
     command: etcd --advertise-client-urls=http://0.0.0.0:2379 --listen-client-urls=http://0.0.0.0:2379
     volumes:
       - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - one-data-network
 
@@ -152,8 +157,30 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
     ports:
+      - "8003:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - one-data-network
+
+  cube-api:
+    build:
+      context: ../../
+      dockerfile: deploy/dockerfiles/cube-api/Dockerfile
+    container_name: one-data-cube-api
+    environment:
+      CUBE_DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:-onedata123}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      HF_TOKEN: ${HF_TOKEN:-}
+    ports:
       - "8002:8002"
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -169,7 +196,14 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - bisheng-api
+      bisheng-api:
+        condition: service_started
+      alldata-api:
+        condition: service_started
+      openai-proxy:
+        condition: service_started
+      cube-api:
+        condition: service_started
     networks:
       - one-data-network
 

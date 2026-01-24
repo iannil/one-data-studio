@@ -139,12 +139,12 @@ export async function createChatCompletion(
 
 /**
  * 聊天补全（流式）
- * 返回一个 ReadableStream
+ * 返回一个 ReadableStream，同时提取 token 使用数据
  */
 export async function streamChatCompletion(
   data: ChatCompletionRequest,
   onChunk: (chunk: string) => void,
-  onComplete: () => void,
+  onComplete: (usage?: ChatCompletionUsage) => void,
   onError: (error: Error) => void
 ): Promise<void> {
   try {
@@ -168,6 +168,7 @@ export async function streamChatCompletion(
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let usage: ChatCompletionUsage | undefined;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -187,13 +188,29 @@ export async function streamChatCompletion(
             if (content) {
               onChunk(content);
             }
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
+            // Extract usage data from the final chunk (OpenAI format)
+            if (json.usage) {
+              usage = {
+                prompt_tokens: json.usage.prompt_tokens || 0,
+                completion_tokens: json.usage.completion_tokens || 0,
+                total_tokens: json.usage.total_tokens || 0,
+              };
+            }
+            // Some providers include usage in x_groq or similar
+            if (json.x_groq?.usage) {
+              usage = {
+                prompt_tokens: json.x_groq.usage.prompt_tokens || 0,
+                completion_tokens: json.x_groq.usage.completion_tokens || 0,
+                total_tokens: json.x_groq.usage.total_tokens || 0,
+              };
+            }
+          } catch {
+            // Ignore parse errors for incomplete chunks
           }
         }
       }
     }
-    onComplete();
+    onComplete(usage);
   } catch (error) {
     onError(error as Error);
   }

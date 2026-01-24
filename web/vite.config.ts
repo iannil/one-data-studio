@@ -47,42 +47,47 @@ export default defineConfig({
         target: 'http://localhost:8001',
         changeOrigin: true,
       },
-      // Cube Studio API (OpenAI compatible)
+      // OpenAI Proxy (OpenAI compatible API)
       '/v1/chat': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8003',
         changeOrigin: true,
       },
       '/v1/models': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8003',
         changeOrigin: true,
       },
       '/v1/embeddings': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8003',
         changeOrigin: true,
       },
+      '/v1/completions': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      // Cube Studio API (model management)
       '/api/v1/models': {
         target: 'http://localhost:8002',
         changeOrigin: true,
       },
       // Bisheng API
       '/api/v1/workflows': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/api/v1/rag': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/api/v1/text2sql': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/api/v1/chat': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/api/v1/templates': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

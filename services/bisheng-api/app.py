@@ -110,8 +110,23 @@ except ImportError:
             return fn
         return decorator
 
+# 尝试导入 MinIO 存储模块
+try:
+    from shared.storage.minio_client import MinIOStorage, get_storage
+    MINIO_ENABLED = True
+except ImportError:
+    MINIO_ENABLED = False
+    _minio_storage = None
+    def get_storage():
+        global _minio_storage
+        if _minio_storage is None:
+            logger.warning("MinIO not available, using fallback local storage")
+        return _minio_storage
+
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+# 请求大小限制 - 防止 DoS 攻击
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB (for file uploads)
 
 # 配置
 ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
@@ -193,12 +208,16 @@ def health():
     try:
         vector_store = VectorStore()
         start = time_module.time()
-        collections = vector_store.list_collections()
+        milvus_health = vector_store.health_check()
         latency = (time_module.time() - start) * 1000
         health_status["checks"]["milvus"] = {
-            "status": "healthy",
+            "status": milvus_health.get("status", "unknown"),
             "latency_ms": round(latency, 2),
-            "collection_count": len(collections) if collections else 0
+            "connected": milvus_health.get("connected", False),
+            "collections_count": milvus_health.get("collections_count", 0),
+            "cache_size": milvus_health.get("cache_size", 0),
+            "host": milvus_health.get("host"),
+            "port": milvus_health.get("port")
         }
     except Exception as e:
         health_status["checks"]["milvus"] = {"status": "unhealthy", "error": str(e)}
@@ -705,6 +724,108 @@ def get_messages(conversation_id):
             "code": 0,
             "message": "success",
             "data": {"messages": result}
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/conversations/<conversation_id>/messages", methods=["POST"])
+@require_jwt()
+def save_message(conversation_id):
+    """保存消息到对话"""
+    db = get_db_session()
+    try:
+        data = request.get_json()
+        role = data.get("role")
+        content = data.get("content")
+        model = data.get("model")
+        usage = data.get("usage", {})
+
+        if not role or not content:
+            return jsonify({"code": 40001, "message": "role and content are required"}), 400
+
+        # 检查会话是否存在
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_id == conversation_id
+        ).first()
+        if not conversation:
+            return jsonify({"code": 40401, "message": "Conversation not found"}), 404
+
+        # 创建消息
+        import uuid
+        message = Message(
+            message_id=str(uuid.uuid4()),
+            conversation_id=conversation_id,
+            role=role,
+            content=content,
+            model=model,
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0),
+        )
+        db.add(message)
+
+        # 更新会话的 updated_at 和消息计数
+        conversation.updated_at = datetime.utcnow()
+        # 统计消息数量
+        message_count = db.query(Message).filter(
+            Message.conversation_id == conversation_id
+        ).count()
+        conversation.message_count = message_count + 1
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "message_id": message.message_id,
+                "conversation_id": conversation_id
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to save message: {e}")
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/conversations/<conversation_id>/usage", methods=["GET"])
+@require_jwt()
+def get_conversation_usage(conversation_id):
+    """获取会话的 Token 使用统计"""
+    db = get_db_session()
+    try:
+        # 检查会话是否存在
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_id == conversation_id
+        ).first()
+        if not conversation:
+            return jsonify({"code": 40401, "message": "Conversation not found"}), 404
+
+        # 统计 token 使用
+        from sqlalchemy import func
+        usage = db.query(
+            func.sum(Message.prompt_tokens).label("total_prompt_tokens"),
+            func.sum(Message.completion_tokens).label("total_completion_tokens"),
+            func.sum(Message.total_tokens).label("total_tokens"),
+            func.count(Message.message_id).label("message_count"),
+        ).filter(
+            Message.conversation_id == conversation_id
+        ).first()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "conversation_id": conversation_id,
+                "total_prompt_tokens": usage.total_prompt_tokens or 0,
+                "total_completion_tokens": usage.total_completion_tokens or 0,
+                "total_tokens": usage.total_tokens or 0,
+                "message_count": usage.message_count or 0,
+            }
         })
     finally:
         db.close()
@@ -1532,22 +1653,57 @@ def upload_image():
         # 生成唯一 ID
         image_id = str(uuid.uuid4())
 
-        # 保存到存储（MinIO 或本地）
-        # TODO: 集成 MinIO 存储
-        # 临时使用本地存储
-        import os
-        upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
-        os.makedirs(upload_dir, exist_ok=True)
+        # 保存到存储（MinIO 优先，本地备选）
+        image_format = processed.metadata.format
+        image_object_name = f"images/{image_id}.{image_format}"
+        thumbnail_object_name = f"images/{image_id}_thumb.jpg"
+        image_url = None
+        thumbnail_url = None
 
-        image_path = os.path.join(upload_dir, f"{image_id}.{processed.metadata.format}")
-        thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
+        if MINIO_ENABLED:
+            try:
+                storage = get_storage()
+                # 上传原图
+                storage.upload_file(
+                    bucket="uploads",
+                    object_name=image_object_name,
+                    data=processed.data,
+                    content_type=f"image/{image_format}"
+                )
+                # 获取预签名 URL
+                image_url = storage.get_presigned_url("uploads", image_object_name, expires=86400)
 
-        with open(image_path, 'wb') as f:
-            f.write(processed.data)
+                # 上传缩略图
+                if processed.thumbnail:
+                    storage.upload_file(
+                        bucket="uploads",
+                        object_name=thumbnail_object_name,
+                        data=processed.thumbnail,
+                        content_type="image/jpeg"
+                    )
+                    thumbnail_url = storage.get_presigned_url("uploads", thumbnail_object_name, expires=86400)
 
-        if processed.thumbnail:
-            with open(thumbnail_path, 'wb') as f:
-                f.write(processed.thumbnail)
+                logger.info(f"Image {image_id} uploaded to MinIO")
+            except Exception as e:
+                logger.error(f"MinIO upload failed, falling back to local storage: {e}")
+                MINIO_ENABLED_LOCAL = False
+        else:
+            MINIO_ENABLED_LOCAL = False
+
+        # 本地存储备选方案
+        if not MINIO_ENABLED or 'MINIO_ENABLED_LOCAL' in dir() and not MINIO_ENABLED_LOCAL:
+            upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            image_path = os.path.join(upload_dir, f"{image_id}.{image_format}")
+            thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
+
+            with open(image_path, 'wb') as f:
+                f.write(processed.data)
+
+            if processed.thumbnail:
+                with open(thumbnail_path, 'wb') as f:
+                    f.write(processed.thumbnail)
 
         # 生成视觉嵌入
         embedding = None
@@ -1580,8 +1736,9 @@ def upload_image():
         response_data = {
             "id": image_id,
             "filename": file.filename,
-            "url": f"/api/v1/images/{image_id}",
-            "thumbnail_url": f"/api/v1/images/{image_id}/thumbnail" if processed.thumbnail else None,
+            "url": image_url if image_url else f"/api/v1/images/{image_id}",
+            "thumbnail_url": thumbnail_url if thumbnail_url else (f"/api/v1/images/{image_id}/thumbnail" if processed.thumbnail else None),
+            "storage": "minio" if image_url else "local",
             "metadata": {
                 "width": processed.metadata.width,
                 "height": processed.metadata.height,
@@ -1616,9 +1773,32 @@ def upload_image():
 @app.route("/api/v1/images/<image_id>", methods=["GET"])
 def get_image(image_id):
     """获取图片"""
-    import os
-    from flask import send_file
+    from flask import send_file, redirect
+    from io import BytesIO
 
+    # 先尝试从 MinIO 获取
+    if MINIO_ENABLED:
+        try:
+            storage = get_storage()
+            for ext in ['jpeg', 'png', 'webp', 'gif']:
+                object_name = f"images/{image_id}.{ext}"
+                if storage.file_exists("uploads", object_name):
+                    # 返回预签名 URL 重定向
+                    url = storage.get_presigned_url("uploads", object_name, expires=3600)
+                    if url:
+                        return redirect(url)
+                    # 或直接返回文件内容
+                    data = storage.download_file("uploads", object_name)
+                    if data:
+                        return send_file(
+                            BytesIO(data),
+                            mimetype=f'image/{ext}',
+                            as_attachment=False
+                        )
+        except Exception as e:
+            logger.warning(f"MinIO retrieval failed, trying local storage: {e}")
+
+    # 本地存储备选
     upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
 
     # 查找图片文件
@@ -1637,9 +1817,32 @@ def get_image(image_id):
 @app.route("/api/v1/images/<image_id>/thumbnail", methods=["GET"])
 def get_image_thumbnail(image_id):
     """获取图片缩略图"""
-    import os
-    from flask import send_file
+    from flask import send_file, redirect
+    from io import BytesIO
 
+    object_name = f"images/{image_id}_thumb.jpg"
+
+    # 先尝试从 MinIO 获取
+    if MINIO_ENABLED:
+        try:
+            storage = get_storage()
+            if storage.file_exists("uploads", object_name):
+                # 返回预签名 URL 重定向
+                url = storage.get_presigned_url("uploads", object_name, expires=3600)
+                if url:
+                    return redirect(url)
+                # 或直接返回文件内容
+                data = storage.download_file("uploads", object_name)
+                if data:
+                    return send_file(
+                        BytesIO(data),
+                        mimetype='image/jpeg',
+                        as_attachment=False
+                    )
+        except Exception as e:
+            logger.warning(f"MinIO retrieval failed, trying local storage: {e}")
+
+    # 本地存储备选
     upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
     thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
 
@@ -1657,11 +1860,28 @@ def get_image_thumbnail(image_id):
 @require_jwt()
 def delete_image(image_id):
     """删除图片"""
-    import os
+    deleted = False
 
+    # 先尝试从 MinIO 删除
+    if MINIO_ENABLED:
+        try:
+            storage = get_storage()
+            for ext in ['jpeg', 'png', 'webp', 'gif']:
+                object_name = f"images/{image_id}.{ext}"
+                if storage.file_exists("uploads", object_name):
+                    storage.delete_file("uploads", object_name)
+                    deleted = True
+                    break
+            # 删除缩略图
+            thumbnail_object = f"images/{image_id}_thumb.jpg"
+            if storage.file_exists("uploads", thumbnail_object):
+                storage.delete_file("uploads", thumbnail_object)
+        except Exception as e:
+            logger.warning(f"MinIO deletion failed: {e}")
+
+    # 本地存储也尝试删除
     upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
 
-    deleted = False
     for ext in ['jpeg', 'png', 'webp', 'gif']:
         image_path = os.path.join(upload_dir, f"{image_id}.{ext}")
         if os.path.exists(image_path):

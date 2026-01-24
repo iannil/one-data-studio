@@ -28,12 +28,12 @@ COPY services/alldata-api/src/ /app/src/
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# 健康检查
+# 健康检查 - 使用 Python 标准库 (无需 requests)
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/api/v1/health', timeout=2)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)" || exit 1
 
-# 暴露端口
-EXPOSE 8080
+# 暴露端口 (与 docker-compose.yml 一致)
+EXPOSE 8001
 
 # 启动命令
 CMD ["python", "-u", "src/main.py"]

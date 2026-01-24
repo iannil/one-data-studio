@@ -4,15 +4,16 @@ Sprint 17: Agent 工具扩展
 
 功能:
 - 沙箱 Python 代码执行
-- 安全限制（RestrictedPython）
+- 安全限制（AST 分析 + RestrictedPython）
 - 执行超时限制
 """
 
+import ast
 import logging
 import asyncio
 import sys
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from io import StringIO
 import traceback
 import time
@@ -22,6 +23,89 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools import BaseTool, ToolSchema
 
 logger = logging.getLogger(__name__)
+
+
+class CodeSecurityValidator(ast.NodeVisitor):
+    """AST-based code security validator
+
+    Analyzes Python code AST to detect potentially dangerous operations.
+    """
+
+    FORBIDDEN_MODULES = {
+        "os", "sys", "subprocess", "shutil", "socket", "requests",
+        "urllib", "http", "ftplib", "smtplib", "pickle", "marshal",
+        "ctypes", "multiprocessing", "threading", "signal", "pty",
+        "fcntl", "termios", "resource", "pwd", "grp", "crypt",
+    }
+
+    FORBIDDEN_FUNCTIONS = {
+        "open", "exec", "eval", "compile", "input", "__import__",
+        "globals", "locals", "vars", "dir", "getattr", "setattr",
+        "delattr", "hasattr", "breakpoint", "exit", "quit",
+    }
+
+    FORBIDDEN_ATTRIBUTES = {
+        "__class__", "__bases__", "__subclasses__", "__mro__",
+        "__globals__", "__code__", "__builtins__", "__dict__",
+        "__module__", "__reduce__", "__reduce_ex__",
+    }
+
+    def __init__(self):
+        self.errors: List[str] = []
+
+    def validate(self, code: str) -> Tuple[bool, str]:
+        """Validate code for security issues
+
+        Args:
+            code: Python source code
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            tree = ast.parse(code)
+            self.visit(tree)
+            if self.errors:
+                return False, "; ".join(self.errors)
+            return True, ""
+        except SyntaxError as e:
+            return False, f"Syntax error: {e}"
+
+    def visit_Import(self, node: ast.Import):
+        """Check for forbidden imports"""
+        for alias in node.names:
+            module = alias.name.split('.')[0]
+            if module in self.FORBIDDEN_MODULES:
+                self.errors.append(f"Forbidden import: {module}")
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        """Check for forbidden from imports"""
+        if node.module:
+            module = node.module.split('.')[0]
+            if module in self.FORBIDDEN_MODULES:
+                self.errors.append(f"Forbidden import from: {module}")
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call):
+        """Check for forbidden function calls"""
+        if isinstance(node.func, ast.Name):
+            if node.func.id in self.FORBIDDEN_FUNCTIONS:
+                self.errors.append(f"Forbidden function: {node.func.id}")
+        elif isinstance(node.func, ast.Attribute):
+            if node.func.attr in self.FORBIDDEN_FUNCTIONS:
+                self.errors.append(f"Forbidden method: {node.func.attr}")
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute):
+        """Check for forbidden attribute access"""
+        if node.attr in self.FORBIDDEN_ATTRIBUTES:
+            self.errors.append(f"Forbidden attribute: {node.attr}")
+        # Check for dunder attributes
+        if node.attr.startswith('__') and node.attr.endswith('__'):
+            if node.attr not in {'__init__', '__str__', '__repr__', '__len__', '__iter__', '__next__'}:
+                self.errors.append(f"Forbidden dunder attribute: {node.attr}")
+        self.generic_visit(node)
 
 
 class CodeExecutorTool(BaseTool):
@@ -98,31 +182,31 @@ class CodeExecutorTool(BaseTool):
             import math
             safe_globals["math"] = math
         except ImportError:
-            pass
+            logger.debug("math module not available in sandbox")
 
         try:
             import json
             safe_globals["json"] = json
         except ImportError:
-            pass
+            logger.debug("json module not available in sandbox")
 
         try:
             import re
             safe_globals["re"] = re
         except ImportError:
-            pass
+            logger.debug("re module not available in sandbox")
 
         try:
             import datetime
             safe_globals["datetime"] = datetime
         except ImportError:
-            pass
+            logger.debug("datetime module not available in sandbox")
 
         try:
             import statistics
             safe_globals["statistics"] = statistics
         except ImportError:
-            pass
+            logger.debug("statistics module not available in sandbox")
 
         # 添加用户变量
         if user_variables:
@@ -130,37 +214,16 @@ class CodeExecutorTool(BaseTool):
 
         return safe_globals
 
-    def _validate_code(self, code: str) -> tuple[bool, str]:
-        """验证代码安全性"""
-        # 检查禁止的模块导入
-        import re
+    def _validate_code(self, code: str) -> Tuple[bool, str]:
+        """验证代码安全性 - 使用 AST 分析
 
-        # 检查 import 语句
-        import_pattern = r'\b(?:import|from)\s+(\w+)'
-        imports = re.findall(import_pattern, code)
-        for module in imports:
-            if module in self.FORBIDDEN_MODULES:
-                return False, f"禁止导入模块: {module}"
-
-        # 检查危险函数调用
-        for func in self.FORBIDDEN_BUILTINS:
-            if re.search(rf'\b{func}\s*\(', code):
-                return False, f"禁止使用函数: {func}"
-
-        # 检查其他危险模式
-        dangerous_patterns = [
-            (r'__\w+__', "禁止使用双下划线属性"),
-            (r'\bos\s*\.', "禁止使用 os 模块"),
-            (r'\bsys\s*\.', "禁止使用 sys 模块"),
-            (r'\bsubprocess', "禁止使用 subprocess"),
-            (r'\beval\s*\(', "禁止使用 eval"),
-            (r'\bexec\s*\(', "禁止使用 exec"),
-            (r'\bopen\s*\(', "禁止使用 open"),
-        ]
-
-        for pattern, message in dangerous_patterns:
-            if re.search(pattern, code):
-                return False, message
+        使用 AST 分析替代 regex，提供更准确的安全检查。
+        """
+        # 使用 AST-based 验证器
+        validator = CodeSecurityValidator()
+        is_valid, error = validator.validate(code)
+        if not is_valid:
+            return False, error
 
         return True, ""
 

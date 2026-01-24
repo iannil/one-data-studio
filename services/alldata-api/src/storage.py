@@ -28,17 +28,30 @@ class MinIOClient:
         self._client = None
         self._initialized = False
 
-        # 配置
+        # 配置 - 生产环境必须设置环境变量
         self.endpoint = os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000')
-        self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
-        self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+        self.access_key = os.getenv('MINIO_ACCESS_KEY')
+        self.secret_key = os.getenv('MINIO_SECRET_KEY')
         self.default_bucket = os.getenv('MINIO_DEFAULT_BUCKET', 'alldata')
         self.use_ssl = os.getenv('MINIO_USE_SSL', 'false').lower() == 'true'
+
+        # 检查必需的凭据
+        if not self.access_key or not self.secret_key:
+            logger.warning(
+                "MINIO_ACCESS_KEY and MINIO_SECRET_KEY not set. "
+                "MinIO will run in mock mode. Set these environment variables for production use."
+            )
 
     def init_client(self):
         """初始化 MinIO 客户端"""
         if not MINIO_AVAILABLE:
             logger.warning("MinIO client not available, using mock storage")
+            self._initialized = True
+            return
+
+        # 检查凭据是否已设置
+        if not self.access_key or not self.secret_key:
+            logger.warning("MinIO credentials not configured, using mock storage")
             self._initialized = True
             return
 
@@ -243,7 +256,8 @@ class MinIOClient:
         try:
             self._client.stat_object(bucket, object_name)
             return True
-        except S3Error:
+        except S3Error as e:
+            logger.debug(f"Object '{object_name}' not found in bucket '{bucket}': {e}")
             return False
 
     def list_objects(

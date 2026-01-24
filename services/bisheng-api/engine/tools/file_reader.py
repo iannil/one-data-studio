@@ -243,8 +243,8 @@ class FileReaderTool(BaseTool):
                     "total_lines": len(lines),
                     "preview": data,
                 }
-            except:
-                return {"success": False, "error": f"JSON 解析失败: {str(e)}"}
+            except (json.JSONDecodeError, TypeError, ValueError) as json_err:
+                return {"success": False, "error": f"JSON 解析失败: {str(json_err)}"}
 
         # 处理结果
         if isinstance(data, list):

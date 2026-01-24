@@ -115,8 +115,7 @@ jobs:
           for app in $APPS; do
             echo "Updating $app with tag $IMAGE_TAG..."
             argocd app set $app \
-              --kustomize-image ghcr.io/${{ github.repository }}/$app:$IMAGE_TAG \
-              || echo "Skipping $app - may use different image config"
+              --kustomize-image ghcr.io/${{ github.repository }}/$app:$IMAGE_TAG
           done
 
       - name: 同步应用
@@ -131,7 +130,7 @@ jobs:
 
           for app in $APPS; do
             echo "Syncing $app..."
-            argocd app sync $app --prune --force || true
+            argocd app sync $app --prune --force
           done
 
       - name: 等待部署完成
@@ -146,7 +145,7 @@ jobs:
 
           for app in $APPS; do
             echo "Waiting for $app..."
-            argocd app wait $app --timeout 300 --health || true
+            argocd app wait $app --timeout 300 --health
           done
 
       - name: 验证部署
@@ -257,7 +256,7 @@ jobs:
 
           for app in $APPS; do
             echo "Promoting $app to 100%..."
-            argocd app set $app --parameter canary.weight=100 || true
+            argocd app set $app --parameter canary.weight=100
             argocd app sync $app --prune
             argocd app wait $app --timeout 600 --health
           done

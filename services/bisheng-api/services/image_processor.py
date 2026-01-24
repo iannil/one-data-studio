@@ -95,10 +95,16 @@ class MinIOImageStorage:
             secure: 是否使用 HTTPS
         """
         self.endpoint = endpoint or os.environ.get('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000')
-        self.access_key = access_key or os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
-        self.secret_key = secret_key or os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+        self.access_key = access_key or os.environ.get('MINIO_ACCESS_KEY', '')
+        self.secret_key = secret_key or os.environ.get('MINIO_SECRET_KEY', '')
         self.bucket = bucket or os.environ.get('MINIO_IMAGES_BUCKET', 'images')
         self.secure = secure or os.environ.get('MINIO_USE_SSL', 'false').lower() == 'true'
+
+        # 验证必需的凭据
+        if not self.access_key or not self.secret_key:
+            raise ValueError(
+                "MinIO credentials are required. Set MINIO_ACCESS_KEY and MINIO_SECRET_KEY environment variables."
+            )
 
         self._client = None
 

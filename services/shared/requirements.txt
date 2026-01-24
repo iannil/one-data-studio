@@ -1,0 +1,41 @@
+# Shared 模块依赖
+# 所有服务共享的基础依赖
+
+# Web 框架核心
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# 数据库
+SQLAlchemy==2.0.23
+PyMySQL==1.1.0
+
+# 认证
+PyJWT==2.8.0
+
+# 缓存
+redis==5.0.1
+
+# HTTP 客户端
+requests==2.31.0
+httpx==0.25.2
+tenacity==8.2.3
+
+# 加密
+cryptography==41.0.7
+
+# 验证
+jsonschema==4.20.0
+
+# 监控与追踪
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-instrumentation-flask==0.43b0
+opentelemetry-exporter-otlp==1.22.0
+prometheus-client==0.19.0
+
+# 异步任务
+celery==5.3.4
+
+# 工具
+python-dotenv==1.0.0
+pydantic==2.5.2

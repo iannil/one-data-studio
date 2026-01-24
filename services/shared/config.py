@@ -25,7 +25,7 @@ class DatabaseConfig:
     host: str = field(default_factory=lambda: os.getenv('MYSQL_HOST', 'mysql.one-data-infra.svc.cluster.local'))
     port: int = field(default_factory=lambda: int(os.getenv('MYSQL_PORT', '3306')))
     user: str = field(default_factory=lambda: os.getenv('MYSQL_USER', 'one_data'))
-    password: str = field(default_factory=lambda: os.getenv('MYSQL_PASSWORD', 'OneDataPassword123!'))
+    password: str = field(default_factory=lambda: os.getenv('MYSQL_PASSWORD', ''))
     database: str = field(default_factory=lambda: os.getenv('MYSQL_DATABASE', 'one_data_bisheng'))
 
     # 连接池配置
@@ -67,16 +67,16 @@ class DatabaseConfig:
 class MinIOConfig:
     """MinIO 存储配置"""
     endpoint: str = field(default_factory=lambda: os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000'))
-    access_key: str = field(default_factory=lambda: os.getenv('MINIO_ACCESS_KEY', 'minioadmin'))
-    secret_key: str = field(default_factory=lambda: os.getenv('MINIO_SECRET_KEY', 'minioadmin'))
+    access_key: str = field(default_factory=lambda: os.getenv('MINIO_ACCESS_KEY', ''))
+    secret_key: str = field(default_factory=lambda: os.getenv('MINIO_SECRET_KEY', ''))
     default_bucket: str = field(default_factory=lambda: os.getenv('MINIO_DEFAULT_BUCKET', 'alldata'))
     use_ssl: bool = field(default_factory=lambda: os.getenv('MINIO_USE_SSL', 'false').lower() == 'true')
 
     def __post_init__(self):
         """配置后处理"""
-        # 警告使用默认密码
-        if self.access_key == 'minioadmin' and self.secret_key == 'minioadmin':
-            logger.warning("Using default MinIO credentials. Please set MINIO_ACCESS_KEY and MINIO_SECRET_KEY in production.")
+        # 检查必需的凭据
+        if not self.access_key or not self.secret_key:
+            logger.warning("MinIO credentials not configured. Set MINIO_ACCESS_KEY and MINIO_SECRET_KEY environment variables.")
 
 
 @dataclass
@@ -305,7 +305,7 @@ class JWTConfig:
     3. 过渡期后旧密钥自动失效
     """
     # 当前有效密钥（用于签发）
-    secret_key: str = field(default_factory=lambda: os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production'))
+    secret_key: str = field(default_factory=lambda: os.getenv('JWT_SECRET_KEY', ''))
 
     # 算法
     algorithm: str = field(default_factory=lambda: os.getenv('JWT_ALGORITHM', 'HS256'))
@@ -326,12 +326,12 @@ class JWTConfig:
 
     def __post_init__(self):
         """初始化后处理"""
+        # 检查必需的密钥配置
+        if not self.secret_key:
+            raise ValueError("JWT_SECRET_KEY environment variable is required. Please set a secure secret key.")
+
         # 生成密钥 ID
         self._key_id = self._generate_key_id(self.secret_key)
-
-        # 检查是否使用默认密钥
-        if self.secret_key == 'dev-secret-key-change-in-production':
-            logger.warning("Using default JWT secret key. Please set JWT_SECRET_KEY in production.")
 
         # 加载轮换密钥历史
         self._load_previous_keys()
@@ -596,21 +596,40 @@ class Config:
 
     def _validate_production_config(self):
         """验证生产环境配置"""
-        if os.getenv('ENVIRONMENT') == 'production':
-            warnings = []
+        is_production = os.getenv('ENVIRONMENT') == 'production'
+        warnings = []
+        errors = []
 
-            # 检查默认密码
-            if self.minio.access_key == 'minioadmin':
-                warnings.append("MinIO using default credentials")
-            if self.database.password in ('OneDataPassword123!', 'password', '123456'):
-                warnings.append("Database using default password")
+        # 检查数据库密码 - 所有环境都需要
+        if not self.database.password:
+            msg = "MYSQL_PASSWORD environment variable is required"
+            errors.append(msg)
 
-            # 检查必需的 API keys
-            if not self.openai.api_key:
-                warnings.append("OpenAI API key not configured")
+        # 检查 MinIO 凭据 - 所有环境都需要
+        if not self.minio.access_key or not self.minio.secret_key:
+            msg = "MinIO credentials not configured (MINIO_ACCESS_KEY, MINIO_SECRET_KEY)"
+            errors.append(msg)
 
-            if warnings:
-                logger.warning("Production configuration warnings: " + "; ".join(warnings))
+        # 检查必需的 API keys
+        if not self.openai.api_key:
+            warnings.append("OpenAI API key not configured")
+
+        # 生产环境额外检查
+        if is_production:
+            # 检查 Redis 密码
+            if not self.redis.password:
+                errors.append("REDIS_PASSWORD is required in production")
+
+        if errors:
+            error_msg = "Configuration errors: " + "; ".join(errors)
+            if is_production:
+                raise ValueError(error_msg)
+            else:
+                # 非生产环境也要记录错误，但允许启动（便于本地开发）
+                logger.error(error_msg + " (allowing startup in non-production mode)")
+
+        if warnings:
+            logger.warning("Configuration warnings: " + "; ".join(warnings))
 
     def to_dict(self) -> Dict[str, Any]:
         """导出为字典（用于调试，隐藏敏感信息）"""

@@ -5,7 +5,11 @@ Phase 7: Sprint 7.1
 支持工具定义、注册和执行
 """
 
+import ast
 import json
+import logging
+import math
+import operator
 import os
 import re
 import requests
@@ -13,9 +17,136 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
+
+
+class SafeMathEvaluator:
+    """安全的数学表达式求值器
+
+    使用 AST 解析而非 eval()，只支持安全的数学运算。
+    """
+
+    # 支持的二元运算符
+    BINARY_OPS = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+    }
+
+    # 支持的一元运算符
+    UNARY_OPS = {
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+    }
+
+    # 支持的数学函数
+    SAFE_FUNCTIONS = {
+        "abs": abs,
+        "round": round,
+        "min": min,
+        "max": max,
+        "sum": sum,
+        "pow": pow,
+        "sqrt": math.sqrt,
+        "sin": math.sin,
+        "cos": math.cos,
+        "tan": math.tan,
+        "log": math.log,
+        "log10": math.log10,
+        "exp": math.exp,
+        "floor": math.floor,
+        "ceil": math.ceil,
+        "fabs": math.fabs,
+    }
+
+    # 支持的常量
+    SAFE_CONSTANTS = {
+        "pi": math.pi,
+        "e": math.e,
+    }
+
+    @classmethod
+    def evaluate(cls, expression: str) -> Any:
+        """安全地求值数学表达式
+
+        Args:
+            expression: 数学表达式字符串
+
+        Returns:
+            计算结果
+
+        Raises:
+            ValueError: 表达式无效或包含不安全的操作
+        """
+        try:
+            tree = ast.parse(expression, mode='eval')
+            return cls._eval_node(tree.body)
+        except SyntaxError as e:
+            raise ValueError(f"Invalid expression syntax: {e}")
+
+    @classmethod
+    def _eval_node(cls, node: ast.AST) -> Any:
+        """递归求值 AST 节点"""
+        if isinstance(node, ast.Constant):
+            # Python 3.8+ 使用 ast.Constant
+            if isinstance(node.value, (int, float, complex)):
+                return node.value
+            raise ValueError(f"Unsupported constant type: {type(node.value)}")
+
+        elif isinstance(node, ast.Num):
+            # Python 3.7 兼容
+            return node.n
+
+        elif isinstance(node, ast.Name):
+            # 变量名 - 仅支持常量
+            name = node.id
+            if name in cls.SAFE_CONSTANTS:
+                return cls.SAFE_CONSTANTS[name]
+            raise ValueError(f"Unknown variable: {name}")
+
+        elif isinstance(node, ast.BinOp):
+            # 二元运算
+            op_type = type(node.op)
+            if op_type not in cls.BINARY_OPS:
+                raise ValueError(f"Unsupported operator: {op_type.__name__}")
+            left = cls._eval_node(node.left)
+            right = cls._eval_node(node.right)
+            return cls.BINARY_OPS[op_type](left, right)
+
+        elif isinstance(node, ast.UnaryOp):
+            # 一元运算
+            op_type = type(node.op)
+            if op_type not in cls.UNARY_OPS:
+                raise ValueError(f"Unsupported unary operator: {op_type.__name__}")
+            operand = cls._eval_node(node.operand)
+            return cls.UNARY_OPS[op_type](operand)
+
+        elif isinstance(node, ast.Call):
+            # 函数调用
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("Only simple function calls are allowed")
+
+            func_name = node.func.id
+            if func_name not in cls.SAFE_FUNCTIONS:
+                raise ValueError(f"Unknown function: {func_name}")
+
+            args = [cls._eval_node(arg) for arg in node.args]
+            return cls.SAFE_FUNCTIONS[func_name](*args)
+
+        elif isinstance(node, ast.Tuple) or isinstance(node, ast.List):
+            # 元组/列表 - 用于 min, max, sum 等
+            return [cls._eval_node(elt) for elt in node.elts]
+
+        else:
+            raise ValueError(f"Unsupported expression type: {type(node).__name__}")
 
 
 class ToolSchema:
@@ -138,26 +269,58 @@ class SQLQueryTool(BaseTool):
     description = "执行 SQL 查询。用于查询数据库中的数据。"
     parameters = [
         ToolSchema("sql", "string", "SQL 查询语句", required=True),
-        ToolSchema("database", "string", "数据库名称", required=False, default="sales_dw")
+        ToolSchema("database", "string", "数据库名称", required=False, default="sales_dw"),
+        ToolSchema("timeout", "integer", "查询超时时间（秒）", required=False, default=30)
     ]
+
+    # 数据库连接池
+    _connection_pools: Dict[str, Any] = {}
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
-        # 可以配置数据库连接
         self.mock_data = self.config.get("mock_data", True)
+        self.db_connections = self.config.get("db_connections", {})
 
-    async def execute(self, sql: str, database: str = "sales_dw") -> Dict[str, Any]:
+    async def execute(self, sql: str, database: str = "sales_dw", timeout: int = 30) -> Dict[str, Any]:
         """执行 SQL 查询"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
-            # 安全检查
+            # 安全检查：SQL 注入防护
             sql_upper = sql.upper().strip()
             dangerous_keywords = ["DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE"]
             if any(keyword in sql_upper for keyword in dangerous_keywords):
+                logger.warning(f"Dangerous SQL operation blocked: {sql[:100]}")
                 return {
                     "success": False,
                     "error": "Dangerous SQL operation not allowed",
                     "results": []
                 }
+
+            # 检查是否为注释攻击
+            if "--" in sql or "/*" in sql:
+                # 检查可疑的 SQL 注入模式
+                injection_patterns = [
+                    ";--",      # 语句终止后跟注释
+                    "';--",     # 引号后跟语句终止和注释
+                    "1=1",      # 经典的 tautology 攻击
+                    "OR 1=1",   # OR tautology
+                    "1'='1",    # 引号 tautology
+                    "' OR '",   # 引号 OR 注入
+                    "UNION SELECT",  # UNION 注入
+                    "DROP TABLE",    # DDL 攻击
+                    "DELETE FROM",   # 删除攻击
+                    "INSERT INTO",   # 插入攻击
+                ]
+                for pattern in injection_patterns:
+                    if pattern.upper() in sql_upper:
+                        logger.warning(f"SQL injection pattern detected: {sql[:100]}")
+                        return {
+                            "success": False,
+                            "error": "Potential SQL injection detected",
+                            "results": []
+                        }
 
             if self.mock_data:
                 # 模拟数据返回
@@ -180,24 +343,355 @@ class SQLQueryTool(BaseTool):
                         "row_count": 0
                     }
             else:
-                # 真实数据库查询（需要配置连接）
-                pass
+                # 真实数据库查询
+                return await self._execute_real_query(sql, database, timeout)
 
         except Exception as e:
+            logger.error(f"SQL query execution failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
                 "results": []
             }
 
+    async def _execute_real_query(self, sql: str, database: str, timeout: int) -> Dict[str, Any]:
+        """执行真实数据库查询"""
+        import logging
+        import asyncio
+        logger = logging.getLogger(__name__)
+
+        # 获取数据库连接配置
+        db_config = self.db_connections.get(database, {})
+        db_type = db_config.get("type", "mysql")
+
+        if not db_config:
+            # 尝试从环境变量获取默认数据库配置
+            import os
+            db_url = os.getenv("DATABASE_URL", "")
+            if db_url:
+                db_config = {"url": db_url, "type": "mysql"}
+            else:
+                return {
+                    "success": False,
+                    "error": f"Database '{database}' not configured",
+                    "results": []
+                }
+
+        try:
+            if db_type == "mysql":
+                return await self._execute_mysql(sql, db_config, timeout)
+            elif db_type == "postgresql":
+                return await self._execute_postgresql(sql, db_config, timeout)
+            elif db_type == "sqlite":
+                return await self._execute_sqlite(sql, db_config, timeout)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unsupported database type: {db_type}",
+                    "results": []
+                }
+        except asyncio.TimeoutError:
+            logger.error(f"SQL query timed out after {timeout}s")
+            return {
+                "success": False,
+                "error": f"Query execution timed out after {timeout} seconds",
+                "results": []
+            }
+
+    async def _execute_mysql(self, sql: str, config: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+        """执行 MySQL 查询"""
+        import asyncio
+
+        try:
+            import aiomysql
+        except ImportError:
+            return {
+                "success": False,
+                "error": "aiomysql not installed. Run: pip install aiomysql",
+                "results": []
+            }
+
+        # 解析连接配置
+        if "url" in config:
+            # 解析 DATABASE_URL 格式
+            import urllib.parse
+            parsed = urllib.parse.urlparse(config["url"])
+            host = parsed.hostname or "localhost"
+            port = parsed.port or 3306
+            user = parsed.username or "root"
+            password = urllib.parse.unquote(parsed.password or "")
+            db = parsed.path.lstrip("/") or "test"
+        else:
+            host = config.get("host", "localhost")
+            port = config.get("port", 3306)
+            user = config.get("user", "root")
+            password = config.get("password", "")
+            db = config.get("database", "test")
+
+        async def run_query():
+            conn = await aiomysql.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                db=db,
+                autocommit=True
+            )
+            try:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(sql)
+                    if sql.strip().upper().startswith("SELECT"):
+                        rows = await cursor.fetchall()
+                        return {
+                            "success": True,
+                            "sql": sql,
+                            "results": list(rows),
+                            "row_count": len(rows)
+                        }
+                    else:
+                        return {
+                            "success": True,
+                            "sql": sql,
+                            "results": [],
+                            "row_count": 0,
+                            "affected_rows": cursor.rowcount
+                        }
+            finally:
+                conn.close()
+
+        return await asyncio.wait_for(run_query(), timeout=timeout)
+
+    async def _execute_postgresql(self, sql: str, config: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+        """执行 PostgreSQL 查询"""
+        import asyncio
+
+        try:
+            import asyncpg
+        except ImportError:
+            return {
+                "success": False,
+                "error": "asyncpg not installed. Run: pip install asyncpg",
+                "results": []
+            }
+
+        # 解析连接配置
+        if "url" in config:
+            dsn = config["url"]
+        else:
+            host = config.get("host", "localhost")
+            port = config.get("port", 5432)
+            user = config.get("user", "postgres")
+            password = config.get("password", "")
+            db = config.get("database", "postgres")
+            dsn = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+        async def run_query():
+            conn = await asyncpg.connect(dsn)
+            try:
+                if sql.strip().upper().startswith("SELECT"):
+                    rows = await conn.fetch(sql)
+                    return {
+                        "success": True,
+                        "sql": sql,
+                        "results": [dict(row) for row in rows],
+                        "row_count": len(rows)
+                    }
+                else:
+                    result = await conn.execute(sql)
+                    return {
+                        "success": True,
+                        "sql": sql,
+                        "results": [],
+                        "row_count": 0,
+                        "affected_rows": int(result.split()[-1]) if result else 0
+                    }
+            finally:
+                await conn.close()
+
+        return await asyncio.wait_for(run_query(), timeout=timeout)
+
+    async def _execute_sqlite(self, sql: str, config: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+        """执行 SQLite 查询"""
+        import sqlite3
+        import asyncio
+
+        db_path = config.get("path", ":memory:")
+
+        def run_sync():
+            conn = sqlite3.connect(db_path, timeout=timeout)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            try:
+                cursor.execute(sql)
+                if sql.strip().upper().startswith("SELECT"):
+                    rows = cursor.fetchall()
+                    return {
+                        "success": True,
+                        "sql": sql,
+                        "results": [dict(row) for row in rows],
+                        "row_count": len(rows)
+                    }
+                else:
+                    conn.commit()
+                    return {
+                        "success": True,
+                        "sql": sql,
+                        "results": [],
+                        "row_count": 0,
+                        "affected_rows": cursor.rowcount
+                    }
+            finally:
+                conn.close()
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, run_sync)
+
+
+class SSRFProtection:
+    """SSRF 防护工具
+
+    防止服务端请求伪造攻击，阻止对内网 IP 和敏感服务的访问。
+    """
+
+    # 私有 IP 段（RFC 1918 + 特殊地址）
+    PRIVATE_IP_RANGES = [
+        ("10.0.0.0", "10.255.255.255"),      # 10.0.0.0/8
+        ("172.16.0.0", "172.31.255.255"),    # 172.16.0.0/12
+        ("192.168.0.0", "192.168.255.255"),  # 192.168.0.0/16
+        ("127.0.0.0", "127.255.255.255"),    # 127.0.0.0/8 (localhost)
+        ("169.254.0.0", "169.254.255.255"),  # 169.254.0.0/16 (link-local)
+        ("0.0.0.0", "0.255.255.255"),        # 0.0.0.0/8
+        ("100.64.0.0", "100.127.255.255"),   # 100.64.0.0/10 (Carrier-grade NAT)
+        ("192.0.0.0", "192.0.0.255"),        # 192.0.0.0/24 (IETF Protocol)
+        ("192.0.2.0", "192.0.2.255"),        # 192.0.2.0/24 (TEST-NET-1)
+        ("198.51.100.0", "198.51.100.255"),  # 198.51.100.0/24 (TEST-NET-2)
+        ("203.0.113.0", "203.0.113.255"),    # 203.0.113.0/24 (TEST-NET-3)
+        ("224.0.0.0", "239.255.255.255"),    # 224.0.0.0/4 (Multicast)
+        ("240.0.0.0", "255.255.255.255"),    # 240.0.0.0/4 (Reserved)
+    ]
+
+    # 禁止访问的主机名模式
+    BLOCKED_HOSTNAMES = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "::1",
+        "[::]",
+        "metadata.google.internal",       # GCP metadata
+        "169.254.169.254",                # AWS/Azure/GCP metadata
+        "metadata.azure.com",             # Azure metadata
+        "kubernetes.default",             # K8s internal
+        "kubernetes.default.svc",
+        "kubernetes.default.svc.cluster.local",
+    ]
+
+    # 禁止的 URL schemes
+    BLOCKED_SCHEMES = ["file", "ftp", "gopher", "data", "javascript"]
+
+    # 允许的域名白名单（可通过环境变量配置）
+    _allowed_domains: List[str] = None
+
+    @classmethod
+    def get_allowed_domains(cls) -> List[str]:
+        """获取允许的域名白名单"""
+        if cls._allowed_domains is None:
+            env_domains = os.getenv("HTTP_TOOL_ALLOWED_DOMAINS", "")
+            if env_domains:
+                cls._allowed_domains = [d.strip().lower() for d in env_domains.split(",") if d.strip()]
+            else:
+                cls._allowed_domains = []
+        return cls._allowed_domains
+
+    @classmethod
+    def _ip_to_int(cls, ip: str) -> int:
+        """将 IP 地址转换为整数"""
+        parts = ip.split(".")
+        return (int(parts[0]) << 24) + (int(parts[1]) << 16) + (int(parts[2]) << 8) + int(parts[3])
+
+    @classmethod
+    def _is_private_ip(cls, ip: str) -> bool:
+        """检查是否为私有 IP"""
+        try:
+            ip_int = cls._ip_to_int(ip)
+            for start, end in cls.PRIVATE_IP_RANGES:
+                if cls._ip_to_int(start) <= ip_int <= cls._ip_to_int(end):
+                    return True
+            return False
+        except (ValueError, IndexError):
+            return True  # 解析失败时保守处理
+
+    @classmethod
+    def validate_url(cls, url: str) -> tuple[bool, str]:
+        """
+        验证 URL 是否安全
+
+        Args:
+            url: 要验证的 URL
+
+        Returns:
+            (is_safe, error_message)
+        """
+        import socket
+        from urllib.parse import urlparse
+
+        try:
+            parsed = urlparse(url)
+
+            # 检查 scheme
+            scheme = parsed.scheme.lower()
+            if not scheme:
+                return False, "URL must have a scheme (http/https)"
+            if scheme in cls.BLOCKED_SCHEMES:
+                return False, f"URL scheme '{scheme}' is not allowed"
+            if scheme not in ["http", "https"]:
+                return False, f"Only http/https schemes are allowed, got '{scheme}'"
+
+            # 检查主机名
+            hostname = parsed.hostname
+            if not hostname:
+                return False, "URL must have a hostname"
+
+            hostname_lower = hostname.lower()
+
+            # 检查禁止的主机名
+            for blocked in cls.BLOCKED_HOSTNAMES:
+                if hostname_lower == blocked or hostname_lower.endswith("." + blocked):
+                    return False, f"Access to '{hostname}' is not allowed"
+
+            # 检查白名单（如果配置了）
+            allowed = cls.get_allowed_domains()
+            if allowed:
+                is_allowed = False
+                for domain in allowed:
+                    if hostname_lower == domain or hostname_lower.endswith("." + domain):
+                        is_allowed = True
+                        break
+                if not is_allowed:
+                    return False, f"Domain '{hostname}' is not in the allowed list"
+
+            # 解析 IP 并检查私有地址
+            try:
+                ip_addresses = socket.gethostbyname_ex(hostname)[2]
+                for ip in ip_addresses:
+                    if cls._is_private_ip(ip):
+                        return False, f"Access to private IP '{ip}' is not allowed (SSRF protection)"
+            except socket.gaierror:
+                # DNS 解析失败，可能是无效域名
+                return False, f"Unable to resolve hostname '{hostname}'"
+
+            return True, ""
+
+        except Exception as e:
+            return False, f"URL validation error: {str(e)}"
+
 
 class HTTPRequestTool(BaseTool):
-    """HTTP 请求工具"""
+    """HTTP 请求工具（带 SSRF 防护）"""
 
     name = "http_request"
-    description = "发送 HTTP 请求。用于调用外部 API。"
+    description = "发送 HTTP 请求。用于调用外部 API。注意：出于安全考虑，无法访问内网地址。"
     parameters = [
-        ToolSchema("url", "string", "请求 URL", required=True),
+        ToolSchema("url", "string", "请求 URL（必须是外部可访问的 HTTPS 地址）", required=True),
         ToolSchema("method", "string", "HTTP 方法 (GET, POST, PUT, DELETE)", required=False, default="GET"),
         ToolSchema("headers", "object", "请求头", required=False, default={}),
         ToolSchema("body", "object", "请求体 (JSON)", required=False, default=None),
@@ -206,24 +700,51 @@ class HTTPRequestTool(BaseTool):
 
     async def execute(self, url: str, method: str = "GET", headers: Dict = None,
                      body: Dict = None, timeout: int = 30) -> Dict[str, Any]:
-        """执行 HTTP 请求"""
+        """执行 HTTP 请求（带 SSRF 防护）"""
         try:
+            # SSRF 防护检查
+            is_safe, error_msg = SSRFProtection.validate_url(url)
+            if not is_safe:
+                logger.warning(f"SSRF protection blocked request to: {url[:100]} - {error_msg}")
+                return {
+                    "success": False,
+                    "error": f"Request blocked: {error_msg}",
+                    "url": url
+                }
+
             headers = headers or {}
             method = method.upper()
 
+            # 限制超时时间
+            timeout = min(timeout, 60)
+
             if method == "GET":
-                response = requests.get(url, headers=headers, timeout=timeout)
+                response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)
             elif method == "POST":
-                response = requests.post(url, headers=headers, json=body, timeout=timeout)
+                response = requests.post(url, headers=headers, json=body, timeout=timeout, allow_redirects=False)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=body, timeout=timeout)
+                response = requests.put(url, headers=headers, json=body, timeout=timeout, allow_redirects=False)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers, timeout=timeout)
+                response = requests.delete(url, headers=headers, timeout=timeout, allow_redirects=False)
             else:
                 return {
                     "success": False,
                     "error": f"Unsupported method: {method}"
                 }
+
+            # 处理重定向（需要再次验证目标 URL）
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_url = response.headers.get("Location")
+                if redirect_url:
+                    is_safe, error_msg = SSRFProtection.validate_url(redirect_url)
+                    if not is_safe:
+                        logger.warning(f"SSRF protection blocked redirect to: {redirect_url[:100]}")
+                        return {
+                            "success": False,
+                            "error": f"Redirect blocked: {error_msg}",
+                            "url": url,
+                            "redirect_url": redirect_url
+                        }
 
             return {
                 "success": response.status_code < 400,
@@ -235,7 +756,20 @@ class HTTPRequestTool(BaseTool):
                 "json": response.json() if response.headers.get("content-type", "").startswith("application/json") else None
             }
 
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "error": f"Request timed out after {timeout} seconds",
+                "url": url
+            }
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Request failed: {str(e)}",
+                "url": url
+            }
         except Exception as e:
+            logger.error(f"HTTP request error: {e}")
             return {
                 "success": False,
                 "error": str(e)
@@ -252,38 +786,10 @@ class CalculatorTool(BaseTool):
     ]
 
     async def execute(self, expression: str) -> Dict[str, Any]:
-        """执行计算"""
+        """执行计算 - 使用安全的 AST 解析而非 eval()"""
         try:
-            # 安全的数学计算
-            import math
-
-            # 只允许安全的数学函数
-            safe_dict = {
-                "abs": abs,
-                "round": round,
-                "min": min,
-                "max": max,
-                "sum": sum,
-                "pow": pow,
-                "sqrt": math.sqrt,
-                "sin": math.sin,
-                "cos": math.cos,
-                "tan": math.tan,
-                "log": math.log,
-                "log10": math.log10,
-                "exp": math.exp,
-                "pi": math.pi,
-                "e": math.e,
-            }
-
-            # 只允许数字和运算符
-            if not re.match(r"^[\d\s+\-*/().a-zA-Z,]+$", expression):
-                return {
-                    "success": False,
-                    "error": "Invalid characters in expression"
-                }
-
-            result = eval(expression, {"__builtins__": {}}, safe_dict)
+            # 使用安全的数学表达式求值器
+            result = SafeMathEvaluator.evaluate(expression)
 
             return {
                 "success": True,
@@ -291,10 +797,16 @@ class CalculatorTool(BaseTool):
                 "result": result
             }
 
-        except Exception as e:
+        except ValueError as e:
             return {
                 "success": False,
                 "error": str(e),
+                "expression": expression
+            }
+        except (ZeroDivisionError, OverflowError, ArithmeticError) as e:
+            return {
+                "success": False,
+                "error": f"Arithmetic error: {e}",
                 "expression": expression
             }
 

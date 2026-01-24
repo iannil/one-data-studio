@@ -1,11 +1,12 @@
 /**
  * 流程图画布组件
  * Phase 7: Sprint 7.3
+ * Sprint 4: 添加缩放控制和连接验证
  *
  * 基于 React Flow 实现可拖拽流程图编辑器
  */
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -21,6 +22,7 @@ import ReactFlow, {
   MarkerType,
   ReactFlowProvider,
   Panel,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -33,6 +35,15 @@ import RetrieverNode from './nodes/RetrieverNode';
 import InputNode from './nodes/InputNode';
 import OutputNode from './nodes/OutputNode';
 import ThinkNode from './nodes/ThinkNode';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+
+export interface FlowCanvasRef {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  fitView: () => void;
+  setZoom: (zoom: number) => void;
+  getZoom: () => number;
+}
 
 interface FlowCanvasProps {
   nodes?: Node[];
@@ -40,6 +51,7 @@ interface FlowCanvasProps {
   onNodesChange?: (nodes: Node[]) => void;
   onEdgesChange?: (edges: Edge[]) => void;
   onNodeSelect?: (node: Node | null) => void;
+  onConnectionValidate?: (connection: Connection) => boolean;
   readonly?: boolean;
   minimap?: boolean;
 }
@@ -64,17 +76,54 @@ const defaultEdgeOptions = {
   },
 };
 
-function FlowCanvas({
-  nodes: initialNodes = [],
-  edges: initialEdges = [],
-  onNodesChange,
-  onEdgesChange,
-  onNodeSelect,
-  readonly = false,
-  minimap = true,
-}: FlowCanvasProps) {
+// 节点类型兼容性规则
+const connectionRules: Record<string, string[]> = {
+  input: ['llm', 'retriever', 'agent', 'tool_call', 'condition', 'think'],
+  llm: ['output', 'condition', 'loop', 'agent', 'tool_call', 'think'],
+  retriever: ['llm', 'output', 'condition', 'think'],
+  agent: ['output', 'condition', 'loop', 'tool_call'],
+  tool_call: ['llm', 'output', 'condition', 'agent'],
+  condition: ['llm', 'agent', 'tool_call', 'output', 'loop'],
+  loop: ['llm', 'agent', 'tool_call', 'output', 'condition'],
+  think: ['llm', 'output', 'condition'],
+  output: [], // output 不能连接到其他节点
+};
+
+const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanvas(
+  {
+    nodes: initialNodes = [],
+    edges: initialEdges = [],
+    onNodesChange,
+    onEdgesChange,
+    onNodeSelect,
+    onConnectionValidate,
+    readonly = false,
+    minimap = true,
+  },
+  ref
+) {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
+  const reactFlowInstance = useReactFlow();
+
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => {
+      reactFlowInstance.zoomIn({ duration: 200 });
+    },
+    zoomOut: () => {
+      reactFlowInstance.zoomOut({ duration: 200 });
+    },
+    fitView: () => {
+      reactFlowInstance.fitView({ padding: 0.2, duration: 200 });
+    },
+    setZoom: (zoom: number) => {
+      reactFlowInstance.setViewport({ ...reactFlowInstance.getViewport(), zoom }, { duration: 200 });
+    },
+    getZoom: () => {
+      return reactFlowInstance.getViewport().zoom;
+    },
+  }), [reactFlowInstance]);
 
   // 同步外部状态
   useEffect(() => {
@@ -89,9 +138,48 @@ function FlowCanvas({
     }
   }, [initialEdges, setEdges]);
 
+  // 验证连接是否有效
+  const isValidConnection = useCallback(
+    (connection: Connection) => {
+      // 如果有自定义验证函数，优先使用
+      if (onConnectionValidate) {
+        return onConnectionValidate(connection);
+      }
+
+      // 获取源节点和目标节点
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+
+      if (!sourceNode || !targetNode) return false;
+
+      // 检查是否是有效的连接类型
+      const allowedTargets = connectionRules[sourceNode.type || ''] || [];
+      if (!allowedTargets.includes(targetNode.type || '')) {
+        return false;
+      }
+
+      // 检查是否已存在相同的连接
+      const existingConnection = edges.find(
+        (e) => e.source === connection.source && e.target === connection.target
+      );
+      if (existingConnection) return false;
+
+      // 防止循环连接
+      if (connection.source === connection.target) return false;
+
+      return true;
+    },
+    [nodes, edges, onConnectionValidate]
+  );
+
   // 处理连接
   const onConnect = useCallback(
     (connection: Connection) => {
+      // 验证连接
+      if (!isValidConnection(connection)) {
+        return;
+      }
+
       const edge = {
         ...connection,
         markerEnd: {
@@ -100,7 +188,7 @@ function FlowCanvas({
       };
       setEdges((eds) => addEdge(edge, eds));
     },
-    [setEdges]
+    [setEdges, isValidConnection]
   );
 
   // 处理节点变化
@@ -166,6 +254,7 @@ function FlowCanvas({
         onNodesChange={readonly ? undefined : handleNodesChange}
         onEdgesChange={readonly ? undefined : handleEdgesChange}
         onConnect={readonly ? undefined : onConnect}
+        isValidConnection={isValidConnection}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         onNodesDelete={readonly ? undefined : onNodesDelete}
@@ -213,16 +302,24 @@ function FlowCanvas({
       </ReactFlow>
     </div>
   );
+});
+
+// 包装组件以提供 Provider 并支持 ref
+interface FlowCanvasWithProviderProps extends FlowCanvasProps {
+  canvasRef?: React.Ref<FlowCanvasRef>;
 }
 
-// 包装组件以提供 Provider
-export default function FlowCanvasWithProvider(props: FlowCanvasProps) {
+function FlowCanvasWithProvider({ canvasRef, ...props }: FlowCanvasWithProviderProps) {
   return (
-    <ReactFlowProvider>
-      <FlowCanvas {...props} />
-    </ReactFlowProvider>
+    <ErrorBoundary>
+      <ReactFlowProvider>
+        <FlowCanvas ref={canvasRef} {...props} />
+      </ReactFlowProvider>
+    </ErrorBoundary>
   );
 }
 
+export default FlowCanvasWithProvider;
+
 // 导出类型
-export type { Node, Edge, Connection };
+export type { Node, Edge, Connection, FlowCanvasRef };

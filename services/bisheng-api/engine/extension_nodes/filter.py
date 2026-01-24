@@ -6,8 +6,13 @@ Phase 6: Sprint 6.1
 """
 
 import json
+import logging
 import re
 from typing import Any, Dict, List, Optional, Callable
+
+from ..control_flow import SafeExpressionEvaluator
+
+logger = logging.getLogger(__name__)
 
 
 class FilterNodeImpl:
@@ -161,7 +166,7 @@ class FilterNodeImpl:
         return filtered
 
     def _evaluate_expression(self, item: Any, context: Dict[str, Any]) -> bool:
-        """评估 JavaScript 风格的表达式"""
+        """评估 JavaScript 风格的表达式 - 使用安全的表达式求值器"""
         if not self.condition_expression:
             return True
 
@@ -177,9 +182,10 @@ class FilterNodeImpl:
         expr = expr.replace("&&", " and ").replace("||", " or ").replace("!", " not ")
 
         try:
-            # 安全评估
-            return bool(eval(expr, {"__builtins__": {}}, {}))
-        except Exception:
+            # 使用安全的表达式求值器
+            return SafeExpressionEvaluator.evaluate(expr, {})
+        except Exception as e:
+            logger.warning(f"Failed to evaluate filter expression: {expr}, error: {e}")
             return False
 
     def _substitute_item_fields(self, expr: str, item: Any) -> str:

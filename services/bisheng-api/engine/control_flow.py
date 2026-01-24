@@ -5,12 +5,129 @@ Phase 7: Sprint 7.2
 支持条件分支和循环迭代
 """
 
+import ast
 import json
+import logging
+import operator
 import re
 from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 
 from .nodes import BaseNode
+
+logger = logging.getLogger(__name__)
+
+
+class SafeExpressionEvaluator:
+    """安全的表达式求值器
+
+    只支持安全的操作，不使用 eval()
+    """
+
+    # 支持的二元运算符
+    OPERATORS = {
+        'and': lambda x, y: x and y,
+        'or': lambda x, y: x or y,
+        '==': operator.eq,
+        '!=': operator.ne,
+        '>': operator.gt,
+        '<': operator.lt,
+        '>=': operator.ge,
+        '<=': operator.le,
+        'in': lambda x, y: x in y,
+        'not in': lambda x, y: x not in y,
+    }
+
+    @classmethod
+    def evaluate(cls, expression: str, context: Dict[str, Any] = None) -> bool:
+        """安全地求值表达式
+
+        Args:
+            expression: 条件表达式字符串
+            context: 上下文变量字典
+
+        Returns:
+            求值结果 (布尔值)
+        """
+        context = context or {}
+        expression = expression.strip()
+
+        # 空表达式返回 False
+        if not expression:
+            return False
+
+        # 布尔字面量
+        if expression.lower() == 'true':
+            return True
+        if expression.lower() == 'false':
+            return False
+
+        # 尝试使用 ast.literal_eval 解析简单字面量
+        try:
+            result = ast.literal_eval(expression)
+            return bool(result)
+        except (ValueError, SyntaxError):
+            pass
+
+        # 解析比较表达式
+        for op_str, op_func in cls.OPERATORS.items():
+            if op_str in ('and', 'or'):
+                continue  # 逻辑运算符单独处理
+
+            pattern = rf'^(.+?)\s*{re.escape(op_str)}\s*(.+)$'
+            match = re.match(pattern, expression)
+            if match:
+                left = cls._resolve_value(match.group(1).strip(), context)
+                right = cls._resolve_value(match.group(2).strip(), context)
+                try:
+                    return bool(op_func(left, right))
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Comparison failed: {expression}, error: {e}")
+                    return False
+
+        # 如果无法解析，记录警告并返回 False
+        logger.warning(f"Unable to safely evaluate expression: {expression}")
+        return False
+
+    @classmethod
+    def _resolve_value(cls, value_str: str, context: Dict[str, Any]) -> Any:
+        """解析值字符串
+
+        支持:
+        - 数字: 123, 45.6
+        - 字符串字面量: 'hello', "world"
+        - 布尔值: true, false, True, False
+        - 上下文变量: 直接查找
+        """
+        value_str = value_str.strip()
+
+        # 字符串字面量
+        if (value_str.startswith('"') and value_str.endswith('"')) or \
+           (value_str.startswith("'") and value_str.endswith("'")):
+            return value_str[1:-1]
+
+        # 布尔值
+        if value_str.lower() == 'true':
+            return True
+        if value_str.lower() == 'false':
+            return False
+        if value_str.lower() == 'none' or value_str.lower() == 'null':
+            return None
+
+        # 数字
+        try:
+            if '.' in value_str:
+                return float(value_str)
+            return int(value_str)
+        except ValueError:
+            pass
+
+        # 上下文变量
+        if value_str in context:
+            return context[value_str]
+
+        # 返回原始字符串
+        return value_str
 
 
 class ConditionNode(BaseNode):
@@ -188,8 +305,8 @@ class ConditionNode(BaseNode):
             if condition.lower() == "false":
                 return False
 
-            # 默认使用 eval（谨慎使用）
-            return bool(eval(condition, {"__builtins__": {}}, safe_dict))
+            # 使用安全表达式求值器替代 eval
+            return SafeExpressionEvaluator.evaluate(condition, safe_dict)
 
         except Exception:
             # 如果评估失败，返回 False
@@ -291,11 +408,11 @@ class LoopNode(BaseNode):
             # 尝试解析为列表
             try:
                 return json.loads(resolved)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 # 如果不是 JSON，检查是否是数字
                 try:
                     return int(resolved)
-                except:
+                except (TypeError, ValueError):
                     return resolved
 
         # 如果是数字，直接返回

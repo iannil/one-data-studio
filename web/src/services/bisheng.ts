@@ -259,6 +259,40 @@ export async function renameConversation(
 }
 
 /**
+ * 保存消息到对话
+ */
+export async function saveMessage(
+  conversationId: string,
+  data: {
+    role: 'user' | 'assistant';
+    content: string;
+    model?: string;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+  }
+): Promise<ApiResponse<{ message_id: string; conversation_id: string }>> {
+  return apiClient.post(`/api/v1/conversations/${conversationId}/messages`, data);
+}
+
+/**
+ * 获取对话的 Token 使用统计
+ */
+export async function getConversationUsage(
+  conversationId: string
+): Promise<ApiResponse<{
+  conversation_id: string;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  total_tokens: number;
+  message_count: number;
+}>> {
+  return apiClient.get(`/api/v1/conversations/${conversationId}/usage`);
+}
+
+/**
  * 获取工作流列表
  */
 export async function getWorkflows(): Promise<ApiResponse<{ workflows: Workflow[] }>> {

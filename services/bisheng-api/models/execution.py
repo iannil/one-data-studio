@@ -4,7 +4,7 @@ Phase 6: Sprint 6.1
 """
 
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, Text, TIMESTAMP, Integer
+from sqlalchemy import Column, BigInteger, String, Text, TIMESTAMP, Integer, Index
 from sqlalchemy.sql import func
 
 from .base import Base
@@ -16,8 +16,8 @@ class WorkflowExecution(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     execution_id = Column(String(64), unique=True, nullable=False, comment='执行唯一标识')
-    workflow_id = Column(String(64), nullable=False, comment='工作流ID')
-    status = Column(String(32), nullable=False, default='pending', comment='状态: pending, running, completed, failed, stopped')
+    workflow_id = Column(String(64), nullable=False, index=True, comment='工作流ID')
+    status = Column(String(32), nullable=False, default='pending', index=True, comment='状态: pending, running, completed, failed, stopped')
     inputs = Column(Text, comment='输入数据 (JSON)')
     outputs = Column(Text, comment='输出数据 (JSON)')
     node_results = Column(Text, comment='节点执行结果 (JSON)')
@@ -26,6 +26,12 @@ class WorkflowExecution(Base):
     completed_at = Column(TIMESTAMP, comment='完成时间')
     duration_ms = Column(Integer, comment='执行时长（毫秒）')
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp(), comment='创建时间')
+
+    # 复合索引用于常见查询
+    __table_args__ = (
+        Index('ix_workflow_executions_workflow_status', 'workflow_id', 'status'),
+        Index('ix_workflow_executions_created_at', 'created_at'),
+    )
 
     def to_dict(self):
         """转换为字典"""

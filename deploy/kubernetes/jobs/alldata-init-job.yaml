@@ -1,5 +1,6 @@
 # ONE-DATA-STUDIO Alldata 数据库初始化 Job
 # Phase 5: 端到端集成配置
+# 安全加固: 使用 Kubernetes Secrets 存储凭据
 
 apiVersion: batch/v1
 kind: Job
@@ -23,19 +24,31 @@ spec:
         command: ["python", "init_db.py"]
         env:
         - name: DATABASE_URL
-          value: "mysql+pymysql://one_data:OneDataPassword123!@mysql.one-data-infra.svc.cluster.local:3306/one_data"
+          valueFrom:
+            secretKeyRef:
+              name: alldata-db-credentials
+              key: database-url
         - name: MINIO_ENDPOINT
           value: "minio.one-data-infra.svc.cluster.local:9000"
         - name: MINIO_ACCESS_KEY
-          value: "admin"
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: access-key
         - name: MINIO_SECRET_KEY
-          value: "admin123456"
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: secret-key
         - name: REDIS_HOST
           value: "redis.one-data-infra.svc.cluster.local"
         - name: REDIS_PORT
           value: "6379"
         - name: REDIS_PASSWORD
-          value: "RedisPassword123!"
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
         resources:
           requests:
             cpu: 100m
@@ -77,3 +90,34 @@ spec:
           limits:
             cpu: 100m
             memory: 128Mi
+---
+# Secret 示例模板 (实际部署时需单独创建)
+# 注意: 请勿将实际密码提交到版本控制
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alldata-db-credentials
+  namespace: one-data-alldata
+type: Opaque
+stringData:
+  # 使用 kubectl create secret 或 Helm values 注入实际值
+  database-url: "mysql+pymysql://one_data:${MYSQL_PASSWORD}@mysql.one-data-infra.svc.cluster.local:3306/one_data"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-credentials
+  namespace: one-data-alldata
+type: Opaque
+stringData:
+  access-key: "${MINIO_ACCESS_KEY}"
+  secret-key: "${MINIO_SECRET_KEY}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+  namespace: one-data-alldata
+type: Opaque
+stringData:
+  password: "${REDIS_PASSWORD}"

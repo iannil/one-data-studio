@@ -40,8 +40,15 @@ class DatabaseManager:
         db_host = os.getenv('MYSQL_HOST', 'mysql.one-data-infra.svc.cluster.local')
         db_port = int(os.getenv('MYSQL_PORT', '3306'))
         db_user = os.getenv('MYSQL_USER', 'one_data')
-        db_password = os.getenv('MYSQL_PASSWORD', 'OneDataPassword123!')
+        db_password = os.getenv('MYSQL_PASSWORD')
         db_name = os.getenv('MYSQL_DATABASE', 'one_data_alldata')
+
+        # 检查必需的凭据
+        if not db_password:
+            raise ValueError(
+                "MYSQL_PASSWORD environment variable is required. "
+                "Please set it before starting the application."
+            )
 
         # Sprint 8: 连接池参数优化
         pool_size = int(os.getenv('DB_POOL_SIZE', '20'))  # 增加默认值 10 -> 20

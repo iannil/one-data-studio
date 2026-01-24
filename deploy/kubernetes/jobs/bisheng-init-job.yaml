@@ -1,5 +1,6 @@
 # ONE-DATA-STUDIO Bisheng 数据库初始化 Job
 # Phase 5: 端到端集成配置
+# 安全加固: 使用 Kubernetes Secrets 存储凭据
 
 apiVersion: batch/v1
 kind: Job
@@ -23,11 +24,19 @@ spec:
         command: ["python", "init_db.py"]
         env:
         - name: DATABASE_URL
-          value: "mysql+pymysql://one_data:OneDataPassword123!@mysql.one-data-infra.svc.cluster.local:3306/one_data"
+          valueFrom:
+            secretKeyRef:
+              name: bisheng-db-credentials
+              key: database-url
         - name: ALDATA_API_URL
           value: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
         - name: CUBE_API_URL
           value: "http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bisheng-jwt-credentials
+              key: secret-key
         resources:
           requests:
             cpu: 100m
@@ -69,3 +78,24 @@ spec:
           limits:
             cpu: 100m
             memory: 128Mi
+---
+# Secret 示例模板 (实际部署时需单独创建)
+# 注意: 请勿将实际密码提交到版本控制
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bisheng-db-credentials
+  namespace: one-data-bisheng
+type: Opaque
+stringData:
+  # 使用 kubectl create secret 或 Helm values 注入实际值
+  database-url: "mysql+pymysql://one_data:${MYSQL_PASSWORD}@mysql.one-data-infra.svc.cluster.local:3306/one_data"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bisheng-jwt-credentials
+  namespace: one-data-bisheng
+type: Opaque
+stringData:
+  secret-key: "${JWT_SECRET_KEY}"

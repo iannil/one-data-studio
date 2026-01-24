@@ -3,10 +3,13 @@
 Phase 7: Sprint 7.4
 """
 
+import logging
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, BigInteger, Text
 
 from .base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowSchedule(Base):
@@ -94,7 +97,8 @@ class WorkflowSchedule(Base):
                 base = self.last_run_at or datetime.utcnow()
                 cron = croniter(self.cron_expression, base)
                 return cron.get_next(datetime)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to parse cron expression '{self.cron_expression}': {e}")
                 return None
         elif self.schedule_type == "interval" and self.interval_seconds:
             base = self.last_run_at or datetime.utcnow()

@@ -55,20 +55,23 @@ class CORSConfig:
     # Preflight cache duration (seconds)
     max_age: int = 600
 
-    # Whether to allow all origins (DANGEROUS - only for development)
-    allow_all_origins: bool = field(default_factory=lambda:
-        os.getenv('CORS_ALLOW_ALL', 'false').lower() == 'true' and
-        os.getenv('FLASK_ENV') != 'production'
-    )
+    # Whether to allow all origins (DANGEROUS - DISABLED for security)
+    # NOTE: This option has been removed for security. Always configure explicit origins.
+    allow_all_origins: bool = False
 
     def __post_init__(self):
         """Validate configuration."""
-        if self.allow_all_origins and os.getenv('FLASK_ENV') == 'production':
-            logger.error("CORS_ALLOW_ALL is not allowed in production!")
-            self.allow_all_origins = False
+        # Force disable allow_all_origins in all environments
+        env_allow_all = os.getenv('CORS_ALLOW_ALL', 'false').lower() == 'true'
+        if env_allow_all:
+            logger.warning(
+                "CORS_ALLOW_ALL environment variable is set but will be ignored. "
+                "Configure explicit origins using CORS_ALLOWED_ORIGINS instead."
+            )
+        self.allow_all_origins = False
 
-        if self.allow_all_origins:
-            logger.warning("CORS configured to allow all origins. This is insecure for production.")
+        if not self.origins and os.getenv('FLASK_ENV') == 'production':
+            logger.warning("No CORS origins configured for production. Set CORS_ALLOWED_ORIGINS.")
 
     def is_origin_allowed(self, origin: str) -> bool:
         """

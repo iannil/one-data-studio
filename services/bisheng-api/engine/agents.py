@@ -149,7 +149,7 @@ class ReActAgent:
                 input_text = re.sub(r'\s+', ' ', input_text)
                 try:
                     parameters = json.loads(input_text)
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     parameters = {}
 
         return tool_name, parameters

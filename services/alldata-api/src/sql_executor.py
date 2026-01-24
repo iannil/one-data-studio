@@ -21,6 +21,10 @@ import threading
 
 logger = logging.getLogger(__name__)
 
+# 数据库名称白名单验证正则表达式
+# 只允许字母、数字和下划线，必须以字母开头
+DATABASE_NAME_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9_]{0,63}$')
+
 
 class QueryStatus(Enum):
     """查询状态"""
@@ -157,6 +161,28 @@ class SQLSanitizer:
 
         return sql
 
+    @classmethod
+    def validate_database_name(cls, database: str) -> Tuple[bool, Optional[str]]:
+        """
+        验证数据库名称是否安全
+
+        Args:
+            database: 数据库名称
+
+        Returns:
+            (是否有效, 错误信息)
+        """
+        if not database:
+            return False, "Database name cannot be empty"
+
+        if not DATABASE_NAME_PATTERN.match(database):
+            return False, (
+                "Invalid database name. Must start with a letter and contain only "
+                "letters, numbers, and underscores (max 64 chars)"
+            )
+
+        return True, None
+
 
 class SQLExecutor:
     """
@@ -262,18 +288,29 @@ class SQLExecutor:
 
             result.status = QueryStatus.RUNNING
 
+            # 验证数据库名称
+            is_valid, db_error = SQLSanitizer.validate_database_name(database)
+            if not is_valid:
+                result.status = QueryStatus.FAILED
+                result.error = db_error
+                return result
+
             # 执行查询
             start_time = time.time()
 
             with self.engine.connect() as conn:
-                # 设置查询超时（MySQL 特定）
-                conn.execute(f"SET SESSION max_execution_time = {config.timeout_seconds * 1000}")
+                from sqlalchemy import text
 
-                # 选择数据库
-                conn.execute(f"USE {database}")
+                # 设置查询超时（MySQL 特定）- 使用参数化查询
+                timeout_ms = config.timeout_seconds * 1000
+                conn.execute(text("SET SESSION max_execution_time = :timeout"), {"timeout": timeout_ms})
 
-                # 执行查询
-                cursor_result = conn.execute(sanitized_sql)
+                # 选择数据库 - 使用反引号转义已验证的数据库名
+                # 注意：数据库名已通过 validate_database_name 验证，只包含安全字符
+                conn.execute(text(f"USE `{database}`"))
+
+                # 执行查询 - 使用 text() 包装已清洗的 SQL
+                cursor_result = conn.execute(text(sanitized_sql))
 
                 # 获取列名
                 result.columns = list(cursor_result.keys())

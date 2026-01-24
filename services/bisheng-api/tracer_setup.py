@@ -349,6 +349,6 @@ if __name__ == "__main__":
     # 测试追踪初始化
     tracer = setup_tracing()
     if tracer:
-        print("Bisheng API tracing initialized successfully")
+        logger.info("Bisheng API tracing initialized successfully")
     else:
-        print("Bisheng API tracing initialization failed")
+        logger.warning("Bisheng API tracing initialization failed")

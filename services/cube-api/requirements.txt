@@ -1,0 +1,16 @@
+# Cube API Dependencies
+# MLOps 平台服务依赖
+
+# Web Framework
+Flask==3.0.0
+flask-cors==4.0.0
+
+# Database
+SQLAlchemy==2.0.23
+PyMySQL==1.1.0
+
+# HTTP Client
+httpx==0.25.2
+
+# Utils
+python-dotenv==1.0.0

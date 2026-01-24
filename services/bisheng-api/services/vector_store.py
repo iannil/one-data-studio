@@ -46,12 +46,149 @@ class VectorStore:
 
     _connected = False
     _search_cache: Dict[str, Tuple[Any, float]] = {}
+    _connection_alias = "default"
+    _max_retries = 3
+    _retry_delay = 1.0  # 秒
 
     def __init__(self):
         """初始化向量存储"""
         if not self._connected:
             self._connect()
             VectorStore._connected = True
+
+    def _connect(self, retry_count: int = 0):
+        """
+        连接到 Milvus 服务器
+
+        Args:
+            retry_count: 当前重试次数
+
+        功能：
+        - 建立 Milvus 连接
+        - 支持连接重试
+        - 连接池管理
+        - 健康检查
+        """
+        import time
+
+        try:
+            # 检查是否已有活跃连接
+            if self._check_connection():
+                logger.info("Milvus connection already active")
+                return
+
+            # 断开旧连接（如果存在）
+            try:
+                connections.disconnect(self._connection_alias)
+            except Exception:
+                pass
+
+            # 建立新连接
+            logger.info(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
+            connections.connect(
+                alias=self._connection_alias,
+                host=MILVUS_HOST,
+                port=MILVUS_PORT,
+                # 连接超时配置
+                timeout=30
+            )
+
+            # 验证连接
+            if self._check_connection():
+                logger.info(f"Successfully connected to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
+                VectorStore._connected = True
+            else:
+                raise ConnectionError("Connection verification failed")
+
+        except Exception as e:
+            logger.error(f"Failed to connect to Milvus (attempt {retry_count + 1}/{self._max_retries}): {e}")
+
+            if retry_count < self._max_retries - 1:
+                time.sleep(self._retry_delay * (retry_count + 1))  # 指数退避
+                self._connect(retry_count + 1)
+            else:
+                logger.error(f"Max retries ({self._max_retries}) exceeded. Milvus connection failed.")
+                VectorStore._connected = False
+                raise ConnectionError(f"Unable to connect to Milvus after {self._max_retries} attempts: {e}")
+
+    def _check_connection(self) -> bool:
+        """
+        检查 Milvus 连接是否活跃
+
+        Returns:
+            bool: 连接是否有效
+        """
+        try:
+            # 尝试列出集合以验证连接
+            utility.list_collections()
+            return True
+        except Exception as e:
+            logger.debug(f"Connection check failed: {e}")
+            return False
+
+    def _ensure_connection(self):
+        """
+        确保连接有效，如果无效则重新连接
+
+        用于在每次操作前检查连接状态
+        """
+        if not self._check_connection():
+            logger.warning("Milvus connection lost, attempting to reconnect...")
+            VectorStore._connected = False
+            self._connect()
+
+    def reconnect(self):
+        """
+        强制重新连接
+
+        可用于手动触发重连
+        """
+        VectorStore._connected = False
+        self._connect()
+
+    def health_check(self) -> Dict[str, Any]:
+        """
+        健康检查
+
+        Returns:
+            Dict: 包含连接状态和服务器信息的字典
+        """
+        try:
+            is_connected = self._check_connection()
+            collections = []
+            server_version = "unknown"
+
+            if is_connected:
+                collections = utility.list_collections()
+                # 尝试获取服务器版本（如果API支持）
+                try:
+                    server_version = utility.get_server_version()
+                except Exception:
+                    pass
+
+            return {
+                "status": "healthy" if is_connected else "unhealthy",
+                "connected": is_connected,
+                "host": MILVUS_HOST,
+                "port": MILVUS_PORT,
+                "server_version": server_version,
+                "collections_count": len(collections),
+                "collections": collections[:10],  # 最多返回10个
+                "index_type": INDEX_TYPE,
+                "metric_type": METRIC_TYPE,
+                "embedding_dim": EMBEDDING_DIM,
+                "cache_size": len(VectorStore._search_cache),
+                "cache_max_size": SEARCH_CACHE_SIZE
+            }
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            return {
+                "status": "error",
+                "connected": False,
+                "error": str(e),
+                "host": MILVUS_HOST,
+                "port": MILVUS_PORT
+            }
 
     def create_collection(self, name: str, dimension: int = EMBEDDING_DIM, drop_existing: bool = False):
         """
@@ -153,6 +290,9 @@ class VectorStore:
         Returns:
             插入的文档数量
         """
+        # 确保连接有效
+        self._ensure_connection()
+
         # 如果集合不存在，创建它
         if not utility.has_collection(collection_name):
             self.create_collection(collection_name)
@@ -194,6 +334,9 @@ class VectorStore:
         Returns:
             包含结果和元数据的字典
         """
+        # 确保连接有效
+        self._ensure_connection()
+
         if not utility.has_collection(collection_name):
             return {"results": [], "total": 0, "offset": offset, "limit": top_k}
 

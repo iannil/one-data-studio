@@ -43,8 +43,7 @@ jobs:
             -o bandit-results.sarif \
             --severity-level medium \
             --confidence-level medium \
-            -x '*/tests/*,*/test/*' \
-            || true
+            -x '*/tests/*,*/test/*'
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
@@ -59,8 +58,7 @@ jobs:
             -f txt \
             --severity-level medium \
             --confidence-level medium \
-            -x '*/tests/*,*/test/*' \
-            || true
+            -x '*/tests/*,*/test/*'
 
   # ========================================
   # JavaScript/TypeScript SAST (ESLint Security)
@@ -88,7 +86,7 @@ jobs:
         working-directory: web
         run: |
           npm install eslint-plugin-security --save-dev
-          npx eslint src/ --format @microsoft/eslint-formatter-sarif --output-file ../eslint-results.sarif || true
+          npx eslint src/ --format @microsoft/eslint-formatter-sarif --output-file ../eslint-results.sarif
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
@@ -118,16 +116,13 @@ jobs:
       - name: Run npm audit
         working-directory: web
         run: |
-          npm audit --audit-level=high --json > npm-audit-results.json || true
+          npm audit --audit-level=high --json > npm-audit-results.json
           cat npm-audit-results.json
 
       - name: Check for high/critical vulnerabilities
         working-directory: web
         run: |
-          VULNS=$(npm audit --audit-level=high 2>&1 || true)
-          if echo "$VULNS" | grep -q "high\|critical"; then
-            echo "::warning::High or critical vulnerabilities found in npm dependencies"
-          fi
+          npm audit --audit-level=high
 
   # ========================================
   # Python Dependency Scanning (pip-audit)
@@ -150,7 +145,7 @@ jobs:
 
       - name: Run pip-audit
         run: |
-          pip-audit -r requirements.txt --format json --output pip-audit-results.json || true
+          pip-audit -r requirements.txt --format json --output pip-audit-results.json
           cat pip-audit-results.json
 
   # ========================================

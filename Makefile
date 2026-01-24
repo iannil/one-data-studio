@@ -69,18 +69,19 @@ help:
 # 创建 Kind 集群
 kind-cluster:
 	@echo "==> 创建 Kind 集群..."
-	@bash scripts/install-kind.sh
+	@bash deploy/scripts/install-kind.sh
 
 # Docker Compose 启动
 docker-up:
 	@echo "==> 使用 Docker Compose 启动服务..."
 	@docker-compose -f deploy/local/docker-compose.yml up -d
 	@echo "==> 服务已启动:"
-	@echo "    Alldata API:  http://localhost:8080"
-	@echo "    Cube API:     http://localhost:8000"
-	@echo "    Bisheng API:  http://localhost:8081"
+	@echo "    Bisheng API:  http://localhost:8000"
+	@echo "    Alldata API:  http://localhost:8001"
+	@echo "    Cube API:     http://localhost:8002"
+	@echo "    OpenAI Proxy: http://localhost:8003"
 	@echo "    MinIO:        http://localhost:9001"
-	@echo "    Grafana:      http://localhost:3000"
+	@echo "    Web Frontend: http://localhost:3000"
 
 # Docker Compose 停止
 docker-down:
@@ -99,15 +100,15 @@ install: install-base install-infra install-apps
 # 安装基础资源
 install-base:
 	@echo "==> 安装基础资源..."
-	kubectl apply -f k8s/base/namespaces.yaml
-	kubectl apply -f k8s/base/storage-classes.yaml
+	kubectl apply -f deploy/kubernetes/base/namespaces.yaml
+	kubectl apply -f deploy/kubernetes/base/storage-classes.yaml
 
 # 安装基础设施
 install-infra: install-base
 	@echo "==> 安装基础设施..."
-	kubectl apply -f k8s/infrastructure/minio.yaml
-	kubectl apply -f k8s/infrastructure/mysql.yaml
-	kubectl apply -f k8s/infrastructure/redis.yaml
+	kubectl apply -f deploy/kubernetes/infrastructure/databases/minio.yaml
+	kubectl apply -f deploy/kubernetes/infrastructure/databases/mysql/standalone.yaml
+	kubectl apply -f deploy/kubernetes/infrastructure/databases/redis/standalone.yaml
 	@echo "==> 等待基础设施就绪..."
 	kubectl wait --for=condition=ready pod -l app=minio -n one-data-infra --timeout=300s || true
 	kubectl wait --for=condition=ready pod -l app=mysql -n one-data-infra --timeout=300s || true
@@ -116,9 +117,9 @@ install-infra: install-base
 # 安装应用服务
 install-apps: install-infra
 	@echo "==> 安装应用服务..."
-	kubectl apply -f k8s/applications/alldata-api-mock.yaml
-	kubectl apply -f k8s/applications/vllm-serving.yaml
-	kubectl apply -f k8s/applications/bisheng-api-mock.yaml
+	kubectl apply -f deploy/kubernetes/applications/alldata-api/deployment.yaml
+	kubectl apply -f deploy/kubernetes/applications/vllm-serving/deployment.yaml
+	kubectl apply -f deploy/kubernetes/applications/bisheng-api/deployment.yaml
 	@echo "==> 等待应用服务就绪..."
 	kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-alldata --timeout=120s || true
 	kubectl wait --for=condition=ready pod -l app=vllm-serving -n one-data-cube --timeout=600s || true
@@ -162,28 +163,28 @@ logs-bisheng:
 
 # 快速测试
 test:
-	@echo "==> 测试 Alldata API..."
-	@curl -s http://localhost:8080/api/v1/health | jq . || echo "  Alldata API 未响应"
-	@echo ""
-	@echo "==> 测试 Cube 模型服务..."
-	@curl -s http://localhost:8000/v1/models | jq . || echo "  Cube API 未响应"
-	@echo ""
 	@echo "==> 测试 Bisheng API..."
-	@curl -s http://localhost:8081/api/v1/health | jq . || echo "  Bisheng API 未响应"
+	@curl -s http://localhost:8000/api/v1/health | jq . || echo "  Bisheng API 未响应"
+	@echo ""
+	@echo "==> 测试 Alldata API..."
+	@curl -s http://localhost:8001/api/v1/health | jq . || echo "  Alldata API 未响应"
+	@echo ""
+	@echo "==> 测试 Cube API..."
+	@curl -s http://localhost:8002/api/v1/health | jq . || echo "  Cube API 未响应"
 	@echo ""
 	@echo "==> 测试端到端调用..."
-	@curl -s -X POST http://localhost:8081/api/v1/chat \
+	@curl -s -X POST http://localhost:8000/api/v1/chat \
 		-H "Content-Type: application/json" \
 		-d '{"message": "测试"}' | jq . || echo "  端到端调用失败"
 
 # 完整集成测试
 test-all:
-	@bash scripts/test-all.sh
+	@bash deploy/scripts/test-all.sh
 
 # 端到端测试
 test-e2e:
 	@echo "==> 运行端到端测试..."
-	@bash scripts/test-e2e.sh
+	@bash deploy/scripts/test-e2e.sh
 
 # ============================================
 # 数据库初始化
@@ -192,8 +193,8 @@ test-e2e:
 # 运行数据库初始化 Job
 init-db:
 	@echo "==> 运行数据库初始化 Job..."
-	kubectl apply -f k8s/jobs/alldata-init-job.yaml
-	kubectl apply -f k8s/jobs/bisheng-init-job.yaml
+	kubectl apply -f deploy/kubernetes/jobs/alldata-init-job.yaml
+	kubectl apply -f deploy/kubernetes/jobs/bisheng-init-job.yaml
 	@echo "==> 等待初始化完成..."
 	@kubectl wait --for=condition=complete job/alldata-db-init -n one-data-alldata --timeout=300s || true
 	@kubectl wait --for=condition=complete job/bisheng-db-init -n one-data-bisheng --timeout=300s || true
@@ -205,11 +206,11 @@ init-db:
 
 # 后台端口转发
 forward:
-	@bash scripts/port-forward.sh &
+	@bash deploy/scripts/port-forward.sh &
 
 # 前台端口转发
 forward-interactive:
-	@bash scripts/port-forward.sh
+	@bash deploy/scripts/port-forward.sh
 
 # 停止端口转发
 unforward:
@@ -224,16 +225,16 @@ unforward:
 
 # 清理 K8s 资源
 clean:
-	@bash scripts/clean.sh
+	@bash deploy/scripts/clean.sh
 
 # 清理所有资源（包括 Kind 集群）
 clean-all:
 	@echo "==> 删除应用服务..."
-	kubectl delete -f k8s/applications/ --ignore-not-found=true
+	kubectl delete -f deploy/kubernetes/applications/ --ignore-not-found=true --recursive
 	@echo "==> 删除基础设施..."
-	kubectl delete -f k8s/infrastructure/ --ignore-not-found=true
+	kubectl delete -f deploy/kubernetes/infrastructure/ --ignore-not-found=true --recursive
 	@echo "==> 删除基础资源..."
-	kubectl delete -f k8s/base/ --ignore-not-found=true
+	kubectl delete -f deploy/kubernetes/base/ --ignore-not-found=true
 	@echo "==> 删除 Kind 集群..."
 	kind delete cluster --name one-data || true
 	@$(MAKE) unforward
@@ -246,12 +247,12 @@ clean-all:
 # 检查 Helm Charts
 helm-lint:
 	@echo "==> 检查 Helm Charts..."
-	helm lint helm/charts/one-data || true
+	helm lint deploy/helm/charts/one-data || true
 
 # 打包 Helm Charts
 helm-package:
 	@echo "==> 打包 Helm Charts..."
-	helm package helm/charts/one-data
+	helm package deploy/helm/charts/one-data
 
 # ============================================
 # Phase 2 Web 前端
@@ -269,7 +270,7 @@ web-install: web-build
 	kind load docker-image one-data-web:latest --name one-data || \
 		echo "  注意: 请确保 Kind 集群名为 'one-data'"
 	@echo "==> 部署 Web 前端到 K8s..."
-	kubectl apply -f k8s/applications/web-frontend.yaml
+	kubectl apply -f deploy/kubernetes/applications/web-frontend/deployment.yaml
 	@echo "==> 等待 Web 前端就绪..."
 	kubectl wait --for=condition=ready pod -l app=web-frontend -n one-data-web --timeout=120s || true
 	@echo "==> Web 前端已部署"

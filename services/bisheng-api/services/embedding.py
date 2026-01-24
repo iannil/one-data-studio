@@ -9,12 +9,40 @@ import os
 import requests
 from typing import List, Union
 
+try:
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    HAS_TENACITY = True
+except ImportError:
+    HAS_TENACITY = False
+
 logger = logging.getLogger(__name__)
 
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+
+
+def _make_embedding_request(api_url: str, text: str, model: str) -> requests.Response:
+    """Make embedding request with optional retry"""
+    return requests.post(
+        f"{api_url}/v1/embeddings",
+        json={"input": text, "model": model},
+        timeout=30
+    )
+
+
+# Apply retry decorator if tenacity is available
+if HAS_TENACITY:
+    _make_embedding_request = retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((requests.exceptions.ConnectionError,
+                                       requests.exceptions.Timeout)),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Embedding request failed, retrying ({retry_state.attempt_number}/3)..."
+        )
+    )(_make_embedding_request)
 
 
 class EmbeddingService:
@@ -44,22 +72,20 @@ class EmbeddingService:
             return [0.0] * EMBEDDING_DIM
 
         try:
-            response = requests.post(
-                f"{self.api_url}/v1/embeddings",
-                json={"input": text, "model": self.model},
-                timeout=30
-            )
+            response = _make_embedding_request(self.api_url, text, self.model)
 
             if response.status_code == 200:
                 result = response.json()
                 embedding = result.get("data", [{}])[0].get("embedding", [])
                 return embedding
             else:
-                logger.warning(f"Embedding API error: {response.status_code}")
+                logger.warning(f"Embedding API error: {response.status_code}, falling back to mock embedding. "
+                              "Check EMBEDDING_API_URL configuration.")
                 return self._mock_embedding(text)
 
         except Exception as e:
-            logger.warning(f"Embedding generation failed: {e}")
+            logger.warning(f"Embedding generation failed: {e}, falling back to mock embedding. "
+                          "Set a valid EMBEDDING_API_URL environment variable for production use.")
             return self._mock_embedding(text)
 
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:

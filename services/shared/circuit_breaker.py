@@ -881,7 +881,8 @@ def create_database_connection_pool(
         try:
             conn.execute("SELECT 1")
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Connection health check failed: {e}")
             return False
 
     return ConnectionPool(

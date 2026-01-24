@@ -27,9 +27,10 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import cube from '@/services/cube';
-import bisheng, { type Conversation, type ConversationMessage } from '@/services/bisheng';
+import cube, { type ChatCompletionUsage } from '@/services/cube';
+import bisheng, { type Conversation, type ConversationMessage, saveMessage, getConversationUsage } from '@/services/bisheng';
 import type { ChatMessage } from '@/services/cube';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -57,10 +58,21 @@ function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
 
+  // Token 使用统计
+  const [tokenUsage, setTokenUsage] = useState<{
+    total_prompt_tokens: number;
+    total_completion_tokens: number;
+    total_tokens: number;
+  }>({ total_prompt_tokens: 0, total_completion_tokens: 0, total_tokens: 0 });
+
   // 重命名相关状态
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [newSessionTitle, setNewSessionTitle] = useState('');
+
+  // 系统提示词状态（用于 Prompt 模板）
+  const [systemPrompt, setSystemPrompt] = useState('你是一个智能助手，请用中文回答问题。');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -126,10 +138,29 @@ function ChatPage() {
           created_at: msg.created_at,
         }));
         setMessages(messageList);
+
+        // 加载 Token 使用统计
+        loadTokenUsage(conversationId);
       }
     } catch (error) {
       console.error('Failed to load conversation:', error);
       message.error('加载会话失败');
+    }
+  };
+
+  // 加载 Token 使用统计
+  const loadTokenUsage = async (conversationId: string) => {
+    try {
+      const response = await getConversationUsage(conversationId);
+      if (response.code === 0 && response.data) {
+        setTokenUsage({
+          total_prompt_tokens: response.data.total_prompt_tokens || 0,
+          total_completion_tokens: response.data.total_completion_tokens || 0,
+          total_tokens: response.data.total_tokens || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load token usage:', error);
     }
   };
 
@@ -138,6 +169,7 @@ function ChatPage() {
     setCurrentConversationId(null);
     setMessages([]);
     setStreamingContent('');
+    setTokenUsage({ total_prompt_tokens: 0, total_completion_tokens: 0, total_tokens: 0 });
   };
 
   // 创建新会话（第一次发送消息时）
@@ -235,6 +267,21 @@ function ChatPage() {
     }
   };
 
+  // 应用 Prompt 模板
+  const handleTemplateSelect = (templateId: string | null) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) {
+      setSystemPrompt('你是一个智能助手，请用中文回答问题。');
+      return;
+    }
+    const templates = templatesData?.data?.templates || [];
+    const template = templates.find((t) => t.template_id === templateId);
+    if (template) {
+      setSystemPrompt(template.content || template.template || '你是一个智能助手，请用中文回答问题。');
+      message.success(`已应用模板: ${template.name}`);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim()) {
       message.warning('请输入消息内容');
@@ -260,6 +307,15 @@ function ChatPage() {
     setIsLoading(true);
     setStreamingContent('');
 
+    // 保存用户消息到后端
+    if (conversationId) {
+      saveMessage(conversationId, {
+        role: 'user',
+        content: currentInput,
+        model,
+      }).catch((err) => console.error('Failed to save user message:', err));
+    }
+
     try {
       const assistantMessage: Message = {
         id: `msg-${Date.now() + 1}`,
@@ -271,12 +327,15 @@ function ChatPage() {
       // 添加占位消息
       setMessages((prev) => [...prev, assistantMessage]);
 
+      // 用于收集完整的助手回复
+      let fullContent = '';
+
       // 使用流式 API
       await cube.streamChatCompletion(
         {
           model,
           messages: [
-            { role: 'system', content: '你是一个智能助手，请用中文回答问题。' },
+            { role: 'system', content: systemPrompt },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
             { role: 'user', content: currentInput },
           ],
@@ -285,6 +344,7 @@ function ChatPage() {
         },
         // onChunk
         (chunk: string) => {
+          fullContent += chunk;
           setStreamingContent((prev) => {
             const newContent = prev + chunk;
             // 更新最后一条消息的内容
@@ -299,10 +359,32 @@ function ChatPage() {
             return newContent;
           });
         },
-        // onComplete
-        () => {
+        // onComplete - receive usage data from stream
+        (usage?: ChatCompletionUsage) => {
           setIsLoading(false);
           setStreamingContent('');
+
+          // Calculate usage from stream data or estimate
+          const finalUsage = usage || {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+          };
+
+          // 保存助手消息到后端
+          if (conversationId && fullContent) {
+            saveMessage(conversationId, {
+              role: 'assistant',
+              content: fullContent,
+              model,
+              usage: finalUsage,
+            })
+              .then(() => {
+                // 刷新 token 使用统计
+                loadTokenUsage(conversationId!);
+              })
+              .catch((err) => console.error('Failed to save assistant message:', err));
+          }
         },
         // onError
         (error: Error) => {
@@ -575,7 +657,13 @@ function ChatPage() {
               <Divider style={{ margin: '8px 0' }} />
               <div>
                 <div style={{ marginBottom: 8 }}>Prompt 模板</div>
-                <Select placeholder="选择模板" style={{ width: '100%' }} allowClear>
+                <Select
+                  placeholder="选择模板"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={selectedTemplateId}
+                  onChange={handleTemplateSelect}
+                >
                   {templatesData.data.templates.map((t) => (
                     <Option key={t.template_id} value={t.template_id}>
                       {t.name}
@@ -597,8 +685,20 @@ function ChatPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#666' }}>Token 使用</span>
-                <span>-</span>
+                <span>{tokenUsage.total_tokens > 0 ? tokenUsage.total_tokens.toLocaleString() : '-'}</span>
               </div>
+              {tokenUsage.total_tokens > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: '#999' }}>输入 Token</span>
+                    <span style={{ color: '#999' }}>{tokenUsage.total_prompt_tokens.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: '#999' }}>输出 Token</span>
+                    <span style={{ color: '#999' }}>{tokenUsage.total_completion_tokens.toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </Space>
           </div>
         </Space>
@@ -627,4 +727,13 @@ function ChatPage() {
   );
 }
 
-export default ChatPage;
+// 使用 ErrorBoundary 包裹导出组件
+function ChatPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <ChatPage />
+    </ErrorBoundary>
+  );
+}
+
+export default ChatPageWithErrorBoundary;

@@ -4,15 +4,20 @@ Sprint 4.2: SQLAlchemy 数据库连接配置
 """
 
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# 数据库配置
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://one_data:OneDataPassword123!@mysql.one-data-infra.svc.cluster.local:3306/one_data_bisheng"
-)
+logger = logging.getLogger(__name__)
+
+# 数据库配置 - 必须从环境变量读取
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is required. "
+        "Example: mysql+pymysql://user:password@host:3306/database"
+    )
 
 # 创建引擎
 engine = create_engine(

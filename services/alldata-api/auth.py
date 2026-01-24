@@ -26,6 +26,18 @@ KEYCLOAK_URL = os.getenv(
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "one-data")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
+# 安全警告: AUTH_MODE=false 将禁用所有认证检查
+if not AUTH_MODE:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError(
+            "CRITICAL: AUTH_MODE cannot be disabled in production environment. "
+            "Remove AUTH_MODE=false or set ENVIRONMENT to a non-production value."
+        )
+    logger.warning(
+        "SECURITY WARNING: AUTH_MODE is disabled. All requests will bypass authentication. "
+        "This should ONLY be used for local development."
+    )
+
 # 尝试导入共享 JWT 中间件
 try:
     import sys
@@ -200,12 +212,17 @@ def _introspect_token(token: str) -> Optional[Dict]:
     使用 Keycloak token introspection 端点验证 token
     """
     try:
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "alldata-api")
+        client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+        if not client_secret:
+            logger.warning("KEYCLOAK_CLIENT_SECRET not set, token introspection may fail")
+            return None
         response = requests.post(
             f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token/introspect",
             data={
                 "token": token,
-                "client_id": os.getenv("KEYCLOAK_CLIENT_ID", "alldata-api"),
-                "client_secret": os.getenv("KEYCLOAK_CLIENT_SECRET", "alldata-api-secret"),
+                "client_id": client_id,
+                "client_secret": client_secret,
             },
             timeout=5
         )

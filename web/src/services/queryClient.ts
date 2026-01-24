@@ -146,11 +146,8 @@ function createQueryCache() {
         message.error(errorMessage);
       }
     },
-    onSuccess: (data, query) => {
-      // 可选：记录成功日志
-      if (query.meta?.logSuccess) {
-        console.log('Query success:', query.queryKey);
-      }
+    onSuccess: (_data, _query) => {
+      // Success logging removed - use network tab for debugging
     },
   });
 }

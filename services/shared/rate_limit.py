@@ -76,7 +76,7 @@ def get_user_id() -> str:
         if hasattr(g, 'api_key'):
             return f"apikey:{g.api_key}"
     except ImportError:
-        pass
+        logger.debug("Flask not available for user ID extraction")
 
     # 回退到 IP 地址
     return get_remote_address() if get_remote_address else "anonymous"
@@ -249,7 +249,7 @@ def handle_rate_limit_error(e):
                 }
             }), 429
     except ImportError:
-        pass
+        logger.debug("Flask not available for rate limit error handling")
 
     return None
 

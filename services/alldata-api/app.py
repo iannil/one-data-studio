@@ -102,6 +102,8 @@ except ImportError:
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+# 请求大小限制 - 防止 DoS 攻击
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 # 配置 Prometheus 指标
 if PROMETHEUS_ENABLED:
@@ -429,6 +431,422 @@ def list_columns(database, table):
             "message": "success",
             "data": {"columns": result}
         })
+    finally:
+        db.close()
+
+
+# ============================================
+# Sprint 7: Query Execution APIs
+# ============================================
+
+@app.route("/api/v1/query/execute", methods=["POST"])
+@require_jwt()
+@check_sql_injection('sql')
+def execute_query():
+    """
+    执行 SQL 查询
+    Sprint 7: 前端期望的查询执行接口
+    """
+    data = request.json
+    if not data or not data.get("sql"):
+        return jsonify({"code": 40001, "message": "SQL query is required"}), 400
+
+    sql = data.get("sql", "").strip()
+    database = data.get("database", "default")
+    limit = min(data.get("limit", 100), 1000)  # 最大1000行
+    timeout = min(data.get("timeout", 30), 60)  # 最大60秒
+
+    # 安全检查：只允许 SELECT 语句
+    sql_upper = sql.upper().strip()
+    if not sql_upper.startswith("SELECT"):
+        return jsonify({
+            "code": 40003,
+            "message": "Only SELECT queries are allowed",
+            "error": "invalid_query_type"
+        }), 400
+
+    db = get_db_session()
+    try:
+        import time
+        start_time = time.time()
+
+        # 添加 LIMIT 如果没有
+        if "LIMIT" not in sql_upper:
+            sql = f"{sql} LIMIT {limit}"
+
+        # 执行查询
+        result = db.execute(sql)
+        rows = result.fetchall()
+        columns = list(result.keys()) if result.keys() else []
+
+        execution_time = time.time() - start_time
+
+        # 转换结果为字典列表
+        data_rows = []
+        for row in rows:
+            data_rows.append(dict(zip(columns, row)))
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "columns": columns,
+                "rows": data_rows,
+                "row_count": len(data_rows),
+                "execution_time_ms": round(execution_time * 1000, 2),
+                "truncated": len(data_rows) >= limit
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50002,
+            "message": f"Query execution failed: {str(e)}",
+            "error": "query_execution_error"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/query/validate", methods=["POST"])
+@require_jwt(optional=True)
+def validate_query():
+    """
+    验证 SQL 查询语法
+    Sprint 7: SQL 验证接口
+    """
+    data = request.json
+    if not data or not data.get("sql"):
+        return jsonify({"code": 40001, "message": "SQL query is required"}), 400
+
+    sql = data.get("sql", "").strip()
+
+    # 基本语法检查
+    errors = []
+    warnings = []
+
+    # 检查是否为空
+    if not sql:
+        errors.append({"type": "syntax", "message": "Query cannot be empty"})
+        return jsonify({
+            "code": 0,
+            "message": "validation_failed",
+            "data": {"valid": False, "errors": errors, "warnings": warnings}
+        })
+
+    sql_upper = sql.upper()
+
+    # 检查危险操作
+    dangerous_keywords = ["DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE"]
+    for keyword in dangerous_keywords:
+        if keyword in sql_upper:
+            if keyword in ["DELETE", "UPDATE", "INSERT"]:
+                warnings.append({
+                    "type": "security",
+                    "message": f"{keyword} statement detected - requires elevated permissions"
+                })
+            else:
+                errors.append({
+                    "type": "security",
+                    "message": f"{keyword} statement is not allowed"
+                })
+
+    # 检查基本语法
+    if not any(sql_upper.startswith(kw) for kw in ["SELECT", "WITH", "EXPLAIN", "SHOW", "DESCRIBE"]):
+        errors.append({
+            "type": "syntax",
+            "message": "Query must start with SELECT, WITH, EXPLAIN, SHOW, or DESCRIBE"
+        })
+
+    # 检查括号匹配
+    if sql.count("(") != sql.count(")"):
+        errors.append({"type": "syntax", "message": "Unmatched parentheses"})
+
+    # 检查引号匹配
+    single_quotes = sql.count("'") - sql.count("\\'")
+    if single_quotes % 2 != 0:
+        errors.append({"type": "syntax", "message": "Unmatched single quotes"})
+
+    is_valid = len(errors) == 0
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "valid": is_valid,
+            "errors": errors,
+            "warnings": warnings
+        }
+    })
+
+
+@app.route("/api/v1/metadata/tables/search", methods=["POST"])
+@require_jwt(optional=True)
+def search_tables():
+    """
+    智能表搜索
+    Sprint 7: 支持模糊搜索表名和列名
+    """
+    data = request.json or {}
+    query = data.get("query", "").strip()
+    database = data.get("database")
+    limit = min(data.get("limit", 20), 100)
+
+    db = get_db_session()
+    try:
+        # 构建查询
+        tables_query = db.query(MetadataTable)
+
+        if database:
+            tables_query = tables_query.filter(MetadataTable.database_name == database)
+
+        if query:
+            # 模糊搜索表名和描述
+            search_pattern = f"%{query}%"
+            tables_query = tables_query.filter(
+                (MetadataTable.table_name.ilike(search_pattern)) |
+                (MetadataTable.description.ilike(search_pattern))
+            )
+
+        tables = tables_query.limit(limit).all()
+
+        # 同时搜索列名
+        columns_query = db.query(MetadataColumn)
+        if query:
+            columns_query = columns_query.filter(
+                MetadataColumn.column_name.ilike(f"%{query}%")
+            )
+        matching_columns = columns_query.limit(limit).all()
+
+        # 收集包含匹配列的表
+        column_table_matches = set()
+        for col in matching_columns:
+            column_table_matches.add((col.database_name, col.table_name))
+
+        result = {
+            "tables": [t.to_dict() for t in tables],
+            "column_matches": [
+                {"database": db_name, "table": tbl_name}
+                for db_name, tbl_name in column_table_matches
+            ],
+            "total_tables": len(tables),
+            "total_column_matches": len(column_table_matches)
+        }
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+    finally:
+        db.close()
+
+
+# ============================================
+# Sprint 7: Dataset Extended APIs
+# ============================================
+
+@app.route("/api/v1/datasets/<dataset_id>/upload-url", methods=["POST"])
+@require_jwt()
+def get_dataset_upload_url(dataset_id):
+    """
+    获取数据集上传预签名 URL
+    Sprint 7: MinIO 预签名 URL 生成
+    """
+    if not MINIO_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "MinIO storage not enabled",
+            "error": "storage_not_configured"
+        }), 503
+
+    data = request.json or {}
+    filename = data.get("filename", "data.csv")
+    content_type = data.get("content_type", "application/octet-stream")
+    expires = min(data.get("expires", 3600), 86400)  # 最大24小时
+
+    db = get_db_session()
+    try:
+        # 验证数据集存在
+        ds = db.query(Dataset).filter(
+            (Dataset.dataset_id == dataset_id) | (Dataset.id == dataset_id)
+        ).first()
+
+        if not ds:
+            return jsonify({"code": 40401, "message": "Dataset not found"}), 404
+
+        # 生成存储路径
+        import uuid
+        file_key = f"datasets/{dataset_id}/{uuid.uuid4().hex[:8]}_{filename}"
+
+        # 获取预签名 URL
+        storage = get_storage()
+        upload_url = storage.get_presigned_upload_url(
+            bucket="datasets",
+            object_name=file_key,
+            expires=expires,
+            content_type=content_type
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "upload_url": upload_url,
+                "file_key": file_key,
+                "expires_in": expires,
+                "method": "PUT"
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to generate upload URL: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/datasets/<dataset_id>/preview", methods=["GET"])
+@require_jwt(optional=True)
+def preview_dataset(dataset_id):
+    """
+    预览数据集内容
+    Sprint 7: 数据集预览接口
+    """
+    limit = min(int(request.args.get("limit", 100)), 1000)
+    offset = int(request.args.get("offset", 0))
+
+    db = get_db_session()
+    try:
+        ds = db.query(Dataset).filter(
+            (Dataset.dataset_id == dataset_id) | (Dataset.id == dataset_id)
+        ).options(joinedload(Dataset.columns)).first()
+
+        if not ds:
+            return jsonify({"code": 40401, "message": "Dataset not found"}), 404
+
+        # 尝试从存储中读取预览数据
+        preview_data = {
+            "columns": [col.to_dict() for col in ds.columns] if ds.columns else [],
+            "rows": [],
+            "total_rows": ds.row_count or 0,
+            "sample_size": 0
+        }
+
+        if MINIO_ENABLED and ds.storage_path:
+            try:
+                storage = get_storage()
+                # 读取数据预览（支持 CSV、Parquet 等格式）
+                sample_data = storage.read_preview(
+                    bucket="datasets",
+                    object_name=ds.storage_path,
+                    limit=limit,
+                    offset=offset,
+                    format=ds.format or "csv"
+                )
+                if sample_data:
+                    preview_data["rows"] = sample_data.get("rows", [])
+                    preview_data["sample_size"] = len(preview_data["rows"])
+            except Exception as e:
+                preview_data["preview_error"] = str(e)
+
+        return jsonify({"code": 0, "message": "success", "data": preview_data})
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/datasets/<dataset_id>/versions", methods=["GET"])
+@require_jwt(optional=True)
+def list_dataset_versions(dataset_id):
+    """
+    列出数据集版本历史
+    Sprint 7: 数据集版本管理
+    """
+    db = get_db_session()
+    try:
+        # 验证数据集存在
+        ds = db.query(Dataset).filter(
+            (Dataset.dataset_id == dataset_id) | (Dataset.id == dataset_id)
+        ).first()
+
+        if not ds:
+            return jsonify({"code": 40401, "message": "Dataset not found"}), 404
+
+        # 获取版本列表
+        versions = db.query(DatasetVersion).filter(
+            DatasetVersion.dataset_id == ds.dataset_id
+        ).order_by(DatasetVersion.version.desc()).all()
+
+        result = []
+        for v in versions:
+            result.append({
+                "version": v.version,
+                "created_at": v.created_at.isoformat() if v.created_at else None,
+                "storage_path": v.storage_path,
+                "row_count": v.row_count,
+                "size_bytes": v.size_bytes,
+                "description": v.description,
+                "is_current": v.version == ds.current_version if hasattr(ds, 'current_version') else False
+            })
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "dataset_id": ds.dataset_id,
+                "versions": result,
+                "total": len(result)
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/datasets/<dataset_id>/versions", methods=["POST"])
+@require_jwt()
+def create_dataset_version(dataset_id):
+    """
+    创建数据集新版本
+    Sprint 7: 版本创建接口
+    """
+    data = request.json or {}
+
+    db = get_db_session()
+    try:
+        ds = db.query(Dataset).filter(
+            (Dataset.dataset_id == dataset_id) | (Dataset.id == dataset_id)
+        ).first()
+
+        if not ds:
+            return jsonify({"code": 40401, "message": "Dataset not found"}), 404
+
+        # 获取最新版本号
+        latest = db.query(DatasetVersion).filter(
+            DatasetVersion.dataset_id == ds.dataset_id
+        ).order_by(DatasetVersion.version.desc()).first()
+
+        new_version = (latest.version + 1) if latest else 1
+
+        # 创建新版本
+        version = DatasetVersion(
+            dataset_id=ds.dataset_id,
+            version=new_version,
+            storage_path=data.get("storage_path", ""),
+            row_count=data.get("row_count", 0),
+            size_bytes=data.get("size_bytes", 0),
+            description=data.get("description", f"Version {new_version}")
+        )
+
+        db.add(version)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "version": new_version,
+                "dataset_id": ds.dataset_id
+            }
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
 

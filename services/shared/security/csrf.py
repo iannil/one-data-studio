@@ -18,7 +18,9 @@ from functools import wraps
 logger = logging.getLogger(__name__)
 
 # CSRF Configuration
-CSRF_SECRET_KEY = os.getenv('CSRF_SECRET_KEY', os.getenv('JWT_SECRET_KEY', 'dev-csrf-secret'))
+CSRF_SECRET_KEY = os.getenv('CSRF_SECRET_KEY') or os.getenv('JWT_SECRET_KEY')
+if not CSRF_SECRET_KEY:
+    raise ValueError("CSRF_SECRET_KEY or JWT_SECRET_KEY environment variable is required")
 CSRF_TOKEN_LENGTH = 32
 CSRF_TOKEN_EXPIRY = int(os.getenv('CSRF_TOKEN_EXPIRY', '3600'))  # 1 hour default
 CSRF_HEADER_NAME = os.getenv('CSRF_HEADER_NAME', 'X-CSRF-Token')
@@ -75,9 +77,6 @@ class CSRFProtection:
             '/api/v1/auth/login',
             '/api/v1/auth/callback',
         ]
-
-        if self.secret_key == 'dev-csrf-secret':
-            logger.warning("Using default CSRF secret key. Set CSRF_SECRET_KEY in production.")
 
     def generate_token(self, session_id: Optional[str] = None) -> Tuple[str, str]:
         """
@@ -298,8 +297,8 @@ def csrf_protect(func: Optional[Callable] = None, exempt: bool = False):
             try:
                 from flask import g
                 session_id = getattr(g, 'session_id', None)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Could not retrieve session_id for CSRF validation: {e}")
 
             if not csrf.validate_token(header_token, cookie_token, session_id):
                 logger.warning(f"CSRF validation failed for {request.method} {request.path}")
