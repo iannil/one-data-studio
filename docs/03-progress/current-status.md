@@ -30,7 +30,7 @@
 
 ---
 
-## 代码实现状态（2025-01 更新）
+## 代码实现状态（2025-01-24 更新）
 
 ### 前端实现 (web/)
 
@@ -43,19 +43,113 @@
 | 认证系统 | ✅ 完成 | 支持 Keycloak SSO + 模拟登录 |
 | 登录页 | ✅ 完成 | `web/src/pages/LoginPage.tsx` |
 | 首页 | ✅ 完成 | `web/src/pages/HomePage.tsx` |
-| 数据集管理页 | ✅ 完成 | `web/src/pages/datasets/` |
+| 数据集管理页 | ✅ 完成 | `web/src/pages/datasets/DatasetsPage.tsx` |
 | 聊天页 | ✅ 完成 | `web/src/pages/chat/ChatPage.tsx` |
-| 元数据页 | ✅ 完成 | `web/src/pages/metadata/` |
-| 工作流页 | ⚠️ 部分 | `web/src/pages/workflows/` - 编辑器待完善 |
-| 聊天历史记录 | ⚪ 待实现 | `web/src/pages/chat/ChatPage.tsx:161` |
+| 元数据页 | ✅ 完成 | `web/src/pages/metadata/MetadataPage.tsx` |
+| 工作流页 | ✅ 完成 | `web/src/pages/workflows/` - 包含列表、编辑、执行页面 |
+| **Text2SQL 页** | ✅ 完成 | `web/src/pages/text2sql/Text2SQLPage.tsx` |
+| **Agents 页** | ✅ 完成 | `web/src/pages/agents/` - 包含模板、工具执行等 |
+| **Documents 页** | ✅ 完成 | `web/src/pages/documents/DocumentsPage.tsx` |
+| **Executions 页** | ✅ 完成 | `web/src/pages/executions/ExecutionsDashboard.tsx` |
+| **Schedules 页** | ✅ 完成 | `web/src/pages/schedules/SchedulesPage.tsx` |
 
-### 后端实现 (docker/)
+### 前端组件清单 (35+ 个 TSX 文件)
 
-| 服务 | 状态 | 说明 |
-|------|------|------|
-| Alldata API | ✅ 完成 | Flask 框架，数据集注册、查询、元数据管理 |
-| OpenAI Proxy | ✅ 完成 | OpenAI 兼容 API，支持流式响应 |
-| Bisheng API | 🟡 进行中 | 基础结构完整，向量检索功能待完善 |
+**页面组件 (pages/)**
+- `LoginPage.tsx` - 登录页
+- `HomePage.tsx` - 首页
+- `CallbackPage.tsx` - SSO 回调页
+- `datasets/DatasetsPage.tsx` - 数据集管理
+- `chat/ChatPage.tsx` - 聊天页
+- `metadata/MetadataPage.tsx` - 元数据浏览
+- `text2sql/Text2SQLPage.tsx` - Text2SQL
+- `agents/AgentsPage.tsx` - Agent 管理页
+- `agents/AgentTemplatesModal.tsx` - Agent 模板弹窗
+- `agents/SchemaViewer.tsx` - Schema 查看器
+- `agents/StepsViewer.tsx` - 步骤查看器
+- `agents/ToolExecuteModal.tsx` - 工具执行弹窗
+- `documents/DocumentsPage.tsx` - 文档管理页
+- `executions/ExecutionsDashboard.tsx` - 执行看板
+- `executions/ExecutionLogsModal.tsx` - 执行日志弹窗
+- `schedules/SchedulesPage.tsx` - 调度管理页
+- `workflows/WorkflowsPage.tsx` - 工作流列表
+- `workflows/WorkflowEditorPage.tsx` - 工作流编辑器
+- `workflows/WorkflowExecutePage.tsx` - 工作流执行页
+
+**布局组件 (layout/)**
+- `AppLayout.tsx` - 应用主布局
+- `Header.tsx` - 头部导航
+- `Sidebar.tsx` - 侧边栏
+
+**通用组件 (common/)**
+- `Loading.tsx` - 加载组件
+- `Error.tsx` - 错误组件
+- `PageWrapper.tsx` - 页面包装器
+
+**工作流组件 (workflow/)**
+- `FlowCanvas.tsx` - 流程图画布
+- `NodePalette.tsx` - 节点面板
+- `NodeConfigPanel.tsx` - 节点配置面板
+- `nodes/AgentNode.tsx` - Agent 节点
+- `nodes/ConditionNode.tsx` - 条件节点
+- `nodes/LoopNode.tsx` - 循环节点
+- `nodes/ToolCallNode.tsx` - 工具调用节点
+- `nodes/LLMNode.tsx` - LLM 节点
+- `nodes/RetrieverNode.tsx` - 检索节点
+- `nodes/InputNode.tsx` - 输入节点
+- `nodes/OutputNode.tsx` - 输出节点
+- `nodes/ThinkNode.tsx` - 思考节点
+
+**其他组件**
+- `WorkflowLogViewer.tsx` - 工作流日志查看器
+- `App.tsx` - 应用入口
+- `main.tsx` - 主入口
+- `contexts/AuthContext.tsx` - 认证上下文
+
+### 后端实现 (services/)
+
+| 服务 | 状态 | 说明 | 文件数 |
+|------|------|------|--------|
+| Alldata API | ✅ 完成 | Flask 框架，数据集注册、查询、元数据管理 | 11 个 Python 文件 |
+| OpenAI Proxy | ✅ 完成 | OpenAI 兼容 API，支持流式响应 | 1 个 Python 文件 |
+| Bisheng API | ✅ 完成 | Flask 框架，工作流、知识库、Agent、调度 | 34 个 Python 文件 |
+| Shared 模块 | ✅ 完成 | 认证、存储共享模块 | 5 个 Python 文件 |
+
+### 后端服务清单 (48+ 个 Python 文件)
+
+**Alldata API (services/alldata-api/)**
+- `app.py` - Flask 应用入口
+- `auth.py` - JWT 认证装饰器
+- `init_db.py` - 数据库初始化
+- `models/` - 数据模型 (base.py, dataset.py, metadata.py, file_upload.py)
+- `src/` - 源代码目录 (main.py, models.py, database.py, storage.py)
+
+**Bisheng API (services/bisheng-api/)**
+- `app.py` - Flask 应用入口
+- `auth.py` - JWT 认证和刷新
+- `init_db.py` - 数据库初始化
+- `engine/` - 执行引擎
+  - `executor.py` - 工作流执行器
+  - `nodes.py` - 节点实现
+  - `agents.py` - Agent 实现
+  - `tools.py` - 工具注册
+  - `control_flow.py` - 控制流节点
+  - `extension_nodes/` - 扩展节点 (http, filter, database)
+- `services/` - 服务层
+  - `vector_store.py` - 向量存储
+  - `embedding.py` - Embedding 生成
+  - `document.py` - 文档处理
+  - `scheduler.py` - 调度器
+  - `agent_template.py` - Agent 模板
+- `models/` - 数据模型 (base.py, workflow.py, conversation.py, execution.py, document.py, schedule.py, agent_template.py)
+
+**Shared 模块 (services/shared/)**
+- `auth/jwt_middleware.py` - JWT 中间件
+- `auth/permissions.py` - 权限控制
+- `storage/minio_client.py` - MinIO 客户端
+
+**OpenAI Proxy (services/openai-proxy/)**
+- `main.py` - FastAPI 应用入口
 
 ### 部署配置
 
@@ -67,14 +161,13 @@
 | 部署脚本 | ✅ 完成 | `scripts/deploy-phase1.sh`, `deploy-phase2.sh` |
 | 测试脚本 | ✅ 完成 | `scripts/test-all.sh`, `test-e2e.sh` |
 
-### 待实现功能
+### 代码清理 (2025-01-24 完成)
 
-| 功能 | 位置 | 优先级 | Sprint |
-|------|------|--------|--------|
-| 聊天历史记录 API | `web/src/pages/chat/ChatPage.tsx:161` | P1 | Sprint 4 |
-| 工作流编辑器逻辑 | `web/src/pages/workflows/` | P1 | Sprint 4 |
-| 向量数据库删除 | `services/bisheng-api/app.py:966` | P2 | Sprint 6 |
-| 向量检索功能 | `services/bisheng-api/engine/nodes.py:97` | P1 | Sprint 4 |
+| 清理项 | 状态 | 说明 |
+|--------|------|------|
+| Python 日志规范化 | ✅ 完成 | 11 个文件的 `print()` 替换为 `logging` |
+| TypeScript 调试代码清理 | ✅ 完成 | 移除 `console.log`，保留 `console.error` |
+| Mock 服务清理 | ✅ 完成 | 删除 `docs/99-archived/mock-services/` 目录 |
 
 ---
 
@@ -238,3 +331,5 @@
 | 2024-01-23 | 创建进度追踪文档 | Claude |
 | 2025-01-23 | 更新实际进度，添加代码实现状态 | Claude |
 | 2025-01-23 | 标记项目为开源项目 | Claude |
+| 2025-01-24 | 添加 35+ 前端页面/组件，48+ 后端 Python 文件清单 | Claude |
+| 2025-01-24 | 记录代码清理完成（日志规范化、调试代码清理） | Claude |

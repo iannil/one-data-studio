@@ -4,7 +4,49 @@
 
 ---
 
-## [Unreleased] - 2025-01
+## [0.2.0] - 2025-01-24
+
+### Added
+
+#### 新增前端页面
+- **Text2SQL 页面** - Text-to-SQL 生成和执行 (`web/src/pages/text2sql/`)
+- **Agents 页面组** - Agent 管理、模板、工具执行 (`web/src/pages/agents/`)
+  - AgentTemplatesModal - Agent 模板选择
+  - SchemaViewer - Schema 查看器
+  - StepsViewer - 步骤查看器
+  - ToolExecuteModal - 工具执行弹窗
+- **Documents 页面** - 文档管理 (`web/src/pages/documents/`)
+- **Executions 页面** - 执行历史看板 (`web/src/pages/executions/`)
+- **Schedules 页面** - 调度管理 (`web/src/pages/schedules/`)
+
+#### 新增前端组件
+- **工作流编辑器** - React Flow 可视化编辑器
+  - FlowCanvas - 流程图画布
+  - NodePalette - 节点面板
+  - NodeConfigPanel - 节点配置面板
+  - 9 种节点类型组件（Agent, LLM, Retriever, ToolCall, Condition, Loop, Input, Output, Think）
+
+#### 后端功能增强
+- **Agent 系统** - ReAct Agent 实现，支持工具调用
+- **调度系统** - 支持 Cron、Interval、Event 触发
+- **向量存储服务** - Milvus 集成，支持文档删除
+- **执行追踪** - 工作流执行统计和历史记录
+
+### Changed
+
+#### 代码质量
+- **日志规范化** - 11 个 Python 文件的 `print()` 替换为 `logging`
+- **调试代码清理** - TypeScript 文件移除 `console.log`，保留 `console.error`
+- **Mock 服务清理** - 删除 `docs/99-archived/mock-services/` 目录
+
+### Fixed
+
+- 修复向量数据库删除功能（向量索引同步删除）
+- 修复调度器暂停/恢复功能
+
+---
+
+## [0.1.0] - 2025-01
 
 ### Added
 
@@ -83,12 +125,21 @@
 ### Known Issues
 
 #### 前端
-- 聊天历史记录功能待实现 (`web/src/pages/chat/ChatPage.tsx:161`)
-- 工作流编辑器实际逻辑待完善
+- 聊天历史记录 API 待实现 (`web/src/pages/chat/ChatPage.tsx`)
+- Agent 编辑器可视化待完善
 
 #### 后端
-- 向量检索功能使用模拟数据 (`services/bisheng-api/engine/nodes.py:97`)
-- 向量数据库删除功能待实现 (`services/bisheng-api/app.py:966`)
+- 向量检索功能使用模拟数据，需集成真实 Milvus (`services/bisheng-api/engine/nodes.py`)
+- 聊天历史记录 API 待实现
+
+---
+
+## Version History
+
+| 版本 | 日期 | 说明 |
+|------|------|------|
+| 0.2.0 | 2025-01-24 | 新增 10+ 页面，Agent 系统，调度系统 |
+| 0.1.0 | 2025-01-23 | 开发中版本，PoC 阶段 |
 
 ---
 

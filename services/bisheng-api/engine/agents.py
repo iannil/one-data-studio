@@ -7,6 +7,7 @@ ReAct: Reasoning + Acting
 """
 
 import json
+import logging
 import os
 import re
 import requests
@@ -14,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
 from .tools import get_tool_registry, ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
@@ -228,8 +231,8 @@ class ReActAgent:
             llm_output = await self._call_llm(prompt)
 
             if self.verbose:
-                print(f"\n=== Iteration {iteration + 1} ===")
-                print(f"LLM Output:\n{llm_output}")
+                logger.debug(f"\n=== Iteration {iteration + 1} ===")
+                logger.debug(f"LLM Output:\n{llm_output}")
 
             # 检查是否有最终答案
             final_answer = self._check_final_answer(llm_output)
@@ -269,9 +272,9 @@ class ReActAgent:
                 self.steps.append(AgentStep("observation", observation, tool_result))
 
                 if self.verbose:
-                    print(f"Action: {tool_name}")
-                    print(f"Parameters: {parameters}")
-                    print(f"Observation: {observation}")
+                    logger.debug(f"Action: {tool_name}")
+                    logger.debug(f"Parameters: {parameters}")
+                    logger.debug(f"Observation: {observation}")
 
         # 达到最大迭代次数
         return {
@@ -654,7 +657,7 @@ class PlanExecuteAgent:
 
         except Exception as e:
             if self.verbose:
-                print(f"Plan generation error: {e}")
+                logger.debug(f"Plan generation error: {e}")
 
         return ["执行任务", "生成答案"]
 
@@ -675,9 +678,9 @@ class PlanExecuteAgent:
         self.steps.append(AgentStep("plan", json.dumps(self.plan, ensure_ascii=False)))
 
         if self.verbose:
-            print(f"\n=== Plan ===")
+            logger.debug(f"\n=== Plan ===")
             for i, step in enumerate(self.plan, 1):
-                print(f"{i}. {step}")
+                logger.debug(f"{i}. {step}")
 
         # 使用 Function Calling Agent 执行
         agent = FunctionCallingAgent(
@@ -722,9 +725,9 @@ class PlanExecuteAgent:
         yield {"type": "step", "data": AgentStep("plan", json.dumps(self.plan, ensure_ascii=False)).to_dict()}
 
         if self.verbose:
-            print(f"\n=== Plan ===")
+            logger.debug(f"\n=== Plan ===")
             for i, step in enumerate(self.plan, 1):
-                print(f"{i}. {step}")
+                logger.debug(f"{i}. {step}")
 
         # 使用 Function Calling Agent 执行
         agent = FunctionCallingAgent(

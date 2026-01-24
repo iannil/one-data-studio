@@ -145,7 +145,7 @@ function FlowCanvas({
   // 删除节点
   const onNodesDelete = useCallback(
     (deletedNodes: Node[]) => {
-      console.log('Deleted nodes:', deletedNodes);
+      // 节点删除后的处理逻辑
     },
     []
   );
@@ -153,7 +153,7 @@ function FlowCanvas({
   // 删除边
   const onEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
-      console.log('Deleted edges:', deletedEdges);
+      // 边删除后的处理逻辑
     },
     []
   );

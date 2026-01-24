@@ -9,6 +9,7 @@
 | 文档类型 | 链接 | 说明 |
 |----------|------|------|
 | 📖 [README](../README.md) | 项目概述 |
+| 🚀 [快速开始](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
 | 📊 [当前状态](03-progress/current-status.md) | 项目进度追踪 |
 | 🗺️ [路线图](04-planning/roadmap.md) | 开发计划与里程碑 |
 

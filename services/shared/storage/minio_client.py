@@ -3,11 +3,14 @@ MinIO 存储客户端
 Sprint 4.3: MinIO 对象存储封装
 """
 
+import logging
 import os
 from datetime import timedelta
 from typing import Optional, List
 from minio import Minio
 from minio.error import S3Error
+
+logger = logging.getLogger(__name__)
 
 
 class MinIOStorage:
@@ -59,7 +62,7 @@ class MinIOStorage:
         for bucket in self.DEFAULT_BUCKETS:
             if not self.client.bucket_exists(bucket):
                 self.client.make_bucket(bucket)
-                print(f"创建 bucket: {bucket}")
+                logger.info(f"创建 bucket: {bucket}")
 
     def upload_file(
         self,
@@ -100,7 +103,7 @@ class MinIOStorage:
                 raise ValueError("必须提供 file_path 或 data")
             return True
         except S3Error as e:
-            print(f"上传文件失败: {e}")
+            logger.error(f"上传文件失败: {e}")
             return False
 
     def download_file(
@@ -128,7 +131,7 @@ class MinIOStorage:
                 response = self.client.get_object(bucket, object_name)
                 return response.read()
         except S3Error as e:
-            print(f"下载文件失败: {e}")
+            logger.error(f"下载文件失败: {e}")
             return None
 
     def get_presigned_url(
@@ -156,7 +159,7 @@ class MinIOStorage:
             )
             return url
         except S3Error as e:
-            print(f"生成临时 URL 失败: {e}")
+            logger.error(f"生成临时 URL 失败: {e}")
             return None
 
     def delete_file(self, bucket: str, object_name: str) -> bool:
@@ -174,7 +177,7 @@ class MinIOStorage:
             self.client.remove_object(bucket, object_name)
             return True
         except S3Error as e:
-            print(f"删除文件失败: {e}")
+            logger.error(f"删除文件失败: {e}")
             return False
 
     def list_files(
@@ -198,7 +201,7 @@ class MinIOStorage:
             objects = self.client.list_objects(bucket, prefix=prefix, recursive=recursive)
             return [obj.object_name for obj in objects]
         except S3Error as e:
-            print(f"列出文件失败: {e}")
+            logger.error(f"列出文件失败: {e}")
             return []
 
     def file_exists(self, bucket: str, object_name: str) -> bool:

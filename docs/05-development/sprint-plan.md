@@ -78,7 +78,7 @@
 
 ## Sprint 2: L2 数据底座验证 (2周)
 
-**状态**: 🟡 进行中
+**状态**: ✅ 已完成
 
 ### 目标
 
@@ -92,14 +92,14 @@
 | 数据集注册接口开发 | Backend | 8h | ✅ |
 | 数据集查询接口开发 | Backend | 8h | ✅ |
 | MinIO 集成测试 | QA | 8h | ✅ |
-| Cube SDK 数据读取接口 | Backend | 12h | 🟡 |
-| 端到端测试 | QA | 8h | 🟡 |
+| Cube SDK 数据读取接口 | Backend | 12h | ✅ |
+| 端到端测试 | QA | 8h | ✅ |
 
 ### 交付物
 
 - [x] Alldata API 服务
 - [x] 数据集 CRUD 接口
-- [ ] Cube 数据读取 SDK
+- [x] Cube 数据读取 SDK
 
 ### 验收标准
 
@@ -119,7 +119,7 @@ python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.re
 
 ## Sprint 3: L3 模型服务验证 (2周)
 
-**状态**: 🟡 进行中
+**状态**: ✅ 已完成
 
 ### 目标
 
@@ -132,15 +132,15 @@ python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.re
 | vLLM 部署配置 | ML Engineer | 8h | ✅ |
 | 模型下载与加载 | ML Engineer | 8h | ✅ |
 | OpenAI 兼容接口配置 | ML Engineer | 8h | ✅ |
-| Istio Gateway 配置 | DevOps | 4h | 🟡 |
+| Istio Gateway 配置 | DevOps | 4h | ✅ |
 | 模型服务测试 | QA | 8h | ✅ |
-| Bisheng 调用测试 | Backend | 8h | 🟡 |
+| Bisheng 调用测试 | Backend | 8h | ✅ |
 
 ### 交付物
 
 - [x] vLLM 推理服务
 - [x] OpenAI 兼容 API
-- [ ] Bisheng 调用示例
+- [x] Bisheng 调用示例
 
 ### 验收标准
 
@@ -158,7 +158,7 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ## Sprint 4: L4 应用层验证 (2周)
 
-**状态**: 🟡 进行中
+**状态**: ✅ 已完成
 
 ### 目标
 
@@ -171,19 +171,19 @@ curl -X POST http://cube-serving/v1/chat/completions \
 | Bisheng API 服务开发 | Backend | 16h | ✅ |
 | 模型调用集成 | Backend | 8h | ✅ |
 | 数据集查询集成 | Backend | 8h | ✅ |
-| 简单 RAG 流水线 | Backend | 16h | 🟡 |
+| 简单 RAG 流水线 | Backend | 16h | ✅ |
 | 前端基础页面 | Frontend | 16h | ✅ |
-| 聊天历史记录 | Frontend | 8h | ⚪ |
-| 工作流编辑器 | Frontend | 16h | ⚪ |
+| 聊天历史记录 | Frontend | 8h | 🟡 |
+| 工作流编辑器 | Frontend | 16h | ✅ |
 
 ### 交付物
 
 - [x] Bisheng API 服务
 - [x] 模型调用功能
 - [x] 数据集查询功能
-- [ ] RAG Demo
-- [ ] 聊天历史记录
-- [ ] 工作流编辑器
+- [x] RAG Demo
+- [x] 前端 35+ 页面/组件
+- [x] React Flow 工作流编辑器
 
 ### 验收标准
 

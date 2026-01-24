@@ -3,6 +3,7 @@
 Sprint 4.1: 创建表并加载示例数据
 """
 
+import logging
 import os
 import sys
 
@@ -11,24 +12,28 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from models import Base, engine, SessionLocal, Dataset, DatasetColumn, MetadataDatabase, MetadataTable, MetadataColumn
 
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def init_database():
     """初始化数据库：创建表和加载示例数据"""
-    print("开始初始化数据库...")
+    logger.info("开始初始化数据库...")
 
     # 创建所有表
-    print("创建数据库表...")
+    logger.info("创建数据库表...")
     Base.metadata.create_all(bind=engine)
-    print("数据库表创建完成")
+    logger.info("数据库表创建完成")
 
     # 加载示例数据
-    print("加载示例数据...")
+    logger.info("加载示例数据...")
     db = SessionLocal()
     try:
         # 检查是否已有数据
         existing_db = db.query(MetadataDatabase).first()
         if existing_db:
-            print("数据库已有数据，跳过示例数据加载")
+            logger.info("数据库已有数据，跳过示例数据加载")
             return
 
         # 创建元数据库
@@ -185,16 +190,16 @@ def init_database():
         db.add_all(dataset_columns)
 
         db.commit()
-        print("示例数据加载完成")
+        logger.info("示例数据加载完成")
 
     except Exception as e:
         db.rollback()
-        print(f"初始化失败: {e}")
+        logger.error(f"初始化失败: {e}")
         raise
     finally:
         db.close()
 
-    print("数据库初始化完成!")
+    logger.info("数据库初始化完成!")
 
 
 if __name__ == "__main__":

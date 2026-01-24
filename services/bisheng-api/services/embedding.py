@@ -4,9 +4,12 @@ Embedding 生成服务
 Phase 6: Sprint 6.2
 """
 
+import logging
 import os
 import requests
 from typing import List, Union
+
+logger = logging.getLogger(__name__)
 
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
@@ -52,11 +55,11 @@ class EmbeddingService:
                 embedding = result.get("data", [{}])[0].get("embedding", [])
                 return embedding
             else:
-                print(f"Embedding API error: {response.status_code}")
+                logger.warning(f"Embedding API error: {response.status_code}")
                 return self._mock_embedding(text)
 
         except Exception as e:
-            print(f"Embedding generation failed: {e}")
+            logger.warning(f"Embedding generation failed: {e}")
             return self._mock_embedding(text)
 
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:

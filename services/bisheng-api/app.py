@@ -16,6 +16,7 @@ Phase 7: Sprint 7.4 - 工作流调度
 - JWT 认证授权
 """
 
+import logging
 import os
 import sys
 import json
@@ -24,6 +25,8 @@ import requests
 import uuid
 from datetime import datetime
 from flask import Flask, jsonify, request, g, Response
+
+logger = logging.getLogger(__name__)
 
 # 添加共享模块路径
 sys.path.insert(0, '/app/shared')
@@ -631,7 +634,7 @@ def build_schema_from_metadata(database: str, selected_tables: list = None) -> s
         )
 
         if tables_response.status_code != 200:
-            print(f"获取表列表失败: {tables_response.status_code}")
+            logger.warning(f"获取表列表失败: {tables_response.status_code}")
             return get_default_schema()
 
         tables_data = tables_response.json()
@@ -679,7 +682,7 @@ def build_schema_from_metadata(database: str, selected_tables: list = None) -> s
         return "\n".join(schema_parts) if schema_parts else get_default_schema()
 
     except Exception as e:
-        print(f"获取元数据失败: {e}")
+        logger.warning(f"获取元数据失败: {e}")
         return get_default_schema()
 
 
@@ -1260,7 +1263,7 @@ def delete_document(doc_id):
 
         if not delete_success:
             # 记录警告但继续删除数据库记录
-            print(f"警告: 向量删除失败，但继续删除数据库记录: doc_id={doc_id}")
+            logger.warning(f"警告: 向量删除失败，但继续删除数据库记录: doc_id={doc_id}")
 
         # 删除数据库记录
         db.delete(doc)
@@ -1277,7 +1280,7 @@ def delete_document(doc_id):
 
     except Exception as e:
         db.rollback()
-        print(f"删除文档失败: {e}")
+        logger.error(f"删除文档失败: {e}")
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
@@ -1320,7 +1323,7 @@ def batch_delete_documents():
                 deleted_count += 1
 
             except Exception as e:
-                print(f"删除文档失败 {doc_id}: {e}")
+                logger.error(f"删除文档失败 {doc_id}: {e}")
                 failed_ids.append(doc_id)
 
         db.commit()
@@ -1731,7 +1734,7 @@ def create_schedule(workflow_id):
             scheduler.add_schedule_from_model(schedule)
         except Exception as e:
             # 调度器注册失败，但仍保存数据库记录
-            print(f"Scheduler registration failed: {e}")
+            logger.warning(f"Scheduler registration failed: {e}")
 
         return jsonify({
             "code": 0,
@@ -1767,7 +1770,7 @@ def delete_schedule(schedule_id):
             scheduler = get_scheduler()
             scheduler.remove_schedule(schedule_id)
         except Exception as e:
-            print(f"Scheduler removal failed: {e}")
+            logger.warning(f"Scheduler removal failed: {e}")
 
         db.delete(schedule)
         db.commit()
@@ -1912,7 +1915,7 @@ def pause_schedule(schedule_id):
             scheduler = get_scheduler()
             scheduler.pause_schedule(schedule_id)
         except Exception as e:
-            print(f"Failed to pause schedule in scheduler: {e}")
+            logger.warning(f"Failed to pause schedule in scheduler: {e}")
 
         return jsonify({
             "code": 0,
@@ -1961,7 +1964,7 @@ def resume_schedule(schedule_id):
             scheduler = get_scheduler()
             scheduler.resume_schedule(schedule_id)
         except Exception as e:
-            print(f"Failed to resume schedule in scheduler: {e}")
+            logger.warning(f"Failed to resume schedule in scheduler: {e}")
 
         return jsonify({
             "code": 0,
@@ -2009,7 +2012,7 @@ def get_schedule_statistics(schedule_id):
             tracker = get_execution_tracker()
             stats = tracker.get_statistics(schedule_id)
         except Exception as e:
-            print(f"Failed to get tracker statistics: {e}")
+            logger.warning(f"Failed to get tracker statistics: {e}")
             stats = {
                 "schedule_id": schedule_id,
                 "total_executions": 0,

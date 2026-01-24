@@ -4,6 +4,7 @@
 Phase 6: Sprint 6.2
 """
 
+import logging
 import os
 import json
 from typing import List, Dict, Any, Optional
@@ -15,6 +16,8 @@ from pymilvus import (
     DataType,
     utility
 )
+
+logger = logging.getLogger(__name__)
 
 # 配置
 MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
@@ -41,9 +44,9 @@ class VectorStore:
                 host=MILVUS_HOST,
                 port=MILVUS_PORT
             )
-            print(f"Connected to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
+            logger.info(f"Connected to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
         except Exception as e:
-            print(f"Failed to connect to Milvus: {e}")
+            logger.warning(f"Failed to connect to Milvus: {e}")
             # 在开发模式下继续运行，使用内存存储
             self._memory_store = {}
 
@@ -207,7 +210,7 @@ class VectorStore:
         """
         try:
             if not utility.has_collection(collection_name):
-                print(f"Collection {collection_name} does not exist")
+                logger.warning(f"Collection {collection_name} does not exist")
                 return False
 
             collection = Collection(collection_name)
@@ -218,7 +221,7 @@ class VectorStore:
             collection.flush()
             return True
         except Exception as e:
-            print(f"删除向量失败: collection={collection_name}, doc_id={doc_id}, error={e}")
+            logger.error(f"删除向量失败: collection={collection_name}, doc_id={doc_id}, error={e}")
             return False
 
     def drop_collection(self, collection_name: str):

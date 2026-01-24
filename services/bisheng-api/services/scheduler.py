@@ -7,6 +7,7 @@ P4: 调度管理增强 - 暂停/恢复、失败重试、超时控制、统计
 支持 Cron 表达式、固定间隔、事件触发
 """
 
+import logging
 import os
 import asyncio
 import threading
@@ -15,6 +16,8 @@ import time
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Callable, Any
+
+logger = logging.getLogger(__name__)
 
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -260,7 +263,7 @@ class WorkflowScheduler:
         # 根据类型添加作业
         if schedule_type == "cron" and cron_expression:
             if not CRONITER_AVAILABLE:
-                print("Warning: croniter not available, cannot parse cron expression")
+                logger.warning("croniter not available, cannot parse cron expression")
                 return False
 
             try:
@@ -274,7 +277,7 @@ class WorkflowScheduler:
                 )
                 return True
             except Exception as e:
-                print(f"Failed to add cron schedule: {e}")
+                logger.error(f"Failed to add cron schedule: {e}")
                 return False
 
         elif schedule_type == "interval" and interval_seconds:
@@ -289,7 +292,7 @@ class WorkflowScheduler:
                 )
                 return True
             except Exception as e:
-                print(f"Failed to add interval schedule: {e}")
+                logger.error(f"Failed to add interval schedule: {e}")
                 return False
 
         elif schedule_type == "event" and event_trigger:
@@ -340,7 +343,7 @@ class WorkflowScheduler:
 
             return True
         except Exception as e:
-            print(f"Failed to remove schedule: {e}")
+            logger.error(f"Failed to remove schedule: {e}")
             return False
 
     def trigger_schedule(self, schedule_id: str, workflow_id: str) -> bool:
@@ -358,7 +361,7 @@ class WorkflowScheduler:
             self._execute_schedule(schedule_id, workflow_id)
             return True
         except Exception as e:
-            print(f"Failed to trigger schedule: {e}")
+            logger.error(f"Failed to trigger schedule: {e}")
             return False
 
     def _execute_schedule(self, schedule_id: str, workflow_id: str):
@@ -367,7 +370,7 @@ class WorkflowScheduler:
             try:
                 self.callbacks[schedule_id](schedule_id, workflow_id)
             except Exception as e:
-                print(f"Schedule callback error for {schedule_id}: {e}")
+                logger.error(f"Schedule callback error for {schedule_id}: {e}")
 
     def get_next_run_time(self, schedule_id: str) -> Optional[datetime]:
         """获取下次运行时间
@@ -401,7 +404,7 @@ class WorkflowScheduler:
                 self.scheduler.pause_job(schedule_id)
             return True
         except Exception as e:
-            print(f"Failed to pause schedule {schedule_id}: {e}")
+            logger.error(f"Failed to pause schedule {schedule_id}: {e}")
             return False
 
     def resume_schedule(self, schedule_id: str) -> bool:
@@ -421,7 +424,7 @@ class WorkflowScheduler:
                 self.scheduler.resume_job(schedule_id)
             return True
         except Exception as e:
-            print(f"Failed to resume schedule {schedule_id}: {e}")
+            logger.error(f"Failed to resume schedule {schedule_id}: {e}")
             return False
 
     def is_paused(self, schedule_id: str) -> bool:
@@ -488,7 +491,7 @@ def init_scheduler_from_db(db_session):
     暂停的调度也会加载但不会自动触发
     """
     if not APSCHEDULER_AVAILABLE:
-        print("APScheduler not available, skipping scheduler initialization")
+        logger.warning("APScheduler not available, skipping scheduler initialization")
         return
 
     try:
@@ -504,7 +507,7 @@ def init_scheduler_from_db(db_session):
             # 创建执行回调
             def execute_callback(sid, wid, s=schedule):
                 # 这里可以触发工作流执行
-                print(f"Triggering workflow {wid} from schedule {sid}")
+                logger.info(f"Triggering workflow {wid} from schedule {sid}")
                 # 记录到执行跟踪器
                 tracker = get_execution_tracker()
                 tracker.record_execution(sid, "running")
@@ -512,10 +515,10 @@ def init_scheduler_from_db(db_session):
             # P4: 使用 add_schedule_from_model 方法
             scheduler.add_schedule_from_model(schedule, callback=execute_callback)
 
-        print(f"Initialized {len(schedules)} schedules")
+        logger.info(f"Initialized {len(schedules)} schedules")
 
     except Exception as e:
-        print(f"Failed to initialize scheduler from database: {e}")
+        logger.error(f"Failed to initialize scheduler from database: {e}")
 
 
 # 调度器辅助函数

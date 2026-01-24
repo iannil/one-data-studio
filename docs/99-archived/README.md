@@ -8,43 +8,41 @@
 
 ```
 99-archived/
-├── README.md                    # 本文件
-├── mock-services/               # 归档的 Mock 服务配置
-│   ├── alldata-api-mock.yaml    # Alldata API Mock 服务（已迁移至真实 API）
-│   └── bisheng-api-mock.yaml    # Bisheng API Mock 服务（已迁移至真实 API）
-└── deprecated/                  # 存放过时的文档和配置
+└── README.md                    # 本文件
 ```
 
 ---
 
-## Mock 服务归档说明
+## 已删除的归档内容
 
-### alldata-api-mock.yaml
+### mock-services/ (已删除)
 
-**归档日期**: 2025-01-23
+**删除日期**: 2025-01-24
 
-**归档原因**: Alldata API 真实服务已实现完成，Mock 服务不再需要。
+**删除原因**:
+- Alldata API 真实服务已实现完成 (`services/alldata-api/`)
+- Bisheng API 真实服务已实现完成 (`services/bisheng-api/`)
+- Mock 服务不再需要，已被真实 API 替代
 
-**替代方案**: 使用 `services/alldata-api/` 中的真实 API 服务。
+**原包含文件**:
+- `alldata-api-mock.yaml` - Alldata API Mock 服务配置
+- `bisheng-api-mock.yaml` - Bisheng API Mock 服务配置
 
----
-
-### bisheng-api-mock.yaml
-
-**归档日期**: 2025-01-23
-
-**归档原因**: Bisheng API 真实服务已实现完成，Mock 服务不再需要。
-
-**替代方案**: 使用 `services/bisheng-api/` 中的真实 API 服务。
+**替代方案**: 使用 `services/alldata-api/` 和 `services/bisheng-api/` 中的真实 API 服务。
 
 ---
 
-## 如何使用归档内容
+## 如何恢复归档内容
 
-归档文件仅供参考和历史记录用途。如需恢复 Mock 服务用于测试，可以：
+归档文件仅供参考和历史记录用途。如需恢复 Mock 服务用于测试，可以从 Git 历史记录中获取：
 
-1. 复制文件到 `k8s/applications/` 目录
-2. 使用 `kubectl apply -f` 部署
+```bash
+# 查看 Git 历史中的文件
+git log --all --full-history -- docs/99-archived/mock-services/
+
+# 恢复特定版本的文件
+git checkout <commit-hash> -- docs/99-archived/mock-services/
+```
 
 ---
 

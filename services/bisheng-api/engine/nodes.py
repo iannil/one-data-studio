@@ -6,10 +6,13 @@ Phase 7: Sprint 7.1-7.2 - Agent 编排与控制流
 """
 
 import json
+import logging
 import os
 import requests
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 # 配置
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
@@ -111,7 +114,7 @@ class RetrieverNode(BaseNode):
                 self.vector_store = VectorStore()
                 self.embedding_service = EmbeddingService()
             except Exception as e:
-                print(f"Failed to initialize vector services: {e}")
+                logger.warning(f"Failed to initialize vector services: {e}")
 
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行检索"""
@@ -133,7 +136,7 @@ class RetrieverNode(BaseNode):
         try:
             query_embedding = await self.embedding_service.embed_text(query)
         except Exception as e:
-            print(f"Embedding generation failed: {e}")
+            logger.warning(f"Embedding generation failed: {e}")
             return {
                 self.node_id: {
                     "query": query,
@@ -167,7 +170,7 @@ class RetrieverNode(BaseNode):
             }
 
         except Exception as e:
-            print(f"Vector search failed: {e}")
+            logger.warning(f"Vector search failed: {e}")
             return {
                 self.node_id: {
                     "query": query,

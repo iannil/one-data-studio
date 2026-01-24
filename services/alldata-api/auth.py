@@ -9,11 +9,14 @@ P5: 使用 Keycloak JWT 进行身份验证和授权
 - 与共享 JWT 中间件集成
 """
 
+import logging
 import os
 import functools
 import requests
 from typing import Dict, List, Optional, Callable
 from flask import g, request, jsonify
+
+logger = logging.getLogger(__name__)
 
 # Keycloak 配置
 KEYCLOAK_URL = os.getenv(
@@ -209,7 +212,7 @@ def _introspect_token(token: str) -> Optional[Dict]:
         if response.status_code == 200:
             return response.json()
     except Exception as e:
-        print(f"Token introspection failed: {e}")
+        logger.warning(f"Token introspection failed: {e}")
     return None
 
 

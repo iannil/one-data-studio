@@ -38,9 +38,16 @@
 | 登录页 | `/login` | ✅ 完成 | 支持模拟登录和 Keycloak SSO |
 | 首页 | `/` | ✅ 完成 | 平台概览、功能入口 |
 | 数据集管理 | `/datasets` | ✅ 完成 | 数据集列表、注册、详情 |
-| 聊天页 | `/chat` | 🟡 部分 | 聊天功能完成，历史记录待实现 |
+| 聊天页 | `/chat` | ✅ 完成 | 聊天功能、流式响应 |
 | 元数据页 | `/metadata` | ✅ 完成 | 元数据浏览、搜索 |
-| 工作流页 | `/workflows` | 🟡 部分 | 页面结构完成，编辑器待完善 |
+| 工作流列表 | `/workflows` | ✅ 完成 | 工作流列表页 |
+| 工作流编辑 | `/workflows/edit/:id` | ✅ 完成 | 可视化编辑器 |
+| 工作流执行 | `/workflows/execute/:id` | ✅ 完成 | 工作流执行页面 |
+| **Text2SQL** | `/text2sql` | ✅ 完成 | Text-to-SQL 生成 |
+| **Agents** | `/agents` | ✅ 完成 | Agent 管理、模板、工具执行 |
+| **Documents** | `/documents` | ✅ 完成 | 文档管理页 |
+| **Executions** | `/executions` | ✅ 完成 | 执行历史看板 |
+| **Schedules** | `/schedules` | ✅ 完成 | 调度管理页 |
 | 回调页 | `/callback` | ✅ 完成 | SSO 认证回调 |
 
 ### 服务层 (services/)
@@ -66,8 +73,22 @@
 
 | 功能 | 位置 | 优先级 |
 |------|------|--------|
-| 聊天历史记录 | `pages/chat/ChatPage.tsx:161` | P1 |
-| 工作流编辑器实际逻辑 | `pages/workflows/` | P1 |
+| 聊天历史记录 | `pages/chat/ChatPage.tsx` | P1 |
+| 真实向量检索集成 | `services/bisheng-api/engine/nodes.py` | P1 |
+| Agent 编排完善 | `services/bisheng-api/engine/agents.py` | P1 |
+
+### 已完成功能 (2025-01-24)
+
+| 功能 | 说明 |
+|------|------|
+| Text2SQL 页面 | 支持动态 Schema 查询和 SQL 生成 |
+| Agents 页面 | Agent 管理、模板选择、工具执行 |
+| Documents 页面 | 文档上传、索引、删除 |
+| Executions 页面 | 执行历史查看、日志查看 |
+| Schedules 页面 | 调度管理、暂停/恢复、统计 |
+| 工作流编辑器 | React Flow 可视化编辑器 |
+| 日志规范化 | Python 代码使用 logging 模块 |
+| 调试代码清理 | TypeScript 移除 console.log |
 
 ---
 
@@ -282,3 +303,6 @@
 | 日期 | 更新内容 |
 |------|----------|
 | 2025-01-23 | 创建文档，记录当前实现状态 |
+| 2025-01-24 | 添加新页面（Text2SQL、Agents、Documents、Executions、Schedules）|
+| 2025-01-24 | 更新组件清单（35+ TSX 文件）|
+| 2025-01-24 | 记录代码清理完成 |
