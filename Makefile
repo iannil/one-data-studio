@@ -74,7 +74,7 @@ kind-cluster:
 # Docker Compose 启动
 docker-up:
 	@echo "==> 使用 Docker Compose 启动服务..."
-	@docker-compose up -d
+	@docker-compose -f deploy/local/docker-compose.yml up -d
 	@echo "==> 服务已启动:"
 	@echo "    Alldata API:  http://localhost:8080"
 	@echo "    Cube API:     http://localhost:8000"
@@ -85,7 +85,7 @@ docker-up:
 # Docker Compose 停止
 docker-down:
 	@echo "==> 停止 Docker Compose 服务..."
-	@docker-compose down
+	@docker-compose -f deploy/local/docker-compose.yml down
 
 # ============================================
 # K8s 部署

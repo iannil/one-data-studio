@@ -1,5 +1,9 @@
 # 故障排查指南
 
+> **适用场景**: Kubernetes 部署环境（Kind、Minikube、云 K8s）
+>
+> 如果您使用 Docker Compose 部署，请参考 [troubleshooting-docker.md](../06-operations/troubleshooting-docker.md)
+
 本文档提供 ONE-DATA-STUDIO 平台常见问题的诊断和解决方案。
 
 ---

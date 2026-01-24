@@ -1,5 +1,9 @@
 # 故障处理手册
 
+> **适用场景**: Docker Compose 本地开发环境
+>
+> 如果您使用 Kubernetes 部署，请参考 [troubleshooting-k8s.md](../05-development/troubleshooting-k8s.md)
+
 ONE-DATA-STUDIO 运维故障处理指南
 
 ## 目录

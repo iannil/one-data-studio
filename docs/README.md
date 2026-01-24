@@ -25,6 +25,8 @@ docs/
 ├── 03-progress/         # 进度追踪
 ├── 04-planning/         # 规划文档
 ├── 05-development/      # 开发指南
+├── 06-operations/       # 运维指南
+├── 07-user-guide/       # 用户手册
 └── 99-archived/         # 归档文档
 ```
 
@@ -86,6 +88,29 @@ docs/
 |------|------|
 | [PoC 实施手册](05-development/poc-playbook.md) | PoC 环境搭建指南 |
 | [API 测试指南](05-development/api-testing-guide.md) | API 测试用例与方法 |
+| [K8s 故障排查](05-development/troubleshooting-k8s.md) | Kubernetes 环境故障排查 |
+
+---
+
+## 06 - 运维指南
+
+| 文档 | 说明 |
+|------|------|
+| [部署指南](06-operations/deployment.md) | 生产环境部署指南 |
+| [运维手册](06-operations/operations-guide.md) | 日常运维操作手册 |
+| [Docker 故障排查](06-operations/troubleshooting-docker.md) | Docker Compose 环境故障排查 |
+| [性能调优](06-operations/performance-tuning.md) | 性能优化指南 |
+| [灾备恢复](06-operations/disaster-recovery.md) | 灾备与恢复方案 |
+| [安全扫描报告](06-operations/security-scan-report.md) | 安全扫描与审计报告 |
+
+---
+
+## 07 - 用户手册
+
+| 文档 | 说明 |
+|------|------|
+| [快速入门](07-user-guide/getting-started.md) | 用户快速入门指南 |
+| [工作流指南](07-user-guide/workflow-guide.md) | 工作流创建与使用 |
 
 ---
 
@@ -93,6 +118,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2025-01-24 | 添加 06-operations 和 07-user-guide 索引，重命名故障排查文档 |
 | 2024-01-23 | 完成设计阶段全部文档，新建开发指南目录 |
 | 2024-01-15 | 初始文档结构创建 |
 

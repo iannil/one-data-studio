@@ -46,6 +46,25 @@ git checkout <commit-hash> -- docs/99-archived/mock-services/
 
 ---
 
+## implementation-status.md (已归档)
+
+**归档日期**: 2025-01-24
+
+**归档原因**:
+- 内容已合并到 `docs/03-progress/current-status.md`
+- 避免重复维护两份进度文档
+
+**原包含内容**:
+- 前端实现状态（项目基础、页面实现）
+- 后端实现状态（API 端点、服务清单）
+- 部署配置状态
+- 待完成功能清单
+- 已知问题和限制
+
+**替代方案**: 使用 `docs/03-progress/current-status.md` 作为唯一进度追踪文档。
+
+---
+
 ## 联系方式
 
 如有问题，请查看项目主文档或提 Issue。

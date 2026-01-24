@@ -26,28 +26,28 @@
 
 ```bash
 # 启动基础设施 + 应用服务
-docker-compose up -d
+docker-compose -f deploy/local/docker-compose.yml up -d
 
 # 查看服务状态
-docker-compose ps
+docker-compose -f deploy/local/docker-compose.yml ps
 ```
 
 ### 2. 等待服务就绪
 
 ```bash
 # 等待所有服务健康
-docker-compose ps
+docker-compose -f deploy/local/docker-compose.yml ps
 
 # 查看初始化日志
-docker-compose logs alldata-init
-docker-compose logs bisheng-init
+docker-compose -f deploy/local/docker-compose.yml logs alldata-init
+docker-compose -f deploy/local/docker-compose.yml logs bisheng-init
 ```
 
 ### 3. 访问前端
 
 ```bash
 # 启动前端开发服务（可选）
-docker-compose --profile dev up -d web
+docker-compose -f deploy/local/docker-compose.yml --profile dev up -d web
 
 # 或在本地启动前端（推荐）
 cd web
@@ -72,7 +72,7 @@ npm run dev
 
 ```bash
 # 启用 Prometheus 和 Grafana
-docker-compose --profile monitoring up -d
+docker-compose -f deploy/local/docker-compose.yml --profile monitoring up -d
 ```
 
 ---
@@ -208,10 +208,10 @@ make test-all
 
 ```bash
 # 停止所有服务
-docker-compose down
+docker-compose -f deploy/local/docker-compose.yml down
 
 # 删除数据卷
-docker-compose down -v
+docker-compose -f deploy/local/docker-compose.yml down -v
 ```
 
 ### Kubernetes
