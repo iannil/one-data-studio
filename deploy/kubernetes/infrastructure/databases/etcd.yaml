@@ -42,9 +42,17 @@ spec:
         app: etcd
         component: infrastructure
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
         - name: etcd
-          image: quay.io/coreos/etcd:v3.5.5
+          image: quay.io/coreos/etcd:v3.5.12  # 锁定具体版本
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - etcd
             - --name

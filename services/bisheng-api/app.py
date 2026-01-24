@@ -249,7 +249,13 @@ def health():
                 "status": "degraded",
                 "http_status": response.status_code
             }
-    except Exception as e:
+    except requests.Timeout:
+        health_status["checks"]["alldata_api"] = {"status": "timeout", "error": "Connection timeout"}
+        # 上游服务不可用不影响本服务健康
+    except requests.ConnectionError as e:
+        health_status["checks"]["alldata_api"] = {"status": "unreachable", "error": "Connection error"}
+        # 上游服务不可用不影响本服务健康
+    except requests.RequestException as e:
         health_status["checks"]["alldata_api"] = {"status": "unreachable", "error": str(e)}
         # 上游服务不可用不影响本服务健康
 
@@ -268,7 +274,11 @@ def health():
                 "status": "degraded",
                 "http_status": response.status_code
             }
-    except Exception as e:
+    except requests.Timeout:
+        health_status["checks"]["cube_api"] = {"status": "timeout", "error": "Connection timeout"}
+    except requests.ConnectionError:
+        health_status["checks"]["cube_api"] = {"status": "unreachable", "error": "Connection error"}
+    except requests.RequestException as e:
         health_status["checks"]["cube_api"] = {"status": "unreachable", "error": str(e)}
 
     # 设置整体状态

@@ -29,6 +29,33 @@
 | `JWT_SECRET_KEY` | JWT 密钥 | *必需* |
 | `PORT` | 服务端口 | `8081` |
 
+## 可选依赖
+
+### 数据库驱动
+
+根据工作流中使用的数据库节点类型，需要安装相应的驱动：
+
+```bash
+# PostgreSQL 异步支持（用于 database.py 异步连接）
+pip install asyncpg
+
+# MySQL 异步支持（用于 database.py, tools.py 异步连接）
+pip install aiomysql
+
+# 同步驱动（通常已随 SQLAlchemy 安装）
+pip install psycopg2-binary  # PostgreSQL
+pip install pymysql          # MySQL
+```
+
+如未安装可选驱动，相关数据库节点将返回友好错误提示，不会导致服务崩溃。
+
+### 向量库驱动
+
+```bash
+# Milvus 向量库支持
+pip install pymilvus>=2.3.0
+```
+
 ## 本地开发
 
 ```bash

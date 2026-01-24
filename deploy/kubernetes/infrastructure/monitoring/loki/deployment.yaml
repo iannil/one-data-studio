@@ -99,11 +99,20 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3100"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
       containers:
       - name: loki
         image: grafana/loki:2.9.10
         args:
         - -config.file=/etc/loki/loki-config.yaml
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
         ports:
         - name: http
           containerPort: 3100
@@ -278,11 +287,21 @@ spec:
         app: promtail
     spec:
       serviceAccountName: promtail
+      securityContext:
+        runAsNonRoot: false  # Promtail 需要 root 读取宿主机日志
+        runAsUser: 0
+        fsGroup: 0
       containers:
       - name: promtail
         image: grafana/promtail:2.9.10
         args:
         - -config.file=/etc/promtail/promtail.yaml
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+            add: ["DAC_READ_SEARCH"]  # 读取日志文件所需
+          readOnlyRootFilesystem: true
         env:
         - name: HOSTNAME
           valueFrom:

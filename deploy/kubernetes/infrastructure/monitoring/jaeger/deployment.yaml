@@ -62,10 +62,19 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "14269"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
       containers:
       - name: jaeger
-        image: jaegertracing/all-in-one:1.54
+        image: jaegertracing/all-in-one:1.54.0  # 锁定具体版本
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
         env:
         - name: COLLECTOR_OTLP_ENABLED
           value: "true"

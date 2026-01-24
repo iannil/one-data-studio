@@ -1,5 +1,23 @@
 # ProxySQL 配置
 # Sprint 14: 高可用基础设施 - MySQL 负载均衡
+# Sprint X: 安全增强 - 移除硬编码凭据，使用环境变量注入
+
+---
+# ProxySQL MySQL 凭据 Secret
+# 警告：这是占位符配置，生产环境必须通过 External Secrets 或 Sealed Secrets 管理
+apiVersion: v1
+kind: Secret
+metadata:
+  name: proxysql-mysql-credentials
+  namespace: one-data-infra
+  annotations:
+    one-data.io/placeholder: "true"
+    one-data.io/description: "生产环境请替换为真实凭据"
+type: Opaque
+stringData:
+  monitor-password: "CHANGE_ME_MONITOR_PASSWORD"
+  onedata-password: "CHANGE_ME_ONEDATA_PASSWORD"
+  root-password: "CHANGE_ME_ROOT_PASSWORD"
 
 ---
 apiVersion: v1
@@ -9,8 +27,11 @@ metadata:
   namespace: one-data-infra
   labels:
     app: proxysql
+  annotations:
+    one-data.io/description: "ProxySQL 配置模板，密码通过 init 容器注入"
 data:
-  proxysql.cnf: |
+  # 配置模板 - 使用占位符，由 init 容器替换
+  proxysql.cnf.template: |
     datadir="/var/lib/proxysql"
     errorlog="/var/lib/proxysql/proxysql.log"
 
@@ -35,7 +56,7 @@ data:
         server_version="8.0.35"
         connect_timeout_server=3000
         monitor_username="proxysql"
-        monitor_password="ProxySQLPassword123!"
+        monitor_password="${MONITOR_PASSWORD}"
         monitor_history=600000
         monitor_connect_interval=60000
         monitor_ping_interval=10000
@@ -96,7 +117,7 @@ data:
     (
         {
             username="one_data"
-            password="OneDataPassword123!"
+            password="${ONEDATA_PASSWORD}"
             default_hostgroup=10
             max_connections=500
             default_schema="one_data"
@@ -105,7 +126,7 @@ data:
         },
         {
             username="root"
-            password="MyRootPassword123!"
+            password="${ROOT_PASSWORD}"
             default_hostgroup=10
             max_connections=50
             default_schema="one_data"
@@ -194,3 +215,32 @@ data:
     #!/bin/bash
     mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT 1" &> /dev/null
     exit $?
+
+  # 配置初始化脚本 - 从环境变量注入密码
+  init-config.sh: |
+    #!/bin/bash
+    set -e
+
+    # 检查必需的环境变量
+    if [ -z "$MONITOR_PASSWORD" ]; then
+      echo "ERROR: MONITOR_PASSWORD not set"
+      exit 1
+    fi
+    if [ -z "$ONEDATA_PASSWORD" ]; then
+      echo "ERROR: ONEDATA_PASSWORD not set"
+      exit 1
+    fi
+    if [ -z "$ROOT_PASSWORD" ]; then
+      echo "ERROR: ROOT_PASSWORD not set"
+      exit 1
+    fi
+
+    # 从模板生成配置文件
+    echo "Generating ProxySQL config from template..."
+    envsubst < /etc/proxysql-template/proxysql.cnf.template > /etc/proxysql/proxysql.cnf
+
+    # 复制健康检查脚本
+    cp /etc/proxysql-template/check-proxysql.sh /etc/proxysql/check-proxysql.sh
+    chmod +x /etc/proxysql/check-proxysql.sh
+
+    echo "ProxySQL config generated successfully"

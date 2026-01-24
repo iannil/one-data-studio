@@ -56,9 +56,17 @@ spec:
       labels:
         app: keycloak-postgres
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999   # postgres user
+        fsGroup: 999
       containers:
       - name: postgres
-        image: postgres:16-alpine
+        image: postgres:16.2-alpine  # 锁定具体版本
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         env:
         - name: POSTGRES_DB
           value: "keycloak"
@@ -204,12 +212,20 @@ spec:
         prometheus.io/port: "9000"
         prometheus.io/path: "/metrics"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
       - name: keycloak
-        image: quay.io/keycloak/keycloak:25.0
+        image: quay.io/keycloak/keycloak:25.0.6  # 锁定具体版本
         command:
         - /opt/keycloak/bin/kc.sh
         - start
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         env:
         - name: KEYCLOAK_ADMIN
           value: "admin"

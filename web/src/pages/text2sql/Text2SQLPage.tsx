@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Card,
   Select,
@@ -495,7 +496,7 @@ function Text2SQLPage() {
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
                         }}
-                        dangerouslySetInnerHTML={{ __html: highlightSQL(sqlResult.sql) }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightSQL(sqlResult.sql)) }}
                       />
                     </div>
 
