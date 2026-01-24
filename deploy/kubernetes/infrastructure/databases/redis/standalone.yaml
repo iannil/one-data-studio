@@ -71,9 +71,17 @@ spec:
       labels:
         app: redis
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999   # redis user
+        fsGroup: 999
       containers:
       - name: redis
         image: redis:7.0-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         command:
         - redis-server
         - /etc/redis/redis.conf
@@ -139,11 +147,19 @@ spec:
 
 ---
 # Redis Secret
+# ⚠️ WARNING: PLACEHOLDER credentials for LOCAL DEVELOPMENT ONLY!
+# For PRODUCTION: Use External Secrets Operator
+# See: deploy/kubernetes/infrastructure/security/secrets/external-secrets.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: redis-credentials
   namespace: one-data-infra
+  annotations:
+    one-data.io/placeholder: "true"
+    one-data.io/environment: "development-only"
+    one-data.io/production-source: "external-secrets:redis-secrets"
 type: Opaque
 stringData:
-  password: "CHANGE_ME_USE_STRONG_PASSWORD"  # 生产环境请使用强密码
+  # ⚠️ PLACEHOLDER - In production, managed by External Secrets Operator
+  password: "CHANGE_ME_USE_STRONG_PASSWORD"

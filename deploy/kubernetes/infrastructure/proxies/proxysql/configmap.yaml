@@ -4,7 +4,9 @@
 
 ---
 # ProxySQL MySQL 凭据 Secret
-# 警告：这是占位符配置，生产环境必须通过 External Secrets 或 Sealed Secrets 管理
+# ⚠️ WARNING: PLACEHOLDER credentials for LOCAL DEVELOPMENT ONLY!
+# For PRODUCTION: Use External Secrets Operator
+# See: deploy/kubernetes/infrastructure/security/secrets/external-secrets.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -12,9 +14,11 @@ metadata:
   namespace: one-data-infra
   annotations:
     one-data.io/placeholder: "true"
-    one-data.io/description: "生产环境请替换为真实凭据"
+    one-data.io/environment: "development-only"
+    one-data.io/production-source: "external-secrets:proxysql-secrets"
 type: Opaque
 stringData:
+  # ⚠️ PLACEHOLDER VALUES - In production, managed by External Secrets Operator
   monitor-password: "CHANGE_ME_MONITOR_PASSWORD"
   onedata-password: "CHANGE_ME_ONEDATA_PASSWORD"
   root-password: "CHANGE_ME_ROOT_PASSWORD"

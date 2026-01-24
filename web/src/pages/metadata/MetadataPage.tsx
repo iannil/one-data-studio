@@ -121,7 +121,7 @@ function MetadataPage() {
     }));
   };
 
-  const handleTreeSelect = (selectedKeys: React.Key[], info: any) => {
+  const handleTreeSelect = (selectedKeys: React.Key[]) => {
     const key = selectedKeys[0] as string;
     if (key && key.includes('.')) {
       const [db, table] = key.split('.');

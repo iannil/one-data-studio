@@ -160,9 +160,10 @@ export function parseJwtToken(token: string): UserInfo | null {
     // 提取角色
     const roles: string[] = [];
     if (payload.resource_access) {
-      Object.values(payload.resource_access).forEach((clientAccess: any) => {
-        if (clientAccess.roles) {
-          roles.push(...clientAccess.roles);
+      Object.values(payload.resource_access).forEach((clientAccess: unknown) => {
+        const access = clientAccess as { roles?: string[] };
+        if (access.roles) {
+          roles.push(...access.roles);
         }
       });
     }

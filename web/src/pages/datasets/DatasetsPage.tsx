@@ -92,7 +92,7 @@ function DatasetsPage() {
 
   // 更新数据集
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Dataset> }) =>
       alldata.updateDataset(id, data),
     onSuccess: () => {
       message.success('数据集更新成功');

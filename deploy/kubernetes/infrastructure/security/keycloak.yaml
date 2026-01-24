@@ -142,7 +142,9 @@ spec:
 
 ---
 # Keycloak Credentials Secret
-# 警告：这是占位符配置，生产环境必须通过 External Secrets 或 Sealed Secrets 管理
+# ⚠️ WARNING: PLACEHOLDER credentials for LOCAL DEVELOPMENT ONLY!
+# For PRODUCTION: Use External Secrets Operator
+# See: deploy/kubernetes/infrastructure/security/secrets/external-secrets.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -150,12 +152,13 @@ metadata:
   namespace: one-data-system
   annotations:
     one-data.io/placeholder: "true"
-    one-data.io/description: "生产环境请替换为真实凭据"
+    one-data.io/environment: "development-only"
+    one-data.io/production-source: "external-secrets:keycloak-secrets"
 type: Opaque
 stringData:
-  admin-password: "CHANGE_ME_USE_STRONG_PASSWORD"      # Keycloak 管理员密码
-  postgres-password: "CHANGE_ME_USE_STRONG_PASSWORD"   # PostgreSQL 密码
-  # 生产环境请使用强密码并通过 Secret Management 工具管理
+  # ⚠️ PLACEHOLDER VALUES - In production, managed by External Secrets Operator
+  admin-password: "CHANGE_ME_USE_STRONG_PASSWORD"
+  postgres-password: "CHANGE_ME_USE_STRONG_PASSWORD"
 
 ---
 # Keycloak ConfigMap
@@ -395,9 +398,9 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
     nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # 生产环境请启用 TLS
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # TLS 证书由 cert-manager 自动管理
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   rules:
@@ -411,11 +414,11 @@ spec:
             name: keycloak
             port:
               number: 80
-  # TLS 配置 (生产环境启用)
-  # tls:
-  # - hosts:
-  #   - keycloak.one-data.local
-  #   secretName: keycloak-tls-cert
+  # TLS 配置 - 生产环境必须启用
+  tls:
+  - hosts:
+    - keycloak.one-data.local
+    secretName: keycloak-tls-cert
 
 ---
 # Keycloak ServiceMonitor (用于 Prometheus 监控)

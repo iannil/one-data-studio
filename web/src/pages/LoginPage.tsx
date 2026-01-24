@@ -147,67 +147,70 @@ function LoginPage() {
             style={{ background: '#f5f5f5', border: 'none' }}
           />
 
-          <Divider style={{ margin: '12px 0' }}>开发模式</Divider>
+          {/* 开发模式模拟登录 - 仅在开发环境显示 */}
+          {import.meta.env.DEV && (
+            <>
+              <Divider style={{ margin: '12px 0' }}>开发模式</Divider>
 
-          {/* 模拟登录 */}
-          <div>
-            <Button
-              type="link"
-              size="small"
-              onClick={() => setUseMock(!useMock)}
-              style={{ padding: 0 }}
-            >
-              {useMock ? '隐藏' : '显示'}模拟登录表单
-            </Button>
-
-            {useMock && (
-              <Form
-                name="mock_login"
-                initialValues={{ username: 'admin', password: 'admin' }}
-                onFinish={handleMockLogin}
-                autoComplete="off"
-                layout="vertical"
-              >
-                <Form.Item
-                  name="username"
-                  rules={[{ required: true, message: '请输入用户名' }]}
+              <div>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setUseMock(!useMock)}
+                  style={{ padding: 0 }}
                 >
-                  <Input
-                    prefix={<UserOutlined />}
-                    placeholder="用户名 (admin)"
-                    size="large"
-                  />
-                </Form.Item>
+                  {useMock ? '隐藏' : '显示'}模拟登录表单
+                </Button>
 
-                <Form.Item
-                  name="password"
-                  rules={[{ required: true, message: '请输入密码' }]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="密码 (admin)"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    type="default"
-                    htmlType="submit"
-                    loading={loading}
-                    block
-                    size="large"
+                {useMock && (
+                  <Form
+                    name="mock_login"
+                    onFinish={handleMockLogin}
+                    autoComplete="off"
+                    layout="vertical"
                   >
-                    模拟登录
-                  </Button>
-                </Form.Item>
+                    <Form.Item
+                      name="username"
+                      rules={[{ required: true, message: '请输入用户名' }]}
+                    >
+                      <Input
+                        prefix={<UserOutlined />}
+                        placeholder="用户名"
+                        size="large"
+                      />
+                    </Form.Item>
 
-                <Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>
-                  提示: 默认账号 <Text code>admin</Text> / <Text code>admin</Text>
-                </Paragraph>
-              </Form>
-            )}
-          </div>
+                    <Form.Item
+                      name="password"
+                      rules={[{ required: true, message: '请输入密码' }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined />}
+                        placeholder="密码"
+                        size="large"
+                      />
+                    </Form.Item>
+
+                    <Form.Item>
+                      <Button
+                        type="default"
+                        htmlType="submit"
+                        loading={loading}
+                        block
+                        size="large"
+                      >
+                        模拟登录
+                      </Button>
+                    </Form.Item>
+
+                    <Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>
+                      注意: 模拟登录功能已禁用，请使用 Keycloak SSO
+                    </Paragraph>
+                  </Form>
+                )}
+              </div>
+            </>
+          )}
         </Space>
       </Card>
     </div>

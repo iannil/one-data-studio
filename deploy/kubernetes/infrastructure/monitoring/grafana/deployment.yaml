@@ -474,23 +474,21 @@ metadata:
 
 ---
 # Grafana Credentials Secret
-# IMPORTANT: For production environments:
-# 1. Use External Secrets Operator to fetch from Vault/AWS Secrets Manager
-# 2. Or use Sealed Secrets to encrypt credentials
-# 3. NEVER commit production credentials to version control
-# 4. Generate strong passwords: openssl rand -base64 32
+# ⚠️ WARNING: PLACEHOLDER credentials for LOCAL DEVELOPMENT ONLY!
+# For PRODUCTION: Use External Secrets Operator
+# See: deploy/kubernetes/infrastructure/security/secrets/external-secrets.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-credentials
   namespace: one-data-system
   annotations:
-    # Mark as placeholder - must be overridden in production
     one-data.io/placeholder: "true"
+    one-data.io/environment: "development-only"
+    one-data.io/production-source: "external-secrets:grafana-secrets"
 type: Opaque
 stringData:
-  # PLACEHOLDER VALUES - MUST BE CHANGED IN PRODUCTION
-  # These values are for local development only
+  # ⚠️ PLACEHOLDER VALUES - In production, managed by External Secrets Operator
   admin-user: "admin"
   admin-password: "CHANGE_ME_USE_STRONG_PASSWORD"
 

@@ -14,12 +14,31 @@ const { Option } = Select;
 
 interface NodeConfigPanelProps {
   node: Node | null;
-  onNodeUpdate?: (nodeId: string, config: Record<string, any>) => void;
+  onNodeUpdate?: (nodeId: string, config: Record<string, unknown>) => void;
   onClose?: () => void;
 }
 
+// 字段配置类型定义
+interface FieldConfig {
+  name: string;
+  label: string;
+  type: 'string' | 'number' | 'slider' | 'select' | 'textarea' | 'boolean' | 'tags';
+  default: unknown;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: string[];
+  description?: string;
+}
+
+// 节点配置 schema 类型定义
+interface NodeConfigSchema {
+  label: string;
+  fields: FieldConfig[];
+}
+
 // 节点类型配置定义
-const nodeConfigSchemas: Record<string, any> = {
+const nodeConfigSchemas: Record<string, NodeConfigSchema> = {
   input: {
     label: '输入节点配置',
     fields: [
@@ -260,7 +279,7 @@ const nodeConfigSchemas: Record<string, any> = {
 
 export default function NodeConfigPanel({ node, onNodeUpdate, onClose }: NodeConfigPanelProps) {
   const [form] = Form.useForm();
-  const [config, setConfig] = useState<Record<string, any>>({});
+  const [config, setConfig] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (node) {
@@ -278,7 +297,7 @@ export default function NodeConfigPanel({ node, onNodeUpdate, onClose }: NodeCon
     });
   };
 
-  const handleValuesChange = (changedValues: any) => {
+  const handleValuesChange = (changedValues: Record<string, unknown>) => {
     setConfig({ ...config, ...changedValues });
   };
 
@@ -319,7 +338,7 @@ export default function NodeConfigPanel({ node, onNodeUpdate, onClose }: NodeCon
             size="small"
             onValuesChange={handleValuesChange}
           >
-            {schema.fields.map((field: any) => (
+            {schema.fields.map((field: FieldConfig) => (
               <Form.Item
                 key={field.name}
                 name={field.name}
@@ -333,7 +352,7 @@ export default function NodeConfigPanel({ node, onNodeUpdate, onClose }: NodeCon
                 {field.type === 'slider' && (
                   <Slider min={field.min} max={field.max} step={field.step} />
                 )}
-                {field.type === 'select' && (
+                {field.type === 'select' && field.options && (
                   <Select>
                     {field.options.map((opt: string) => (
                       <Option key={opt} value={opt}>

@@ -23,6 +23,8 @@ import ReactFlow, {
   ReactFlowProvider,
   Panel,
   useReactFlow,
+  NodeChange,
+  EdgeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -193,7 +195,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
 
   // 处理节点变化
   const handleNodesChange = useCallback(
-    (changes: any) => {
+    (changes: NodeChange[]) => {
       onNodesChangeInternal(changes);
       if (onNodesChange) {
         onNodesChange(nodes);
@@ -204,7 +206,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
 
   // 处理边变化
   const handleEdgesChange = useCallback(
-    (changes: any) => {
+    (changes: EdgeChange[]) => {
       onEdgesChangeInternal(changes);
       if (onEdgesChange) {
         onEdgesChange(edges);

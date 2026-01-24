@@ -246,9 +246,10 @@ export const queryClient = new QueryClient({
       // 缓存时间 - 缓存在内存中保留的时间
       gcTime: CacheTime.LONG,
       // 失败重试策略
-      retry: (failureCount, error: any) => {
+      retry: (failureCount, error: unknown) => {
         // 4xx 错误不重试（客户端错误）
-        if (error?.status >= 400 && error?.status < 500) {
+        const httpError = error as { status?: number } | null;
+        if (httpError?.status && httpError.status >= 400 && httpError.status < 500) {
           return false;
         }
         // 网络错误最多重试 2 次
