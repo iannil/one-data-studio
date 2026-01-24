@@ -1,0 +1,26 @@
+{
+  "name": "one-data-studio-e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for ONE DATA STUDIO",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:report": "playwright show-report",
+    "test:core": "playwright test core-pages.spec.ts",
+    "test:cube": "playwright test cube-pages.spec.ts",
+    "test:alldata": "playwright test alldata-pages.spec.ts",
+    "test:bisheng": "playwright test bisheng-pages.spec.ts",
+    "test:admin": "playwright test admin-pages.spec.ts",
+    "test:acceptance": "playwright test acceptance-test.spec.ts",
+    "test:all": "playwright test --reporter=list",
+    "install:browsers": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0"
+  }
+}

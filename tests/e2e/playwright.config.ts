@@ -6,7 +6,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: '.',
 
   // 测试超时时间
   timeout: 30 * 1000,
@@ -42,6 +42,9 @@ export default defineConfig({
     '**/*.e2e.ts',
   ],
 
+  // 完全测试模式
+  fullyParallel: true,
+
   // 忽略的文件
   testIgnore: [
     '**/node_modules/**',
@@ -72,12 +75,4 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] },
     },
   ],
-
-  // 开发服务器配置（可选）
-  // webServer: {
-  //   command: 'npm run dev',
-  //   port: 3000,
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 120 * 1000,
-  // },
 });
