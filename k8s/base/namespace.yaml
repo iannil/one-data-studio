@@ -1,0 +1,9 @@
+# ONE-DATA-STUDIO Kubernetes Namespace
+# Creates isolated namespace for all platform resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-studio
+  labels:
+    app.kubernetes.io/name: one-data-studio
+    app.kubernetes.io/part-of: one-data-platform

@@ -299,8 +299,9 @@ export async function prefetchQuery<T>(
       queryFn,
       staleTime: CacheTime.MEDIUM,
     });
-  } catch (error) {
-    console.warn('Prefetch failed:', key, error);
+  } catch {
+    // Prefetch failures are non-critical - silently ignore
+    // Failed prefetches will be retried when the query is actually used
   }
 }
 

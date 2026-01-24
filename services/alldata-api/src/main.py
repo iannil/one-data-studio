@@ -24,12 +24,33 @@ from models import (
 )
 from storage import minio_client, init_storage
 
+# 添加父目录以导入 auth 模块
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from auth import require_jwt, require_permission, Resource, Operation
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+# M-03 安全修复: 生产环境隐藏内部错误详情
+def get_safe_error_message(e: Exception, default_msg: str = "Internal server error") -> str:
+    """
+    获取安全的错误消息，生产环境隐藏内部错误详情
+
+    Args:
+        e: 异常对象
+        default_msg: 生产环境的默认错误消息
+
+    Returns:
+        安全的错误消息
+    """
+    if os.getenv("ENVIRONMENT") == "production":
+        return default_msg
+    return f"Internal error: {str(e)}"
 
 # 创建 Flask 应用
 app = Flask(__name__)
@@ -67,6 +88,8 @@ def health():
 # ==================== 数据集管理 API ====================
 
 @app.route("/api/v1/datasets", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
 def list_datasets():
     """获取数据集列表"""
     try:
@@ -105,10 +128,12 @@ def list_datasets():
 
     except Exception as e:
         logger.error(f"Error listing datasets: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
 def get_dataset(dataset_id: str):
     """获取数据集详情"""
     try:
@@ -127,10 +152,12 @@ def get_dataset(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error getting dataset: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.CREATE)
 def create_dataset():
     """注册新数据集"""
     try:
@@ -201,10 +228,12 @@ def create_dataset():
         }), 409
     except Exception as e:
         logger.error(f"Error creating dataset: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.UPDATE)
 def update_dataset(dataset_id: str):
     """更新数据集"""
     try:
@@ -242,10 +271,12 @@ def update_dataset(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error updating dataset: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.DELETE)
 def delete_dataset(dataset_id: str):
     """删除数据集（软删除）"""
     try:
@@ -268,13 +299,27 @@ def delete_dataset(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error deleting dataset: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
-@app.route("/api/v1/datasets/<dataset_id>/credentials", methods=["POST"])
-def get_credentials(dataset_id: str):
-    """获取数据集访问凭证"""
+@app.route("/api/v1/datasets/<dataset_id>/access", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.STORAGE, Operation.READ)
+def get_dataset_access(dataset_id: str):
+    """获取数据集访问凭证 - 返回预签名 URL 而非原始凭证
+
+    C-01 安全修复: 不再返回原始 access_key 和 secret_key，
+    而是返回有限时效的预签名 URL 用于数据访问
+    """
     try:
+        data = request.json or {}
+        operation = data.get("operation", "download")  # download or upload
+        expires = int(data.get("expires", 3600))  # 默认 1 小时
+
+        # 限制有效期最长 24 小时
+        if expires > 86400:
+            expires = 86400
+
         with db_manager.get_session() as session:
             dataset = session.query(Dataset).filter(Dataset.dataset_id == dataset_id).first()
             if not dataset:
@@ -283,44 +328,46 @@ def get_credentials(dataset_id: str):
                     "message": f"Dataset {dataset_id} not found"
                 }), 404
 
-            # 解析存储路径获取桶名
-            if dataset.storage_path.startswith('s3://'):
+            # 解析存储路径
+            if dataset.storage_path and dataset.storage_path.startswith('s3://'):
                 path = dataset.storage_path[5:]
                 parts = path.split('/', 1)
                 bucket = parts[0] if parts else minio_client.default_bucket
+                object_name = parts[1] if len(parts) > 1 else ""
             else:
                 bucket = minio_client.default_bucket
+                object_name = f"datasets/{dataset_id}/"
 
-            # 生成预签名 URL（有效期 1 小时）
-            # SECURITY: MinIO credentials must be explicitly configured - no defaults
-            minio_access_key = os.getenv('MINIO_ACCESS_KEY')
-            minio_secret_key = os.getenv('MINIO_SECRET_KEY')
-
-            if not minio_access_key or not minio_secret_key:
-                logger.error("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be configured")
-                return jsonify({
-                    "code": 50001,
-                    "message": "Storage credentials not configured"
-                }), 500
+            # 生成预签名 URL
+            method = 'PUT' if operation == 'upload' else 'GET'
+            presigned_info = minio_client.generate_presigned_url(
+                object_name=object_name,
+                bucket=bucket,
+                expires=expires,
+                method=method
+            )
 
             return jsonify({
                 "code": 0,
                 "message": "success",
                 "data": {
-                    "access_key": minio_access_key,
-                    "secret_key": minio_secret_key,
-                    "endpoint": os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000'),
+                    "presigned_url": presigned_info.get('url'),
+                    "method": method,
                     "bucket": bucket,
-                    "expires_at": (datetime.utcnow().replace(hour=23, minute=59, second=59)).isoformat() + "Z"
+                    "object_path": object_name,
+                    "expires_in": expires,
+                    "operation": operation
                 }
             })
 
     except Exception as e:
-        logger.error(f"Error getting credentials: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        logger.error(f"Error getting dataset access: {e}")
+        return jsonify({"code": 50000, "message": "Internal server error"}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>/upload-url", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.STORAGE, Operation.CREATE)
 def get_upload_url(dataset_id: str):
     """获取文件上传预签名 URL"""
     try:
@@ -375,10 +422,12 @@ def get_upload_url(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error getting upload URL: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>/preview", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
 def preview_dataset(dataset_id: str):
     """预览数据集内容"""
     try:
@@ -427,12 +476,14 @@ def preview_dataset(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error previewing dataset: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 # ==================== 元数据管理 API ====================
 
 @app.route("/api/v1/metadata/databases", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
 def list_databases():
     """获取数据库列表"""
     try:
@@ -448,10 +499,12 @@ def list_databases():
 
     except Exception as e:
         logger.error(f"Error listing databases: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/metadata/databases/<database>/tables", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
 def list_tables(database: str):
     """获取表列表"""
     try:
@@ -469,10 +522,12 @@ def list_tables(database: str):
 
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/metadata/databases/<database>/tables/<table>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
 def get_table_schema(database: str, table: str):
     """获取表结构"""
     try:
@@ -508,12 +563,14 @@ def get_table_schema(database: str, table: str):
 
     except Exception as e:
         logger.error(f"Error getting table schema: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 # ==================== 数据集版本管理 API ====================
 
 @app.route("/api/v1/datasets/<dataset_id>/versions", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
 def list_dataset_versions(dataset_id: str):
     """获取数据集版本列表"""
     try:
@@ -541,10 +598,12 @@ def list_dataset_versions(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error listing versions: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 @app.route("/api/v1/datasets/<dataset_id>/versions", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.CREATE)
 def create_dataset_version(dataset_id: str):
     """创建数据集新版本"""
     try:
@@ -586,7 +645,7 @@ def create_dataset_version(dataset_id: str):
 
     except Exception as e:
         logger.error(f"Error creating version: {e}")
-        return jsonify({"code": 50000, "message": f"Internal error: {str(e)}"}), 500
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
 # 启动应用

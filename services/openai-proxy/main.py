@@ -8,12 +8,14 @@ Sprint 1.2: 真实 OpenAI API 调用代理
 - 请求/响应日志
 - 流式输出支持（SSE）
 - Prompt 模板管理
+- JWT 认证保护
 """
 
 import os
 import sys
 import logging
 import json
+import functools
 from typing import AsyncGenerator, Optional
 from datetime import datetime
 
@@ -25,7 +27,7 @@ except ImportError:
     AsyncOpenAI = None
     OpenAIError = Exception
 
-from flask import Flask, jsonify, request, Response, stream_with_context
+from flask import Flask, jsonify, request, Response, stream_with_context, g
 
 # 配置日志
 logging.basicConfig(
@@ -33,6 +35,130 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# 认证模式配置
+AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
+
+# C-02 安全修复: 生产环境强制认证
+if not AUTH_MODE:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError(
+            "CRITICAL: AUTH_MODE cannot be disabled in production environment. "
+            "Remove AUTH_MODE=false or set ENVIRONMENT to a non-production value."
+        )
+    logger.warning(
+        "SECURITY WARNING: AUTH_MODE is disabled. All requests will bypass authentication. "
+        "This should ONLY be used for local development."
+    )
+
+# 尝试导入共享 JWT 中间件
+try:
+    sys.path.insert(0, '/app/shared')
+    from auth.jwt_middleware import (
+        decode_jwt_token,
+        extract_token_from_request,
+        get_user_roles
+    )
+    JWT_SHARED_AVAILABLE = True
+except ImportError:
+    JWT_SHARED_AVAILABLE = False
+    # 降级实现
+    def extract_token_from_request(request_obj):
+        auth_header = request_obj.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            return auth_header[7:]
+        return None
+
+    def get_user_roles(payload):
+        roles = []
+        resource_access = payload.get("resource_access", {})
+        for client, client_data in resource_access.items():
+            roles.extend(client_data.get("roles", []))
+        realm_access = payload.get("realm_access", {})
+        roles.extend(realm_access.get("roles", []))
+        return roles
+
+    def decode_jwt_token(token):
+        # 简单验证 - 生产环境应使用完整的 JWT 验证
+        import base64
+        try:
+            parts = token.split('.')
+            if len(parts) != 3:
+                return None
+            payload_b64 = parts[1]
+            # 添加必要的填充
+            padding = 4 - len(payload_b64) % 4
+            if padding != 4:
+                payload_b64 += '=' * padding
+            payload_json = base64.urlsafe_b64decode(payload_b64)
+            return json.loads(payload_json)
+        except Exception:
+            return None
+
+
+def require_jwt(optional: bool = False):
+    """
+    JWT 认证装饰器
+
+    C-02 安全修复: 为 OpenAI Proxy 添加认证保护
+
+    Args:
+        optional: 是否可选认证
+    """
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            # 跳过认证检查（仅开发环境）
+            if not AUTH_MODE:
+                g.user = "dev_user"
+                g.roles = ["admin"]
+                g.payload = {}
+                return fn(*args, **kwargs)
+
+            # 提取 Token
+            token = extract_token_from_request(request)
+
+            if not token:
+                if optional:
+                    g.user = None
+                    g.roles = []
+                    g.payload = None
+                    return fn(*args, **kwargs)
+                return jsonify({
+                    "error": {
+                        "message": "Missing authentication token",
+                        "type": "authentication_error",
+                        "code": "unauthorized"
+                    }
+                }), 401
+
+            # 验证 Token
+            payload = decode_jwt_token(token)
+
+            if not payload:
+                if optional:
+                    g.user = None
+                    g.roles = []
+                    g.payload = None
+                    return fn(*args, **kwargs)
+                return jsonify({
+                    "error": {
+                        "message": "Invalid or expired token",
+                        "type": "authentication_error",
+                        "code": "invalid_token"
+                    }
+                }), 401
+
+            # 存储用户信息到 Flask g 对象
+            g.payload = payload
+            g.user = payload.get("preferred_username") or payload.get("email") or payload.get("sub", "unknown")
+            g.user_id = payload.get("sub")
+            g.roles = get_user_roles(payload)
+
+            return fn(*args, **kwargs)
+
+        return wrapper
+    return decorator
 
 # 创建 Flask 应用
 app = Flask(__name__)
@@ -113,6 +239,7 @@ def health():
 
 
 @app.route("/v1/models")
+@require_jwt()
 def list_models():
     """列出可用模型"""
     client = get_openai_client()
@@ -167,6 +294,7 @@ def list_models():
 # ==================== Chat Completions ====================
 
 @app.route("/v1/chat/completions", methods=["POST"])
+@require_jwt()
 def chat_completions():
     """OpenAI 兼容的聊天补全接口"""
     data = request.json
@@ -334,6 +462,7 @@ def chat_completions():
 # ==================== Prompt 模板管理 API ====================
 
 @app.route("/api/v1/templates", methods=["GET"])
+@require_jwt()
 def list_templates():
     """列出所有 Prompt 模板"""
     return jsonify({
@@ -346,6 +475,7 @@ def list_templates():
 
 
 @app.route("/api/v1/templates/<template_name>", methods=["GET"])
+@require_jwt()
 def get_template(template_name: str):
     """获取 Prompt 模板内容"""
     template = PROMPT_TEMPLATES.get(template_name)
@@ -365,6 +495,7 @@ def get_template(template_name: str):
 
 
 @app.route("/api/v1/templates", methods=["POST"])
+@require_jwt()
 def create_template():
     """创建新的 Prompt 模板"""
     data = request.json
@@ -388,6 +519,7 @@ def create_template():
 # ==================== 使用统计 ====================
 
 @app.route("/api/v1/stats", methods=["GET"])
+@require_jwt()
 def get_stats():
     """获取使用统计"""
     # 实际实现中应从数据库或缓存中获取

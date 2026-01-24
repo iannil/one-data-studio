@@ -1,0 +1,200 @@
+# Bisheng API Deployment
+# LLMOps application orchestration layer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bisheng-api
+  namespace: one-data-studio
+  labels:
+    app.kubernetes.io/name: bisheng-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: one-data-studio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bisheng-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bisheng-api
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: one-data-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: bisheng-api
+          image: one-data-studio/bisheng-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            # ConfigMap values
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MYSQL_PORT
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MYSQL_USER
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: REDIS_PORT
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MINIO_ENDPOINT
+            - name: MILVUS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MILVUS_HOST
+            - name: MILVUS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: MILVUS_PORT
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: ENVIRONMENT
+            - name: AUTH_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: AUTH_MODE
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: KEYCLOAK_REALM
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: one-data-config
+                  key: KEYCLOAK_CLIENT_ID
+            # Secret values
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: MYSQL_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: REDIS_PASSWORD
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: MINIO_SECRET_KEY
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: JWT_SECRET_KEY
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: one-data-secrets
+                  key: KEYCLOAK_CLIENT_SECRET
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: bisheng-api
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bisheng-api
+  namespace: one-data-studio
+  labels:
+    app.kubernetes.io/name: bisheng-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: bisheng-api

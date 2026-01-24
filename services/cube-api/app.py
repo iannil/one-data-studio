@@ -44,9 +44,23 @@ app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
 # 配置 CORS
+# C-05 安全修复: 生产环境必须显式配置 CORS_ORIGINS
+_cors_origins = os.getenv("CORS_ORIGINS", "")
+if not _cors_origins:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError(
+            "CRITICAL: CORS_ORIGINS must be explicitly configured in production. "
+            "Set CORS_ORIGINS environment variable to allowed origins (comma-separated)."
+        )
+    logger.warning(
+        "SECURITY WARNING: CORS_ORIGINS not configured, defaulting to localhost only. "
+        "This should be explicitly configured for production deployment."
+    )
+    _cors_origins = "http://localhost:3000,http://127.0.0.1:3000"
+
 CORS(app, resources={
     r"/*": {
-        "origins": os.getenv("CORS_ORIGINS", "*").split(","),
+        "origins": _cors_origins.split(","),
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }

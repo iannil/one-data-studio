@@ -1,0 +1,87 @@
+# Staging overlay
+# Customizes base configuration for staging environment
+# Apply with: kubectl apply -k k8s/overlays/staging/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: one-data-studio-staging
+
+resources:
+  - ../../base
+
+# Staging-specific namespace
+nameSuffix: -staging
+
+# Staging-specific labels
+commonLabels:
+  environment: staging
+
+# Staging image tags (use latest for testing)
+images:
+  - name: one-data-studio/bisheng-api
+    newTag: develop
+  - name: one-data-studio/alldata-api
+    newTag: develop
+  - name: one-data-studio/openai-proxy
+    newTag: develop
+  - name: one-data-studio/cube-api
+    newTag: develop
+  - name: one-data-studio/web-frontend
+    newTag: develop
+
+# Staging resource patches - reduce resources
+patches:
+  - target:
+      kind: Deployment
+      name: bisheng-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "100m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+  - target:
+      kind: Deployment
+      name: alldata-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: openai-proxy
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: cube-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: web-frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  # Disable HPA minimum replicas in staging
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1

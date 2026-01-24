@@ -13,11 +13,16 @@ import pytest
 import requests
 import time
 import json
+import os
+import logging
 from typing import Optional
 
+# 配置日志
+logger = logging.getLogger(__name__)
+
 # 测试配置
-BASE_URL = "http://localhost:8081"
-AUTH_TOKEN = ""  # 可选：设置 JWT token
+BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 # 请求头
 HEADERS = {
@@ -53,7 +58,7 @@ class TestWorkflowCRUD:
             assert data["code"] == 0
             assert "workflow_id" in data["data"]
             TestWorkflowCRUD.workflow_id = data["data"]["workflow_id"]
-            print(f"Created workflow: {TestWorkflowCRUD.workflow_id}")
+            logger.info("Created workflow: %s", TestWorkflowCRUD.workflow_id)
 
     def test_02_list_workflows(self):
         """测试列出工作流"""
@@ -201,7 +206,7 @@ class TestWorkflowExecution:
             assert data["code"] == 0
             assert "execution_id" in data["data"]
             TestWorkflowExecution.execution_id = data["data"]["execution_id"]
-            print(f"Started execution: {TestWorkflowExecution.execution_id}")
+            logger.info("Started execution: %s", TestWorkflowExecution.execution_id)
 
     def test_02_get_execution_status(self):
         """测试获取执行状态"""
@@ -222,7 +227,7 @@ class TestWorkflowExecution:
             data = response.json()
             assert data["code"] == 0
             assert "status" in data["data"]
-            print(f"Execution status: {data['data']['status']}")
+            logger.info("Execution status: %s", data['data']['status'])
 
     def test_03_get_execution_logs(self):
         """测试获取执行日志"""

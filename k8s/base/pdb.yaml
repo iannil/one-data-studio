@@ -1,0 +1,57 @@
+# Pod Disruption Budget
+# Ensures minimum availability during voluntary disruptions
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bisheng-api-pdb
+  namespace: one-data-studio
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bisheng-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: alldata-api-pdb
+  namespace: one-data-studio
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alldata-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: openai-proxy-pdb
+  namespace: one-data-studio
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openai-proxy
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cube-api-pdb
+  namespace: one-data-studio
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cube-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-frontend-pdb
+  namespace: one-data-studio
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web-frontend

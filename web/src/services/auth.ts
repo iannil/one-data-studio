@@ -423,48 +423,17 @@ export function getKeycloakConfig(): KeycloakConfig {
 }
 
 // ============= 模拟登录（开发模式）============
+// SECURITY: mockLogin is completely disabled
+// Use Keycloak authentication in all environments
 
 /**
- * 模拟登录（用于开发环境）
+ * 模拟登录（已禁用）
+ * @deprecated This function is disabled for security. Use Keycloak authentication.
  */
-export function mockLogin(username: string, password: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (username === 'admin' && password === 'admin') {
-        // 创建模拟 Token
-        const mockToken = btoa(JSON.stringify({
-          sub: 'user-001',
-          preferred_username: 'admin',
-          email: 'admin@example.com',
-          name: 'Administrator',
-          exp: Math.floor(Date.now() / 1000) + 3600,
-          realm_access: { roles: ['admin'] },
-        }));
-
-        const mockTokens: AuthTokens = {
-          access_token: mockToken,
-          refresh_token: 'mock_refresh_token',
-          expires_in: 3600,
-          token_type: 'Bearer',
-        };
-
-        storeTokens(mockTokens);
-
-        const userInfo: UserInfo = {
-          sub: 'user-001',
-          preferred_username: 'admin',
-          email: 'admin@example.com',
-          name: 'Administrator',
-          roles: ['admin'],
-        };
-        storeUserInfo(userInfo);
-
-        resolve(true);
-      } else {
-        resolve(false);
-      }
-    }, 500);
-  });
+export function mockLogin(_username: string, _password: string): Promise<boolean> {
+  // SECURITY: Mock login is disabled to prevent hardcoded credential exposure
+  // Use Keycloak SSO for authentication in all environments
+  return Promise.resolve(false);
 }
 
 /**

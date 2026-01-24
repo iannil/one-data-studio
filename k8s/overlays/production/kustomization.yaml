@@ -1,0 +1,77 @@
+# Production overlay
+# Customizes base configuration for production environment
+# Apply with: kubectl apply -k k8s/overlays/production/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: one-data-studio
+
+resources:
+  - ../../base
+
+# Production-specific labels
+commonLabels:
+  environment: production
+
+# Production image tags (replace with actual versions)
+images:
+  - name: one-data-studio/bisheng-api
+    newTag: v1.0.0
+  - name: one-data-studio/alldata-api
+    newTag: v1.0.0
+  - name: one-data-studio/openai-proxy
+    newTag: v1.0.0
+  - name: one-data-studio/cube-api
+    newTag: v1.0.0
+  - name: one-data-studio/web-frontend
+    newTag: v1.0.0
+
+# Production resource patches
+patches:
+  # Increase replicas for production
+  - target:
+      kind: Deployment
+      name: bisheng-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: alldata-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: openai-proxy
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: cube-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: web-frontend
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  # Increase resource limits for production
+  - target:
+      kind: Deployment
+      name: bisheng-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "2000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "4Gi"

@@ -14,9 +14,13 @@ import pytest
 import requests
 import time
 import os
+import logging
 import jwt
 from typing import Optional
 from datetime import datetime, timedelta
+
+# 配置日志
+logger = logging.getLogger(__name__)
 
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
@@ -52,7 +56,7 @@ class TestUserAuthentication:
         if response.status_code == 201:
             data = response.json()
             assert data["code"] == 0
-            print(f"Registered user: {self.test_user['username']}")
+            logger.info("Registered user: %s", self.test_user['username'])
 
     def test_02_login_user(self):
         """测试用户登录"""
@@ -74,7 +78,7 @@ class TestUserAuthentication:
             assert "access_token" in data["data"]
             TestUserAuthentication.access_token = data["data"]["access_token"]
             TestUserAuthentication.refresh_token = data["data"].get("refresh_token")
-            print(f"Login successful, token received")
+            logger.info("Login successful, token received")
 
     def test_03_access_protected_endpoint(self):
         """测试访问受保护的端点"""
@@ -393,7 +397,7 @@ class TestAPIKeyAuthentication:
         if response.status_code == 201:
             data = response.json()
             TestAPIKeyAuthentication.api_key = data["data"].get("api_key")
-            print(f"Created API key")
+            logger.info("Created API key")
 
     def test_02_authenticate_with_api_key(self):
         """测试使用 API Key 认证"""

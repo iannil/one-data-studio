@@ -1,0 +1,48 @@
+# ONE-DATA-STUDIO ConfigMap
+# Non-sensitive configuration shared across services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: one-data-config
+  namespace: one-data-studio
+  labels:
+    app.kubernetes.io/name: one-data-studio
+data:
+  # Database configuration
+  MYSQL_HOST: "mysql.one-data-studio.svc.cluster.local"
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: "onedata"
+  MYSQL_USER: "onedata"
+
+  # Redis configuration
+  REDIS_HOST: "redis.one-data-studio.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # MinIO configuration
+  MINIO_ENDPOINT: "minio.one-data-studio.svc.cluster.local:9000"
+  MINIO_USE_SSL: "false"
+  MINIO_DEFAULT_BUCKET: "alldata"
+
+  # Milvus configuration
+  MILVUS_HOST: "milvus.one-data-studio.svc.cluster.local"
+  MILVUS_PORT: "19530"
+  EMBEDDING_DIM: "1536"
+
+  # Service URLs (internal)
+  ALLDATA_API_URL: "http://alldata-api.one-data-studio.svc.cluster.local:8001"
+  BISHENG_API_URL: "http://bisheng-api.one-data-studio.svc.cluster.local:8000"
+  CUBE_API_URL: "http://cube-api.one-data-studio.svc.cluster.local:8002"
+  OPENAI_PROXY_URL: "http://openai-proxy.one-data-studio.svc.cluster.local:8003"
+
+  # Environment
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+  # Keycloak configuration
+  KEYCLOAK_URL: "http://keycloak.one-data-studio.svc.cluster.local"
+  KEYCLOAK_REALM: "one-data-studio"
+  KEYCLOAK_CLIENT_ID: "one-data-api"
+
+  # Authentication mode (must be true in production)
+  AUTH_MODE: "true"

@@ -14,8 +14,12 @@ import requests
 import time
 import os
 import asyncio
+import logging
 from typing import Optional
 from unittest.mock import patch, MagicMock, AsyncMock
+
+# 配置日志
+logger = logging.getLogger(__name__)
 
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
@@ -97,7 +101,7 @@ class TestDocumentUploadFlow:
             data = response.json()
             assert data["code"] == 0
             TestDocumentUploadFlow.document_id = data["data"].get("document_id")
-            print(f"Uploaded document: {TestDocumentUploadFlow.document_id}")
+            logger.info("Uploaded document: %s", TestDocumentUploadFlow.document_id)
 
     def test_03_list_documents(self):
         """测试列出文档"""
@@ -133,7 +137,7 @@ class TestDocumentUploadFlow:
                 data = response.json()
                 status = data["data"].get("status")
                 if status in ["completed", "indexed"]:
-                    print(f"Document indexed successfully")
+                    logger.info("Document indexed successfully")
                     return
                 elif status == "failed":
                     pytest.fail("Document processing failed")

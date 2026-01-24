@@ -1,0 +1,37 @@
+# Kustomization for base configuration
+# Apply with: kubectl apply -k k8s/base/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: one-data-studio
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - rbac.yaml
+  - bisheng-api.yaml
+  - alldata-api.yaml
+  - openai-proxy.yaml
+  - cube-api.yaml
+  - web-frontend.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - network-policy.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/version: "1.0.0"
+
+images:
+  - name: one-data-studio/bisheng-api
+    newTag: latest
+  - name: one-data-studio/alldata-api
+    newTag: latest
+  - name: one-data-studio/openai-proxy
+    newTag: latest
+  - name: one-data-studio/cube-api
+    newTag: latest
+  - name: one-data-studio/web-frontend
+    newTag: latest

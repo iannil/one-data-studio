@@ -13,11 +13,16 @@ import pytest
 import requests
 import json
 import time
+import os
+import logging
 from typing import Optional
 
+# 配置日志
+logger = logging.getLogger(__name__)
+
 # 测试配置
-BASE_URL = "http://localhost:8081"
-AUTH_TOKEN = ""
+BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 # 请求头
 HEADERS = {
@@ -43,9 +48,9 @@ class TestAgentTools:
             data = response.json()
             assert data["code"] == 0
             assert "tools" in data["data"]
-            print(f"Available tools: {len(data['data']['tools'])}")
+            logger.info("Available tools: %d", len(data['data']['tools']))
             for tool in data["data"]["tools"]:
-                print(f"  - {tool.get('name', 'unknown')}: {tool.get('description', '')[:50]}")
+                logger.debug("  - %s: %s", tool.get('name', 'unknown'), tool.get('description', '')[:50])
 
     def test_02_get_tool_schemas(self):
         """测试获取工具 Schema"""
@@ -135,7 +140,7 @@ class TestAgentTemplates:
             data = response.json()
             assert data["code"] == 0
             TestAgentTemplates.template_id = data["data"].get("template_id")
-            print(f"Created template: {TestAgentTemplates.template_id}")
+            logger.info("Created template: %s", TestAgentTemplates.template_id)
 
     def test_03_get_template(self):
         """测试获取模板详情"""
@@ -200,7 +205,7 @@ class TestAgentExecution:
             data = response.json()
             assert data["code"] == 0
             # Agent 执行结果应该包含一些输出
-            print(f"Agent result: {json.dumps(data['data'], ensure_ascii=False, indent=2)[:500]}")
+            logger.info("Agent result: %s", json.dumps(data['data'], ensure_ascii=False, indent=2)[:500])
 
     def test_02_run_agent_with_tools(self):
         """测试运行带工具的 Agent"""
@@ -258,12 +263,12 @@ class TestAgentExecution:
                         try:
                             event_data = json.loads(line_str[6:])
                             events.append(event_data)
-                            print(f"SSE Event: {event_data.get('type', 'unknown')}")
+                            logger.debug("SSE Event: %s", event_data.get('type', 'unknown'))
                         except json.JSONDecodeError:
                             pass
 
             # 至少应该有一些事件
-            print(f"Total SSE events: {len(events)}")
+            logger.info("Total SSE events: %d", len(events))
 
 
 class TestRAGScenario:
@@ -341,7 +346,7 @@ class TestRAGScenario:
             data = response.json()
             assert data["code"] == 0
             assert "answer" in data["data"]
-            print(f"RAG Answer: {data['data']['answer'][:200]}...")
+            logger.info("RAG Answer: %s...", data['data']['answer'][:200])
 
     def test_02_text2sql(self):
         """测试 Text-to-SQL"""
@@ -360,7 +365,7 @@ class TestRAGScenario:
             data = response.json()
             assert data["code"] == 0
             assert "sql" in data["data"]
-            print(f"Generated SQL: {data['data']['sql']}")
+            logger.info("Generated SQL: %s", data['data']['sql'])
 
 
 class TestConversationFlow:
@@ -419,7 +424,7 @@ class TestConversationFlow:
             assert data["code"] == 0
             # 应该包含消息历史
             if "messages" in data["data"]:
-                print(f"Messages in conversation: {len(data['data']['messages'])}")
+                logger.info("Messages in conversation: %d", len(data['data']['messages']))
 
     def test_04_list_conversations(self):
         """测试列出会话"""
