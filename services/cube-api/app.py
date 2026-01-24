@@ -25,12 +25,61 @@ from flask_cors import CORS
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 添加共享模块路径
+sys.path.insert(0, '/app/shared')
+
 from models import (
     SessionLocal, init_db,
     MLModel, ModelVersion, ModelDeployment,
     TrainingJob, BatchPredictionJob
 )
 from services.huggingface import get_huggingface_service, HuggingFaceService
+
+# 尝试导入认证模块
+try:
+    from auth import (
+        require_jwt,
+        require_permission,
+        Resource,
+        Operation,
+        get_current_user
+    )
+    AUTH_ENABLED = True
+except ImportError:
+    # Check if we're in production - auth is required in production
+    if os.getenv('ENVIRONMENT', '').lower() in ('production', 'prod'):
+        raise ImportError(
+            "Authentication module is required in production. "
+            "Ensure auth.py is present and all dependencies are installed."
+        )
+
+    AUTH_ENABLED = False
+    # 装饰器空实现（开发模式）
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Authentication module not available. Running in development mode without auth. "
+        "This is NOT safe for production use."
+    )
+    def require_jwt(optional=False):
+        def decorator(fn):
+            return fn
+        return decorator
+    def require_permission(resource, operation):
+        def decorator(fn):
+            return fn
+        return decorator
+    class Resource:
+        MODEL = type('', (), {'value': 'model'})()
+        DATASET = type('', (), {'value': 'dataset'})()
+    class Operation:
+        CREATE = type('', (), {'value': 'create'})()
+        READ = type('', (), {'value': 'read'})()
+        UPDATE = type('', (), {'value': 'update'})()
+        DELETE = type('', (), {'value': 'delete'})()
+        EXECUTE = type('', (), {'value': 'execute'})()
+
+# 认证模式配置
+AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
 # 配置日志
 logging.basicConfig(
@@ -109,8 +158,9 @@ def health():
 # ==================== 模型管理 API ====================
 
 @app.route("/api/v1/models", methods=["GET"])
+@require_jwt(optional=True)
 def list_models():
-    """列出所有模型"""
+    """列出所有模型（公开只读访问）"""
     db = get_db_session()
 
     # 查询参数
@@ -145,8 +195,10 @@ def list_models():
 
 
 @app.route("/api/v1/models", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.CREATE)
 def create_model():
-    """创建模型"""
+    """创建模型（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -185,8 +237,9 @@ def create_model():
 
 
 @app.route("/api/v1/models/<model_id>", methods=["GET"])
+@require_jwt(optional=True)
 def get_model(model_id: str):
-    """获取模型详情"""
+    """获取模型详情（公开只读访问）"""
     db = get_db_session()
 
     model = db.query(MLModel).filter(MLModel.model_id == model_id).first()
@@ -203,8 +256,10 @@ def get_model(model_id: str):
 
 
 @app.route("/api/v1/models/<model_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.UPDATE)
 def update_model(model_id: str):
-    """更新模型"""
+    """更新模型（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -238,8 +293,10 @@ def update_model(model_id: str):
 
 
 @app.route("/api/v1/models/<model_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.DELETE)
 def delete_model(model_id: str):
-    """删除模型"""
+    """删除模型（需要认证）"""
     db = get_db_session()
 
     model = db.query(MLModel).filter(MLModel.model_id == model_id).first()
@@ -269,8 +326,9 @@ def delete_model(model_id: str):
 # ==================== 模型版本管理 ====================
 
 @app.route("/api/v1/models/<model_id>/versions", methods=["GET"])
+@require_jwt(optional=True)
 def list_model_versions(model_id: str):
-    """列出模型版本"""
+    """列出模型版本（公开只读访问）"""
     db = get_db_session()
 
     model = db.query(MLModel).filter(MLModel.model_id == model_id).first()
@@ -291,8 +349,10 @@ def list_model_versions(model_id: str):
 
 
 @app.route("/api/v1/models/<model_id>/versions", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.CREATE)
 def create_model_version(model_id: str):
-    """创建模型版本"""
+    """创建模型版本（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -331,8 +391,9 @@ def create_model_version(model_id: str):
 # ==================== 模型部署管理 ====================
 
 @app.route("/api/v1/deployments", methods=["GET"])
+@require_jwt(optional=True)
 def list_deployments():
-    """列出所有部署"""
+    """列出所有部署（公开只读访问）"""
     db = get_db_session()
 
     status = request.args.get("status")
@@ -363,8 +424,10 @@ def list_deployments():
 
 
 @app.route("/api/v1/models/<model_id>/deploy", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.EXECUTE)
 def deploy_model(model_id: str):
-    """部署模型"""
+    """部署模型（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -417,8 +480,10 @@ def deploy_model(model_id: str):
 
 
 @app.route("/api/v1/deployments/<deployment_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.DELETE)
 def undeploy_model(deployment_id: str):
-    """取消部署"""
+    """取消部署（需要认证）"""
     db = get_db_session()
 
     deployment = db.query(ModelDeployment).filter(
@@ -454,8 +519,10 @@ def undeploy_model(deployment_id: str):
 # ==================== 预测接口 ====================
 
 @app.route("/api/v1/predict/<deployment_id>", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.EXECUTE)
 def predict(deployment_id: str):
-    """单条预测"""
+    """单条预测（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -473,6 +540,18 @@ def predict(deployment_id: str):
     # Get model inference configuration
     use_mock = os.getenv("USE_MOCK_INFERENCE", "true").lower() == "true"
 
+    # C-03 安全修复: 生产环境禁止使用 Mock 推理
+    if use_mock and os.getenv("ENVIRONMENT") == "production":
+        logger.error(
+            f"CRITICAL: Mock inference is enabled in production for deployment {deployment_id}. "
+            "Set USE_MOCK_INFERENCE=false and configure real model serving."
+        )
+        return jsonify({
+            "code": 50010,
+            "message": "Model inference not properly configured for production. Contact administrator.",
+            "error": "mock_inference_in_production"
+        }), 503
+
     if use_mock:
         # Mock prediction logic - for development/testing only
         # In production, set USE_MOCK_INFERENCE=false and configure real inference
@@ -487,28 +566,32 @@ def predict(deployment_id: str):
         # 根据模型类型返回不同的 mock 结果
         if model_type == "text-generation":
             result = {
-                "generated_text": f"[Mock] Generated response for: {input_data[:50]}...",
+                "generated_text": f"[Mock - 仅开发环境] Generated response for: {input_data[:50]}...",
                 "model": model.name if model else "unknown",
-                "mock": True
+                "mock": True,
+                "_warning": "This is mock data. Configure USE_MOCK_INFERENCE=false for production."
             }
         elif model_type == "text-classification":
             result = {
                 "labels": ["positive", "negative", "neutral"],
                 "scores": [0.85, 0.10, 0.05],
                 "model": model.name if model else "unknown",
-                "mock": True
+                "mock": True,
+                "_warning": "This is mock data. Configure USE_MOCK_INFERENCE=false for production."
             }
         elif model_type == "text2text-generation":
             result = {
-                "generated_text": f"[Mock] Translated/transformed: {input_data[:50]}...",
+                "generated_text": f"[Mock - 仅开发环境] Translated/transformed: {input_data[:50]}...",
                 "model": model.name if model else "unknown",
-                "mock": True
+                "mock": True,
+                "_warning": "This is mock data. Configure USE_MOCK_INFERENCE=false for production."
             }
         else:
             result = {
-                "output": f"[Mock] Prediction for type {model_type}",
+                "output": f"[Mock - 仅开发环境] Prediction for type {model_type}",
                 "model": model.name if model else "unknown",
-                "mock": True
+                "mock": True,
+                "_warning": "This is mock data. Configure USE_MOCK_INFERENCE=false for production."
             }
     else:
         # Real inference - to be implemented with actual model serving
@@ -535,8 +618,10 @@ def predict(deployment_id: str):
 # ==================== 批量预测 ====================
 
 @app.route("/api/v1/batch-predictions", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.EXECUTE)
 def create_batch_prediction():
-    """创建批量预测任务"""
+    """创建批量预测任务（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -581,8 +666,9 @@ def create_batch_prediction():
 
 
 @app.route("/api/v1/batch-predictions/<job_id>", methods=["GET"])
+@require_jwt(optional=True)
 def get_batch_prediction(job_id: str):
-    """获取批量预测任务状态"""
+    """获取批量预测任务状态（公开只读访问）"""
     db = get_db_session()
 
     job = db.query(BatchPredictionJob).filter(
@@ -602,8 +688,9 @@ def get_batch_prediction(job_id: str):
 # ==================== 训练任务管理 ====================
 
 @app.route("/api/v1/training-jobs", methods=["GET"])
+@require_jwt(optional=True)
 def list_training_jobs():
-    """列出训练任务"""
+    """列出训练任务（公开只读访问）"""
     db = get_db_session()
 
     status = request.args.get("status")
@@ -634,8 +721,10 @@ def list_training_jobs():
 
 
 @app.route("/api/v1/training-jobs", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.CREATE)
 def create_training_job():
-    """创建训练任务"""
+    """创建训练任务（需要认证）"""
     db = get_db_session()
     data = request.json
 
@@ -677,8 +766,9 @@ def create_training_job():
 
 
 @app.route("/api/v1/training-jobs/<job_id>", methods=["GET"])
+@require_jwt(optional=True)
 def get_training_job(job_id: str):
-    """获取训练任务详情"""
+    """获取训练任务详情（公开只读访问）"""
     db = get_db_session()
 
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
@@ -693,8 +783,10 @@ def get_training_job(job_id: str):
 
 
 @app.route("/api/v1/training-jobs/<job_id>/cancel", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.UPDATE)
 def cancel_training_job(job_id: str):
-    """取消训练任务"""
+    """取消训练任务（需要认证）"""
     db = get_db_session()
 
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
@@ -718,8 +810,9 @@ def cancel_training_job(job_id: str):
 # ==================== Hugging Face Hub 集成 ====================
 
 @app.route("/api/v1/huggingface/models", methods=["GET"])
+@require_jwt(optional=True)
 def search_huggingface_models():
-    """搜索 Hugging Face 模型"""
+    """搜索 Hugging Face 模型（公开只读访问）"""
     query = request.args.get("query", "")
     pipeline_tag = request.args.get("pipeline_tag")
     library = request.args.get("library")
@@ -776,8 +869,9 @@ def search_huggingface_models():
 
 
 @app.route("/api/v1/huggingface/models/<path:model_id>", methods=["GET"])
+@require_jwt(optional=True)
 def get_huggingface_model(model_id: str):
-    """获取 Hugging Face 模型详情"""
+    """获取 Hugging Face 模型详情（公开只读访问）"""
     hf_service = get_huggingface_service()
 
     try:
@@ -816,8 +910,10 @@ def get_huggingface_model(model_id: str):
 
 
 @app.route("/api/v1/huggingface/models/<path:model_id>/import", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.CREATE)
 def import_huggingface_model(model_id: str):
-    """从 Hugging Face 导入模型"""
+    """从 Hugging Face 导入模型（需要认证）"""
     db = get_db_session()
     data = request.json or {}
 
@@ -894,8 +990,9 @@ def import_huggingface_model(model_id: str):
 
 
 @app.route("/api/v1/huggingface/pipeline-tags", methods=["GET"])
+@require_jwt(optional=True)
 def get_pipeline_tags():
-    """获取所有 Pipeline 标签"""
+    """获取所有 Pipeline 标签（公开只读访问）"""
     hf_service = get_huggingface_service()
 
     loop = asyncio.new_event_loop()
@@ -917,8 +1014,9 @@ def get_pipeline_tags():
 
 
 @app.route("/api/v1/huggingface/datasets", methods=["GET"])
+@require_jwt(optional=True)
 def search_huggingface_datasets():
-    """搜索 Hugging Face 数据集"""
+    """搜索 Hugging Face 数据集（公开只读访问）"""
     query = request.args.get("query", "")
     author = request.args.get("author")
     limit = int(request.args.get("limit", 20))
@@ -971,8 +1069,10 @@ def search_huggingface_datasets():
 # ==================== 初始化数据库 ====================
 
 @app.route("/api/v1/init-db", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.MODEL, Operation.MANAGE if hasattr(Operation, 'MANAGE') else Operation.CREATE)
 def init_database():
-    """初始化数据库表"""
+    """初始化数据库表（需要管理员权限）"""
     try:
         init_db()
         logger.info("数据库表初始化成功")

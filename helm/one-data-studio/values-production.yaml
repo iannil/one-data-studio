@@ -1,0 +1,197 @@
+# Production Environment Values
+# Override default values for production deployment
+
+# Production-specific settings
+global:
+  imageRegistry: "registry.production.example.com/"
+  imagePullSecrets:
+    - production-registry-secret
+
+# Production replicas and resources
+alldataApi:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilization: 70
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+bishengApi:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilization: 70
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+
+cubeApi:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilization: 70
+  env:
+    USE_MOCK_INFERENCE: "false"  # Real inference in production
+    ENVIRONMENT: "production"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+
+openaiProxy:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilization: 70
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+webFrontend:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilization: 80
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# Production ingress with TLS
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: one-data.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web-frontend
+        - path: /api/v1/datasets
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/metadata
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/workflows
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/chat
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/models
+          pathType: Prefix
+          service: cube-api
+        - path: /v1/
+          pathType: Prefix
+          service: openai-proxy
+  tls:
+    - secretName: production-tls
+      hosts:
+        - one-data.example.com
+
+# Production database settings
+mysql:
+  enabled: true
+  auth:
+    # Credentials from external secrets
+    existingSecret: one-data-mysql-secret
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+
+redis:
+  enabled: true
+  auth:
+    existingSecret: one-data-redis-secret
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+
+minio:
+  enabled: true
+  auth:
+    existingSecret: one-data-minio-secret
+  persistence:
+    enabled: true
+    size: 500Gi
+    storageClass: "standard"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+# Enable all security features in production
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Enable monitoring in production
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    scrapeTimeout: 10s

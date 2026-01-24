@@ -1,5 +1,14 @@
 # Kustomization for base configuration
 # Apply with: kubectl apply -k k8s/base/
+#
+# IMPORTANT: Secrets must be created separately before applying this kustomization.
+# See k8s/base/secrets.yaml.template for the template.
+#
+# Create secrets using one of these methods:
+#   1. kubectl create secret generic one-data-secrets --from-literal=... -n one-data-studio
+#   2. Use external secrets management (Vault, AWS Secrets Manager, etc.)
+#   3. Use sealed-secrets or similar for GitOps
+#
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -8,7 +17,9 @@ namespace: one-data-studio
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secrets.yaml
+  # Note: secrets.yaml is now a template (secrets.yaml.template)
+  # Secrets must be created separately from the template with actual values
+  # - secrets.yaml
   - rbac.yaml
   - bisheng-api.yaml
   - alldata-api.yaml

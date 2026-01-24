@@ -62,7 +62,21 @@ try:
     JWT_SHARED_AVAILABLE = True
 except ImportError:
     JWT_SHARED_AVAILABLE = False
-    # 降级实现
+
+    # C-02 安全修复: 共享 JWT 模块不可用时的安全处理
+    # 生产环境必须有共享 JWT 模块
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ImportError(
+            "CRITICAL: Shared JWT authentication module is required in production. "
+            "Ensure /app/shared/auth/jwt_middleware.py is available and all dependencies are installed."
+        )
+
+    logger.warning(
+        "SECURITY WARNING: Shared JWT module not available. "
+        "Using secure fallback that rejects all authenticated requests. "
+        "This should only occur in development/testing environments."
+    )
+
     def extract_token_from_request(request_obj):
         auth_header = request_obj.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
@@ -79,21 +93,13 @@ except ImportError:
         return roles
 
     def decode_jwt_token(token):
-        # 简单验证 - 生产环境应使用完整的 JWT 验证
-        import base64
-        try:
-            parts = token.split('.')
-            if len(parts) != 3:
-                return None
-            payload_b64 = parts[1]
-            # 添加必要的填充
-            padding = 4 - len(payload_b64) % 4
-            if padding != 4:
-                payload_b64 += '=' * padding
-            payload_json = base64.urlsafe_b64decode(payload_b64)
-            return json.loads(payload_json)
-        except Exception:
-            return None
+        # C-02 安全修复: 拒绝所有 Token 验证请求，而不是使用不安全的 Base64 解码
+        # 这比返回伪造数据更安全，因为它会强制请求失败而不是授权未验证的用户
+        logger.error(
+            "JWT token validation requested but shared JWT module is not available. "
+            "Rejecting token for security. Configure proper JWT validation in production."
+        )
+        return None
 
 
 def require_jwt(optional: bool = False):
@@ -245,7 +251,18 @@ def list_models():
     client = get_openai_client()
 
     if not client:
-        # Mock 响应
+        # C-03 安全修复: 生产环境必须配置 OpenAI API
+        if os.getenv("ENVIRONMENT") == "production":
+            logger.error("OpenAI client not available in production for /v1/models")
+            return jsonify({
+                "error": {
+                    "message": "LLM service not configured. Contact administrator.",
+                    "type": "service_unavailable",
+                    "code": "llm_not_configured"
+                }
+            }), 503
+
+        # Mock 响应（仅用于开发/测试）
         return jsonify({
             "object": "list",
             "data": [
@@ -261,7 +278,8 @@ def list_models():
                     "created": 1234567890,
                     "owned_by": "openai"
                 }
-            ]
+            ],
+            "_warning": "This is mock data. Configure OPENAI_API_KEY for real model list."
         })
 
     try:
@@ -320,7 +338,21 @@ def chat_completions():
     client = get_openai_client()
 
     if not client:
-        # Mock 响应（用于测试）
+        # C-03 安全修复: 生产环境必须配置 OpenAI API
+        if os.getenv("ENVIRONMENT") == "production":
+            logger.error(
+                "CRITICAL: OpenAI client not available in production. "
+                "Set OPENAI_API_KEY environment variable."
+            )
+            return jsonify({
+                "error": {
+                    "message": "LLM service not configured. Contact administrator.",
+                    "type": "service_unavailable",
+                    "code": "llm_not_configured"
+                }
+            }), 503
+
+        # Mock 响应（仅用于开发/测试）
         logger.warning(
             "OpenAI client not available, returning mock response. "
             "Set OPENAI_API_KEY environment variable for production use. "
@@ -334,7 +366,7 @@ def chat_completions():
 
         if stream:
             def generate():
-                response_text = f"[Mock 响应] 您好！我收到了您的问题：{user_message}"
+                response_text = f"[Mock 响应 - 仅开发环境] 您好！我收到了您的问题：{user_message}"
                 for char in response_text:
                     chunk = {
                         "id": "chatcmpl-mock",
@@ -374,7 +406,7 @@ def chat_completions():
                 "index": 0,
                 "message": {
                     "role": "assistant",
-                    "content": f"[Mock 响应] 您好！我收到了您的问题：{user_message}"
+                    "content": f"[Mock 响应 - 仅开发环境] 您好！我收到了您的问题：{user_message}"
                 },
                 "finish_reason": "stop"
             }],
@@ -382,7 +414,8 @@ def chat_completions():
                 "prompt_tokens": sum(len(m.get("content", "")) for m in messages),
                 "completion_tokens": 50,
                 "total_tokens": sum(len(m.get("content", "")) for m in messages) + 50
-            }
+            },
+            "_warning": "This is a mock response. Configure OPENAI_API_KEY for real responses."
         })
 
     # 真实 OpenAI 调用

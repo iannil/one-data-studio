@@ -437,7 +437,15 @@ def get_dataset(dataset_id):
 @app.route("/api/v1/workflows", methods=["GET"])
 @require_jwt(optional=True)
 def list_workflows():
-    """列出工作流"""
+    """
+    列出工作流
+
+    使用 optional=True 允许未认证访问，用于工作流发现。
+    安全考虑：
+    - 未认证用户只能看到 status='published' 的公开工作流
+    - 认证用户可以看到自己创建的所有工作流
+    - 管理员可以看到所有工作流
+    """
     db = get_db_session()
     try:
         workflows = db.query(Workflow).order_by(Workflow.created_at.desc()).all()
@@ -2955,12 +2963,28 @@ def update_agent_template(template_id):
 
 @app.route("/api/v1/auth/refresh", methods=["POST"])
 def refresh_token():
-    """刷新访问 Token"""
-    data = request.json
-    refresh_token_value = data.get("refresh_token")
+    """
+    刷新访问 Token
+
+    支持两种方式：
+    1. 从 HttpOnly Cookie 读取 refresh_token（推荐，更安全）
+    2. 从请求体读取 refresh_token（用于 API 客户端）
+
+    成功后会同时在响应体和 Set-Cookie 头中返回新 Token。
+    """
+    # 优先从 Cookie 读取（HttpOnly Cookie 方式）
+    refresh_token_value = request.cookies.get('refresh_token')
+
+    # 如果 Cookie 中没有，尝试从请求体读取（API 客户端方式）
+    if not refresh_token_value:
+        data = request.json or {}
+        refresh_token_value = data.get("refresh_token")
 
     if not refresh_token_value:
-        return jsonify({"code": 40001, "message": "refresh_token is required"}), 400
+        return jsonify({
+            "code": 40001,
+            "message": "refresh_token is required (via cookie or request body)"
+        }), 400
 
     try:
         # 使用 auth 模块刷新 token
@@ -2968,7 +2992,8 @@ def refresh_token():
             from auth import refresh_token as do_refresh
             result = do_refresh(refresh_token_value)
             if result:
-                return jsonify({
+                # 构建响应
+                response_data = {
                     "code": 0,
                     "message": "success",
                     "data": {
@@ -2977,7 +3002,39 @@ def refresh_token():
                         "expires_in": result.get("expires_in"),
                         "token_type": result.get("token_type", "Bearer")
                     }
-                })
+                }
+
+                from flask import make_response
+                response = make_response(jsonify(response_data))
+
+                # 同时设置 HttpOnly Cookie（用于浏览器客户端）
+                try:
+                    from auth import set_auth_cookies
+                    set_auth_cookies(response, result)
+                except ImportError:
+                    # 手动设置 Cookie
+                    is_secure = os.getenv("FLASK_ENV") == "production"
+                    if result.get("access_token"):
+                        response.set_cookie(
+                            'access_token',
+                            result.get("access_token"),
+                            max_age=result.get("expires_in", 3600),
+                            httponly=True,
+                            secure=is_secure,
+                            samesite='Lax'
+                        )
+                    if result.get("refresh_token"):
+                        response.set_cookie(
+                            'refresh_token',
+                            result.get("refresh_token"),
+                            max_age=result.get("refresh_expires_in", 604800),
+                            httponly=True,
+                            secure=is_secure,
+                            samesite='Lax'
+                        )
+
+                return response
+
         return jsonify({"code": 40101, "message": "Invalid refresh token"}), 401
     except Exception as e:
         return jsonify({"code": 50001, "message": str(e)}), 500

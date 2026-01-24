@@ -1,0 +1,113 @@
+# Staging Environment Values
+# Override default values for staging deployment
+
+# Staging-specific settings
+global:
+  imageRegistry: "registry.staging.example.com/"
+
+# Reduce replicas for staging
+alldataApi:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+
+bishengApi:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+cubeApi:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  env:
+    USE_MOCK_INFERENCE: "true"  # Use mock in staging
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+openaiProxy:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+
+webFrontend:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+
+# Staging ingress
+ingress:
+  enabled: true
+  hosts:
+    - host: one-data-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web-frontend
+        - path: /api/v1/datasets
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/metadata
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/workflows
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/chat
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/models
+          pathType: Prefix
+          service: cube-api
+        - path: /v1/
+          pathType: Prefix
+          service: openai-proxy
+  tls:
+    - secretName: staging-tls
+      hosts:
+        - one-data-staging.example.com
+
+# Smaller persistent volumes for staging
+mysql:
+  enabled: true
+  primary:
+    persistence:
+      size: 5Gi
+
+redis:
+  enabled: true
+  master:
+    persistence:
+      size: 2Gi
+
+minio:
+  enabled: true
+  persistence:
+    size: 10Gi
+
+# Disable network policies in staging for easier debugging
+networkPolicy:
+  enabled: false
+
+# Disable PDB in staging
+podDisruptionBudget:
+  enabled: false

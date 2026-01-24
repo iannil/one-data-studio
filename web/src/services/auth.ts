@@ -357,40 +357,48 @@ export async function handleCallback(code: string, state: string): Promise<boole
 
 /**
  * 刷新 Token
+ *
+ * 调用后端刷新端点，后端会从 HttpOnly Cookie 中读取 refresh_token。
+ * 这比直接发送 refresh_token 更安全，因为 refresh_token 不会暴露给 JavaScript。
  */
 export async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-
   try {
-    const tokenEndpoint = `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/token`;
-
-    const response = await fetch(tokenEndpoint, {
+    // 调用后端刷新端点
+    // 后端会自动从 HttpOnly Cookie 中读取 refresh_token
+    const response = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-        client_id: KEYCLOAK_CONFIG.clientId,
-      }),
+      credentials: 'include', // 重要：包含 Cookie
+      body: JSON.stringify({}), // 空 body，refresh_token 从 Cookie 读取
     });
 
     if (!response.ok) {
-      throw new Error('Failed to refresh token');
+      console.error('Token refresh failed:', response.status);
+      return false;
     }
 
-    const tokens: AuthTokens = await response.json();
-    storeTokens(tokens);
+    const result = await response.json();
 
-    // 更新用户信息
-    const userInfo = parseJwtToken(tokens.access_token);
-    if (userInfo) {
-      storeUserInfo(userInfo);
+    if (result.code === 0 && result.data) {
+      // 更新本地状态（过期时间）
+      // 注意：Token 本身由服务器通过 Set-Cookie 头更新
+      const expiresAt = Date.now() + (result.data.expires_in || 3600) * 1000;
+      sessionStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
+
+      // 更新用户信息（如果返回了新的 token）
+      if (result.data.access_token) {
+        const userInfo = parseJwtToken(result.data.access_token);
+        if (userInfo) {
+          storeUserInfo(userInfo);
+        }
+      }
+
+      return true;
     }
 
-    return true;
+    return false;
   } catch (e) {
     console.error('Token refresh failed:', e);
     clearAuthData();

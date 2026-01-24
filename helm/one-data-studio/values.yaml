@@ -1,0 +1,291 @@
+# ONE-DATA-STUDIO Helm Chart Values
+# Default configuration - override for staging/production
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Namespace configuration
+namespace: one-data-studio
+
+# Common labels
+commonLabels:
+  app.kubernetes.io/name: one-data-studio
+  app.kubernetes.io/instance: "{{ .Release.Name }}"
+  app.kubernetes.io/version: "{{ .Chart.AppVersion }}"
+  app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+
+# ===========================================
+# Alldata API Service
+# ===========================================
+alldataApi:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: one-data-studio/alldata-api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+  env:
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/alldata"
+    REDIS_URL: "redis://:$(REDIS_PASSWORD)@redis:6379/0"
+
+# ===========================================
+# Bisheng API Service
+# ===========================================
+bishengApi:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: one-data-studio/bisheng-api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5001
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+  env:
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/bisheng"
+    REDIS_URL: "redis://:$(REDIS_PASSWORD)@redis:6379/1"
+    MINIO_ENDPOINT: "minio:9000"
+
+# ===========================================
+# Cube API Service
+# ===========================================
+cubeApi:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: one-data-studio/cube-api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5003
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+  env:
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/cube"
+    USE_MOCK_INFERENCE: "false"
+
+# ===========================================
+# OpenAI Proxy Service
+# ===========================================
+openaiProxy:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: one-data-studio/openai-proxy
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+  env:
+    OPENAI_API_KEY: ""  # Set from secret
+    OPENAI_BASE_URL: "https://api.openai.com/v1"
+
+# ===========================================
+# Web Frontend
+# ===========================================
+webFrontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: one-data-studio/web-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilization: 80
+
+# ===========================================
+# Ingress Configuration
+# ===========================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: one-data.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web-frontend
+        - path: /api/v1/datasets
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/metadata
+          pathType: Prefix
+          service: alldata-api
+        - path: /api/v1/workflows
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/chat
+          pathType: Prefix
+          service: bisheng-api
+        - path: /api/v1/models
+          pathType: Prefix
+          service: cube-api
+        - path: /v1/
+          pathType: Prefix
+          service: openai-proxy
+  tls: []
+  #  - secretName: one-data-tls
+  #    hosts:
+  #      - one-data.example.com
+
+# ===========================================
+# Secrets Configuration
+# ===========================================
+secrets:
+  # Create secrets from values (not recommended for production)
+  # For production, use external secrets management
+  create: false
+  mysql:
+    password: ""
+    rootPassword: ""
+  redis:
+    password: ""
+  minio:
+    rootUser: ""
+    rootPassword: ""
+  jwt:
+    secretKey: ""
+  keycloak:
+    clientSecret: ""
+  openai:
+    apiKey: ""
+
+# ===========================================
+# External Dependencies
+# ===========================================
+mysql:
+  enabled: true
+  auth:
+    rootPassword: ""  # Set from secret
+    database: onedata
+    username: onedata
+    password: ""  # Set from secret
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Set from secret
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+minio:
+  enabled: true
+  auth:
+    rootUser: ""  # Set from secret
+    rootPassword: ""  # Set from secret
+  persistence:
+    enabled: true
+    size: 50Gi
+
+# ===========================================
+# Network Policies
+# ===========================================
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+# ===========================================
+# Pod Disruption Budgets
+# ===========================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ===========================================
+# Service Account
+# ===========================================
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ===========================================
+# Monitoring
+# ===========================================
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
