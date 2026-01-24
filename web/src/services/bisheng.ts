@@ -2,14 +2,92 @@ import { apiClient, ApiResponse } from './api';
 
 // ============= 类型定义 =============
 
+// 人机循环 (Human-in-the-Loop) 类型
+export interface HumanTask {
+  task_id: string;
+  execution_id: string;
+  node_id: string;
+  task_type: 'approval' | 'review' | 'input' | 'confirmation';
+  title: string;
+  description?: string;
+  assignee?: string;
+  assignees?: string[];
+  status: 'pending' | 'approved' | 'rejected' | 'timeout' | 'cancelled';
+  data?: {
+    input_data?: Record<string, unknown>;
+    form_schema?: Array<{
+      name: string;
+      type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'boolean' | 'date';
+      label: string;
+      required?: boolean;
+      options?: Array<{ label: string; value: string }>;
+      default?: unknown;
+    }>;
+    context?: Record<string, unknown>;
+    timeout_minutes?: number;
+  };
+  created_at: string;
+  completed_at?: string;
+  result?: {
+    approved: boolean;
+    comment?: string;
+    input_data?: Record<string, unknown>;
+  };
+}
+
+export interface CreateHumanTaskRequest {
+  task_type: 'approval' | 'review' | 'input' | 'confirmation';
+  title: string;
+  description?: string;
+  assignee?: string;
+  assignees?: string[];
+  data?: {
+    input_data?: Record<string, unknown>;
+    form_schema?: HumanTask['data']['form_schema'];
+    context?: Record<string, unknown>;
+    timeout_minutes?: number;
+  };
+}
+
+export interface SubmitHumanTaskRequest {
+  approved: boolean;
+  comment?: string;
+  input_data?: Record<string, unknown>;
+}
+
 export interface PromptTemplate {
   template_id: string;
   name: string;
   description?: string;
   content: string;
   variables: string[];
+  category?: string;
+  tags?: string[];
   created_at: string;
   updated_at?: string;
+  created_by?: string;
+}
+
+export interface CreatePromptTemplateRequest {
+  name: string;
+  description?: string;
+  content: string;
+  category?: string;
+  tags?: string[];
+}
+
+export interface UpdatePromptTemplateRequest {
+  name?: string;
+  description?: string;
+  content?: string;
+  category?: string;
+  tags?: string[];
+}
+
+export interface TestPromptTemplateRequest {
+  content: string;
+  variables: Record<string, string>;
+  model?: string;
 }
 
 export interface ChatRequest {
@@ -133,8 +211,13 @@ export interface Text2SqlResponse {
 /**
  * 获取 Prompt 模板列表
  */
-export async function getPromptTemplates(): Promise<ApiResponse<{ templates: PromptTemplate[] }>> {
-  return apiClient.get('/api/v1/templates');
+export async function getPromptTemplates(params?: {
+  category?: string;
+  tags?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ templates: PromptTemplate[]; total: number }>> {
+  return apiClient.get('/api/v1/templates', { params });
 }
 
 /**
@@ -142,6 +225,41 @@ export async function getPromptTemplates(): Promise<ApiResponse<{ templates: Pro
  */
 export async function getPromptTemplate(templateId: string): Promise<ApiResponse<PromptTemplate>> {
   return apiClient.get(`/api/v1/templates/${templateId}`);
+}
+
+/**
+ * 创建 Prompt 模板
+ */
+export async function createPromptTemplate(
+  data: CreatePromptTemplateRequest
+): Promise<ApiResponse<{ template_id: string }>> {
+  return apiClient.post('/api/v1/templates', data);
+}
+
+/**
+ * 更新 Prompt 模板
+ */
+export async function updatePromptTemplate(
+  templateId: string,
+  data: UpdatePromptTemplateRequest
+): Promise<ApiResponse<PromptTemplate>> {
+  return apiClient.put(`/api/v1/templates/${templateId}`, data);
+}
+
+/**
+ * 删除 Prompt 模板
+ */
+export async function deletePromptTemplate(templateId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/templates/${templateId}`);
+}
+
+/**
+ * 测试 Prompt 模板
+ */
+export async function testPromptTemplate(
+  data: TestPromptTemplateRequest
+): Promise<ApiResponse<{ result: string; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }>> {
+  return apiClient.post('/api/v1/templates/test', data);
 }
 
 /**
@@ -979,13 +1097,778 @@ export async function batchDeleteDocuments(docIds: string[]): Promise<ApiRespons
   failed_count: number;
   failed_ids: string[];
 }>> {
-  return apiClient.delete('/api/v1/documents/batch', { doc_ids: docIds });
+  return apiClient.delete('/api/v1/documents/batch', { data: { doc_ids: docIds } });
+}
+
+// ============================================
+// 知识库管理 API (Phase 3: LLMOps 增强功能)
+// ============================================
+
+export interface KnowledgeBase {
+  kb_id: string;
+  name: string;
+  description?: string;
+  embedding_model: string;
+  chunk_size: number;
+  chunk_overlap: number;
+  document_count: number;
+  vector_count: number;
+  status: 'ready' | 'indexing' | 'error';
+  tags?: string[];
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateKnowledgeBaseRequest {
+  name: string;
+  description?: string;
+  embedding_model?: string;
+  chunk_size?: number;
+  chunk_overlap?: number;
+  tags?: string[];
+}
+
+export interface UpdateKnowledgeBaseRequest {
+  name?: string;
+  description?: string;
+  embedding_model?: string;
+  chunk_size?: number;
+  chunk_overlap?: number;
+  tags?: string[];
+}
+
+export interface KnowledgeDocument {
+  doc_id: string;
+  kb_id: string;
+  file_name: string;
+  title: string;
+  chunk_count: number;
+  status: 'pending' | 'indexed' | 'failed';
+  error?: string;
+  created_at: string;
+}
+
+export interface ChunkingConfig {
+  chunk_size: number;
+  chunk_overlap: number;
+  separator?: string;
+  keep_separator?: boolean;
+}
+
+export interface RetrievalTestRequest {
+  query: string;
+  top_k?: number;
+  score_threshold?: number;
+  search_type?: 'vector' | 'hybrid' | 'keyword';
+}
+
+export interface RetrievalTestResult {
+  query: string;
+  results: Array<{
+    chunk_id: string;
+    content: string;
+    score: number;
+    source: {
+      doc_id: string;
+      file_name: string;
+      title: string;
+    };
+  }>;
+  total_results: number;
+  search_type: string;
+}
+
+/**
+ * 获取知识库列表
+ */
+export async function getKnowledgeBases(params?: {
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ knowledge_bases: KnowledgeBase[]; total: number }>> {
+  return apiClient.get('/api/v1/knowledge-bases', { params });
+}
+
+/**
+ * 获取知识库详情
+ */
+export async function getKnowledgeBase(kbId: string): Promise<ApiResponse<KnowledgeBase & { documents?: KnowledgeDocument[] }>> {
+  return apiClient.get(`/api/v1/knowledge-bases/${kbId}`);
+}
+
+/**
+ * 创建知识库
+ */
+export async function createKnowledgeBase(
+  data: CreateKnowledgeBaseRequest
+): Promise<ApiResponse<{ kb_id: string }>> {
+  return apiClient.post('/api/v1/knowledge-bases', data);
+}
+
+/**
+ * 更新知识库
+ */
+export async function updateKnowledgeBase(
+  kbId: string,
+  data: UpdateKnowledgeBaseRequest
+): Promise<ApiResponse<KnowledgeBase>> {
+  return apiClient.put(`/api/v1/knowledge-bases/${kbId}`, data);
+}
+
+/**
+ * 删除知识库
+ */
+export async function deleteKnowledgeBase(kbId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/knowledge-bases/${kbId}`);
+}
+
+/**
+ * 获取知识库文档列表
+ */
+export async function getKnowledgeDocuments(kbId: string): Promise<ApiResponse<{ documents: KnowledgeDocument[] }>> {
+  return apiClient.get(`/api/v1/knowledge-bases/${kbId}/documents`);
+}
+
+/**
+ * 上传文档到知识库
+ */
+export async function uploadToKnowledgeBase(
+  kbId: string,
+  formData: FormData
+): Promise<ApiResponse<{ doc_id: string; file_name: string; chunk_count: number }>> {
+  return apiClient.post(`/api/v1/knowledge-bases/${kbId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+/**
+ * 从知识库删除文档
+ */
+export async function deleteKnowledgeDocument(kbId: string, docId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/knowledge-bases/${kbId}/documents/${docId}`);
+}
+
+/**
+ * 测试知识库检索
+ */
+export async function testRetrieval(
+  kbId: string,
+  data: RetrievalTestRequest
+): Promise<ApiResponse<RetrievalTestResult>> {
+  return apiClient.post(`/api/v1/knowledge-bases/${kbId}/test`, data);
+}
+
+/**
+ * 重建知识库索引
+ */
+export async function rebuildKnowledgeIndex(kbId: string): Promise<ApiResponse<{ status: string }>> {
+  return apiClient.post(`/api/v1/knowledge-bases/${kbId}/rebuild`);
+}
+
+// ============================================
+// 应用发布管理 API (Phase 3: LLMOps 增强功能)
+// ============================================
+
+export type AppStatus = 'draft' | 'published' | 'archived';
+
+export interface PublishedApp {
+  app_id: string;
+  name: string;
+  description?: string;
+  type: 'chat' | 'workflow' | 'agent';
+  status: AppStatus;
+  version: string;
+  endpoint?: string;
+  api_key_count: number;
+  access_count: number;
+  last_accessed?: string;
+  tags?: string[];
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+  published_at?: string;
+}
+
+export interface CreateAppRequest {
+  name: string;
+  description?: string;
+  type: 'chat' | 'workflow' | 'agent';
+  config?: Record<string, unknown>;
+}
+
+export interface UpdateAppRequest {
+  name?: string;
+  description?: string;
+  config?: Record<string, unknown>;
+  tags?: string[];
+}
+
+export interface PublishAppRequest {
+  version?: string;
+  changelog?: string;
+}
+
+export interface ApiKey {
+  key_id: string;
+  key_display: string;
+  created_at: string;
+  last_used?: string;
+  access_count: number;
+  is_active: boolean;
+}
+
+export interface AppAccessLog {
+  log_id: string;
+  app_id: string;
+  api_key: string;
+  endpoint: string;
+  status: number;
+  latency_ms: number;
+  timestamp: string;
+}
+
+export interface AppStatistics {
+  app_id: string;
+  total_access: number;
+  unique_users: number;
+  avg_latency_ms: number;
+  error_rate: number;
+  access_by_date: Array<{
+    date: string;
+    count: number;
+  }>;
+  top_endpoints: Array<{
+    endpoint: string;
+    count: number;
+  }>;
+}
+
+/**
+ * 获取已发布应用列表
+ */
+export async function getPublishedApps(params?: {
+  type?: string;
+  status?: AppStatus;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ apps: PublishedApp[]; total: number }>> {
+  return apiClient.get('/api/v1/apps', { params });
+}
+
+/**
+ * 获取应用详情
+ */
+export async function getPublishedApp(appId: string): Promise<ApiResponse<PublishedApp & { config?: Record<string, unknown> }>> {
+  return apiClient.get(`/api/v1/apps/${appId}`);
+}
+
+/**
+ * 创建应用
+ */
+export async function createApp(
+  data: CreateAppRequest
+): Promise<ApiResponse<{ app_id: string }>> {
+  return apiClient.post('/api/v1/apps', data);
+}
+
+/**
+ * 更新应用
+ */
+export async function updateApp(
+  appId: string,
+  data: UpdateAppRequest
+): Promise<ApiResponse<PublishedApp>> {
+  return apiClient.put(`/api/v1/apps/${appId}`, data);
+}
+
+/**
+ * 发布应用
+ */
+export async function publishApp(
+  appId: string,
+  data: PublishAppRequest
+): Promise<ApiResponse<{ app_id: string; version: string; endpoint: string }>> {
+  return apiClient.post(`/api/v1/apps/${appId}/publish`, data);
+}
+
+/**
+ * 下线应用
+ */
+export async function unpublishApp(appId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/apps/${appId}/unpublish`);
+}
+
+/**
+ * 删除应用
+ */
+export async function deleteApp(appId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/apps/${appId}`);
+}
+
+/**
+ * 获取应用 API 密钥列表
+ */
+export async function getAppApiKeys(appId: string): Promise<ApiResponse<{ api_keys: ApiKey[] }>> {
+  return apiClient.get(`/api/v1/apps/${appId}/api-keys`);
+}
+
+/**
+ * 创建 API 密钥
+ */
+export async function createApiKey(appId: string): Promise<ApiResponse<{ key_id: string; key: string }>> {
+  return apiClient.post(`/api/v1/apps/${appId}/api-keys`);
+}
+
+/**
+ * 删除 API 密钥
+ */
+export async function deleteApiKey(appId: string, keyId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/apps/${appId}/api-keys/${keyId}`);
+}
+
+/**
+ * 获取应用访问统计
+ */
+export async function getAppStatistics(
+  appId: string,
+  params?: { period_start?: string; period_end?: string }
+): Promise<ApiResponse<AppStatistics>> {
+  return apiClient.get(`/api/v1/apps/${appId}/statistics`, { params });
+}
+
+/**
+ * 获取应用访问日志
+ */
+export async function getAppAccessLogs(
+  appId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<ApiResponse<{ logs: AppAccessLog[]; total: number }>> {
+  return apiClient.get(`/api/v1/apps/${appId}/logs`, { params });
+}
+
+// ============= 模型评估类型 =============
+
+export interface EvaluationTask {
+  task_id: string;
+  name: string;
+  description?: string;
+  model_configs: Array<{
+    model_name: string;
+    endpoint: string;
+    api_key?: string;
+  }>;
+  dataset_id: string;
+  metrics: Array<'accuracy' | 'f1' | 'precision' | 'recall' | 'bleu' | 'rouge' | 'cosine_similarity' | 'response_time'>;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  created_by: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface CreateEvaluationTaskRequest {
+  name: string;
+  description?: string;
+  model_configs: Array<{
+    model_name: string;
+    endpoint: string;
+    api_key?: string;
+  }>;
+  dataset_id: string;
+  metrics: Array<'accuracy' | 'f1' | 'precision' | 'recall' | 'bleu' | 'rouge' | 'cosine_similarity' | 'response_time'>;
+}
+
+export interface EvaluationResult {
+  result_id: string;
+  task_id: string;
+  task_name: string;
+  model_name: string;
+  status: 'completed' | 'failed';
+  metrics: Record<string, number>;
+  samples_evaluated: number;
+  avg_response_time_ms?: number;
+  error?: string;
+  evaluated_at: string;
+}
+
+export interface EvaluationDataset {
+  dataset_id: string;
+  name: string;
+  description?: string;
+  type: 'qa' | 'rag' | 'summarization' | 'classification' | 'generation';
+  sample_count: number;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ComparisonReport {
+  report_id: string;
+  task_id: string;
+  task_name: string;
+  models: Array<{
+    model_name: string;
+    metrics: Record<string, number>;
+  }>;
+  winner: string;
+  comparison: Record<string, {
+    best_model: string;
+    difference: number;
+  }>;
+  generated_at: string;
+}
+
+// ============= SFT 微调类型 =============
+
+export interface SFTTask {
+  task_id: string;
+  name: string;
+  description?: string;
+  base_model: string;
+  method: 'sft' | 'lora' | 'qlora';
+  dataset_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'stopped';
+  config: {
+    learning_rate: number;
+    batch_size: number;
+    num_epochs: number;
+    max_steps?: number;
+    warmup_ratio?: number;
+    lora_r?: number;
+    lora_alpha?: number;
+    lora_dropout?: number;
+  };
+  resources: {
+    gpu_type: string;
+    gpu_count: number;
+    cpu: string;
+    memory: string;
+  };
+  output_model_path?: string;
+  metrics?: Array<{
+    step: number;
+    loss: number;
+    learning_rate: number;
+    epoch: number;
+  }>;
+  created_by: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  error?: string;
+}
+
+export interface CreateSFTTaskRequest {
+  name: string;
+  description?: string;
+  base_model: string;
+  method: 'sft' | 'lora' | 'qlora';
+  dataset_id: string;
+  config: {
+    learning_rate: number;
+    batch_size: number;
+    num_epochs: number;
+    max_steps?: number;
+    warmup_ratio?: number;
+    lora_r?: number;
+    lora_alpha?: number;
+    lora_dropout?: number;
+  };
+  resources: {
+    gpu_type: string;
+    gpu_count: number;
+    cpu: string;
+    memory: string;
+  };
+}
+
+export interface SFTDataset {
+  dataset_id: string;
+  name: string;
+  description?: string;
+  format: 'jsonl' | 'parquet' | 'json';
+  sample_count: number;
+  file_size: number;
+  schema?: {
+    system?: string;
+    instruction: string;
+    input?: string;
+    output: string;
+  };
+  created_by: string;
+  created_at: string;
+}
+
+export interface SFTModelExport {
+  export_id: string;
+  task_id: string;
+  format: 'pytorch' | 'safetensors' | 'gguf';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress?: number;
+  output_path?: string;
+  download_url?: string;
+  created_at: string;
+}
+
+// ============= 模型评估 API =============
+
+/**
+ * 获取评估任务列表
+ */
+export async function getEvaluationTasks(params?: {
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ tasks: EvaluationTask[]; total: number }>> {
+  return apiClient.get('/api/v1/evaluation/tasks', { params });
+}
+
+/**
+ * 获取评估任务详情
+ */
+export async function getEvaluationTask(taskId: string): Promise<ApiResponse<EvaluationTask>> {
+  return apiClient.get(`/api/v1/evaluation/tasks/${taskId}`);
+}
+
+/**
+ * 创建评估任务
+ */
+export async function createEvaluationTask(data: CreateEvaluationTaskRequest): Promise<ApiResponse<{ task_id: string }>> {
+  return apiClient.post('/api/v1/evaluation/tasks', data);
+}
+
+/**
+ * 启动评估任务
+ */
+export async function startEvaluationTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/evaluation/tasks/${taskId}/start`);
+}
+
+/**
+ * 停止评估任务
+ */
+export async function stopEvaluationTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/evaluation/tasks/${taskId}/stop`);
+}
+
+/**
+ * 删除评估任务
+ */
+export async function deleteEvaluationTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/evaluation/tasks/${taskId}`);
+}
+
+/**
+ * 获取评估结果
+ */
+export async function getEvaluationResults(taskId: string): Promise<ApiResponse<{ results: EvaluationResult[] }>> {
+  return apiClient.get(`/api/v1/evaluation/tasks/${taskId}/results`);
+}
+
+/**
+ * 获取评估数据集列表
+ */
+export async function getEvaluationDatasets(params?: {
+  type?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ datasets: EvaluationDataset[]; total: number }>> {
+  return apiClient.get('/api/v1/evaluation/datasets', { params });
+}
+
+/**
+ * 上传评估数据集
+ */
+export async function uploadEvaluationDataset(formData: FormData): Promise<ApiResponse<{ dataset_id: string }>> {
+  return apiClient.post('/api/v1/evaluation/datasets/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+/**
+ * 获取对比报告
+ */
+export async function getComparisonReport(taskId: string): Promise<ApiResponse<ComparisonReport>> {
+  return apiClient.get(`/api/v1/evaluation/tasks/${taskId}/comparison`);
+}
+
+// ============= SFT 微调 API =============
+
+/**
+ * 获取 SFT 任务列表
+ */
+export async function getSFTTasks(params?: {
+  status?: string;
+  base_model?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ tasks: SFTTask[]; total: number }>> {
+  return apiClient.get('/api/v1/sft/tasks', { params });
+}
+
+/**
+ * 获取 SFT 任务详情
+ */
+export async function getSFTTask(taskId: string): Promise<ApiResponse<SFTTask>> {
+  return apiClient.get(`/api/v1/sft/tasks/${taskId}`);
+}
+
+/**
+ * 创建 SFT 任务
+ */
+export async function createSFTTask(data: CreateSFTTaskRequest): Promise<ApiResponse<{ task_id: string }>> {
+  return apiClient.post('/api/v1/sft/tasks', data);
+}
+
+/**
+ * 启动 SFT 任务
+ */
+export async function startSFTTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/sft/tasks/${taskId}/start`);
+}
+
+/**
+ * 停止 SFT 任务
+ */
+export async function stopSFTTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/sft/tasks/${taskId}/stop`);
+}
+
+/**
+ * 删除 SFT 任务
+ */
+export async function deleteSFTTask(taskId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/sft/tasks/${taskId}`);
+}
+
+/**
+ * 获取 SFT 指标
+ */
+export async function getSFTMetrics(taskId: string): Promise<ApiResponse<{ metrics: SFTTask['metrics'] }>> {
+  return apiClient.get(`/api/v1/sft/tasks/${taskId}/metrics`);
+}
+
+/**
+ * 获取 SFT 数据集列表
+ */
+export async function getSFTDatasets(params?: {
+  format?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ datasets: SFTDataset[]; total: number }>> {
+  return apiClient.get('/api/v1/sft/datasets', { params });
+}
+
+/**
+ * 上传 SFT 数据集
+ */
+export async function uploadSFTDataset(formData: FormData): Promise<ApiResponse<{ dataset_id: string }>> {
+  return apiClient.post('/api/v1/sft/datasets/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+/**
+ * 导出 SFT 模型
+ */
+export async function exportSFTModel(taskId: string, format: 'pytorch' | 'safetensors' | 'gguf'): Promise<ApiResponse<{ export_id: string }>> {
+  return apiClient.post(`/api/v1/sft/tasks/${taskId}/export`, { format });
+}
+
+/**
+ * 获取导出状态
+ */
+export async function getSFTExportStatus(exportId: string): Promise<ApiResponse<SFTModelExport>> {
+  return apiClient.get(`/api/v1/sft/exports/${exportId}`);
+}
+
+/**
+ * 获取可用的基础模型列表
+ */
+export async function getBaseModels(): Promise<ApiResponse<{ models: Array<{ name: string; type: string; size: string }> }>> {
+  return apiClient.get('/api/v1/sft/base-models');
+}
+
+/**
+ * 验证 SFT 数据集格式
+ */
+export async function validateSFTDataset(formData: FormData): Promise<ApiResponse<{ valid: boolean; errors?: string[]; sample_count?: number }>> {
+  return apiClient.post('/api/v1/sft/datasets/validate', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+// ============================================
+// 人机循环 (Human-in-the-Loop) API
+// ============================================
+
+/**
+ * 获取待处理的人工任务列表
+ */
+export async function getPendingHumanTasks(params?: {
+  execution_id?: string;
+  status?: string;
+  assignee?: string;
+}): Promise<ApiResponse<{ tasks: HumanTask[] }>> {
+  return apiClient.get('/api/v1/human-tasks', { params });
+}
+
+/**
+ * 获取人工任务详情
+ */
+export async function getHumanTask(taskId: string): Promise<ApiResponse<HumanTask>> {
+  return apiClient.get(`/api/v1/human-tasks/${taskId}`);
+}
+
+/**
+ * 提交人工任务结果
+ */
+export async function submitHumanTask(
+  taskId: string,
+  data: SubmitHumanTaskRequest
+): Promise<ApiResponse<{ task_id: string; status: string }>> {
+  return apiClient.post(`/api/v1/human-tasks/${taskId}/submit`, data);
+}
+
+/**
+ * 批量审批人工任务
+ */
+export async function bulkApproveHumanTasks(taskIds: string[], comment?: string): Promise<ApiResponse<{ approved_count: number }>> {
+  return apiClient.post('/api/v1/human-tasks/bulk-approve', { task_ids: taskIds, comment });
+}
+
+/**
+ * 获取当前用户的待办任务
+ */
+export async function getMyTasks(params?: {
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ tasks: HumanTask[]; total: number }>> {
+  return apiClient.get('/api/v1/human-tasks/my-tasks', { params });
+}
+
+/**
+ * 获取我的任务统计
+ */
+export async function getMyTaskStatistics(): Promise<ApiResponse<{
+  pending: number;
+  approved: number;
+  rejected: number;
+  timeout: number;
+  total: number;
+}>> {
+  return apiClient.get('/api/v1/human-tasks/my-tasks/statistics');
 }
 
 export default {
   // Prompt 模板
   getPromptTemplates,
   getPromptTemplate,
+  createPromptTemplate,
+  updatePromptTemplate,
+  deletePromptTemplate,
+  testPromptTemplate,
 
   // 聊天
   sendChatMessage,
@@ -995,6 +1878,8 @@ export default {
   createConversation,
   deleteConversation,
   renameConversation,
+  saveMessage,
+  getConversationUsage,
 
   // 工作流
   getWorkflows,
@@ -1013,28 +1898,26 @@ export default {
   ragQuery,
   text2Sql,
 
-  // Agent 工具 (Phase 7)
+  // Agent 工具
   listTools,
   getToolSchemas,
   executeTool,
   runAgent,
   runAgentStream,
 
-  // Agent 模板管理 (P1)
+  // Agent 模板管理
   listAgentTemplates,
   getAgentTemplate,
   createAgentTemplate,
   updateAgentTemplate,
   deleteAgentTemplate,
 
-  // 工作流调度 (Phase 7)
+  // 工作流调度
   listSchedules,
   createSchedule,
   deleteSchedule,
   triggerSchedule,
   listAllSchedules,
-
-  // P4: 调度管理增强
   pauseSchedule,
   resumeSchedule,
   getScheduleStatistics,
@@ -1046,4 +1929,65 @@ export default {
   getDocument,
   deleteDocument,
   batchDeleteDocuments,
+
+  // 知识库管理
+  getKnowledgeBases,
+  getKnowledgeBase,
+  createKnowledgeBase,
+  updateKnowledgeBase,
+  deleteKnowledgeBase,
+  getKnowledgeDocuments,
+  uploadToKnowledgeBase,
+  deleteKnowledgeDocument,
+  testRetrieval,
+  rebuildKnowledgeIndex,
+
+  // 应用发布管理
+  getPublishedApps,
+  getPublishedApp,
+  createApp,
+  updateApp,
+  publishApp,
+  unpublishApp,
+  deleteApp,
+  getAppApiKeys,
+  createApiKey,
+  deleteApiKey,
+  getAppStatistics,
+  getAppAccessLogs,
+
+  // 模型评估
+  getEvaluationTasks,
+  getEvaluationTask,
+  createEvaluationTask,
+  startEvaluationTask,
+  stopEvaluationTask,
+  deleteEvaluationTask,
+  getEvaluationResults,
+  getEvaluationDatasets,
+  uploadEvaluationDataset,
+  getComparisonReport,
+
+  // SFT 微调
+  getSFTTasks,
+  getSFTTask,
+  createSFTTask,
+  startSFTTask,
+  stopSFTTask,
+  deleteSFTTask,
+  getSFTMetrics,
+  getSFTDatasets,
+  uploadSFTDataset,
+  exportSFTModel,
+  getSFTExportStatus,
+  getBaseModels,
+  validateSFTDataset,
+
+  // 人机循环
+  getPendingHumanTasks,
+  getHumanTask,
+  submitHumanTask,
+  bulkApproveHumanTasks,
+  getMyTasks,
+  getMyTaskStatistics,
 };

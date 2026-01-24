@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { OutputOutlined } from '@ant-design/icons';
+import { UpOutlined } from '@ant-design/icons';
 
 export default function OutputNode({ data, selected }: NodeProps) {
   return (
@@ -18,7 +18,7 @@ export default function OutputNode({ data, selected }: NodeProps) {
 
       <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-          <OutputOutlined className="text-red-600" />
+          <UpOutlined className="text-red-600" />
         </div>
         <div className="flex-1">
           <div className="font-semibold text-sm text-gray-800">{data.label || '输出'}</div>

@@ -8,8 +8,8 @@
 import React, { useCallback } from 'react';
 import { useReactFlow } from 'reactflow';
 import {
-  InputOutlined,
-  OutputOutlined,
+  DownOutlined,
+  UpOutlined,
   SearchOutlined,
   RobotOutlined,
   ApiOutlined,
@@ -17,6 +17,7 @@ import {
   BulbOutlined,
   BranchesOutlined,
   SyncOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 
 interface NodeType {
@@ -32,7 +33,7 @@ const nodeTypes: NodeType[] = [
   {
     type: 'input',
     label: '输入',
-    icon: <InputOutlined />,
+    icon: <DownOutlined />,
     color: 'emerald',
     description: '接收外部输入',
     config: { key: 'input' },
@@ -40,7 +41,7 @@ const nodeTypes: NodeType[] = [
   {
     type: 'output',
     label: '输出',
-    icon: <OutputOutlined />,
+    icon: <UpOutlined />,
     color: 'red',
     description: '返回最终结果',
     config: { output_key: 'result' },
@@ -100,6 +101,19 @@ const nodeTypes: NodeType[] = [
     color: 'cyan',
     description: '循环迭代',
     config: { loop_over: 3, max_iterations: 10 },
+  },
+  {
+    type: 'human_task',
+    label: '人工审批',
+    icon: <UserOutlined />,
+    color: 'rose',
+    description: '人机循环，等待人工审批',
+    config: {
+      approval_type: 'single',
+      assignees: [],
+      timeout_minutes: 60,
+      auto_approve: false,
+    },
   },
 ];
 

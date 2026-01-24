@@ -32,7 +32,7 @@ import {
   RedoOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-  FitScreenOutlined,
+  ExpandOutlined,
   DownloadOutlined,
   UploadOutlined,
   ClearOutlined,
@@ -478,7 +478,7 @@ function WorkflowEditorPage() {
     {
       key: 'fit',
       label: '适应屏幕',
-      icon: <FitScreenOutlined />,
+      icon: <ExpandOutlined />,
       onClick: handleFitView,
     },
   ];
