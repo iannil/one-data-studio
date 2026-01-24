@@ -1,5 +1,5 @@
 # ==================== 开发阶段 ====================
-FROM node:20-alpine AS development
+FROM node:25-alpine AS development
 
 # 安装 libc6-compat 用于兼容性
 RUN apk add --no-cache libc6-compat
@@ -23,7 +23,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 
 # ==================== 构建阶段 ====================
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 
 # 安装 libc6-compat 用于兼容性
 RUN apk add --no-cache libc6-compat
