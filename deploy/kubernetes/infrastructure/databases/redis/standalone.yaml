@@ -146,4 +146,4 @@ metadata:
   namespace: one-data-infra
 type: Opaque
 stringData:
-  password: "RedisPassword123!"  # 生产环境请使用强密码
+  password: "CHANGE_ME_USE_STRONG_PASSWORD"  # 生产环境请使用强密码
