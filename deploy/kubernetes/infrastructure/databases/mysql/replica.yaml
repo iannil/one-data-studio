@@ -1,0 +1,253 @@
+# MySQL Replica (Slave) StatefulSet
+# Sprint 14: 高可用基础设施 - MySQL 从节点
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-replica
+  namespace: one-data-infra
+  labels:
+    app: mysql-ha
+    role: replica
+spec:
+  serviceName: mysql-replica
+  replicas: 2  # 可配置多个从节点
+  selector:
+    matchLabels:
+      app: mysql-ha
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: mysql-ha
+        role: replica
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9104"
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+      - name: init-config
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          # 为每个副本生成唯一的 server-id
+          # 使用 hostname 中的序号
+          ordinal=$(echo $HOSTNAME | grep -o '[0-9]*$')
+          server_id=$((10 + ordinal))
+          sed "s/server-id=2/server-id=$server_id/" /mnt/config-map/replica.cnf > /mnt/conf.d/server.cnf
+        volumeMounts:
+        - name: config
+          mountPath: /mnt/config-map
+        - name: conf
+          mountPath: /mnt/conf.d
+
+      - name: clone-data
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-ha-credentials
+              key: root-password
+        - name: REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-ha-credentials
+              key: replication-password
+        command:
+        - bash
+        - -c
+        - |
+          # 如果已有数据，跳过克隆
+          if [ -d "/var/lib/mysql/mysql" ]; then
+            echo "Data already exists, skipping clone"
+            exit 0
+          fi
+
+          echo "Waiting for primary to be ready..."
+          until mysqladmin ping -h mysql-primary -u root -p"${MYSQL_ROOT_PASSWORD}" --silent; do
+            sleep 5
+          done
+
+          echo "Cloning data from primary..."
+          # 使用 mysqldump 进行初始数据同步
+          mysqldump -h mysql-primary -u root -p"${MYSQL_ROOT_PASSWORD}" \
+            --all-databases --single-transaction --master-data=2 \
+            --routines --triggers --events > /tmp/dump.sql
+
+          # 启动临时 MySQL 实例导入数据
+          mysqld --user=mysql --datadir=/var/lib/mysql --initialize-insecure
+
+          echo "Clone completed"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-ha-credentials
+              key: root-password
+        - name: REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-ha-credentials
+              key: replication-password
+        ports:
+        - name: mysql
+          containerPort: 3306
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - |
+              # 检查复制状态
+              mysql -h localhost -u root -p"${MYSQL_ROOT_PASSWORD}" -e "
+                SELECT IF(
+                  (SELECT COUNT(*) FROM performance_schema.replication_applier_status WHERE SERVICE_STATE = 'ON') > 0,
+                  'OK', 'NOT_READY'
+                ) AS status
+              " | grep -q "OK"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - bash
+              - -c
+              - |
+                # 等待 MySQL 启动
+                until mysqladmin ping -h localhost -u root -p"${MYSQL_ROOT_PASSWORD}" --silent; do
+                  sleep 2
+                done
+
+                # 配置复制（如果尚未配置）
+                mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SHOW SLAVE STATUS\G" | grep -q "Slave_IO_Running" && exit 0
+
+                mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<EOF
+                STOP SLAVE;
+                CHANGE MASTER TO
+                  MASTER_HOST='mysql-primary',
+                  MASTER_USER='replicator',
+                  MASTER_PASSWORD='${REPLICATION_PASSWORD}',
+                  MASTER_AUTO_POSITION=1,
+                  MASTER_CONNECT_RETRY=10;
+                START SLAVE;
+                EOF
+
+      - name: mysql-exporter
+        image: prom/mysqld-exporter:v0.15.0
+        env:
+        - name: MYSQLD_EXPORTER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-ha-credentials
+              key: root-password
+        - name: DATA_SOURCE_NAME
+          value: "root:$(MYSQLD_EXPORTER_PASSWORD)@(localhost:3306)/"
+        ports:
+        - name: metrics
+          containerPort: 9104
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+      volumes:
+      - name: config
+        configMap:
+          name: mysql-ha-config
+      - name: conf
+        emptyDir: {}
+
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app: mysql-ha
+        role: replica
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 50Gi
+
+---
+# Replica 服务 (用于读取负载均衡)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-replica
+  namespace: one-data-infra
+  labels:
+    app: mysql-ha
+    role: replica
+spec:
+  type: ClusterIP
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  - name: metrics
+    port: 9104
+    targetPort: 9104
+  selector:
+    app: mysql-ha
+    role: replica
+
+---
+# Headless 服务 (用于 StatefulSet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-replica-headless
+  namespace: one-data-infra
+  labels:
+    app: mysql-ha
+    role: replica
+spec:
+  clusterIP: None
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-ha
+    role: replica

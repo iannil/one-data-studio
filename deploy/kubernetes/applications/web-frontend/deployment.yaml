@@ -1,0 +1,175 @@
+# ONE-DATA-STUDIO Web Frontend
+# Phase 2: Web UI for unified platform
+
+---
+# Web Frontend ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-frontend-env
+  namespace: one-data-web
+data:
+  # API 端点配置（内部 K8s 服务）
+  VITE_API_ALLDATA_URL: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+  VITE_API_BISHENG_URL: "http://bisheng-api.one-data-bisheng.svc.cluster.local:8081"
+  VITE_API_CUBE_URL: "http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+
+  # 认证配置
+  VITE_AUTH_MODE: "keycloak"
+  VITE_KEYCLOAK_URL: "http://keycloak.one-data-infra.svc.cluster.local:8080"
+  VITE_KEYCLOAK_REALM: "one-data"
+  VITE_KEYCLOAK_CLIENT_ID: "one-data-frontend"
+
+  # 应用配置
+  VITE_APP_TITLE: "ONE-DATA-STUDIO"
+  VITE_APP_VERSION: "0.1.0"
+
+  # 功能开关
+  VITE_ENABLE_METRICS: "true"
+  VITE_ENABLE_WEBSOCKET: "true"
+
+---
+# Web Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  namespace: one-data-web
+  labels:
+    app: web-frontend
+    version: v2.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+        version: v2.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: web-frontend
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: web
+        image: one-data-web:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: VITE_API_ALLDATA_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_API_ALLDATA_URL
+        - name: VITE_API_BISHENG_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_API_BISHENG_URL
+        - name: VITE_API_CUBE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_API_CUBE_URL
+        - name: VITE_AUTH_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_AUTH_MODE
+        - name: VITE_KEYCLOAK_URL
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_KEYCLOAK_URL
+        - name: VITE_KEYCLOAK_REALM
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_KEYCLOAK_REALM
+        - name: VITE_KEYCLOAK_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_KEYCLOAK_CLIENT_ID
+        - name: VITE_APP_TITLE
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_APP_TITLE
+        - name: VITE_APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_APP_VERSION
+        - name: VITE_ENABLE_METRICS
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_ENABLE_METRICS
+        - name: VITE_ENABLE_WEBSOCKET
+          valueFrom:
+            configMapKeyRef:
+              name: web-frontend-env
+              key: VITE_ENABLE_WEBSOCKET
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+# Web Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-frontend
+  namespace: one-data-web
+  labels:
+    app: web-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: web-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+
+---
+# Web Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-web
+  labels:
+    app: one-data-studio
+    component: web-frontend

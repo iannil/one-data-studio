@@ -1,0 +1,156 @@
+# MySQL Backup CronJob
+# Sprint 23: Production Readiness - Backup & Recovery
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+  namespace: one-data-infra
+  labels:
+    app.kubernetes.io/name: mysql-backup
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: one-data-studio
+spec:
+  # Run daily at 2:00 AM UTC
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: mysql-backup
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-service-account
+          containers:
+            - name: mysql-backup
+              image: mysql:8.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+
+                  # Configuration
+                  BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_DIR="/backup"
+                  BACKUP_FILE="${BACKUP_DIR}/mysql_backup_${BACKUP_DATE}.sql.gz"
+                  RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+
+                  echo "Starting MySQL backup at $(date)"
+
+                  # Create backup directory
+                  mkdir -p ${BACKUP_DIR}
+
+                  # Perform backup with mysqldump
+                  echo "Creating backup: ${BACKUP_FILE}"
+                  mysqldump \
+                    --host=${MYSQL_HOST} \
+                    --port=${MYSQL_PORT} \
+                    --user=${MYSQL_USER} \
+                    --password=${MYSQL_PASSWORD} \
+                    --single-transaction \
+                    --routines \
+                    --triggers \
+                    --events \
+                    --set-gtid-purged=OFF \
+                    --all-databases \
+                    | gzip > ${BACKUP_FILE}
+
+                  # Verify backup
+                  if [ -f "${BACKUP_FILE}" ] && [ -s "${BACKUP_FILE}" ]; then
+                    BACKUP_SIZE=$(ls -lh ${BACKUP_FILE} | awk '{print $5}')
+                    echo "Backup completed successfully: ${BACKUP_FILE} (${BACKUP_SIZE})"
+                  else
+                    echo "ERROR: Backup file is empty or missing"
+                    exit 1
+                  fi
+
+                  # Upload to MinIO
+                  if [ -n "${MINIO_ENDPOINT:-}" ]; then
+                    echo "Uploading backup to MinIO..."
+                    mc alias set minio ${MINIO_ENDPOINT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
+                    mc cp ${BACKUP_FILE} minio/${MINIO_BUCKET}/mysql-backups/
+                    echo "Upload completed"
+                  fi
+
+                  # Clean up old local backups
+                  echo "Cleaning up old backups (older than ${RETENTION_DAYS} days)..."
+                  find ${BACKUP_DIR} -name "mysql_backup_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+
+                  echo "Backup job completed at $(date)"
+              env:
+                - name: MYSQL_HOST
+                  value: "mysql.one-data-infra.svc.cluster.local"
+                - name: MYSQL_PORT
+                  value: "3306"
+                - name: MYSQL_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-credentials
+                      key: MYSQL_USER
+                - name: MYSQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-credentials
+                      key: MYSQL_PASSWORD
+                - name: MINIO_ENDPOINT
+                  value: "http://minio.one-data-infra.svc.cluster.local:9000"
+                - name: MINIO_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: minio-credentials
+                      key: MINIO_ACCESS_KEY
+                - name: MINIO_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: minio-credentials
+                      key: MINIO_SECRET_KEY
+                - name: MINIO_BUCKET
+                  value: "backups"
+                - name: BACKUP_RETENTION_DAYS
+                  value: "30"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: mysql-backup-pvc
+
+---
+# PVC for backup storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-backup-pvc
+  namespace: one-data-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+# ServiceAccount for backup job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-service-account
+  namespace: one-data-infra

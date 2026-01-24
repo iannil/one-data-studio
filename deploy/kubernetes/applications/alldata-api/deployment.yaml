@@ -1,0 +1,185 @@
+# Alldata API 持久化服务
+# Sprint 1.1: MySQL + SQLAlchemy 实现
+
+---
+# Alldata API ConfigMap (可选配置)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alldata-api-env
+  namespace: one-data-alldata
+data:
+  # MySQL 配置
+  MYSQL_HOST: "mysql.one-data-infra.svc.cluster.local"
+  MYSQL_PORT: "3306"
+  MYSQL_USER: "one_data"
+  MYSQL_DATABASE: "one_data_alldata"
+
+  # MinIO 配置
+  MINIO_ENDPOINT: "minio.one-data-infra.svc.cluster.local:9000"
+  MINIO_DEFAULT_BUCKET: "alldata"
+  MINIO_USE_SSL: "false"
+
+---
+# Alldata API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+    version: v1.1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: alldata-api
+  template:
+    metadata:
+      labels:
+        app: alldata-api
+        version: v1.1
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: alldata-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: api
+        image: alldata-api:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "true"
+        - name: PORT
+          value: "8080"
+        # MySQL 配置
+        - name: MYSQL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MYSQL_HOST
+        - name: MYSQL_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MYSQL_PORT
+        - name: MYSQL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MYSQL_USER
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MYSQL_DATABASE
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              namespace: one-data-infra
+              key: password
+        # MinIO 配置
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MINIO_ENDPOINT
+        - name: MINIO_DEFAULT_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MINIO_DEFAULT_BUCKET
+        - name: MINIO_USE_SSL
+          valueFrom:
+            configMapKeyRef:
+              name: alldata-api-env
+              key: MINIO_USE_SSL
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: secret_key
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+---
+# Alldata API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+spec:
+  selector:
+    app: alldata-api
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+---
+# Alldata API Ingress (可选)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alldata-ingress
+  namespace: one-data-alldata
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: alldata.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: alldata-api
+            port:
+              number: 8080

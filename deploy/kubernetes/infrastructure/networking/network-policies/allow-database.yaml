@@ -1,0 +1,139 @@
+# Allow Database NetworkPolicy
+# Sprint 24: Security Hardening
+# Allow traffic from application services to database services
+
+---
+# Allow MySQL access from alldata-api and bisheng-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mysql-access
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+  policyTypes:
+  - Ingress
+  ingress:
+  # From alldata-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 3306
+  # From bisheng-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 3306
+
+---
+# Allow Redis access from alldata-api and bisheng-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  ingress:
+  # From alldata-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-alldata
+    ports:
+    - protocol: TCP
+      port: 6379
+  # From bisheng-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-bisheng
+    ports:
+    - protocol: TCP
+      port: 6379
+  # From one-data-web (for session/cache)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-web
+    ports:
+    - protocol: TCP
+      port: 6379
+
+---
+# Allow MinIO access from alldata-api and bisheng-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-minio-access
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: minio
+  policyTypes:
+  - Ingress
+  ingress:
+  # From alldata-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-alldata
+    ports:
+    - protocol: TCP
+      port: 9000
+    - protocol: TCP
+      port: 9001
+  # From bisheng-api
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-bisheng
+    ports:
+    - protocol: TCP
+      port: 9000
+    - protocol: TCP
+      port: 9001
+
+---
+# Allow Milvus access for vector operations
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-milvus-access
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: milvus
+  policyTypes:
+  - Ingress
+  ingress:
+  # From bisheng-api for RAG operations
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-bisheng
+    ports:
+    - protocol: TCP
+      port: 19530
+    - protocol: TCP
+      port: 9091

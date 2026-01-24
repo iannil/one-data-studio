@@ -1,0 +1,110 @@
+# Allow Ingress NetworkPolicy
+# Sprint 24: Security Hardening
+# Allow traffic from ingress controller to frontend and API services
+
+---
+# Allow ingress to web-frontend from nginx ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-web
+  namespace: one-data-web
+spec:
+  podSelector:
+    matchLabels:
+      app: web-frontend
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+# Allow ingress to alldata-api from nginx ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-alldata
+  namespace: one-data-alldata
+spec:
+  podSelector:
+    matchLabels:
+      app: alldata-api
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+# Allow ingress to bisheng-api from nginx ingress controller and other services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-bisheng
+  namespace: one-data-bisheng
+spec:
+  podSelector:
+    matchLabels:
+      app: bisheng-api
+  policyTypes:
+  - Ingress
+  ingress:
+  # From ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # From web-frontend
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app: one-data-studio
+          component: web-frontend
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+# Allow ingress to openai-proxy from bisheng-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-openai-proxy
+  namespace: one-data-cube
+spec:
+  podSelector:
+    matchLabels:
+      app: openai-proxy
+  policyTypes:
+  - Ingress
+  ingress:
+  # From bisheng-api namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: one-data-bisheng
+    ports:
+    - protocol: TCP
+      port: 8000
+  # From ingress controller (optional, for direct API access)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000

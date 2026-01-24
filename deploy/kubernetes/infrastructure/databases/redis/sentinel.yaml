@@ -1,0 +1,173 @@
+# Redis Sentinel Deployment
+# Sprint 14: 高可用基础设施 - Redis Sentinel
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-sentinel
+  namespace: one-data-infra
+  labels:
+    app: redis-ha
+    role: sentinel
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-ha
+      role: sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-ha
+        role: sentinel
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - redis-ha
+                - key: role
+                  operator: In
+                  values:
+                  - sentinel
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+      - name: wait-for-master
+        image: redis:7.2-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until redis-cli -h redis-master -a "${REDIS_PASSWORD}" ping | grep -q PONG; do
+            echo "Waiting for master to be ready..."
+            sleep 2
+          done
+          echo "Master is ready!"
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-ha-credentials
+              key: password
+
+      containers:
+      - name: sentinel
+        image: redis:7.2-alpine
+        command: ["/bin/sh", "/etc/redis/start-sentinel.sh"]
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-ha-credentials
+              key: password
+        - name: SENTINEL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-ha-credentials
+              key: sentinel-password
+        ports:
+        - name: sentinel
+          containerPort: 26379
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -p 26379 -a "${SENTINEL_PASSWORD}" ping | grep -q PONG
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -p 26379 -a "${SENTINEL_PASSWORD}" ping | grep -q PONG
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /etc/redis
+
+      volumes:
+      - name: config
+        configMap:
+          name: redis-ha-config
+          defaultMode: 0755
+      - name: data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel
+  namespace: one-data-infra
+  labels:
+    app: redis-ha
+    role: sentinel
+spec:
+  type: ClusterIP
+  ports:
+  - name: sentinel
+    port: 26379
+    targetPort: 26379
+  selector:
+    app: redis-ha
+    role: sentinel
+
+---
+# 统一 Redis 入口服务
+# 应用应连接此服务，通过 Sentinel 自动发现 Master
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: one-data-infra
+  labels:
+    app: redis-ha
+  annotations:
+    description: "Redis 统一入口 - 连接 Master 用于读写"
+spec:
+  type: ClusterIP
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  - name: sentinel
+    port: 26379
+    targetPort: 26379
+  selector:
+    app: redis-ha
+    role: master
+
+---
+# PodDisruptionBudget for Sentinel
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-sentinel-pdb
+  namespace: one-data-infra
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: redis-ha
+      role: sentinel

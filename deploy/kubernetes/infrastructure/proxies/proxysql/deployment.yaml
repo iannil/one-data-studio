@@ -1,0 +1,159 @@
+# ProxySQL Deployment
+# Sprint 14: 高可用基础设施 - MySQL 代理/负载均衡
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxysql
+  namespace: one-data-infra
+  labels:
+    app: proxysql
+spec:
+  replicas: 2  # 高可用部署
+  selector:
+    matchLabels:
+      app: proxysql
+  template:
+    metadata:
+      labels:
+        app: proxysql
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6070"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - proxysql
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: proxysql
+        image: proxysql/proxysql:2.5.5
+        ports:
+        - name: mysql
+          containerPort: 6033
+        - name: admin
+          containerPort: 6032
+        - name: metrics
+          containerPort: 6070
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - /etc/proxysql/check-proxysql.sh
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          tcpSocket:
+            port: 6033
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/proxysql/proxysql.cnf
+          subPath: proxysql.cnf
+        - name: config
+          mountPath: /etc/proxysql/check-proxysql.sh
+          subPath: check-proxysql.sh
+        - name: data
+          mountPath: /var/lib/proxysql
+
+      - name: proxysql-exporter
+        image: quay.io/prometheuscommunity/proxysql-exporter:v1.0.0
+        args:
+        - "--web.listen-address=:6070"
+        - "--web.telemetry-path=/metrics"
+        env:
+        - name: DATA_SOURCE_NAME
+          value: "admin:admin@tcp(localhost:6032)/"
+        ports:
+        - name: metrics
+          containerPort: 6070
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+
+      volumes:
+      - name: config
+        configMap:
+          name: proxysql-config
+      - name: data
+        emptyDir: {}
+
+---
+# ProxySQL MySQL 服务 (应用连接此端口)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: one-data-infra
+  labels:
+    app: proxysql
+  annotations:
+    description: "MySQL 统一入口 - 通过 ProxySQL 代理"
+spec:
+  type: ClusterIP
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 6033
+  - name: admin
+    port: 6032
+    targetPort: 6032
+  - name: metrics
+    port: 6070
+    targetPort: 6070
+  selector:
+    app: proxysql
+
+---
+# ProxySQL Admin 服务 (管理接口)
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxysql-admin
+  namespace: one-data-infra
+  labels:
+    app: proxysql
+spec:
+  type: ClusterIP
+  ports:
+  - name: admin
+    port: 6032
+    targetPort: 6032
+  selector:
+    app: proxysql
+
+---
+# PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: proxysql-pdb
+  namespace: one-data-infra
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: proxysql

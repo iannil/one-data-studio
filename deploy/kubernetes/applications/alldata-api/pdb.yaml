@@ -1,0 +1,61 @@
+# Alldata API PodDisruptionBudget
+# 确保在集群维护期间至少有 1 个 Pod 可用
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: alldata-api-pdb
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: alldata-api
+
+---
+# Alldata API HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: alldata-api-hpa
+  namespace: one-data-alldata
+  labels:
+    app: alldata-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: alldata-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max

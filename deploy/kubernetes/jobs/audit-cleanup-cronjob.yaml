@@ -1,0 +1,126 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: audit-log-cleanup
+  namespace: one-data-system
+  labels:
+    app: audit-log-cleanup
+    component: maintenance
+    part-of: one-data-studio
+spec:
+  # 每天凌晨 3 点执行
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: audit-log-cleanup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: cleanup
+            image: mysql:8.0
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: database-config
+                  key: MYSQL_HOST
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: database-config
+                  key: MYSQL_DATABASE
+            # 保留策略配置
+            - name: DEFAULT_RETENTION_DAYS
+              value: "90"
+            - name: SENSITIVE_RETENTION_DAYS
+              value: "365"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+
+              echo "Starting audit log cleanup..."
+              echo "Host: $MYSQL_HOST, Database: $MYSQL_DATABASE"
+
+              # 敏感操作列表（保留更长时间）
+              SENSITIVE_ACTIONS="'login','logout','login_failed','password_change','password_reset','permission_change','config_change','data_delete','workflow_delete','document_delete'"
+
+              # 计算截止日期
+              DEFAULT_CUTOFF=$(date -d "-${DEFAULT_RETENTION_DAYS} days" +%Y-%m-%d)
+              SENSITIVE_CUTOFF=$(date -d "-${SENSITIVE_RETENTION_DAYS} days" +%Y-%m-%d)
+
+              echo "Default cutoff date: $DEFAULT_CUTOFF (${DEFAULT_RETENTION_DAYS} days)"
+              echo "Sensitive cutoff date: $SENSITIVE_CUTOFF (${SENSITIVE_RETENTION_DAYS} days)"
+
+              # 删除普通日志（超过 90 天）
+              echo "Deleting non-sensitive audit logs older than $DEFAULT_CUTOFF..."
+              mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+                DELETE FROM audit_logs
+                WHERE timestamp < '$DEFAULT_CUTOFF'
+                AND action NOT IN ($SENSITIVE_ACTIONS)
+                LIMIT 10000;
+              "
+
+              # 删除敏感日志（超过 365 天）
+              echo "Deleting sensitive audit logs older than $SENSITIVE_CUTOFF..."
+              mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+                DELETE FROM audit_logs
+                WHERE timestamp < '$SENSITIVE_CUTOFF'
+                AND action IN ($SENSITIVE_ACTIONS)
+                LIMIT 10000;
+              "
+
+              # 统计剩余日志数量
+              REMAINING=$(mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -N -e "
+                SELECT COUNT(*) FROM audit_logs;
+              ")
+
+              echo "Cleanup completed. Remaining audit logs: $REMAINING"
+
+              # 优化表（可选，在低峰期执行）
+              if [ "$(date +%u)" -eq 7 ]; then
+                echo "Running table optimization (Sunday only)..."
+                mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+                  OPTIMIZE TABLE audit_logs;
+                "
+                echo "Table optimization completed."
+              fi
+
+              echo "Audit log cleanup finished successfully."
+            resources:
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+          # 服务账号（可选）
+          # serviceAccountName: maintenance-sa
+---
+# ConfigMap for database configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+  namespace: one-data-system
+data:
+  MYSQL_HOST: "mysql.one-data-infra.svc.cluster.local"
+  MYSQL_DATABASE: "one_data_bisheng"

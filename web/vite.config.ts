@@ -4,11 +4,31 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // 启用 Fast Refresh
+      fastRefresh: true,
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  // 依赖优化配置
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'antd',
+      '@ant-design/icons',
+      '@tanstack/react-query',
+      'zustand',
+      'axios',
+    ],
+    // 排除不需要预构建的依赖
+    exclude: ['@vite/client'],
   },
   server: {
     host: '0.0.0.0',
@@ -69,15 +89,95 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // 生产环境禁用 sourcemap 以减小包体积
+    sourcemap: false,
+    // 启用 CSS 代码分割
+    cssCodeSplit: true,
+    // 构建目标
+    target: 'es2020',
+    // 压缩配置 - 使用 esbuild
+    minify: 'esbuild',
+    // 启用 CSS 压缩
+    cssMinify: true,
+    // 禁用 gzip 大小报告以加速构建
+    reportCompressedSize: false,
+    // chunk 大小警告阈值（KB）
+    chunkSizeWarningLimit: 500,
+    // 资源内联阈值（4KB 以下的资源内联为 base64）
+    assetsInlineLimit: 4096,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'antd-vendor': ['antd', '@ant-design/icons'],
-          'query-vendor': ['@tanstack/react-query'],
+        // 智能分包策略
+        manualChunks: (id) => {
+          // React 核心库
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          // 路由库
+          if (id.includes('node_modules/react-router')) {
+            return 'router-vendor';
+          }
+          // Ant Design - 拆分为核心和图标
+          if (id.includes('node_modules/@ant-design/icons')) {
+            return 'antd-icons';
+          }
+          if (id.includes('node_modules/antd')) {
+            return 'antd-vendor';
+          }
+          // React Query 和 Zustand
+          if (id.includes('node_modules/@tanstack/react-query') || id.includes('node_modules/zustand')) {
+            return 'state-vendor';
+          }
+          // React Flow (流程图库)
+          if (id.includes('node_modules/reactflow') || id.includes('node_modules/@reactflow')) {
+            return 'reactflow-vendor';
+          }
+          // 工具库 (axios, dayjs 等)
+          if (id.includes('node_modules/axios') || id.includes('node_modules/dayjs')) {
+            return 'utils-vendor';
+          }
+          // 其他 node_modules 合并为一个 vendor chunk
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+        // 资源文件名 - 使用内容哈希
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const name = assetInfo.name || '';
+          // 图片文件
+          if (/\.(png|jpe?g|gif|svg|webp|avif|ico)$/i.test(name)) {
+            return 'assets/images/[name]-[hash][extname]';
+          }
+          // 字体文件
+          if (/\.(woff2?|eot|ttf|otf)$/i.test(name)) {
+            return 'assets/fonts/[name]-[hash][extname]';
+          }
+          // CSS 文件
+          if (/\.css$/i.test(name)) {
+            return 'assets/css/[name]-[hash][extname]';
+          }
+          // 其他资源
+          return 'assets/[name]-[hash][extname]';
         },
       },
+      // Tree-shaking 配置
+      treeshake: {
+        // 标记无副作用的模块
+        moduleSideEffects: 'no-external',
+        // 保守的属性访问分析
+        propertyReadSideEffects: false,
+      },
     },
+  },
+  // 预览服务器配置
+  preview: {
+    port: 4173,
+    host: true,
+  },
+  // 定义全局常量
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.3.0'),
   },
 });

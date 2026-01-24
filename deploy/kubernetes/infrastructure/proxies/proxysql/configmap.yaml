@@ -1,0 +1,196 @@
+# ProxySQL 配置
+# Sprint 14: 高可用基础设施 - MySQL 负载均衡
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxysql-config
+  namespace: one-data-infra
+  labels:
+    app: proxysql
+data:
+  proxysql.cnf: |
+    datadir="/var/lib/proxysql"
+    errorlog="/var/lib/proxysql/proxysql.log"
+
+    admin_variables=
+    {
+        admin_credentials="admin:admin;radmin:radmin"
+        mysql_ifaces="0.0.0.0:6032"
+        refresh_interval=2000
+    }
+
+    mysql_variables=
+    {
+        threads=4
+        max_connections=2048
+        default_query_delay=0
+        default_query_timeout=36000000
+        have_compress=true
+        poll_timeout=2000
+        interfaces="0.0.0.0:6033"
+        default_schema="one_data"
+        stacksize=1048576
+        server_version="8.0.35"
+        connect_timeout_server=3000
+        monitor_username="proxysql"
+        monitor_password="ProxySQLPassword123!"
+        monitor_history=600000
+        monitor_connect_interval=60000
+        monitor_ping_interval=10000
+        monitor_read_only_interval=1500
+        monitor_read_only_timeout=500
+        ping_interval_server_msec=120000
+        ping_timeout_server=500
+        commands_stats=true
+        sessions_sort=true
+        connect_retries_on_failure=10
+    }
+
+    # MySQL 服务器组
+    # hostgroup 10: 写入组 (Primary)
+    # hostgroup 20: 读取组 (Replicas)
+    mysql_servers =
+    (
+        # Primary (写入)
+        {
+            address="mysql-primary"
+            port=3306
+            hostgroup=10
+            max_connections=200
+            weight=1
+            comment="primary"
+        },
+        # Primary 也可用于读取
+        {
+            address="mysql-primary"
+            port=3306
+            hostgroup=20
+            max_connections=100
+            weight=1
+            comment="primary-read"
+        },
+        # Replica 0
+        {
+            address="mysql-replica-0.mysql-replica-headless"
+            port=3306
+            hostgroup=20
+            max_connections=200
+            weight=2
+            comment="replica-0"
+        },
+        # Replica 1
+        {
+            address="mysql-replica-1.mysql-replica-headless"
+            port=3306
+            hostgroup=20
+            max_connections=200
+            weight=2
+            comment="replica-1"
+        }
+    )
+
+    # 用户配置
+    mysql_users=
+    (
+        {
+            username="one_data"
+            password="OneDataPassword123!"
+            default_hostgroup=10
+            max_connections=500
+            default_schema="one_data"
+            active=1
+            transaction_persistent=1
+        },
+        {
+            username="root"
+            password="MyRootPassword123!"
+            default_hostgroup=10
+            max_connections=50
+            default_schema="one_data"
+            active=1
+            transaction_persistent=1
+        }
+    )
+
+    # 查询路由规则
+    mysql_query_rules=
+    (
+        # 所有 SELECT 语句路由到读取组 (除了 SELECT ... FOR UPDATE)
+        {
+            rule_id=100
+            active=1
+            match_pattern="^SELECT .* FOR UPDATE"
+            destination_hostgroup=10
+            apply=1
+        },
+        {
+            rule_id=101
+            active=1
+            match_pattern="^SELECT"
+            destination_hostgroup=20
+            apply=1
+        },
+        # 所有写入操作路由到写入组
+        {
+            rule_id=200
+            active=1
+            match_pattern="^INSERT"
+            destination_hostgroup=10
+            apply=1
+        },
+        {
+            rule_id=201
+            active=1
+            match_pattern="^UPDATE"
+            destination_hostgroup=10
+            apply=1
+        },
+        {
+            rule_id=202
+            active=1
+            match_pattern="^DELETE"
+            destination_hostgroup=10
+            apply=1
+        },
+        {
+            rule_id=203
+            active=1
+            match_pattern="^REPLACE"
+            destination_hostgroup=10
+            apply=1
+        },
+        # 事务开始路由到写入组
+        {
+            rule_id=300
+            active=1
+            match_pattern="^START TRANSACTION"
+            destination_hostgroup=10
+            apply=1
+        },
+        {
+            rule_id=301
+            active=1
+            match_pattern="^BEGIN"
+            destination_hostgroup=10
+            apply=1
+        }
+    )
+
+    # 复制组配置
+    mysql_replication_hostgroups=
+    (
+        {
+            writer_hostgroup=10
+            reader_hostgroup=20
+            check_type="read_only"
+            comment="MySQL HA Cluster"
+        }
+    )
+
+  # ProxySQL 监控脚本
+  check-proxysql.sh: |
+    #!/bin/bash
+    mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT 1" &> /dev/null
+    exit $?

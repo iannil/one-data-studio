@@ -55,6 +55,37 @@ except ImportError:
         UPDATE = type('', (), {'value': 'update'})()
         DELETE = type('', (), {'value': 'delete'})()
 
+# 尝试导入验证模块
+try:
+    from shared.validation import (
+        validate_request, validate_query_params, sanitize_input,
+        check_sql_injection, limit_content_size, COMMON_SCHEMAS
+    )
+    VALIDATION_ENABLED = True
+except ImportError:
+    VALIDATION_ENABLED = False
+    # 装饰器空实现
+    def validate_request(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def sanitize_input(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def check_sql_injection(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def limit_content_size(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def validate_query_params(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+
 # 尝试导入 Prometheus 指标
 try:
     from prometheus_flask_exporter import PrometheusMetrics
@@ -113,28 +144,64 @@ def health():
         "auth_enabled": AUTH_ENABLED and AUTH_MODE,
         "prometheus_enabled": PROMETHEUS_ENABLED,
         "minio_enabled": MINIO_ENABLED,
+        "checks": {}
     }
+
+    all_healthy = True
 
     # 测试数据库连接
     try:
         db = get_db_session()
         db.execute("SELECT 1")
         db.close()
-        health_status["database"] = "connected"
+        health_status["checks"]["database"] = {"status": "healthy", "latency_ms": 0}
     except Exception as e:
-        health_status["database"] = f"disconnected: {str(e)}"
+        health_status["checks"]["database"] = {"status": "unhealthy", "error": str(e)}
+        all_healthy = False
 
     # 测试 MinIO 连接
     if MINIO_ENABLED:
         try:
+            import time
+            start = time.time()
             storage = get_storage()
-            # 尝试列出 buckets
             buckets = storage.client.list_buckets()
-            health_status["minio"] = "connected"
+            latency = (time.time() - start) * 1000
+            health_status["checks"]["minio"] = {
+                "status": "healthy",
+                "latency_ms": round(latency, 2),
+                "bucket_count": len(buckets)
+            }
         except Exception as e:
-            health_status["minio"] = f"disconnected: {str(e)}"
+            health_status["checks"]["minio"] = {"status": "unhealthy", "error": str(e)}
+            all_healthy = False
 
-    return jsonify(health_status)
+    # 测试 Redis 连接（如果配置）
+    try:
+        import redis
+        redis_host = os.getenv('REDIS_HOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT', '6379'))
+        redis_client = redis.Redis(host=redis_host, port=redis_port, socket_timeout=2)
+        import time
+        start = time.time()
+        redis_client.ping()
+        latency = (time.time() - start) * 1000
+        health_status["checks"]["redis"] = {
+            "status": "healthy",
+            "latency_ms": round(latency, 2)
+        }
+    except ImportError:
+        health_status["checks"]["redis"] = {"status": "not_configured", "message": "redis package not installed"}
+    except Exception as e:
+        health_status["checks"]["redis"] = {"status": "unhealthy", "error": str(e)}
+        # Redis 不影响整体健康状态（可选依赖）
+
+    # 设置整体状态
+    if not all_healthy:
+        health_status["code"] = 1
+        health_status["message"] = "degraded"
+
+    return jsonify(health_status), 200 if all_healthy else 503
 
 
 @app.route("/metrics")
@@ -195,6 +262,8 @@ def get_dataset(dataset_id):
 @app.route("/api/v1/datasets", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.DATASET, Operation.CREATE)
+@validate_request('dataset_create')
+@sanitize_input('name', 'description')
 def create_dataset():
     """创建数据集（需要认证）"""
     data = request.json

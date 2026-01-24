@@ -1,0 +1,274 @@
+# ONE-DATA-STUDIO DestinationRule Configuration
+# Sprint 11.1: 服务网格与流量管理 - 目标规则配置
+# Sprint 14: WebSocket 会话亲和性增强
+
+---
+# DestinationRule: Alldata API with Subsets
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: alldata-api-dr
+  namespace: one-data-alldata
+spec:
+  host: alldata-api
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+      # 一致性哈希配置（用于基于用户的会话保持）
+      consistentHash:
+        httpHeaderName: x-user-id
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 10s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+      http:
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 10
+        idleTimeout: 60s
+        h2UpgradePolicy: UPGRADE
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 50
+  # 定义服务子集（用于灰度发布）
+  subsets:
+  - name: stable  # 稳定版本
+    labels:
+      version: v1.0
+  - name: canary  # 金丝雀版本
+    labels:
+      version: v1.1
+  - name: blue  # 蓝环境
+    labels:
+      deployment: blue
+  - name: green  # 绿环境
+    labels:
+      deployment: green
+
+---
+# DestinationRule: Bisheng API with Subsets
+# Sprint 14: 增强 WebSocket 会话亲和性
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: bisheng-api-dr
+  namespace: one-data-bisheng
+spec:
+  host: bisheng-api
+  trafficPolicy:
+    loadBalancer:
+      # Sprint 14: 使用一致性哈希确保 WebSocket 会话亲和性
+      consistentHash:
+        # 优先使用 session-id header
+        httpHeaderName: x-session-id
+        # 备选：使用 cookie
+        # httpCookie:
+        #   name: bisheng_session
+        #   path: /
+        #   ttl: 86400s
+    connectionPool:
+      tcp:
+        maxConnections: 150
+        connectTimeout: 10s
+        keepAlive:
+          # Sprint 14: WebSocket 长连接优化
+          time: 7200s  # 2小时
+          interval: 60s
+      http:
+        http2MaxRequests: 1500
+        maxRequestsPerConnection: 20
+        idleTimeout: 300s  # WebSocket 空闲超时延长到 5 分钟
+        h2UpgradePolicy: UPGRADE  # 支持 HTTP/2 升级
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+      # 熔断后自动恢复的探测配置
+      successRateMinimumHosts: 2
+      successRateRequestVolume: 10
+      successRateStdevFactor: 1900
+  subsets:
+  - name: stable
+    labels:
+      version: v1.0
+  - name: canary
+    labels:
+      version: v1.1
+  - name: version-a  # A/B 测试 A 版本
+    labels:
+      ab-test: A
+  - name: version-b  # A/B 测试 B 版本
+    labels:
+      ab-test: B
+
+---
+# DestinationRule: Bisheng API WebSocket 专用
+# Sprint 14: WebSocket 连接的独立规则
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: bisheng-api-websocket-dr
+  namespace: one-data-bisheng
+  annotations:
+    description: "WebSocket 专用目标规则 - 确保会话亲和性"
+spec:
+  host: bisheng-api
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        # 基于源 IP 的一致性哈希（WebSocket 场景）
+        useSourceIp: true
+    connectionPool:
+      tcp:
+        maxConnections: 200
+        connectTimeout: 10s
+        keepAlive:
+          time: 7200s
+          interval: 30s
+      http:
+        # WebSocket 不使用 HTTP/2 多路复用
+        http1MaxPendingRequests: 500
+        maxRequestsPerConnection: 1  # 每连接1请求，适合 WebSocket
+        idleTimeout: 3600s  # 1小时 WebSocket 空闲超时
+        h2UpgradePolicy: DO_NOT_UPGRADE  # WebSocket 不升级到 HTTP/2
+    outlierDetection:
+      consecutiveErrors: 5  # WebSocket 连接允许更多错误
+      interval: 60s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 30
+
+---
+# DestinationRule: OpenAI Proxy with Subsets
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: openai-proxy-dr
+  namespace: one-data-cube
+spec:
+  host: openai-proxy
+  trafficPolicy:
+    loadBalancer:
+      simple: RANDOM
+    connectionPool:
+      tcp:
+        maxConnections: 200
+        connectTimeout: 5s
+      http:
+        http1MaxPendingRequests: 500
+        http2MaxRequests: 2000
+        maxRequestsPerConnection: 5
+        idleTimeout: 300s
+        maxRetries: 3
+    outlierDetection:
+      consecutiveErrors: 2  # 模型服务更敏感
+      interval: 20s
+      baseEjectionTime: 60s  # 更长的驱逐时间
+      maxEjectionPercent: 60
+      minHealthPercent: 30
+  subsets:
+  - name: stable
+    labels:
+      version: v1.0
+  - name: canary
+    labels:
+      version: v1.1
+
+---
+# DestinationRule: Web Frontend with Subsets
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: web-frontend-dr
+  namespace: one-data-system
+spec:
+  host: web-frontend
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+      consistentHash:
+        httpCookie:
+          name: session_id
+          path: /
+          ttl: 3600s
+    connectionPool:
+      tcp:
+        maxConnections: 50
+        connectTimeout: 10s
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 500
+        maxRequestsPerConnection: 5
+        idleTimeout: 60s
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 60s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+  subsets:
+  - name: stable
+    labels:
+      version: v1.0
+  - name: canary
+    labels:
+      version: v1.1
+
+---
+# DestinationRule: MySQL 数据库连接池策略
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: mysql-dr
+  namespace: one-data-system
+spec:
+  host: mysql.one-data-system.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+        connectTimeout: 5s
+        keepAlive:
+          time: 3600s
+          interval: 60s
+    loadBalancer:
+      simple: ROUND_ROBIN
+
+---
+# DestinationRule: Redis 缓存连接池策略
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: redis-dr
+  namespace: one-data-system
+spec:
+  host: redis.one-data-system.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 3s
+    loadBalancer:
+      simple: ROUND_ROBIN
+
+---
+# DestinationRule: MinIO 存储连接池策略
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: minio-dr
+  namespace: one-data-system
+spec:
+  host: minio.one-data-system.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 80
+        connectTimeout: 10s
+    loadBalancer:
+      simple: ROUND_ROBIN

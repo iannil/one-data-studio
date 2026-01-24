@@ -1,0 +1,129 @@
+{
+  "home": {
+    "title": "Welcome to ONE-DATA-STUDIO",
+    "subtitle": "Enterprise-grade Data + AI + LLM Integration Platform",
+    "quickStart": "Quick Start",
+    "recentWorkflows": "Recent Workflows",
+    "recentConversations": "Recent Conversations",
+    "statistics": {
+      "title": "Platform Overview",
+      "workflows": "Workflows",
+      "documents": "Documents",
+      "executions": "Executions",
+      "conversations": "Conversations"
+    }
+  },
+  "chat": {
+    "title": "AI Chat",
+    "newConversation": "New Conversation",
+    "inputPlaceholder": "Type a message...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "regenerate": "Regenerate",
+    "copyResponse": "Copy Response",
+    "clearHistory": "Clear History",
+    "conversationSettings": "Conversation Settings",
+    "model": "Model",
+    "temperature": "Temperature",
+    "maxTokens": "Max Tokens",
+    "systemPrompt": "System Prompt"
+  },
+  "workflows": {
+    "title": "Workflow Management",
+    "create": "Create Workflow",
+    "edit": "Edit Workflow",
+    "execute": "Execute Workflow",
+    "name": "Workflow Name",
+    "description": "Description",
+    "version": "Version",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "nodes": {
+      "input": "Input",
+      "output": "Output",
+      "llm": "LLM Call",
+      "retriever": "Vector Retrieval",
+      "condition": "Condition",
+      "loop": "Loop",
+      "agent": "Agent",
+      "think": "Think",
+      "toolCall": "Tool Call",
+      "parallel": "Parallel",
+      "subflow": "Subflow",
+      "cache": "Cache",
+      "retry": "Retry",
+      "webhook": "Webhook"
+    }
+  },
+  "agents": {
+    "title": "Agent Management",
+    "create": "Create Agent",
+    "templates": "Agent Templates",
+    "tools": "Available Tools",
+    "runAgent": "Run Agent",
+    "agentName": "Agent Name",
+    "agentDescription": "Description",
+    "toolList": "Tool List",
+    "executionHistory": "Execution History"
+  },
+  "documents": {
+    "title": "Document Management",
+    "upload": "Upload Document",
+    "uploadImage": "Upload Image",
+    "fileName": "File Name",
+    "fileType": "File Type",
+    "fileSize": "File Size",
+    "uploadTime": "Upload Time",
+    "vectorized": "Vectorized",
+    "collection": "Collection",
+    "chunks": "Chunks",
+    "preview": "Preview",
+    "reindex": "Reindex"
+  },
+  "text2sql": {
+    "title": "Text-to-SQL",
+    "inputPlaceholder": "Describe the data you want to query in natural language...",
+    "generate": "Generate SQL",
+    "execute": "Execute Query",
+    "generatedSQL": "Generated SQL",
+    "queryResults": "Query Results",
+    "tableSchema": "Table Schema",
+    "selectTable": "Select Table",
+    "explain": "Explain SQL"
+  },
+  "executions": {
+    "title": "Execution Monitoring",
+    "executionId": "Execution ID",
+    "workflowName": "Workflow Name",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "duration": "Duration",
+    "status": "Status",
+    "logs": "Logs",
+    "viewLogs": "View Logs",
+    "input": "Input",
+    "output": "Output"
+  },
+  "schedules": {
+    "title": "Schedule Management",
+    "create": "Create Schedule",
+    "scheduleName": "Schedule Name",
+    "cronExpression": "Cron Expression",
+    "nextRun": "Next Run",
+    "lastRun": "Last Run",
+    "enabled": "Enabled",
+    "trigger": "Manual Trigger"
+  },
+  "settings": {
+    "title": "System Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "notifications": "Notifications",
+    "security": "Security",
+    "apiKeys": "API Keys"
+  }
+}

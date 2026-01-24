@@ -1,0 +1,259 @@
+# ONE-DATA-STUDIO Security Scanning
+# Sprint 22: Quality Assurance - Security Integration
+
+name: Security
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: '0 0 * * 0'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ========================================
+  # Python SAST (Bandit)
+  # ========================================
+  python-sast:
+    name: Python SAST (Bandit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Bandit
+        run: pip install bandit bandit-sarif-formatter
+
+      - name: Run Bandit scan
+        run: |
+          bandit -r services/ \
+            -f sarif \
+            -o bandit-results.sarif \
+            --severity-level medium \
+            --confidence-level medium \
+            -x '*/tests/*,*/test/*' \
+            || true
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+
+      - name: Bandit summary
+        run: |
+          bandit -r services/ \
+            -f txt \
+            --severity-level medium \
+            --confidence-level medium \
+            -x '*/tests/*,*/test/*' \
+            || true
+
+  # ========================================
+  # JavaScript/TypeScript SAST (ESLint Security)
+  # ========================================
+  js-sast:
+    name: JavaScript SAST
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run ESLint security rules
+        working-directory: web
+        run: |
+          npm install eslint-plugin-security --save-dev
+          npx eslint src/ --format @microsoft/eslint-formatter-sarif --output-file ../eslint-results.sarif || true
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: eslint-results.sarif
+          category: eslint-security
+
+  # ========================================
+  # Dependency Scanning (npm audit)
+  # ========================================
+  npm-audit:
+    name: npm Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Run npm audit
+        working-directory: web
+        run: |
+          npm audit --audit-level=high --json > npm-audit-results.json || true
+          cat npm-audit-results.json
+
+      - name: Check for high/critical vulnerabilities
+        working-directory: web
+        run: |
+          VULNS=$(npm audit --audit-level=high 2>&1 || true)
+          if echo "$VULNS" | grep -q "high\|critical"; then
+            echo "::warning::High or critical vulnerabilities found in npm dependencies"
+          fi
+
+  # ========================================
+  # Python Dependency Scanning (pip-audit)
+  # ========================================
+  pip-audit:
+    name: pip Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        run: |
+          pip-audit -r requirements.txt --format json --output pip-audit-results.json || true
+          cat pip-audit-results.json
+
+  # ========================================
+  # Container Image Scanning (Trivy)
+  # ========================================
+  container-scan:
+    name: Container Image Scan (Trivy)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: |
+          docker build -t one-data-studio/bisheng-api:scan \
+            -f services/bisheng-api/Dockerfile services/
+
+      - name: Run Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'one-data-studio/bisheng-api:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+
+      - name: Upload Trivy SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+  # ========================================
+  # Secret Scanning
+  # ========================================
+  secret-scan:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
+  # ========================================
+  # Infrastructure as Code Scanning
+  # ========================================
+  iac-scan:
+    name: IaC Scanning (Checkov)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: k8s/
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          soft_fail: true
+
+      - name: Upload Checkov SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+  # ========================================
+  # Security Summary
+  # ========================================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [python-sast, js-sast, npm-audit, pip-audit, secret-scan, iac-scan]
+    if: always()
+
+    steps:
+      - name: Security scan summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python SAST (Bandit) | ${{ needs.python-sast.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JavaScript SAST | ${{ needs.js-sast.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm Audit | ${{ needs.npm-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| pip Audit | ${{ needs.pip-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| IaC Scan | ${{ needs.iac-scan.result }} |" >> $GITHUB_STEP_SUMMARY

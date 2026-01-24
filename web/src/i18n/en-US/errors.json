@@ -1,0 +1,64 @@
+{
+  "network": {
+    "connectionFailed": "Network connection failed",
+    "timeout": "Request timeout",
+    "serverError": "Server error",
+    "unauthorized": "Unauthorized, please login again",
+    "forbidden": "Access forbidden"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidFormat": "Invalid format",
+    "tooShort": "Input is too short",
+    "tooLong": "Input is too long",
+    "invalidEmail": "Invalid email format",
+    "invalidUrl": "Invalid URL format"
+  },
+  "auth": {
+    "loginFailed": "Login failed",
+    "invalidCredentials": "Invalid username or password",
+    "sessionExpired": "Session expired, please login again",
+    "accountLocked": "Account is locked",
+    "tokenRefreshFailed": "Token refresh failed"
+  },
+  "workflow": {
+    "notFound": "Workflow not found",
+    "executionFailed": "Workflow execution failed",
+    "invalidDefinition": "Invalid workflow definition",
+    "nodeError": "Node execution error",
+    "timeout": "Workflow execution timeout"
+  },
+  "document": {
+    "uploadFailed": "Document upload failed",
+    "invalidFormat": "Unsupported file format",
+    "tooLarge": "File size exceeds limit",
+    "indexFailed": "Document indexing failed",
+    "notFound": "Document not found"
+  },
+  "agent": {
+    "executionFailed": "Agent execution failed",
+    "toolNotFound": "Tool not found",
+    "toolExecutionFailed": "Tool execution failed",
+    "maxIterationsReached": "Maximum iterations reached"
+  },
+  "llm": {
+    "apiError": "LLM API call failed",
+    "rateLimited": "Rate limit exceeded",
+    "tokenLimitExceeded": "Token limit exceeded",
+    "modelNotAvailable": "Model not available"
+  },
+  "database": {
+    "connectionFailed": "Database connection failed",
+    "queryFailed": "Query execution failed",
+    "transactionFailed": "Transaction failed"
+  },
+  "general": {
+    "unknownError": "Unknown error",
+    "operationFailed": "Operation failed",
+    "saveFailed": "Save failed",
+    "deleteFailed": "Delete failed",
+    "loadFailed": "Load failed",
+    "exportFailed": "Export failed",
+    "importFailed": "Import failed"
+  }
+}

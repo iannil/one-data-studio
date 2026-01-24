@@ -1,0 +1,73 @@
+# Bisheng API ArgoCD Application
+# Sprint 23: Production Readiness - GitOps
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bisheng-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: one-data-studio
+    app.kubernetes.io/component: backend
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: one-data-alerts
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: one-data-alerts
+spec:
+  project: one-data-studio
+
+  source:
+    repoURL: https://github.com/your-org/one-data-studio.git
+    targetRevision: HEAD
+    path: deploy/kubernetes/applications/bisheng-api
+
+    # Kustomize configuration (if using Kustomize)
+    # kustomize:
+    #   images:
+    #     - name: one-data-studio/bisheng-api
+    #       newTag: v1.0.0
+
+    # Helm configuration (if using Helm)
+    # helm:
+    #   valueFiles:
+    #     - values.yaml
+    #     - values-production.yaml
+    #   parameters:
+    #     - name: image.tag
+    #       value: v1.0.0
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: one-data-system
+
+  syncPolicy:
+    automated:
+      prune: true        # Delete resources that are no longer defined
+      selfHeal: true     # Automatically fix drift
+      allowEmpty: false  # Don't delete all resources if manifest is empty
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Health checks
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replicas managed by HPA
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /status
+
+  # Revision history limit
+  revisionHistoryLimit: 10

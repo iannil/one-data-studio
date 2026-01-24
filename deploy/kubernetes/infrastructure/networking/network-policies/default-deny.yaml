@@ -1,0 +1,63 @@
+# Default Deny NetworkPolicy
+# Sprint 24: Security Hardening
+# Deny all ingress/egress traffic by default for security
+
+---
+# Default deny all ingress traffic in one-data-alldata namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-alldata
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Default deny all ingress traffic in one-data-bisheng namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-bisheng
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Default deny all ingress traffic in one-data-cube namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-cube
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Default deny all ingress traffic in one-data-web namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-web
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Default deny all ingress traffic in one-data-infra namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-infra
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress

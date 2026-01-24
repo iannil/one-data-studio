@@ -79,6 +79,37 @@ except ImportError:
         CREATE = type('', (), {'value': 'create'})()
         EXECUTE = type('', (), {'value': 'execute'})()
 
+# 尝试导入验证模块
+try:
+    from shared.validation import (
+        validate_request, validate_query_params, sanitize_input,
+        check_sql_injection, limit_content_size, COMMON_SCHEMAS
+    )
+    VALIDATION_ENABLED = True
+except ImportError:
+    VALIDATION_ENABLED = False
+    # 装饰器空实现
+    def validate_request(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def sanitize_input(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def check_sql_injection(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def limit_content_size(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+    def validate_query_params(*args, **kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
+
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
@@ -104,7 +135,9 @@ def get_user_id():
 
 @app.route("/api/v1/health")
 def health():
-    """健康检查（无需认证）"""
+    """健康检查（无需认证）- 深度检查所有依赖"""
+    import time as time_module
+
     health_status = {
         "code": 0,
         "message": "healthy",
@@ -114,24 +147,113 @@ def health():
         "connections": {
             "alldata_api": ALDATA_API_URL,
             "cube_api": CUBE_API_URL
-        }
+        },
+        "checks": {}
     }
+
+    all_healthy = True
 
     # 测试数据库连接
     try:
+        start = time_module.time()
         db = get_db_session()
         db.execute("SELECT 1")
         db.close()
-        health_status["database"] = "connected"
+        latency = (time_module.time() - start) * 1000
+        health_status["checks"]["database"] = {
+            "status": "healthy",
+            "latency_ms": round(latency, 2)
+        }
     except Exception as e:
-        health_status["database"] = f"disconnected: {str(e)}"
+        health_status["checks"]["database"] = {"status": "unhealthy", "error": str(e)}
+        all_healthy = False
 
-    return jsonify(health_status)
+    # 测试 Redis 连接
+    try:
+        import redis
+        redis_host = os.getenv('REDIS_HOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT', '6379'))
+        redis_client = redis.Redis(host=redis_host, port=redis_port, socket_timeout=2)
+        start = time_module.time()
+        redis_client.ping()
+        latency = (time_module.time() - start) * 1000
+        info = redis_client.info('memory')
+        health_status["checks"]["redis"] = {
+            "status": "healthy",
+            "latency_ms": round(latency, 2),
+            "used_memory_mb": round(info.get('used_memory', 0) / 1024 / 1024, 2)
+        }
+    except ImportError:
+        health_status["checks"]["redis"] = {"status": "not_configured"}
+    except Exception as e:
+        health_status["checks"]["redis"] = {"status": "unhealthy", "error": str(e)}
+        # Redis 是可选依赖，不影响整体健康
+
+    # 测试 Milvus 连接
+    try:
+        vector_store = VectorStore()
+        start = time_module.time()
+        collections = vector_store.list_collections()
+        latency = (time_module.time() - start) * 1000
+        health_status["checks"]["milvus"] = {
+            "status": "healthy",
+            "latency_ms": round(latency, 2),
+            "collection_count": len(collections) if collections else 0
+        }
+    except Exception as e:
+        health_status["checks"]["milvus"] = {"status": "unhealthy", "error": str(e)}
+        # Milvus 是可选依赖，不影响整体健康
+
+    # 测试上游服务连接
+    try:
+        start = time_module.time()
+        response = requests.get(f"{ALDATA_API_URL}/api/v1/health", timeout=5)
+        latency = (time_module.time() - start) * 1000
+        if response.status_code == 200:
+            health_status["checks"]["alldata_api"] = {
+                "status": "healthy",
+                "latency_ms": round(latency, 2)
+            }
+        else:
+            health_status["checks"]["alldata_api"] = {
+                "status": "degraded",
+                "http_status": response.status_code
+            }
+    except Exception as e:
+        health_status["checks"]["alldata_api"] = {"status": "unreachable", "error": str(e)}
+        # 上游服务不可用不影响本服务健康
+
+    # 测试 LLM 服务连接
+    try:
+        start = time_module.time()
+        response = requests.get(f"{CUBE_API_URL}/v1/models", timeout=5)
+        latency = (time_module.time() - start) * 1000
+        if response.status_code == 200:
+            health_status["checks"]["cube_api"] = {
+                "status": "healthy",
+                "latency_ms": round(latency, 2)
+            }
+        else:
+            health_status["checks"]["cube_api"] = {
+                "status": "degraded",
+                "http_status": response.status_code
+            }
+    except Exception as e:
+        health_status["checks"]["cube_api"] = {"status": "unreachable", "error": str(e)}
+
+    # 设置整体状态
+    if not all_healthy:
+        health_status["code"] = 1
+        health_status["message"] = "degraded"
+
+    return jsonify(health_status), 200 if all_healthy else 503
 
 
 @app.route("/api/v1/chat", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
+@validate_request('chat_request')
+@sanitize_input('message')
 def chat():
     """聊天接口（需要认证）"""
     data = request.json
@@ -313,6 +435,8 @@ def get_workflow(workflow_id):
 @app.route("/api/v1/workflows", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.WORKFLOW, Operation.CREATE)
+@validate_request('workflow_create')
+@sanitize_input('name', 'description')
 def create_workflow():
     """创建工作流（需要认证）"""
     data = request.json
@@ -746,6 +870,8 @@ def generate_sql():
 @app.route("/api/v1/text2sql", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
+@validate_request('text2sql_request')
+@check_sql_injection('natural_language', 'database')
 def text2sql():
     """Text-to-SQL 生成（别名端点，与 /api/v1/sql/generate 相同）
 
@@ -1343,6 +1469,292 @@ def batch_delete_documents():
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
+
+
+# =============================================================================
+# Sprint 15: 图片上传与多模态支持
+# =============================================================================
+
+# 尝试导入图片处理模块
+try:
+    from services.image_processor import ImageProcessor, get_image_processor
+    from services.vision_embedding import VisionEmbeddingService, get_vision_service
+    IMAGE_PROCESSING_AVAILABLE = True
+except ImportError:
+    IMAGE_PROCESSING_AVAILABLE = False
+    logger.warning("Image processing modules not available")
+
+
+@app.route("/api/v1/images/upload", methods=["POST"])
+@require_jwt()
+def upload_image():
+    """
+    上传图片
+    Sprint 15: 多模态支持
+
+    支持:
+    - 图片预处理（缩放、格式转换）
+    - OCR 文字提取
+    - 视觉嵌入生成（可选）
+    """
+    if not IMAGE_PROCESSING_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Image processing not available. Install required dependencies."
+        }), 503
+
+    if 'file' not in request.files:
+        return jsonify({"code": 40001, "message": "No file provided"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"code": 40001, "message": "No file selected"}), 400
+
+    # 解析参数
+    enable_ocr = request.form.get('enable_ocr', 'true').lower() == 'true'
+    generate_embedding = request.form.get('generate_embedding', 'true').lower() == 'true'
+    workflow_id = request.form.get('workflow_id')
+    document_id = request.form.get('document_id')
+
+    try:
+        # 读取文件数据
+        image_data = file.read()
+
+        # 处理图片
+        processor = get_image_processor()
+        processed = processor.process_image(
+            image_data,
+            resize=True,
+            generate_thumbnail=True,
+            extract_text=enable_ocr
+        )
+
+        # 生成唯一 ID
+        image_id = str(uuid.uuid4())
+
+        # 保存到存储（MinIO 或本地）
+        # TODO: 集成 MinIO 存储
+        # 临时使用本地存储
+        import os
+        upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        image_path = os.path.join(upload_dir, f"{image_id}.{processed.metadata.format}")
+        thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
+
+        with open(image_path, 'wb') as f:
+            f.write(processed.data)
+
+        if processed.thumbnail:
+            with open(thumbnail_path, 'wb') as f:
+                f.write(processed.thumbnail)
+
+        # 生成视觉嵌入
+        embedding = None
+        if generate_embedding:
+            try:
+                vision_service = get_vision_service()
+                embedding_result = vision_service.embed_image(processed.data)
+                embedding = embedding_result.embedding
+
+                # 存储到向量数据库
+                vector_store = VectorStore()
+                vector_store.insert(
+                    collection="images",
+                    ids=[image_id],
+                    embeddings=[embedding],
+                    metadatas=[{
+                        "filename": file.filename,
+                        "format": processed.metadata.format,
+                        "width": processed.metadata.width,
+                        "height": processed.metadata.height,
+                        "workflow_id": workflow_id,
+                        "document_id": document_id,
+                        "ocr_text": processed.ocr_result.text if processed.ocr_result else None
+                    }]
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate image embedding: {e}")
+
+        # 构建响应
+        response_data = {
+            "id": image_id,
+            "filename": file.filename,
+            "url": f"/api/v1/images/{image_id}",
+            "thumbnail_url": f"/api/v1/images/{image_id}/thumbnail" if processed.thumbnail else None,
+            "metadata": {
+                "width": processed.metadata.width,
+                "height": processed.metadata.height,
+                "format": processed.metadata.format,
+                "sizeBytes": processed.metadata.size_bytes,
+                "colorMode": processed.metadata.color_mode,
+                "hash": processed.metadata.hash
+            }
+        }
+
+        if processed.ocr_result:
+            response_data["ocr_text"] = processed.ocr_result.text
+            response_data["ocr_confidence"] = processed.ocr_result.confidence
+
+        if embedding:
+            response_data["has_embedding"] = True
+            response_data["embedding_dimension"] = len(embedding)
+
+        return jsonify({
+            "code": 0,
+            "message": "Image uploaded successfully",
+            "data": response_data
+        })
+
+    except ValueError as e:
+        return jsonify({"code": 40001, "message": str(e)}), 400
+    except Exception as e:
+        logger.exception(f"Image upload failed: {e}")
+        return jsonify({"code": 50001, "message": str(e)}), 500
+
+
+@app.route("/api/v1/images/<image_id>", methods=["GET"])
+def get_image(image_id):
+    """获取图片"""
+    import os
+    from flask import send_file
+
+    upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
+
+    # 查找图片文件
+    for ext in ['jpeg', 'png', 'webp', 'gif']:
+        image_path = os.path.join(upload_dir, f"{image_id}.{ext}")
+        if os.path.exists(image_path):
+            return send_file(
+                image_path,
+                mimetype=f'image/{ext}',
+                as_attachment=False
+            )
+
+    return jsonify({"code": 40401, "message": "Image not found"}), 404
+
+
+@app.route("/api/v1/images/<image_id>/thumbnail", methods=["GET"])
+def get_image_thumbnail(image_id):
+    """获取图片缩略图"""
+    import os
+    from flask import send_file
+
+    upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
+    thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
+
+    if os.path.exists(thumbnail_path):
+        return send_file(
+            thumbnail_path,
+            mimetype='image/jpeg',
+            as_attachment=False
+        )
+
+    return jsonify({"code": 40401, "message": "Thumbnail not found"}), 404
+
+
+@app.route("/api/v1/images/<image_id>", methods=["DELETE"])
+@require_jwt()
+def delete_image(image_id):
+    """删除图片"""
+    import os
+
+    upload_dir = os.environ.get('IMAGE_UPLOAD_DIR', '/tmp/images')
+
+    deleted = False
+    for ext in ['jpeg', 'png', 'webp', 'gif']:
+        image_path = os.path.join(upload_dir, f"{image_id}.{ext}")
+        if os.path.exists(image_path):
+            os.remove(image_path)
+            deleted = True
+            break
+
+    # 删除缩略图
+    thumbnail_path = os.path.join(upload_dir, f"{image_id}_thumb.jpg")
+    if os.path.exists(thumbnail_path):
+        os.remove(thumbnail_path)
+
+    # 从向量数据库删除
+    try:
+        vector_store = VectorStore()
+        vector_store.delete("images", [image_id])
+    except Exception as e:
+        logger.warning(f"Failed to delete image embedding: {e}")
+
+    if deleted:
+        return jsonify({"code": 0, "message": "Image deleted"})
+    else:
+        return jsonify({"code": 40401, "message": "Image not found"}), 404
+
+
+@app.route("/api/v1/images/search", methods=["POST"])
+@require_jwt()
+def search_images():
+    """
+    图片搜索
+    Sprint 15: 多模态检索
+
+    支持:
+    - 文本搜索图片（使用 CLIP 文本编码）
+    - 图片搜索图片（使用视觉嵌入）
+    """
+    if not IMAGE_PROCESSING_AVAILABLE:
+        return jsonify({
+            "code": 50003,
+            "message": "Image processing not available"
+        }), 503
+
+    data = request.json
+    query_text = data.get("query")
+    query_image = data.get("image_base64")  # Base64 编码的图片
+    top_k = data.get("top_k", 10)
+
+    if not query_text and not query_image:
+        return jsonify({
+            "code": 40001,
+            "message": "Either query text or image is required"
+        }), 400
+
+    try:
+        vision_service = get_vision_service()
+
+        # 生成查询向量
+        if query_image:
+            # 图片搜索图片
+            processor = get_image_processor()
+            image_data = processor.from_base64(query_image)
+            query_embedding = vision_service.embed_image(image_data).embedding
+        else:
+            # 文本搜索图片
+            query_embedding = vision_service.embed_text(query_text)
+
+        # 向量搜索
+        vector_store = VectorStore()
+        results = vector_store.search("images", query_embedding, top_k)
+
+        # 格式化结果
+        search_results = []
+        for result in results:
+            search_results.append({
+                "id": result.get("id"),
+                "score": result.get("score", 0),
+                "url": f"/api/v1/images/{result.get('id')}",
+                "thumbnail_url": f"/api/v1/images/{result.get('id')}/thumbnail",
+                "metadata": result.get("metadata", {})
+            })
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": search_results,
+                "total": len(search_results)
+            }
+        })
+
+    except Exception as e:
+        logger.exception(f"Image search failed: {e}")
+        return jsonify({"code": 50001, "message": str(e)}), 500
 
 
 @app.route("/api/v1/collections", methods=["GET"])

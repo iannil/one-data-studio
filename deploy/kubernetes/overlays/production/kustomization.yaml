@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: one-data-system
+
+resources:
+  - ../../base
+  - ../../applications
+
+commonLabels:
+  environment: production
+
+# Production uses HPA, so replicas are managed automatically

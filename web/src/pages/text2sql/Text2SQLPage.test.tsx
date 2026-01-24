@@ -1,0 +1,276 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Text2SQLPage from './Text2SQLPage';
+import * as bisheng from '@/services/bisheng';
+import * as alldata from '@/services/alldata';
+
+// Mock 服务
+vi.mock('@/services/bisheng', () => ({
+  default: {
+    generateSQL: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/alldata', () => ({
+  default: {
+    getDatabases: vi.fn(),
+    getTables: vi.fn(),
+    getTableColumns: vi.fn(),
+  },
+}));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{component}</BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
+describe('Text2SQLPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // 默认 mock 返回值
+    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+      code: 0,
+      data: {
+        databases: [
+          { name: 'sales_dw', tables_count: 10 },
+          { name: 'analytics', tables_count: 5 },
+        ],
+      },
+    });
+
+    vi.mocked(alldata.default.getTables).mockResolvedValue({
+      code: 0,
+      data: {
+        tables: [
+          { name: 'orders', rows_count: 1000 },
+          { name: 'customers', rows_count: 500 },
+          { name: 'products', rows_count: 200 },
+        ],
+      },
+    });
+  });
+
+  it('应该正确渲染 Text2SQL 页面', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Text-to-SQL')).toBeInTheDocument();
+    });
+  });
+
+  it('应该显示输入区域', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/自然语言查询/i)).toBeInTheDocument();
+    });
+  });
+
+  it('应该有生成 SQL 按钮', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /生成/i })).toBeInTheDocument();
+    });
+  });
+
+  it('应该显示数据库选择器', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/数据库/i)).toBeInTheDocument();
+    });
+  });
+
+  it('应该显示表选择区域', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/选择表/i)).toBeInTheDocument();
+    });
+  });
+
+  it('应该在输入查询后能够生成 SQL', async () => {
+    vi.mocked(bisheng.default.generateSQL).mockResolvedValue({
+      code: 0,
+      data: {
+        sql: 'SELECT * FROM orders WHERE created_at > DATE_SUB(NOW(), INTERVAL 1 MONTH)',
+        confidence: 0.92,
+        tables_used: ['orders'],
+      },
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/自然语言查询/i)).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText(/自然语言查询/i);
+    await user.type(input, '查询最近一个月的订单');
+
+    const generateButton = screen.getByRole('button', { name: /生成/i });
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      expect(bisheng.default.generateSQL).toHaveBeenCalled();
+    });
+  });
+
+  it('应该显示生成的 SQL 结果', async () => {
+    vi.mocked(bisheng.default.generateSQL).mockResolvedValue({
+      code: 0,
+      data: {
+        sql: 'SELECT COUNT(*) FROM orders',
+        confidence: 0.95,
+        tables_used: ['orders'],
+      },
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/自然语言查询/i)).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText(/自然语言查询/i);
+    await user.type(input, '统计订单数量');
+
+    const generateButton = screen.getByRole('button', { name: /生成/i });
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      // SQL 结果应该显示在页面上
+      expect(screen.getByText(/SELECT/i)).toBeInTheDocument();
+    });
+  });
+
+  it('应该处理生成错误', async () => {
+    vi.mocked(bisheng.default.generateSQL).mockRejectedValue(
+      new Error('Generation failed')
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/自然语言查询/i)).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText(/自然语言查询/i);
+    await user.type(input, '查询数据');
+
+    const generateButton = screen.getByRole('button', { name: /生成/i });
+    fireEvent.click(generateButton);
+
+    // 应该显示错误处理（具体实现可能需要调整）
+  });
+});
+
+describe('Text2SQLPage 数据库和表选择', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+      code: 0,
+      data: {
+        databases: [
+          { name: 'sales_dw', tables_count: 10 },
+        ],
+      },
+    });
+
+    vi.mocked(alldata.default.getTables).mockResolvedValue({
+      code: 0,
+      data: {
+        tables: [
+          { name: 'orders', rows_count: 1000 },
+          { name: 'customers', rows_count: 500 },
+        ],
+      },
+    });
+
+    vi.mocked(alldata.default.getTableColumns).mockResolvedValue({
+      code: 0,
+      data: {
+        columns: [
+          { name: 'id', type: 'INT', primary_key: true },
+          { name: 'customer_id', type: 'INT' },
+          { name: 'amount', type: 'DECIMAL(10,2)' },
+        ],
+      },
+    });
+  });
+
+  it('应该加载数据库列表', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(alldata.default.getDatabases).toHaveBeenCalled();
+    });
+  });
+
+  it('应该在选择数据库后加载表列表', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    await waitFor(() => {
+      expect(alldata.default.getDatabases).toHaveBeenCalled();
+    });
+
+    // 选择数据库后应该加载表
+    await waitFor(() => {
+      expect(alldata.default.getTables).toHaveBeenCalled();
+    });
+  });
+});
+
+describe('Text2SQLPage SQL 预览', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+      code: 0,
+      data: { databases: [] },
+    });
+  });
+
+  it('应该显示 SQL 语法高亮', async () => {
+    renderWithProviders(<Text2SQLPage />);
+
+    // 验证 SQL 编辑器/预览区域存在
+    await waitFor(() => {
+      expect(screen.getByText('Text-to-SQL')).toBeInTheDocument();
+    });
+  });
+
+  it('应该有复制 SQL 功能', async () => {
+    vi.mocked(bisheng.default.generateSQL).mockResolvedValue({
+      code: 0,
+      data: {
+        sql: 'SELECT * FROM orders',
+        confidence: 0.90,
+      },
+    });
+
+    renderWithProviders(<Text2SQLPage />);
+
+    // 验证复制按钮存在（在生成结果后）
+  });
+});

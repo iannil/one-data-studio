@@ -1,0 +1,129 @@
+{
+  "app": {
+    "name": "ONE-DATA-STUDIO",
+    "title": "Data + AI + LLM Integration Platform",
+    "description": "Enterprise-grade Data Intelligence Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "chat": "AI Chat",
+    "workflows": "Workflows",
+    "agents": "Agents",
+    "documents": "Documents",
+    "datasets": "Datasets",
+    "metadata": "Metadata",
+    "text2sql": "Text-to-SQL",
+    "executions": "Executions",
+    "schedules": "Schedules",
+    "settings": "Settings"
+  },
+  "actions": {
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "upload": "Upload",
+    "download": "Download",
+    "export": "Export",
+    "import": "Import",
+    "copy": "Copy",
+    "paste": "Paste",
+    "undo": "Undo",
+    "redo": "Redo",
+    "reset": "Reset",
+    "clear": "Clear",
+    "run": "Run",
+    "stop": "Stop",
+    "pause": "Pause",
+    "resume": "Resume",
+    "retry": "Retry",
+    "preview": "Preview",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "close": "Close",
+    "open": "Open",
+    "select": "Select",
+    "selectAll": "Select All",
+    "more": "More",
+    "less": "Less",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "success": "Success",
+    "failed": "Failed",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "paused": "Paused",
+    "unknown": "Unknown"
+  },
+  "time": {
+    "now": "Just now",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This week",
+    "thisMonth": "This month"
+  },
+  "form": {
+    "required": "This field is required",
+    "optional": "Optional",
+    "placeholder": "Enter...",
+    "selectPlaceholder": "Select...",
+    "validation": {
+      "email": "Please enter a valid email address",
+      "url": "Please enter a valid URL",
+      "number": "Please enter a valid number",
+      "minLength": "Minimum {{min}} characters",
+      "maxLength": "Maximum {{max}} characters",
+      "min": "Minimum value is {{min}}",
+      "max": "Maximum value is {{max}}"
+    }
+  },
+  "table": {
+    "noData": "No data",
+    "total": "Total {{total}} items",
+    "selected": "{{count}} selected",
+    "perPage": "{{count}} per page",
+    "pageOf": "Page {{current}} of {{total}}"
+  },
+  "confirm": {
+    "title": "Confirm Action",
+    "deleteTitle": "Confirm Delete",
+    "deleteMessage": "Are you sure you want to delete? This action cannot be undone.",
+    "leaveTitle": "Confirm Leave",
+    "leaveMessage": "You have unsaved changes. Are you sure you want to leave?"
+  },
+  "user": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "profile": "Profile",
+    "settings": "Account Settings",
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "role": "Role"
+  },
+  "language": {
+    "switch": "Switch Language",
+    "current": "Current Language"
+  }
+}

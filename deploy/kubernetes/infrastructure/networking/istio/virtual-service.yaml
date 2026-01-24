@@ -1,0 +1,287 @@
+# ONE-DATA-STUDIO VirtualService Configuration
+# Sprint 11.1: 服务网格与流量管理 - 灰度发布支持
+
+---
+# VirtualService: Alldata API with Canary Support
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: alldata-api-vs
+  namespace: one-data-alldata
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  # 生产流量路由
+  - match:
+    - headers:
+        x-canary:
+          regex: ".*"  # 匹配任何值，用于强制路由到金丝雀
+    route:
+    - destination:
+        host: alldata-api
+        subset: canary  # 金丝雀版本
+      weight: 100
+  # 默认流量分配（调整 weight 实现灰度发布）
+  - match:
+    - uri:
+        prefix: /api/v1/datasets
+    - uri:
+        prefix: /api/v1/metadata
+    route:
+    - destination:
+        host: alldata-api
+        subset: stable  # 稳定版本
+      weight: 90  # 调整此值控制灰度比例
+    - destination:
+        host: alldata-api
+        subset: canary  # 金丝雀版本
+      weight: 10  # 调整此值控制灰度比例
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,connect-failure,refused-stream,reset
+
+---
+# VirtualService: Bisheng API with Canary Support
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: bisheng-api-vs
+  namespace: one-data-bisheng
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  # 金丝雀流量路由
+  - match:
+    - headers:
+        x-canary:
+          regex: ".*"
+    route:
+    - destination:
+        host: bisheng-api
+        subset: canary
+      weight: 100
+  # 默认流量分配
+  - match:
+    - uri:
+        prefix: /api/v1/chat
+    - uri:
+        prefix: /api/v1/workflows
+    - uri:
+        prefix: /api/v1/rag
+    - uri:
+        prefix: /api/v1/sql
+    route:
+    - destination:
+        host: bisheng-api
+        subset: stable
+      weight: 90
+    - destination:
+        host: bisheng-api
+        subset: canary
+      weight: 10
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: 5xx,connect-failure,refused-stream,reset
+
+---
+# VirtualService: OpenAI Proxy with Canary Support
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: openai-proxy-vs
+  namespace: one-data-cube
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  # 金丝雀流量路由
+  - match:
+    - headers:
+        x-canary:
+          regex: ".*"
+    route:
+    - destination:
+        host: openai-proxy
+        subset: canary
+      weight: 100
+  # 默认流量分配
+  - match:
+    - uri:
+        prefix: /v1/
+    route:
+    - destination:
+        host: openai-proxy
+        subset: stable
+      weight: 95  # 模型服务更保守的灰度策略
+    - destination:
+        host: openai-proxy
+        subset: canary
+      weight: 5
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: 5xx,connect-failure,refused-stream,reset
+
+---
+# VirtualService: Web Frontend with Canary Support
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: web-frontend-vs
+  namespace: one-data-system
+spec:
+  hosts:
+  - "one-data.local"
+  - "www.one-data.local"
+  gateways:
+  - one-data-system/web-gateway
+  http:
+  # 金丝雀流量路由（基于用户 ID 哈希的一致性路由）
+  - match:
+    - headers:
+        x-canary:
+          regex: ".*"
+    route:
+    - destination:
+        host: web-frontend
+        subset: canary
+      weight: 100
+  # 默认流量分配
+  - route:
+    - destination:
+        host: web-frontend
+        subset: stable
+      weight: 90
+    - destination:
+        host: web-frontend
+        subset: canary
+      weight: 10
+
+---
+# VirtualService: 基于用户的灰度发布（使用用户 ID 一致性哈希）
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: user-based-canary-vs
+  namespace: one-data-system
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/v1/
+    route:
+    - destination:
+        host: bisheng-api
+        subset: stable
+      weight: 0  # 由一致性哈希控制
+    - destination:
+        host: bisheng-api
+        subset: canary
+      weight: 0  # 由一致性哈希控制
+    # 根据用户 ID 进行一致性哈希路由
+    # 10% 的用户会一直路由到金丝雀版本
+    headers:
+      request:
+        add:
+          x-envoy-upstream-service-time: "0"
+    mirrorPercentage:  # 流量镜像（复制流量到金丝雀，不影响实际响应）
+      value: 10
+
+---
+# VirtualService: 蓝绿部署支持
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: blue-green-deploy-vs
+  namespace: one-data-system
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  - match:
+    - headers:
+        x-deployment-version:
+          exact: "blue"  # 蓝环境
+    route:
+    - destination:
+        host: alldata-api
+        subset: blue
+      weight: 100
+  - match:
+    - headers:
+        x-deployment-version:
+          exact: "green"  # 绿环境
+    route:
+    - destination:
+        host: alldata-api
+        subset: green
+      weight: 100
+  # 默认路由到蓝环境
+  - route:
+    - destination:
+        host: alldata-api
+        subset: blue
+      weight: 100
+
+---
+# VirtualService: A/B 测试支持
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ab-testing-vs
+  namespace: one-data-bisheng
+spec:
+  hosts:
+  - "api.one-data.local"
+  gateways:
+  - one-data-system/api-gateway
+  http:
+  # A 版本（对照组）
+  - match:
+    - headers:
+        x-ab-test:
+          exact: "A"
+    route:
+    - destination:
+        host: bisheng-api
+        subset: version-a
+      weight: 100
+  # B 版本（实验组）
+  - match:
+    - headers:
+        x-ab-test:
+          exact: "B"
+    route:
+    - destination:
+        host: bisheng-api
+        subset: version-b
+      weight: 100
+  # 默认 50/50 分流
+  - route:
+    - destination:
+        host: bisheng-api
+        subset: version-a
+      weight: 50
+    - destination:
+        host: bisheng-api
+        subset: version-b
+      weight: 50

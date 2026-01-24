@@ -1,0 +1,794 @@
+openapi: 3.0.3
+info:
+  title: ONE-DATA-STUDIO Bisheng API
+  description: |
+    大模型应用开发平台 API
+
+    ## 功能概述
+
+    - 工作流管理与执行
+    - 聊天对话接口
+    - RAG 检索增强
+    - Text-to-SQL 生成
+    - Agent 工具调用
+    - 文档管理
+    - 会话管理
+    - 工作流调度
+
+    ## 认证方式
+
+    API 使用 Bearer Token 认证。请在请求头中包含:
+    ```
+    Authorization: Bearer your-access-token
+    ```
+  version: 2.0.0
+  contact:
+    name: ONE-DATA-STUDIO Team
+    email: support@one-data.example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8081
+    description: 开发环境
+  - url: https://api.example.com/bisheng
+    description: 生产环境
+
+tags:
+  - name: Health
+    description: 健康检查
+  - name: Workflows
+    description: 工作流管理
+  - name: Execution
+    description: 工作流执行
+  - name: Chat
+    description: 聊天对话
+  - name: Documents
+    description: 文档管理
+  - name: RAG
+    description: RAG 检索
+  - name: Text2SQL
+    description: Text-to-SQL
+  - name: Agent
+    description: Agent 工具
+  - name: Conversations
+    description: 会话管理
+  - name: Schedules
+    description: 工作流调度
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: 健康检查
+      description: 检查 API 服务健康状态，无需认证
+      operationId: health
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/workflows:
+    get:
+      tags: [Workflows]
+      summary: 获取工作流列表
+      operationId: listWorkflows
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowListResponse'
+    post:
+      tags: [Workflows]
+      summary: 创建工作流
+      operationId: createWorkflow
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkflowResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/workflows/{workflow_id}:
+    get:
+      tags: [Workflows]
+      summary: 获取工作流详情
+      operationId: getWorkflow
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '404':
+          description: 工作流不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags: [Workflows]
+      summary: 更新工作流
+      operationId: updateWorkflow
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '404':
+          description: 工作流不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Workflows]
+      summary: 删除工作流
+      operationId: deleteWorkflow
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: 工作流不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/workflows/{workflow_id}/start:
+    post:
+      tags: [Execution]
+      summary: 启动工作流执行
+      operationId: startWorkflow
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      requestBody:
+        description: 工作流输入参数
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartWorkflowRequest'
+      responses:
+        '202':
+          description: 工作流已启动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartWorkflowResponse'
+
+  /api/v1/workflows/{workflow_id}/stop:
+    post:
+      tags: [Execution]
+      summary: 停止工作流执行
+      operationId: stopWorkflow
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                execution_id:
+                  type: string
+      responses:
+        '200':
+          description: 停止成功
+
+  /api/v1/executions/{execution_id}/logs:
+    get:
+      tags: [Execution]
+      summary: 获取执行日志
+      operationId: getExecutionLogs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      logs:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExecutionLog'
+
+  /api/v1/chat:
+    post:
+      tags: [Chat]
+      summary: 发送聊天消息
+      operationId: chat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+
+  /api/v1/documents/upload:
+    post:
+      tags: [Documents]
+      summary: 上传文档
+      operationId: uploadDocument
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadDocumentRequest'
+      responses:
+        '201':
+          description: 上传成功
+
+  /api/v1/documents:
+    get:
+      tags: [Documents]
+      summary: 获取文档列表
+      operationId: listDocuments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: collection
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/documents/{doc_id}:
+    delete:
+      tags: [Documents]
+      summary: 删除文档
+      operationId: deleteDocument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  /api/v1/rag/query:
+    post:
+      tags: [RAG]
+      summary: RAG 查询
+      operationId: ragQuery
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RagQueryRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RagQueryResponse'
+
+  /api/v1/text2sql:
+    post:
+      tags: [Text2SQL]
+      summary: Text-to-SQL 生成
+      operationId: text2sql
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text2SqlRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Text2SqlResponse'
+
+  /api/v1/tools:
+    get:
+      tags: [Agent]
+      summary: 获取可用工具列表
+      operationId: listTools
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/agent/run:
+    post:
+      tags: [Agent]
+      summary: 运行 Agent
+      operationId: runAgent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunAgentRequest'
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/conversations:
+    get:
+      tags: [Conversations]
+      summary: 获取会话列表
+      operationId: listConversations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Conversations]
+      summary: 创建会话
+      operationId: createConversation
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                model:
+                  type: string
+      responses:
+        '201':
+          description: 创建成功
+
+  /api/v1/conversations/{conversation_id}:
+    delete:
+      tags: [Conversations]
+      summary: 删除会话
+      operationId: deleteConversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    WorkflowId:
+      name: workflow_id
+      in: path
+      required: true
+      description: 工作流 ID
+      schema:
+        type: string
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: bisheng-api
+        version:
+          type: string
+          example: 2.0.0
+        connections:
+          type: object
+          properties:
+            alldata_api:
+              type: string
+            cube_api:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 40001
+        message:
+          type: string
+          example: Invalid request
+        details:
+          type: object
+
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: integer
+        workflow_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [rag, agent, text2sql, custom]
+        status:
+          type: string
+          enum: [stopped, running, error]
+        created_at:
+          type: string
+          format: date-time
+
+    WorkflowListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            workflows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Workflow'
+
+    CreateWorkflowRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        type:
+          type: string
+          enum: [rag, agent, text2sql, custom]
+          default: rag
+
+    CreateWorkflowResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            workflow_id:
+              type: string
+
+    UpdateWorkflowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        definition:
+          type: object
+
+    WorkflowResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/Workflow'
+
+    StartWorkflowRequest:
+      type: object
+      properties:
+        inputs:
+          type: object
+          additionalProperties: true
+
+    StartWorkflowResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            execution_id:
+              type: string
+            status:
+              type: string
+
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        model:
+          type: string
+          default: gpt-4o-mini
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 0.7
+        max_tokens:
+          type: integer
+          minimum: 1
+          maximum: 32000
+          default: 2000
+        conversation_id:
+          type: string
+
+    ChatResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            reply:
+              type: string
+            conversation_id:
+              type: string
+            model:
+              type: string
+
+    UploadDocumentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000000
+        file_name:
+          type: string
+        title:
+          type: string
+        collection:
+          type: string
+          default: default
+
+    RagQueryRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+        collection:
+          type: string
+          default: default
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 5
+
+    RagQueryResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            answer:
+              type: string
+            sources:
+              type: array
+              items:
+                type: string
+            retrieved_count:
+              type: integer
+
+    Text2SqlRequest:
+      type: object
+      required:
+        - natural_language
+      properties:
+        natural_language:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        database:
+          type: string
+          default: sales_dw
+        selected_tables:
+          type: array
+          items:
+            type: string
+
+    Text2SqlResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            sql:
+              type: string
+            confidence:
+              type: number
+            tables_used:
+              type: array
+              items:
+                type: string
+
+    RunAgentRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+        agent_type:
+          type: string
+          enum: [react, plan-and-solve, babyagi]
+          default: react
+        model:
+          type: string
+          default: gpt-4o-mini
+        max_iterations:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+
+    ExecutionLog:
+      type: object
+      properties:
+        node_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, success, error]

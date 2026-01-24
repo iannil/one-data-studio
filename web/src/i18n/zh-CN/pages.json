@@ -1,0 +1,129 @@
+{
+  "home": {
+    "title": "欢迎使用 ONE-DATA-STUDIO",
+    "subtitle": "企业级数据 + AI + LLM 融合平台",
+    "quickStart": "快速开始",
+    "recentWorkflows": "最近的工作流",
+    "recentConversations": "最近的对话",
+    "statistics": {
+      "title": "平台概览",
+      "workflows": "工作流数量",
+      "documents": "文档数量",
+      "executions": "执行次数",
+      "conversations": "对话数量"
+    }
+  },
+  "chat": {
+    "title": "智能对话",
+    "newConversation": "新对话",
+    "inputPlaceholder": "输入消息...",
+    "send": "发送",
+    "thinking": "思考中...",
+    "regenerate": "重新生成",
+    "copyResponse": "复制回复",
+    "clearHistory": "清空历史",
+    "conversationSettings": "对话设置",
+    "model": "模型",
+    "temperature": "温度",
+    "maxTokens": "最大令牌数",
+    "systemPrompt": "系统提示词"
+  },
+  "workflows": {
+    "title": "工作流管理",
+    "create": "创建工作流",
+    "edit": "编辑工作流",
+    "execute": "执行工作流",
+    "name": "工作流名称",
+    "description": "描述",
+    "version": "版本",
+    "status": "状态",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "nodes": {
+      "input": "输入",
+      "output": "输出",
+      "llm": "LLM 调用",
+      "retriever": "向量检索",
+      "condition": "条件判断",
+      "loop": "循环",
+      "agent": "Agent",
+      "think": "思考",
+      "toolCall": "工具调用",
+      "parallel": "并行执行",
+      "subflow": "子工作流",
+      "cache": "缓存",
+      "retry": "重试",
+      "webhook": "Webhook"
+    }
+  },
+  "agents": {
+    "title": "Agent 管理",
+    "create": "创建 Agent",
+    "templates": "Agent 模板",
+    "tools": "可用工具",
+    "runAgent": "运行 Agent",
+    "agentName": "Agent 名称",
+    "agentDescription": "描述",
+    "toolList": "工具列表",
+    "executionHistory": "执行历史"
+  },
+  "documents": {
+    "title": "文档管理",
+    "upload": "上传文档",
+    "uploadImage": "上传图片",
+    "fileName": "文件名",
+    "fileType": "文件类型",
+    "fileSize": "文件大小",
+    "uploadTime": "上传时间",
+    "vectorized": "已向量化",
+    "collection": "向量集合",
+    "chunks": "分块数",
+    "preview": "预览",
+    "reindex": "重新索引"
+  },
+  "text2sql": {
+    "title": "Text-to-SQL",
+    "inputPlaceholder": "用自然语言描述您想查询的数据...",
+    "generate": "生成 SQL",
+    "execute": "执行查询",
+    "generatedSQL": "生成的 SQL",
+    "queryResults": "查询结果",
+    "tableSchema": "表结构",
+    "selectTable": "选择数据表",
+    "explain": "SQL 解释"
+  },
+  "executions": {
+    "title": "执行监控",
+    "executionId": "执行 ID",
+    "workflowName": "工作流名称",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "duration": "耗时",
+    "status": "状态",
+    "logs": "日志",
+    "viewLogs": "查看日志",
+    "input": "输入",
+    "output": "输出"
+  },
+  "schedules": {
+    "title": "调度管理",
+    "create": "创建调度",
+    "scheduleName": "调度名称",
+    "cronExpression": "Cron 表达式",
+    "nextRun": "下次执行",
+    "lastRun": "上次执行",
+    "enabled": "启用",
+    "trigger": "手动触发"
+  },
+  "settings": {
+    "title": "系统设置",
+    "general": "通用设置",
+    "appearance": "外观",
+    "language": "语言",
+    "theme": "主题",
+    "darkMode": "深色模式",
+    "notifications": "通知设置",
+    "security": "安全设置",
+    "apiKeys": "API 密钥"
+  }
+}

@@ -1,11 +1,13 @@
 /**
  * 认证服务
  * Sprint 3.1: Keycloak SSO 集成
+ * Sprint 21: Security Hardening - HttpOnly Cookie 认证
  *
  * 功能：
  * - Keycloak OAuth2/OIDC 登录流程
- * - Token 管理（存储、刷新、验证）
+ * - Token 管理（HttpOnly Cookie 存储，防止 XSS）
  * - 登出处理
+ * - 自动 Token 刷新
  */
 
 import { apiClient } from './api';
@@ -50,47 +52,80 @@ const KEYCLOAK_CONFIG: KeycloakConfig = {
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'web-frontend',
 };
 
-// 本地存储键
+// 本地存储键（仅用于非敏感数据）
+// Token 现在存储在 HttpOnly Cookie 中，不再使用 localStorage
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  REFRESH_TOKEN: 'refresh_token',
   USER_INFO: 'user_info',
   TOKEN_EXPIRES_AT: 'token_expires_at',
+  // DEPRECATED: access_token 和 refresh_token 现在由后端通过 HttpOnly Cookie 管理
 };
+
+// ============= Cookie 工具函数 =============
+
+/**
+ * 获取 Cookie 值（仅用于非 HttpOnly Cookie）
+ * 注意：HttpOnly Cookie 无法通过 JavaScript 读取，这是安全特性
+ */
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+  return null;
+}
+
+/**
+ * 获取 CSRF Token
+ * CSRF Token 存储在可读 Cookie 中，用于发送到服务器验证
+ */
+export function getCsrfToken(): string | null {
+  return getCookie('csrf_token') || getCookie('X-CSRF-Token');
+}
 
 // ============= Token 管理 =============
 
 /**
- * 存储 Token
+ * 存储用户信息（非敏感数据）
+ * Token 现在通过 HttpOnly Cookie 存储
  */
 export function storeTokens(tokens: AuthTokens): void {
   const expiresAt = Date.now() + tokens.expires_in * 1000;
-  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
-  if (tokens.refresh_token) {
-    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
-  }
-  localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
+  sessionStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
+
+  // 注意：Token 现在由服务器通过 Set-Cookie 头设置为 HttpOnly Cookie
+  // 前端不再直接存储 access_token 和 refresh_token
 }
 
 /**
- * 获取访问 Token
+ * 获取访问 Token 状态
+ * 由于使用 HttpOnly Cookie，前端无法读取实际 Token
+ * 返回 'httponly' 表示 Token 存在于 Cookie 中
  */
 export function getAccessToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  // 检查 Token 是否未过期
+  const expiresAt = sessionStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+  if (expiresAt && Date.now() < parseInt(expiresAt, 10)) {
+    return 'httponly'; // 表示 Token 存在但无法读取（HttpOnly）
+  }
+  return null;
 }
 
 /**
- * 获取刷新 Token
+ * 获取刷新 Token（已废弃）
+ * HttpOnly Cookie 中的 refresh_token 无法直接访问
  */
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  // refresh_token 现在是 HttpOnly Cookie，无法通过 JavaScript 访问
+  // 刷新操作由后端自动处理
+  return null;
 }
 
 /**
  * 检查 Token 是否过期
  */
 export function isTokenExpired(): boolean {
-  const expiresAt = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+  const expiresAt = sessionStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
   if (!expiresAt) return true;
   // 提前 5 分钟判断为过期
   return Date.now() > parseInt(expiresAt, 10) - 5 * 60 * 1000;
@@ -100,10 +135,13 @@ export function isTokenExpired(): boolean {
  * 清除所有认证信息
  */
 export function clearAuthData(): void {
-  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-  localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+  sessionStorage.removeItem(STORAGE_KEYS.USER_INFO);
+  sessionStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+  // localStorage 中的历史数据也清理
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user_info');
+  localStorage.removeItem('token_expires_at');
 }
 
 // ============= 用户信息管理 =============
@@ -150,17 +188,30 @@ export function parseJwtToken(token: string): UserInfo | null {
  * 存储用户信息
  */
 export function storeUserInfo(userInfo: UserInfo): void {
-  localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
+  sessionStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
 }
 
 /**
  * 获取用户信息
  */
 export function getUserInfo(): UserInfo | null {
-  const stored = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+  const stored = sessionStorage.getItem(STORAGE_KEYS.USER_INFO);
   if (stored) {
     try {
       return JSON.parse(stored);
+    } catch (e) {
+      return null;
+    }
+  }
+  // Fallback to localStorage for migration
+  const legacyStored = localStorage.getItem('user_info');
+  if (legacyStored) {
+    try {
+      const userInfo = JSON.parse(legacyStored);
+      // Migrate to sessionStorage
+      storeUserInfo(userInfo);
+      localStorage.removeItem('user_info');
+      return userInfo;
     } catch (e) {
       return null;
     }

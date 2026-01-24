@@ -1,0 +1,222 @@
+# Promtail Kubernetes 配置文件
+# Sprint 10: 日志聚合配置 - Kubernetes 原生采集
+#
+# 此配置用于 Kubernetes 环境中的日志采集
+# 支持 Pod 自动发现和标签匹配
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+# 日志采集位置配置
+positions:
+  filename: /run/promtail/positions.yaml
+
+# Loki 客户端配置
+clients:
+  - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+    tenant_id: one-data-studio
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+    backoff_config:
+      min_period: 100ms
+      max_period: 5s
+      max_retries: 20
+    external_labels:
+      cluster: one-data-studio
+      environment: production
+
+# Kubernetes 采集配置
+scrape_configs:
+  # ==================== Kubernetes Pod 日志采集 ====================
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - one-data-system
+            - default
+
+    relabel_configs:
+      # 只采集带有 promtail/enabled: "true" 标签的 Pod
+      - source_labels: [__meta_kubernetes_pod_annotation_promtail_enabled]
+        action: keep
+        regex: "true"
+
+      # 使用 Pod 名称作为 job 名称
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+
+      # 提取命名空间
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+
+      # 提取容器名称
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        action: replace
+        target_label: container
+
+      # 提取 deployment 名称
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: replace
+        target_label: app
+
+      # 提取服务标签
+      - source_labels: [__meta_kubernetes_pod_label_service]
+        action: replace
+        target_label: service
+
+      # 设置日志路径
+      - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        separator: /
+        action: replace
+        target_label: __path__
+        replacement: /var/log/pods/*$1/*.log
+
+    pipeline_stages:
+      # 解析 JSON 格式的日志
+      - match:
+          selector: '{container=~"alldata-api|bisheng-api|openai-proxy"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  message: message
+                  timestamp: timestamp
+                  request_id: request_id
+                  user_id: user_id
+                  duration_ms: duration_ms
+            - labels:
+                level:
+                request_id:
+            - timestamp:
+                source: timestamp
+                format: RFC3339Nano
+
+      # 解析标准 Python 日志格式
+      - match:
+          selector: '{container=~"celery-worker|scheduler"}'
+          stages:
+            - regex:
+                expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<name>[^ ]+) - (?P<level>INFO|WARNING|ERROR|DEBUG|CRITICAL) - (?P<message>.*)'
+            - labels:
+                level:
+                name:
+            - timestamp:
+                source: timestamp
+                format: "2006-01-02 15:04:05,000"
+
+      # 输出过滤：丢弃健康检查日志
+      - drop:
+          expression: '.*GET /api/v1/health.*'
+
+      # 输出过滤：丢弃 metrics 端点日志
+      - drop:
+          expression: '.*GET /metrics.*'
+
+  # ==================== Kubernetes 系统组件日志 ====================
+  - job_name: kubernetes-system
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - kube-system
+            - istio-system
+
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_component]
+        action: keep
+        regex: (kube-apiserver|kube-controller-manager|kube-scheduler|etcd|istio.*)
+
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+
+      - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        separator: /
+        action: replace
+        target_label: __path__
+        replacement: /var/log/pods/*$1/*.log
+
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            ts: ts
+      - labels:
+          level:
+
+  # ==================== 基础设施服务日志 ====================
+  - job_name: infrastructure
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - one-data-system
+
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: (mysql|redis|milvus|minio|keycloak)
+
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: replace
+        target_label: infrastructure
+
+      - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        separator: /
+        action: replace
+        target_label: __path__
+        replacement: /var/log/pods/*$1/*.log
+
+    pipeline_stages:
+      # MySQL 日志解析
+      - match:
+          selector: '{infrastructure="mysql"}'
+          stages:
+            - regex:
+                expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z) (?P<thread>\d+) \[(?P<level>\w+)\] (?P<message>.*)'
+            - labels:
+                level:
+
+      # Redis 日志解析
+      - match:
+          selector: '{infrastructure="redis"}'
+          stages:
+            - regex:
+                expression: '(?P<pid>\d+):(?P<role>\w) (?P<timestamp>\d{2} \w+ \d{4} \d{2}:\d{2}:\d{2}.\d+) (?P<level>[#*-]) (?P<message>.*)'
+            - labels:
+                level:
+
+      # Milvus 日志解析
+      - match:
+          selector: '{infrastructure="milvus"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  message: msg
+            - labels:
+                level:
+
+# 限制配置
+limits_config:
+  readline_limit: 256
+  line_max_truncate: 10240
+  max_label_names_per_stream: 30
+
+target_config:
+  sync_period: 10s
