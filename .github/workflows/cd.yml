@@ -89,7 +89,7 @@ jobs:
       url: https://staging.one-data.example.com
     steps:
       - name: Checkout 代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 设置 ArgoCD CLI
         run: |
@@ -211,7 +211,7 @@ jobs:
       url: https://one-data.example.com
     steps:
       - name: Checkout 代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 设置 ArgoCD CLI
         run: |
