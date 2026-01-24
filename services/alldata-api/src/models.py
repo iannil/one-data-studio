@@ -4,6 +4,7 @@ Alldata API 数据模型
 """
 
 from sqlalchemy import Column, BigInteger, String, Text, Boolean, Integer, DateTime, JSON, ForeignKey, Index
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -190,8 +191,9 @@ class MetadataColumn(Base):
     __tablename__ = 'metadata_columns'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    table_id = Column(BigInteger, ForeignKey('metadata_tables.id', ondelete='CASCADE'), nullable=False, comment='表ID')
     table_name = Column(String(128), nullable=False, comment='表名')
-    database_name = Column(String(128), ForeignKey('metadata_databases.database_name', ondelete='CASCADE'), nullable=False)
+    database_name = Column(String(128), nullable=False, comment='数据库名')
     column_name = Column(String(128), nullable=False, comment='列名')
     column_type = Column(String(64), nullable=False, comment='数据类型')
     is_nullable = Column(Boolean, default=True, comment='是否可空')
@@ -199,7 +201,6 @@ class MetadataColumn(Base):
     position = Column(Integer, nullable=False, comment='列位置')
 
     # 关系
-    database = relationship("MetadataDatabase")
     table = relationship("MetadataTable", back_populates="columns")
 
     __table_args__ = (

@@ -12,8 +12,8 @@ from sqlalchemy.orm import sessionmaker
 logger = logging.getLogger(__name__)
 
 # 数据库配置 - 必须从环境变量读取
-# 支持 DATABASE_URL 作为标准变量名
-DATABASE_URL = os.getenv("DATABASE_URL")
+# 支持 DATABASE_URL 或 CUBE_DATABASE_URL 作为变量名
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("CUBE_DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError(
         "DATABASE_URL environment variable is required. "

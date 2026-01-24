@@ -21,7 +21,7 @@ class IndexedDocument(Base):
     title = Column(String(255), comment='文档标题')
     content = Column(Text, comment='文档内容')
     chunk_count = Column(Integer, default=0, comment='文档块数量')
-    metadata = Column(Text, comment='元数据 (JSON)')
+    extra_metadata = Column(Text, comment='元数据 (JSON)')
     created_by = Column(String(128), comment='创建者')
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp(), comment='创建时间')
 
@@ -34,7 +34,7 @@ class IndexedDocument(Base):
             "file_name": self.file_name,
             "title": self.title,
             "chunk_count": self.chunk_count,
-            "metadata": json.loads(self.metadata) if self.metadata else {},
+            "metadata": json.loads(self.extra_metadata) if self.extra_metadata else {},
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

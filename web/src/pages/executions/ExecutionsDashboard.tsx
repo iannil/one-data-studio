@@ -13,6 +13,7 @@ import {
   Row,
   Col,
   Progress,
+  Modal,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -88,6 +89,16 @@ function ExecutionsDashboard() {
   const executions = executionsData?.data?.executions || [];
   const workflows = workflowsData?.data?.workflows || [];
 
+  const getWorkflowName = (workflowId: string): string => {
+    const workflow = workflows.find((w: Workflow) => w.workflow_id === workflowId);
+    return workflow?.name || workflowId;
+  };
+
+  const getWorkflowType = (workflowId: string): string => {
+    const workflow = workflows.find((w: Workflow) => w.workflow_id === workflowId);
+    return workflow?.type || 'custom';
+  };
+
   // 根据搜索文本过滤
   const filteredExecutions = executions.filter((exec: WorkflowExecution) => {
     if (!searchText) return true;
@@ -99,16 +110,6 @@ function ExecutionsDashboard() {
       exec.workflow_id.toLowerCase().includes(searchLower)
     );
   });
-
-  const getWorkflowName = (workflowId: string): string => {
-    const workflow = workflows.find((w: Workflow) => w.workflow_id === workflowId);
-    return workflow?.name || workflowId;
-  };
-
-  const getWorkflowType = (workflowId: string): string => {
-    const workflow = workflows.find((w: Workflow) => w.workflow_id === workflowId);
-    return workflow?.type || 'custom';
-  };
 
   // 统计数据
   const stats = {

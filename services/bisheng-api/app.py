@@ -28,8 +28,11 @@ from flask import Flask, jsonify, request, g, Response
 
 logger = logging.getLogger(__name__)
 
+# 添加当前目录到路径（确保本地 models 优先于 shared/models）
+sys.path.insert(0, '/app')
+
 # 添加共享模块路径
-sys.path.insert(0, '/app/shared')
+sys.path.insert(1, '/app/shared')
 
 # 导入模型
 from models import get_db, Workflow, Conversation, Message, WorkflowExecution, ExecutionLog, IndexedDocument
@@ -181,9 +184,10 @@ def health():
 
     # 测试数据库连接
     try:
+        from sqlalchemy import text
         start = time_module.time()
         db = get_db_session()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         latency = (time_module.time() - start) * 1000
         health_status["checks"]["database"] = {

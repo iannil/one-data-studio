@@ -76,9 +76,12 @@ services:
   milvus:
     image: milvusdb/milvus:v2.3.0
     container_name: one-data-milvus
+    command: ["milvus", "run", "standalone"]
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
     ports:
       - "19530:19530"
       - "9091:9091"
@@ -126,6 +129,9 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      PORT: 8000
+      # Development mode: disable authentication
+      AUTH_MODE: "false"
     ports:
       - "8000:8000"
     depends_on:
@@ -145,8 +151,15 @@ services:
     container_name: one-data-alldata-api
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
-      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-onedata}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-onedata}
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      PORT: 8001
+      # Development mode: disable authentication
+      AUTH_MODE: "false"
     ports:
       - "8001:8001"
     depends_on:
@@ -165,6 +178,8 @@ services:
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      # Development mode: disable authentication
+      AUTH_MODE: "false"
     ports:
       - "8003:8000"
     depends_on:
@@ -186,6 +201,8 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
       HF_TOKEN: ${HF_TOKEN:-}
+      # Development mode: disable authentication
+      AUTH_MODE: "false"
     ports:
       - "8002:8002"
     depends_on:

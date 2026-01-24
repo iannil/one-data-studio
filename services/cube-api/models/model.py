@@ -96,7 +96,7 @@ class ModelVersion(Base):
     checksum = Column(String(128), comment='文件校验和')
     status = Column(String(32), default='pending', comment='状态: pending, uploading, ready, error')
     metrics = Column(Text, comment='评估指标 (JSON)')
-    metadata = Column(Text, comment='元数据 (JSON)')
+    extra_metadata = Column(Text, comment='元数据 (JSON)')
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp(), comment='创建时间')
 
     # 关系
@@ -117,16 +117,16 @@ class ModelVersion(Base):
 
     def get_metadata(self) -> dict:
         """获取元数据"""
-        if not self.metadata:
+        if not self.extra_metadata:
             return {}
         try:
-            return json.loads(self.metadata)
+            return json.loads(self.extra_metadata)
         except json.JSONDecodeError:
             return {}
 
     def set_metadata(self, metadata: dict):
         """设置元数据"""
-        self.metadata = json.dumps(metadata, ensure_ascii=False)
+        self.extra_metadata = json.dumps(metadata, ensure_ascii=False)
 
     def to_dict(self):
         """转换为字典"""

@@ -48,8 +48,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # 复制共享模块
 COPY services/shared/ /app/shared/
 
-# 复制应用代码
-COPY services/alldata-api/src/ /app/src/
+# 复制应用代码（完整目录结构）
+COPY services/alldata-api/ /app/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -57,7 +57,7 @@ USER appuser
 
 # 健康检查 - 使用 Python 标准库 (无需 requests)
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/health', timeout=2)" || exit 1
 
 # 暴露端口 (与 docker-compose.yml 一致)
 EXPOSE 8001

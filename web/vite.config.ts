@@ -69,24 +69,8 @@ export default defineConfig({
         target: 'http://localhost:8002',
         changeOrigin: true,
       },
-      // Bisheng API
-      '/api/v1/workflows': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/api/v1/rag': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/api/v1/text2sql': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/api/v1/chat': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/api/v1/templates': {
+      // Bisheng API - all other /api/v1/* routes
+      '/api/v1': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

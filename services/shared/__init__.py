@@ -23,6 +23,31 @@ from .error_handler import (
     register_error_handlers,
 )
 
+# Initialize __all__ with base exports
+__all__ = [
+    # Config
+    "Config",
+    "get_config",
+    "reload_config",
+    # Error Handling
+    "ErrorCode",
+    "APIError",
+    "ValidationError",
+    "NotFoundError",
+    "UnauthorizedError",
+    "ForbiddenError",
+    "ConflictError",
+    "DatabaseError",
+    "ExternalAPIError",
+    "success_response",
+    "error_response",
+    "handle_exception",
+    "catch_errors",
+    "validate_required",
+    "validate_field",
+    "register_error_handlers",
+]
+
 # Sprint 8: 缓存
 try:
     from .cache import (
@@ -105,27 +130,3 @@ try:
     ]
 except ImportError:
     pass
-
-__all__ = [
-    # Config
-    "Config",
-    "get_config",
-    "reload_config",
-    # Error Handling
-    "ErrorCode",
-    "APIError",
-    "ValidationError",
-    "NotFoundError",
-    "UnauthorizedError",
-    "ForbiddenError",
-    "ConflictError",
-    "DatabaseError",
-    "ExternalAPIError",
-    "success_response",
-    "error_response",
-    "handle_exception",
-    "catch_errors",
-    "validate_required",
-    "validate_field",
-    "register_error_handlers",
-]

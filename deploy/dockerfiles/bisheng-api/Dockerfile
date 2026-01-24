@@ -36,8 +36,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # 复制共享认证模块
 COPY services/shared/ /app/shared/
 
-# 复制应用代码
-COPY services/bisheng-api/app.py /app/
+# 复制应用代码（包含所有模块）
+COPY services/bisheng-api/ /app/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -52,6 +52,6 @@ ENV AUTH_MODE=true
 
 # 健康检查 - 使用 Python 而非 curl (slim 镜像无 curl)
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2)" || exit 1
 
 CMD ["python", "/app/app.py"]

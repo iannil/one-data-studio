@@ -22,11 +22,11 @@ from functools import wraps
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 添加项目路径（确保本地 models 优先于 shared/models）
+sys.path.insert(0, '/app')
 
 # 添加共享模块路径
-sys.path.insert(0, '/app/shared')
+sys.path.insert(1, '/app/shared')
 
 from models import (
     SessionLocal, init_db,

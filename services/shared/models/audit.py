@@ -50,7 +50,7 @@ class AuditLog(AuditLogBase):
     error_message = Column(Text, nullable=True, comment='错误消息')
 
     # 详细信息
-    metadata = Column(JSON, nullable=True, comment='元数据')
+    extra_metadata = Column(JSON, nullable=True, comment='元数据')
 
     # 时间戳
     timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
@@ -86,7 +86,7 @@ class AuditLog(AuditLogBase):
             'resource_id': self.resource_id,
             'error_code': self.error_code,
             'error_message': self.error_message,
-            'metadata': self.metadata,
+            'extra_metadata': self.extra_metadata,
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
@@ -114,7 +114,7 @@ class AuditLog(AuditLogBase):
             resource_id=event.resource_id,
             error_code=event.error_code,
             error_message=event.error_message,
-            metadata=event.metadata,
+            extra_metadata=event.metadata,
             timestamp=event.timestamp,
         )
 

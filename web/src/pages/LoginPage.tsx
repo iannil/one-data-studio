@@ -204,7 +204,7 @@ function LoginPage() {
                     </Form.Item>
 
                     <Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>
-                      注意: 模拟登录功能已禁用，请使用 Keycloak SSO
+                      开发模式: 输入任意用户名和密码即可登录
                     </Paragraph>
                   </Form>
                 )}

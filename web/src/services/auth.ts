@@ -433,16 +433,40 @@ export function getKeycloakConfig(): KeycloakConfig {
 }
 
 // ============= 模拟登录（开发模式）============
-// SECURITY: mockLogin is completely disabled
-// Use Keycloak authentication in all environments
+// Development mode only - enables local testing without Keycloak
 
 /**
- * 模拟登录（已禁用）
- * @deprecated This function is disabled for security. Use Keycloak authentication.
+ * 模拟登录（仅开发模式）
+ * @param username 用户名
+ * @param password 密码
+ * @returns 登录结果
  */
-export function mockLogin(_username: string, _password: string): Promise<boolean> {
-  // SECURITY: Mock login is disabled to prevent hardcoded credential exposure
-  // Use Keycloak SSO for authentication in all environments
+export function mockLogin(username: string, password: string): Promise<boolean> {
+  // Only allow mock login in development mode
+  if (!import.meta.env.DEV) {
+    console.warn('Mock login is only available in development mode');
+    return Promise.resolve(false);
+  }
+
+  // Simple mock validation for development
+  if (username && password) {
+    // Create mock user info
+    const mockUser: UserInfo = {
+      sub: 'dev-user-001',
+      preferred_username: username,
+      email: `${username}@dev.local`,
+      name: username,
+      roles: ['admin', 'user', 'developer'],
+    };
+
+    // Store mock tokens (simulating 1 hour expiry)
+    const expiresAt = Date.now() + 3600 * 1000;
+    sessionStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
+    storeUserInfo(mockUser);
+
+    return Promise.resolve(true);
+  }
+
   return Promise.resolve(false);
 }
 

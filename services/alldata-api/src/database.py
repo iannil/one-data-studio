@@ -7,7 +7,7 @@ Sprint 8: 连接池优化和慢查询日志
 
 import os
 import time
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
@@ -203,7 +203,7 @@ def check_db_health():
     """检查数据库健康状态"""
     try:
         with db_manager.get_session() as session:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
