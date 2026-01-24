@@ -2,13 +2,16 @@
 
 本文档目录提供 ONE-DATA-STUDIO 项目的完整文档索引。
 
+> **提示**: 首次访问请先阅读 [项目 README](../README.md) 或 [中文版 README](../README_ZH.md) 了解项目概况。
+
 ---
 
 ## 快速导航
 
 | 文档类型 | 链接 | 说明 |
 |----------|------|------|
-| 📖 [README](../README.md) | 项目概述 |
+| 📖 [项目 README](../README.md) | 项目概述（英文） |
+| 📖 [中文 README](../README_ZH.md) | 项目概述（中文） |
 | 🚀 [快速开始](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
 | 📊 [当前状态](03-progress/current-status.md) | 项目进度追踪 |
 | 🗺️ [路线图](04-planning/roadmap.md) | 开发计划与里程碑 |

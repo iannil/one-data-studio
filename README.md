@@ -1,100 +1,284 @@
 # ONE-DATA-STUDIO
 
-> 企业级 DataOps + MLOps + LLMOps 全栈智能基础设施
+<div align="center">
 
-## 简介
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/)
+[![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.27%2B-326ce5.svg)](https://kubernetes.io/)
 
-ONE-DATA-STUDIO 是一个融合平台设计，整合了三个企业级 AI 平台：
+**Enterprise-Grade DataOps + MLOps + LLMOps Converged Platform**
 
-* **Alldata** - 数据治理与开发平台（DataOps 层）
-* **Cube Studio** - 云原生 MLOps 平台（模型/计算层）
-* **Bisheng** - 大模型应用开发平台（LLMOps 层）
+[Features](#features) • [Quick Start](#quick-start) • [Architecture](#architecture) • [Documentation](#documentation) • [Contributing](#contributing) • [简体中文](README_ZH.md)
 
-这个平台打通了从**原始数据治理**到**模型训练部署**，再到**生成式AI应用构建**的完整价值链。
+</div>
 
-## 架构概览
+---
+
+## Overview
+
+**ONE-DATA-STUDIO** is an open-source enterprise platform that converges three critical AI infrastructure layers:
+
+- **Alldata** - Data governance and development platform (DataOps layer)
+- **Cube Studio** - Cloud-native MLOps platform (Model/Compute layer)
+- **Bisheng** - LLM application development platform (LLMOps layer)
+
+This platform bridges the complete value chain from **raw data governance** to **model training/deployment**, and finally to **generative AI application construction**.
+
+## Why ONE-DATA-STUDIO?
+
+### Break Down Data & AI Silos
+
+Data teams (using Alldata) and algorithm teams (using Cube Studio) often work in isolation. Our integration enables a **seamless Feature Store** where algorithm engineers can directly access high-quality, governed data without redundant cleaning efforts.
+
+### Unified Structured & Unstructured Data
+
+Alldata excels at structured data while Bisheng handles unstructured documents. Combined, enterprises can build **"ChatBI"**—querying both document knowledge bases and database sales reports using natural language (Text-to-SQL).
+
+### Complete Private LLM Deployment Loop
+
+Many enterprises want to use Bisheng for applications but lack model fine-tuning capabilities, or have models trained via Cube Studio but lack application-building tools.
+
+**All three combined = Private Data (Alldata) + Private Compute/Models (Cube Studio) + Private Applications (Bisheng)**. This constitutes the most secure enterprise AGI solution.
+
+### Full Lifecycle Governance
+
+From data lineage (Alldata) to model lineage (Cube Studio) to application logs, the entire chain is traceable. If an AI answer is incorrect, you can trace whether it's a Prompt issue, model overfitting, or dirty source data.
+
+## Features
+
+### Data Operations (DataOps)
+
+- Data integration and EEL pipelines
+- Metadata management and data governance
+- Feature store for ML models
+- Vector storage for RAG applications
+
+### Machine Learning Operations (MLOps)
+
+- Jupyter Notebook development environment
+- Distributed model training with Ray
+- Model registry and versioning
+- Model serving with vLLM (OpenAI-compatible API)
+
+### LLM Operations (LLMOps)
+
+- RAG (Retrieval-Augmented Generation) pipelines
+- Agent orchestration and workflow builder
+- Prompt management and templates
+- Knowledge base management
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     L4 应用编排层 (Bisheng)                      │
-│                  RAG 流水线 | Agent 编排 | Prompt 管理             │
+│                  L4 Application Layer (Bisheng)                  │
+│                   RAG Pipeline | Agent Orchestration              │
 └─────────────────────────────────────────────────────────────────┘
-                              ↕ OpenAI API / 元数据
+                              ↕ OpenAI API / Metadata
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L3 算法引擎层 (Cube Studio)                   │
-│            Notebook | 分布式训练 | 模型仓库 | 模型服务化           │
+│                 L3 Algorithm Engine Layer (Cube Studio)          │
+│              Notebook | Distributed Training | Model Serving     │
 └─────────────────────────────────────────────────────────────────┘
-                              ↕ 挂载数据卷
+                              ↕ Mount Data Volumes
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L2 数据底座层 (Alldata)                       │
-│          数据集成 | ETL | 数据治理 | 特征存储 | 向量存储           │
+│                   L2 Data Foundation Layer (Alldata)             │
+│         Data Integration | ETL | Governance | Vector Store       │
 └─────────────────────────────────────────────────────────────────┘
-                              ↕ 存储协议
+                              ↕ Storage Protocol
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L1 基础设施层 (K8s)                           │
-│              CPU/GPU 资源池 | 存储 | 网络 | 监控                  │
+│                   L1 Infrastructure Layer (Kubernetes)           │
+│              CPU/GPU Pool | Storage | Network | Monitoring       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 文档导航
+## Key Integrations
 
-### 项目概览
+| Integration | Description | Status |
+|-------------|-------------|--------|
+| **Alldata → Cube** | Unified storage protocol with dataset versioning | 90% |
+| **Cube → Bisheng** | OpenAI-compatible model serving API | 85% |
+| **Alldata → Bisheng** | Metadata-based Text-to-SQL | 75% |
 
-| 文档 | 说明 |
-|------|------|
-| [项目说明](docs/00-project/README.md) | 仓库概述和使用指南 |
-| [当前状态](docs/03-progress/current-status.md) | 项目进度与待办事项 |
-| [路线图](docs/04-planning/roadmap.md) | 开发计划与里程碑 |
+## Tech Stack
 
-### 架构设计
+### Frontend
 
-| 文档 | 说明 |
-|------|------|
-| [平台概览](docs/01-architecture/platform-overview.md) | 平台概念与价值主张 |
-| [四层架构](docs/01-architecture/four-layer-stack.md) | L1-L4 架构详解 |
-| [应用场景](docs/01-architecture/use-cases.md) | 典型应用场景介绍 |
-| [技术栈](docs/01-architecture/tech-stack.md) | 技术选型与版本 |
+- **React 18.3** with TypeScript
+- **Ant Design 5.14** UI components
+- **React Router 6.22** for navigation
+- **React Query 5.24** for server state
+- **Zustand 4.5** for client state
+- **Vite 5.1** for building
 
-### 集成方案
+### Backend Services
 
-| 文档 | 说明 |
-|------|------|
-| [集成总览](docs/02-integration/integration-overview.md) | 三个集成点概览 |
-| [Alldata ↔ Cube](docs/02-integration/alldata-cube.md) | 数据与训练连接 |
-| [Cube ↔ Bisheng](docs/02-integration/cube-bisheng.md) | 模型与应用连接 |
-| [Alldata ↔ Bisheng](docs/02-integration/alldata-bisheng.md) | 结构化数据与LLM |
-| [时序图](docs/02-integration/sequence-diagrams.md) | 研发态/运行态流程图 |
+- **Python 3.10+** with FastAPI/Flask
+- **MySQL 8.0** for persistent storage
+- **Redis 7.0** for caching
+- **MinIO** for S3-compatible object storage
+- **Milvus 2.3** for vector database
 
-### 设计规范
+### Infrastructure
 
-| 文档 | 说明 |
-|------|------|
-| [API 规范](docs/02-integration/api-specifications.md) | 三大集成点 API 接口规范 |
-| [安全设计](docs/02-integration/security-design.md) | 认证鉴权与权限管理方案 |
-| [部署架构](docs/02-integration/deployment-architecture.md) | K8s 部署架构与 Helm Chart |
+- **Kubernetes 1.27+** for orchestration
+- **Helm 3.13+** for package management
+- **Prometheus + Grafana** for monitoring
+- **Keycloak** for authentication
 
-### 开发指南
+## Quick Start
 
-| 文档 | 说明 |
-|------|------|
-| [PoC 实施手册](docs/05-development/poc-playbook.md) | PoC 环境搭建指南 |
-| [API 测试指南](docs/05-development/api-testing-guide.md) | API 测试用例与方法 |
+### Prerequisites
 
-## 核心集成点
+- Docker 20.10+
+- Docker Compose 2.0+
+- kubectl 1.25+ (for Kubernetes deployment)
+- Helm 3.x (for Helm deployment)
 
-1. **Alldata → Cube Studio**：统一存储协议与数据集版本化
-2. **Cube Studio → Bisheng**：OpenAI 兼容的模型即服务
-3. **Alldata → Bisheng**：基于元数据的 Text-to-SQL
+### Option 1: Docker Compose (Recommended for Development)
 
-## 典型应用场景
+```bash
+# Clone the repository
+git clone https://github.com/one-data-studio/one-data-studio.git
+cd one-data-studio
 
-* **企业知识中台**：统一管理企业文档知识，提供智能问答
-* **ChatBI**：用自然语言查询数据库，自动生成报表
-* **工业质检**：传感器数据实时分析，预测性维护
+# Start all services
+docker-compose -f deploy/local/docker-compose.yml up -d
 
-## 许可证
+# Check service status
+docker-compose -f deploy/local/docker-compose.yml ps
+```
 
-本项目采用 [Apache License 2.0](LICENSE) 开源协议。
+### Option 2: Kubernetes (Recommended for Production)
+
+```bash
+# Create Kind cluster
+make kind-cluster
+
+# Deploy all services
+make install
+
+# Check status
+make status
+
+# Forward ports to access services
+make forward
+```
+
+### Access the Platform
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Web UI | <http://localhost:3000> | Development mode: no auth |
+| Alldata API | <http://localhost:8001> | - |
+| Bisheng API | <http://localhost:8000> | - |
+| OpenAI Proxy | <http://localhost:8003> | - |
+| MinIO Console | <http://localhost:9001> | See `.env` |
+| Prometheus | <http://localhost:9090> | - |
+| Grafana | <http://localhost:3001> | admin/admin |
+
+## Project Structure
+
+```
+one-data-studio/
+├── services/               # Backend services
+│   ├── alldata-api/        # Data governance API (Flask)
+│   ├── bisheng-api/        # Application orchestration API (Flask)
+│   ├── openai-proxy/       # OpenAI-compatible proxy (FastAPI)
+│   ├── cube-api/           # Model service API (FastAPI)
+│   └── shared/             # Shared modules (auth, storage)
+├── web/                    # Frontend application (React + TypeScript)
+├── deploy/                 # Deployment configurations
+│   ├── local/              # Docker Compose files
+│   ├── kubernetes/         # Kubernetes manifests
+│   ├── helm/               # Helm charts
+│   ├── dockerfiles/        # Docker build files
+│   └── scripts/            # Deployment scripts
+├── scripts/                # Operations scripts
+├── tests/                  # Test files
+├── docs/                   # Documentation
+└── examples/               # Usage examples
+```
+
+## Use Cases
+
+### Enterprise Knowledge Center
+
+Unified management of enterprise document knowledge with intelligent Q&A capabilities.
+
+### ChatBI
+
+Query databases using natural language with automatic report generation.
+
+### Industrial Quality Inspection
+
+Real-time sensor data analysis with predictive maintenance.
+
+## Documentation
+
+- [Quick Start Guide](QUICKSTART.md)
+- [Architecture Overview](docs/01-architecture/platform-overview.md)
+- [API Specifications](docs/02-integration/api-specifications.md)
+- [Development Guide](docs/05-development/poc-playbook.md)
+- [User Guide](docs/07-user-guide/getting-started.md)
+
+## Contributing
+
+We welcome contributions from the community!
+
+### Development Setup
+
+```bash
+# Backend development
+cd services/bisheng-api
+pip install -r requirements.txt
+python app.py
+
+# Frontend development
+cd web
+npm install
+npm run dev
+```
+
+### Code Style
+
+- **Python**: Follow PEP 8, use `logging` instead of `print()`
+- **TypeScript**: Follow ESLint rules, avoid `console.log` (use `console.error` only)
+- **Commits**: Use clear commit messages
+
+### Testing
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run with coverage
+pytest tests/ --cov=services/ --cov-report=html
+
+# Run frontend tests
+cd web && npm test
+```
+
+### Pull Requests
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Roadmap
+
+- [ ] Enhanced vector search capabilities
+- [ ] Real-time data streaming with Kafka
+- [ ] Multi-model orchestration
+- [ ] Advanced Agent framework
+- [ ] Performance optimization and benchmarking
+- [ ] Enhanced security features
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```
 Copyright 2024 ONE-DATA-STUDIO Contributors
@@ -111,3 +295,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
+
+## Acknowledgments
+
+- [Alldata](https://github.com/Computing-Data/Alldata) - Data governance platform
+- [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform
+- [Bisheng](https://github.com/Tencent/Bisheng) - LLM application development platform
+
+## Contact
+
+- **Website**: <https://one-data-studio.io>
+- **Documentation**: <https://docs.one-data-studio.io>
+- **Issues**: <https://github.com/one-data-studio/one-data-studio/issues>
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the ONE-DATA-STUDIO Community**
+
+</div>
