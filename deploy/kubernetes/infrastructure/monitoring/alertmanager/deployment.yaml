@@ -2,6 +2,22 @@
 # Sprint 3.2: 告警聚合和通知
 
 ---
+# Alertmanager SMTP Credentials Secret
+# 警告：这是占位符配置，生产环境必须通过 External Secrets 或 Sealed Secrets 管理
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-smtp-credentials
+  namespace: one-data-system
+  annotations:
+    one-data.io/placeholder: "true"
+    one-data.io/description: "生产环境请替换为真实 SMTP 凭据"
+type: Opaque
+stringData:
+  smtp-username: "CHANGE_ME_SMTP_USERNAME"
+  smtp-password: "CHANGE_ME_SMTP_PASSWORD"
+
+---
 # AlertManager ConfigMap
 apiVersion: v1
 kind: ConfigMap
@@ -13,10 +29,10 @@ data:
     global:
       resolve_timeout: 5m
       # SMTP 配置（用于邮件通知）
+      # 凭据通过环境变量注入，见 Deployment 配置
       smtp_smarthost: 'smtp.example.com:587'
       smtp_from: 'alertmanager@one-data.local'
-      smtp_auth_username: 'alertmanager@one-data.local'
-      smtp_auth_password: 'password'
+      # smtp_auth_username 和 smtp_auth_password 由 Secret 提供
 
     # 告警路由配置
     route:
@@ -121,6 +137,10 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9093"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534  # nobody user
+        fsGroup: 65534
       containers:
       - name: alertmanager
         image: prom/alertmanager:v0.26.0
@@ -128,6 +148,22 @@ spec:
         - '--config.file=/etc/alertmanager/alertmanager.yml'
         - '--storage.path=/alertmanager'
         - '--web.external-url=http://alertmanager.one-data.local'
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+        env:
+        - name: SMTP_AUTH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp-credentials
+              key: smtp-username
+        - name: SMTP_AUTH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp-credentials
+              key: smtp-password
         ports:
         - name: web
           containerPort: 9093

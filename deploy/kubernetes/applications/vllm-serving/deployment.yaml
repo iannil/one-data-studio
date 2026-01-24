@@ -97,9 +97,18 @@ spec:
         app: vllm-serving
         component: model-serving
     spec:
+      # Security context for the pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: vllm
-        image: python:3.10-slim
+        # SECURITY: Use pinned version for reproducibility
+        image: python:3.10.14-slim
         command:
         - /bin/sh
         - -c
@@ -130,13 +139,29 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        # Security context for the container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Flask needs write access for temp files
+          capabilities:
+            drop:
+              - ALL
         volumeMounts:
         - name: config
           mountPath: /app
+        - name: tmp
+          mountPath: /tmp
+        - name: pip-cache
+          mountPath: /.cache
       volumes:
       - name: config
         configMap:
           name: vllm-mock-config
+      # Writable volumes for non-root user
+      - name: tmp
+        emptyDir: {}
+      - name: pip-cache
+        emptyDir: {}
 
 ---
 # vLLM Service

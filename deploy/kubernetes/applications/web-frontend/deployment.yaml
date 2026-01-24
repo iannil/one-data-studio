@@ -58,10 +58,22 @@ spec:
                 matchLabels:
                   app: web-frontend
               topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: web
-        image: one-data-web:latest
+        image: one-data-web:v1.0.0  # Use semantic versioning or git SHA, never :latest
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         ports:
         - name: http
           containerPort: 8080

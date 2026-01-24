@@ -365,9 +365,20 @@ spec:
         prometheus.io/port: "9090"
     spec:
       serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534    # nobody user
+        runAsGroup: 65534
+        fsGroup: 65534
       containers:
       - name: prometheus
         image: prom/prometheus:v2.48.0
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         args:
         - '--config.file=/etc/prometheus/prometheus.yml'
         - '--storage.tsdb.path=/prometheus'

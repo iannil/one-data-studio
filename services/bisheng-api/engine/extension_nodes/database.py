@@ -5,6 +5,7 @@ Phase 6: Sprint 6.1
 支持在工作流中执行 SQL 查询，实现数据持久化和检索。
 """
 
+import math
 import re
 from typing import Any, Dict, List, Optional
 
@@ -129,18 +130,39 @@ class DatabaseNodeImpl:
         return re.sub(pattern, replace_var, query)
 
     def _escape_sql_value(self, value: Any) -> str:
-        """转义 SQL 值（用于字符串插值）"""
+        """转义 SQL 值（用于字符串插值）
+
+        SECURITY WARNING: This method is for variable interpolation in SQL templates only.
+        For user input, ALWAYS use parameterized queries via _get_parameters().
+        This method should only be used for trusted, pre-validated values from
+        workflow context, never for direct user input.
+        """
         if value is None:
             return "NULL"
         if isinstance(value, bool):
             return "TRUE" if value else "FALSE"
         if isinstance(value, (int, float)):
+            # Validate numeric values to prevent injection through numeric fields
+            if not isinstance(value, (int, float)) or math.isnan(value) if isinstance(value, float) else False:
+                raise ValueError(f"Invalid numeric value: {value}")
             return str(value)
         if isinstance(value, (list, tuple)):
             escaped = [self._escape_sql_value(v) for v in value]
             return "(" + ", ".join(escaped) + ")"
-        # 字符串需要引号并转义
-        escaped = str(value).replace("'", "''").replace("\\", "\\\\")
+        # String escaping - multiple layers of protection
+        str_value = str(value)
+        # Reject strings containing dangerous patterns
+        dangerous_patterns = ['--', ';', '/*', '*/', 'xp_', 'sp_', 'EXEC', 'EXECUTE',
+                             'DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'INSERT', 'UPDATE',
+                             'UNION', 'SELECT', 'OR 1=1', "OR '1'='1"]
+        str_upper = str_value.upper()
+        for pattern in dangerous_patterns:
+            if pattern.upper() in str_upper:
+                raise ValueError(f"Potentially dangerous SQL pattern detected: {pattern}")
+        # Standard SQL escaping
+        escaped = str_value.replace("\\", "\\\\").replace("'", "''")
+        # Additional escaping for special characters
+        escaped = escaped.replace("\x00", "").replace("\n", "\\n").replace("\r", "\\r")
         return f"'{escaped}'"
 
     def _get_parameters(self, context: Dict[str, Any]) -> List[Any]:
@@ -250,9 +272,27 @@ class DatabaseNodeImpl:
         if not dsn:
             host = self.connection_config.get("host", "localhost")
             port = self.connection_config.get("port", 5432)
-            database = self.connection_config.get("database", "postgres")
-            username = self.connection_config.get("username", "postgres")
+            database = self.connection_config.get("database", "")
+            username = self.connection_config.get("username", "")
             password = self.connection_config.get("password", "")
+
+            # Validate required connection parameters
+            if not database:
+                raise ValueError(
+                    "PostgreSQL database name is required. "
+                    "Configure 'database' in connection settings."
+                )
+            if not username:
+                raise ValueError(
+                    "PostgreSQL username is required. "
+                    "Configure 'username' in connection settings."
+                )
+            if not password:
+                raise ValueError(
+                    "PostgreSQL password is required. "
+                    "Configure 'password' in connection settings."
+                )
+
             dsn = f"postgresql://{username}:{password}@{host}:{port}/{database}"
 
         try:
@@ -293,9 +333,27 @@ class DatabaseNodeImpl:
 
         host = self.connection_config.get("host", "localhost")
         port = self.connection_config.get("port", 3306)
-        database = self.connection_config.get("database", "test")
-        username = self.connection_config.get("username", "root")
+        database = self.connection_config.get("database", "")
+        username = self.connection_config.get("username", "")
         password = self.connection_config.get("password", "")
+
+        # Validate required connection parameters
+        if not database:
+            raise ValueError(
+                "MySQL database name is required. "
+                "Configure 'database' in connection settings."
+            )
+        if not username:
+            raise ValueError(
+                "MySQL username is required. "
+                "Configure 'username' in connection settings. "
+                "Do not use 'root' in production."
+            )
+        if not password:
+            raise ValueError(
+                "MySQL password is required. "
+                "Configure 'password' in connection settings."
+            )
 
         try:
             conn = await aiomysql.connect(
@@ -332,7 +390,28 @@ class DatabaseNodeImpl:
             return self._mock_result(query, parameters, error=str(e))
 
     def _mock_result(self, query: str, parameters: List[Any], error: str = None) -> Dict[str, Any]:
-        """返回模拟结果（当数据库不可用时）"""
+        """返回模拟结果（当数据库不可用时）
+
+        WARNING: This should only be used in development/testing environments.
+        In production, database unavailability should result in an error.
+        """
+        import os
+
+        # Check if we're in production mode - if so, raise an error instead of mocking
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env in ("production", "prod"):
+            raise RuntimeError(
+                f"Database connection failed in production environment: {error or 'Unknown error'}. "
+                "Mock data is not allowed in production."
+            )
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Returning mock data for query. This is only acceptable in development/testing. "
+            f"Error: {error or 'Database driver not installed'}"
+        )
+
         query_upper = query.strip().upper()
 
         if query_upper.startswith("SELECT"):
@@ -346,6 +425,7 @@ class DatabaseNodeImpl:
                 "row_count": 2,
                 "affected_rows": 0,
                 "mock": True,
+                "warning": "This is mock data. Install database driver for real queries.",
                 "error": error
             }
         else:
@@ -354,6 +434,7 @@ class DatabaseNodeImpl:
                 "row_count": 0,
                 "affected_rows": 1,
                 "mock": True,
+                "warning": "This is mock data. Install database driver for real queries.",
                 "error": error
             }
 

@@ -1,7 +1,7 @@
 # OpenAI 代理服务
 # Sprint 1.2: 真实 OpenAI API 调用
 
-FROM python:3.10-slim
+FROM python:3.10.14-slim
 
 WORKDIR /app
 

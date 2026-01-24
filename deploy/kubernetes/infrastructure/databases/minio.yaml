@@ -35,9 +35,20 @@ spec:
       labels:
         app: minio
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - name: minio
         image: quay.io/minio/minio:RELEASE.2023-12-23T07-19-11Z
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
         command:
         - minio
         - server
@@ -46,9 +57,15 @@ spec:
         - ":9001"
         env:
         - name: MINIO_ROOT_USER
-          value: "admin"
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
         - name: MINIO_ROOT_PASSWORD
-          value: "admin123456"
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
         ports:
         - name: api
           containerPort: 9000
@@ -100,15 +117,28 @@ spec:
 
 ---
 # MinIO Secret
+# IMPORTANT: For production environments:
+# 1. Use External Secrets Operator to fetch from Vault/AWS Secrets Manager
+# 2. Or use Sealed Secrets to encrypt credentials
+# 3. NEVER commit production credentials to version control
+# 4. Generate strong passwords: openssl rand -base64 32
 apiVersion: v1
 kind: Secret
 metadata:
   name: minio-credentials
   namespace: one-data-infra
+  annotations:
+    # Mark as placeholder - must be overridden in production
+    one-data.io/placeholder: "true"
 type: Opaque
 stringData:
-  access_key: "admin"  # 对应 MINIO_ROOT_USER
-  secret_key: "admin123456"  # 对应 MINIO_ROOT_PASSWORD，生产环境请使用强密码
+  # PLACEHOLDER VALUES - MUST BE CHANGED IN PRODUCTION
+  # These values are for local development only
+  root-user: "CHANGE_ME_IN_PRODUCTION"
+  root-password: "CHANGE_ME_USE_STRONG_PASSWORD"
+  # Legacy keys for backward compatibility
+  access_key: "CHANGE_ME_IN_PRODUCTION"
+  secret_key: "CHANGE_ME_USE_STRONG_PASSWORD"
 
 ---
 # MinIO Ingress (可选)

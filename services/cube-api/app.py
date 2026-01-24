@@ -456,38 +456,60 @@ def predict(deployment_id: str):
     # 获取模型信息
     model = db.query(MLModel).filter(MLModel.model_id == deployment.model_id).first()
 
-    # Mock 预测逻辑
-    # TODO: 实现真实的模型推理调用
-    logger.warning(
-        f"Using mock prediction for deployment {deployment_id}. "
-        "Real model inference is not yet implemented. "
-        "This is for development/testing only."
-    )
-    input_data = data.get("input", data.get("inputs", ""))
-    model_type = model.model_type if model else "text-generation"
+    # Get model inference configuration
+    use_mock = os.getenv("USE_MOCK_INFERENCE", "true").lower() == "true"
 
-    # 根据模型类型返回不同的 mock 结果
-    if model_type == "text-generation":
-        result = {
-            "generated_text": f"[Mock] Generated response for: {input_data[:50]}...",
-            "model": model.name if model else "unknown"
-        }
-    elif model_type == "text-classification":
-        result = {
-            "labels": ["positive", "negative", "neutral"],
-            "scores": [0.85, 0.10, 0.05],
-            "model": model.name if model else "unknown"
-        }
-    elif model_type == "text2text-generation":
-        result = {
-            "generated_text": f"[Mock] Translated/transformed: {input_data[:50]}...",
-            "model": model.name if model else "unknown"
-        }
+    if use_mock:
+        # Mock prediction logic - for development/testing only
+        # In production, set USE_MOCK_INFERENCE=false and configure real inference
+        logger.warning(
+            f"Using mock prediction for deployment {deployment_id}. "
+            "Real model inference is not yet implemented. "
+            "Set USE_MOCK_INFERENCE=false and configure model serving for production."
+        )
+        input_data = data.get("input", data.get("inputs", ""))
+        model_type = model.model_type if model else "text-generation"
+
+        # 根据模型类型返回不同的 mock 结果
+        if model_type == "text-generation":
+            result = {
+                "generated_text": f"[Mock] Generated response for: {input_data[:50]}...",
+                "model": model.name if model else "unknown",
+                "mock": True
+            }
+        elif model_type == "text-classification":
+            result = {
+                "labels": ["positive", "negative", "neutral"],
+                "scores": [0.85, 0.10, 0.05],
+                "model": model.name if model else "unknown",
+                "mock": True
+            }
+        elif model_type == "text2text-generation":
+            result = {
+                "generated_text": f"[Mock] Translated/transformed: {input_data[:50]}...",
+                "model": model.name if model else "unknown",
+                "mock": True
+            }
+        else:
+            result = {
+                "output": f"[Mock] Prediction for type {model_type}",
+                "model": model.name if model else "unknown",
+                "mock": True
+            }
     else:
-        result = {
-            "output": f"[Mock] Prediction for type {model_type}",
-            "model": model.name if model else "unknown"
-        }
+        # Real inference - to be implemented with actual model serving
+        # Options:
+        # 1. Call vLLM/TGI serving endpoint
+        # 2. Load model directly using transformers
+        # 3. Use external inference API
+        logger.error(
+            f"Real model inference requested but not implemented for deployment {deployment_id}. "
+            "Configure model serving endpoint or enable mock mode."
+        )
+        return jsonify({
+            "code": 50010,
+            "message": "Model inference not configured. Contact administrator."
+        }), 503
 
     return jsonify({
         "code": 0,

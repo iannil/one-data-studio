@@ -19,8 +19,17 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: init
-        image: alldata-api:latest
+        image: alldata-api:v1.0.0  # Use semantic versioning or git SHA, never :latest
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         command: ["python", "init_db.py"]
         env:
         - name: DATABASE_URL

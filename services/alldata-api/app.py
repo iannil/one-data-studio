@@ -38,8 +38,21 @@ try:
     )
     AUTH_ENABLED = True
 except ImportError:
+    # Check if we're in production - auth is required in production
+    import os
+    if os.getenv('ENVIRONMENT', '').lower() in ('production', 'prod'):
+        raise ImportError(
+            "Authentication module is required in production. "
+            "Ensure auth.py is present and all dependencies are installed."
+        )
+
     AUTH_ENABLED = False
     # 装饰器空实现（开发模式）
+    import logging
+    logging.getLogger(__name__).warning(
+        "Authentication module not available. Running in development mode without auth. "
+        "This is NOT safe for production use."
+    )
     def require_jwt(optional=False):
         def decorator(fn):
             return fn

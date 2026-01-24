@@ -200,18 +200,23 @@ function WorkflowEditorPage() {
         // 解析工作流定义
         if (wf.definition) {
           let definition: WorkflowDefinition;
-          if (typeof wf.definition === 'string') {
-            definition = JSON.parse(wf.definition);
-          } else {
-            definition = wf.definition;
+          try {
+            if (typeof wf.definition === 'string') {
+              definition = JSON.parse(wf.definition);
+            } else {
+              definition = wf.definition;
+            }
+
+            const loadedNodes = definition.nodes || [];
+            const loadedEdges = definition.edges || [];
+
+            setNodes(loadedNodes);
+            setEdges(loadedEdges);
+            initHistory(loadedNodes, loadedEdges);
+          } catch (parseError) {
+            message.error('工作流定义格式错误，无法解析');
+            console.error('Failed to parse workflow definition:', parseError);
           }
-
-          const loadedNodes = definition.nodes || [];
-          const loadedEdges = definition.edges || [];
-
-          setNodes(loadedNodes);
-          setEdges(loadedEdges);
-          initHistory(loadedNodes, loadedEdges);
         }
       }
     } catch (error) {

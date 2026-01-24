@@ -1,0 +1,82 @@
+{{/*
+Validate all credentials before showing deployment notes
+This ensures the deployment fails early if credentials are missing
+*/}}
+{{- include "one-data.validateAllCredentials" . }}
+
+ONE-DATA-STUDIO has been deployed!
+
+Environment: {{ .Values.global.environment }}
+Release: {{ .Release.Name }}
+
+=============================================================================
+IMPORTANT: Post-Installation Steps
+=============================================================================
+
+{{- if .Values.infrastructure.minio.enabled }}
+1. MinIO Object Storage:
+   - Endpoint: http://minio.{{ .Release.Namespace }}.svc.cluster.local:9000
+   - Console: http://minio.{{ .Release.Namespace }}.svc.cluster.local:9001
+   - Credentials: Configured via values
+{{- end }}
+
+{{- if .Values.infrastructure.mysql.enabled }}
+2. MySQL Database:
+   - Host: mysql.{{ .Release.Namespace }}.svc.cluster.local
+   - Port: 3306
+   - Database: {{ .Values.infrastructure.mysql.database.name }}
+{{- end }}
+
+{{- if .Values.infrastructure.redis.enabled }}
+3. Redis Cache:
+   - Host: redis.{{ .Release.Namespace }}.svc.cluster.local
+   - Port: 6379
+{{- end }}
+
+{{- if .Values.alldata.enabled }}
+4. Alldata API:
+   - Internal: http://alldata-api.{{ .Values.alldata.namespace }}.svc.cluster.local:{{ .Values.alldata.service.port }}
+   {{- if .Values.alldata.ingress.enabled }}
+   - External: {{ if .Values.alldata.ingress.tls }}https{{ else }}http{{ end }}://{{ .Values.alldata.ingress.host }}
+   {{- end }}
+{{- end }}
+
+{{- if .Values.bisheng.enabled }}
+5. Bisheng API:
+   - Internal: http://bisheng-api.{{ .Values.bisheng.namespace }}.svc.cluster.local:{{ .Values.bisheng.service.port }}
+   {{- if .Values.bisheng.ingress.enabled }}
+   - External: {{ if .Values.bisheng.ingress.tls }}https{{ else }}http{{ end }}://{{ .Values.bisheng.ingress.host }}
+   {{- end }}
+{{- end }}
+
+{{- if .Values.cube.enabled }}
+6. Cube Studio (Model Serving):
+   - Internal: http://vllm-serving.{{ .Values.cube.namespace }}.svc.cluster.local:{{ .Values.cube.modelServing.service.port }}
+   {{- if .Values.cube.modelServing.ingress.enabled }}
+   - External: {{ if .Values.cube.modelServing.ingress.tls }}https{{ else }}http{{ end }}://{{ .Values.cube.modelServing.ingress.host }}
+   {{- end }}
+{{- end }}
+
+=============================================================================
+SECURITY REMINDERS
+=============================================================================
+
+{{- if not (include "one-data.isProduction" .) }}
+WARNING: Running in {{ .Values.global.environment }} mode.
+For production deployment:
+- Set global.environment to "production"
+- Enable TLS on all ingress resources
+- Use strong, unique passwords for all services
+- Configure proper resource limits
+- Enable monitoring and alerting
+{{- end }}
+
+{{- if and .Values.alldata.ingress.enabled (not .Values.alldata.ingress.tls) }}
+WARNING: Alldata ingress TLS is disabled. Enable for production!
+{{- end }}
+
+{{- if and .Values.bisheng.ingress.enabled (not .Values.bisheng.ingress.tls) }}
+WARNING: Bisheng ingress TLS is disabled. Enable for production!
+{{- end }}
+
+For more information, visit: https://github.com/one-data-studio

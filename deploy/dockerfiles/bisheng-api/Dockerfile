@@ -1,6 +1,6 @@
 # Bisheng API Dockerfile
 # Sprint 1.3 + Sprint 3.1: 添加 JWT 认证
-FROM python:3.10-slim
+FROM python:3.10.14-slim
 
 WORKDIR /app
 
@@ -13,6 +13,10 @@ COPY services/shared/ /app/shared/
 
 # 复制应用代码
 COPY services/bisheng-api/app.py /app/
+
+# 创建非 root 用户
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
 # 暴露端口 (与 docker-compose.yml 一致)
 EXPOSE 8000

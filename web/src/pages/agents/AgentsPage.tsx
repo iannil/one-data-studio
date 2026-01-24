@@ -205,12 +205,13 @@ function AgentsPage() {
             },
           ]);
         }
-      } catch (error: any) {
-        message.error(`Agent 运行失败: ${error.message || '未知错误'}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '未知错误';
+        message.error(`Agent 运行失败: ${errorMessage}`);
         setSteps([
           {
             type: 'final',
-            content: `错误: ${error.message || '未知错误'}`,
+            content: `错误: ${errorMessage}`,
             timestamp: new Date().toISOString(),
           },
         ]);
@@ -260,7 +261,7 @@ function AgentsPage() {
       message.success('模板删除成功');
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`删除失败: ${error.message || '未知错误'}`);
     },
   });

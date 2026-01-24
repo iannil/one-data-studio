@@ -124,7 +124,7 @@ function SchedulesPage() {
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`调度创建失败: ${error.message || '未知错误'}`);
     },
   });
@@ -150,7 +150,7 @@ function SchedulesPage() {
       editForm.resetFields();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`调度更新失败: ${error.message || '未知错误'}`);
     },
   });
@@ -162,7 +162,7 @@ function SchedulesPage() {
       message.success('调度删除成功');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`调度删除失败: ${error.message || '未知错误'}`);
     },
   });
@@ -174,7 +174,7 @@ function SchedulesPage() {
       message.success(`调度已触发，执行ID: ${data.data?.execution_id || '-'}`);
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`触发调度失败: ${error.message || '未知错误'}`);
     },
   });
@@ -199,7 +199,7 @@ function SchedulesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`切换状态失败: ${error.message || '未知错误'}`);
     },
   });
@@ -211,7 +211,7 @@ function SchedulesPage() {
       message.success('调度已暂停');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`暂停失败: ${error.message || '未知错误'}`);
     },
   });
@@ -223,7 +223,7 @@ function SchedulesPage() {
       message.success('调度已恢复');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`恢复失败: ${error.message || '未知错误'}`);
     },
   });
@@ -237,7 +237,7 @@ function SchedulesPage() {
       setIsRetryConfigModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`更新失败: ${error.message || '未知错误'}`);
     },
   });

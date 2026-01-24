@@ -6,6 +6,27 @@ Sprint 17: Agent 工具扩展
 - 沙箱 Python 代码执行
 - 安全限制（AST 分析 + RestrictedPython）
 - 执行超时限制
+
+SECURITY WARNING:
+This code executor uses AST analysis and restricted builtins to create a sandbox,
+but it is NOT a fully secure sandbox. Sophisticated attackers may be able to bypass
+these restrictions. For high-security environments, consider:
+
+1. Using Docker/container-based isolation
+2. Using a dedicated code execution service like Pyodide or a subprocess sandbox
+3. Using RestrictedPython with additional guards
+4. Network isolation to prevent exfiltration
+5. Resource limits (CPU, memory) at the OS level
+
+The current implementation is suitable for:
+- Internal use with trusted users
+- Development and testing environments
+- Low-risk code execution scenarios
+
+It is NOT recommended for:
+- Untrusted user input execution
+- Production systems with sensitive data access
+- Internet-facing applications without additional layers
 """
 
 import ast
@@ -299,10 +320,17 @@ class CodeExecutorTool(BaseTool):
                 stdout_output = stdout_output[:self.MAX_OUTPUT_LENGTH] + "\n...[truncated]"
 
             if not success:
+                # Sanitize error output - don't expose full code in errors
+                sanitized_error = str(error)
+                # Truncate long error messages to prevent log bloat
+                if len(sanitized_error) > 500:
+                    sanitized_error = sanitized_error[:500] + "...[truncated]"
+
                 return {
                     "success": False,
-                    "error": str(error),
-                    "traceback": traceback.format_exc(),
+                    "error": sanitized_error,
+                    # Don't include full traceback in production - it may contain code
+                    "traceback": "[traceback hidden for security]" if os.getenv("ENVIRONMENT", "").lower() in ("production", "prod") else traceback.format_exc(),
                     "stdout": stdout_output,
                     "stderr": stderr_output,
                     "execution_time": execution_time,

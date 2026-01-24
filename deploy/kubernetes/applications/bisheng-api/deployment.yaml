@@ -340,16 +340,22 @@ spec:
                 matchLabels:
                   app: bisheng-api
               topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: api
-        image: python:3.10-slim
-        command:
-        - /bin/sh
-        - -c
-        args:
-        - |
-          pip install flask requests -q && \
-          python /app/app.py
+        image: bisheng-api:v1.0.0  # Use pre-built image instead of python base image with runtime pip install
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         - name: PYTHONUNBUFFERED
           value: "true"
@@ -365,11 +371,17 @@ spec:
             path: /api/v1/health
             port: 8080
           initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/v1/health
             port: 8080
           initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
         resources:
           requests:
             memory: "256Mi"

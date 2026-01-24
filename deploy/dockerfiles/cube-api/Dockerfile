@@ -1,7 +1,7 @@
 # Cube API - MLOps 平台服务
 # 提供模型管理、训练任务、部署服务等功能
 
-FROM python:3.10-slim
+FROM python:3.10.14-slim
 
 WORKDIR /app
 

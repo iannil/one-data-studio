@@ -1,5 +1,30 @@
 # ONE-DATA-STUDIO Helm Chart Values
 # 全局配置
+#
+# ============================================
+# SECURITY NOTICE
+# ============================================
+# Before deploying to production:
+# 1. Set global.environment to "production"
+# 2. Configure ALL required credentials via --set or external secrets
+# 3. Enable TLS on all ingress resources
+# 4. Use values-production.yaml overlay for production settings
+#
+# Example production deployment:
+#   helm install one-data ./deploy/helm/charts/one-data \
+#     -f values.yaml \
+#     -f values-production.yaml \
+#     --set infrastructure.minio.credentials.rootUser=$MINIO_USER \
+#     --set infrastructure.minio.credentials.rootPassword=$MINIO_PASS \
+#     --set infrastructure.mysql.database.password=$MYSQL_PASS \
+#     --set infrastructure.redis.password=$REDIS_PASS \
+#     --set monitoring.grafana.adminPassword=$GRAFANA_PASS
+#
+# For external secrets management:
+#   - Sealed Secrets: https://sealed-secrets.netlify.app/
+#   - External Secrets: https://external-secrets.io/
+#   - HashiCorp Vault: https://www.vaultproject.io/
+# ============================================
 
 global:
   # 镜像仓库
@@ -8,7 +33,8 @@ global:
   # 镜像拉取密钥
   imagePullSecrets: []
 
-  # 环境标签
+  # 环境标签 - IMPORTANT: Set to "production" for production deployments
+  # This triggers credential validation in templates
   environment: "dev"
 
   # 存储配置
@@ -42,15 +68,17 @@ infrastructure:
     credentials:
       # REQUIRED: Must be set via --set or values override
       # DO NOT use default values in production
-      rootUser: ""  # Required: set via MINIO_ROOT_USER
-      rootPassword: ""  # Required: set via MINIO_ROOT_PASSWORD
+      # Example: helm install ... --set infrastructure.minio.credentials.rootUser=$MINIO_ROOT_USER
+      rootUser: ""  # REQUIRED: set via MINIO_ROOT_USER
+      rootPassword: ""  # REQUIRED: set via MINIO_ROOT_PASSWORD
+      # Validation: Template will fail if these are empty in production
 
   # MySQL 数据库
   mysql:
     enabled: true
     image:
       repository: mysql
-      tag: 8.0
+      tag: "8.0.36"  # Pinned version for reproducibility
     persistence:
       size: 50Gi
       storageClass: fast-ssd
@@ -65,14 +93,15 @@ infrastructure:
       name: one_data
       user: one_data
       # REQUIRED: Must be set via --set or values override
-      password: ""  # Required: set via MYSQL_PASSWORD
+      # Example: helm install ... --set infrastructure.mysql.database.password=$MYSQL_PASSWORD
+      password: ""  # REQUIRED: set via MYSQL_PASSWORD
 
   # Redis 缓存
   redis:
     enabled: true
     image:
       repository: redis
-      tag: 7.0-alpine
+      tag: "7.0.15-alpine"  # Pinned version for reproducibility
     persistence:
       size: 10Gi
       storageClass: fast-ssd
@@ -84,7 +113,8 @@ infrastructure:
         memory: 1Gi
         cpu: 500m
     # REQUIRED: Must be set via --set or values override
-    password: ""  # Required: set via REDIS_PASSWORD
+    # Example: helm install ... --set infrastructure.redis.password=$REDIS_PASSWORD
+    password: ""  # REQUIRED: set via REDIS_PASSWORD
 
   # Milvus 向量数据库（可选）
   milvus:
@@ -134,7 +164,8 @@ alldata:
     enabled: true
     className: nginx
     host: alldata.example.com
-    tls: false
+    # SECURITY: Enable TLS for production deployments
+    tls: false  # Set to true and configure cert-manager for production
 
 # ============================================
 # Cube Studio 平台
@@ -231,7 +262,8 @@ bisheng:
     enabled: true
     className: nginx
     host: bisheng.example.com
-    tls: false
+    # SECURITY: Enable TLS for production deployments
+    tls: false  # Set to true and configure cert-manager for production
 
 # ============================================
 # 监控
@@ -251,7 +283,8 @@ monitoring:
     persistence:
       size: 5Gi
     # REQUIRED: Must be set via --set or values override
-    adminPassword: ""  # Required: set via GRAFANA_ADMIN_PASSWORD
+    # Example: helm install ... --set monitoring.grafana.adminPassword=$GRAFANA_ADMIN_PASSWORD
+    adminPassword: ""  # REQUIRED: set via GRAFANA_ADMIN_PASSWORD
 
 # ============================================
 # 安全

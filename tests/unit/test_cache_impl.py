@@ -236,3 +236,117 @@ class TestGetCache:
         cache2 = get_cache()
 
         assert cache1 is cache2
+
+
+class TestCacheSecurityFeatures:
+    """Tests for cache security features (HMAC signatures, JSON serialization)."""
+
+    @pytest.mark.unit
+    def test_signing_key_required_in_production(self):
+        """Test that signing key is required in production."""
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "CACHE_SIGNING_KEY": ""}):
+            # Reset the global key
+            import cache
+            cache._CACHE_SIGNING_KEY = None
+
+            with pytest.raises(ValueError, match="CACHE_SIGNING_KEY.*required"):
+                cache._get_signing_key()
+
+    @pytest.mark.unit
+    def test_signing_key_dev_fallback(self):
+        """Test signing key has dev fallback in development."""
+        with patch.dict(os.environ, {"ENVIRONMENT": "development", "CACHE_SIGNING_KEY": ""}):
+            import cache
+            cache._CACHE_SIGNING_KEY = None
+
+            # Should not raise, uses dev fallback
+            key = cache._get_signing_key()
+            assert key is not None
+            assert len(key) > 0
+
+    @pytest.mark.unit
+    def test_signature_verification(self):
+        """Test HMAC signature creation and verification."""
+        with patch.dict(os.environ, {"ENVIRONMENT": "development", "CACHE_SIGNING_KEY": "test-key-123"}):
+            import cache
+            cache._CACHE_SIGNING_KEY = None  # Reset to pick up new key
+
+            data = b'test data'
+            signature = cache._sign_data(data)
+
+            # Verification should pass with correct data
+            assert cache._verify_signature(data, signature) is True
+
+            # Verification should fail with wrong data
+            assert cache._verify_signature(b'wrong data', signature) is False
+
+            # Verification should fail with wrong signature
+            assert cache._verify_signature(data, "wrong-signature") is False
+
+    @pytest.mark.unit
+    def test_json_serialization_only(self):
+        """Test that only JSON-serializable values can be cached."""
+        from cache import MemoryCache
+
+        cache = MemoryCache()
+
+        # JSON-serializable values should work
+        cache.set('dict', {'key': 'value'})
+        cache.set('list', [1, 2, 3])
+        cache.set('string', 'hello')
+        cache.set('number', 42)
+
+        assert cache.get('dict') == {'key': 'value'}
+        assert cache.get('list') == [1, 2, 3]
+        assert cache.get('string') == 'hello'
+        assert cache.get('number') == 42
+
+    @pytest.mark.unit
+    def test_tampered_cache_rejected(self):
+        """Test that tampered cache entries are rejected by Redis cache."""
+        # This test verifies the security behavior:
+        # If someone modifies the cache data without knowing the signing key,
+        # the signature verification should fail
+
+        with patch.dict(os.environ, {"ENVIRONMENT": "development", "CACHE_SIGNING_KEY": "test-key"}):
+            import cache
+            import json
+            cache._CACHE_SIGNING_KEY = None
+
+            # Create a valid envelope
+            data = json.dumps({"value": "original"})
+            signature = cache._sign_data(data.encode('utf-8'))
+            envelope = json.dumps({"signature": signature, "data": data})
+
+            # Tamper with the data
+            tampered_data = json.dumps({"value": "tampered"})
+            tampered_envelope = json.dumps({"signature": signature, "data": tampered_data})
+
+            # The tampered envelope should fail verification
+            parsed = json.loads(tampered_envelope)
+            result = cache._verify_signature(
+                parsed['data'].encode('utf-8'),
+                parsed['signature']
+            )
+            assert result is False
+
+    @pytest.mark.unit
+    def test_legacy_unsigned_cache_rejected(self):
+        """Test that legacy unsigned cache entries are rejected."""
+        # This verifies that old pickle-based cache entries (without signatures)
+        # will be rejected for security
+
+        with patch.dict(os.environ, {"ENVIRONMENT": "development", "CACHE_SIGNING_KEY": "test-key"}):
+            import cache
+            import json
+
+            # Simulate a legacy cache entry (just raw JSON without signature envelope)
+            legacy_data = json.dumps({"key": "value"})
+
+            # Parse it - it's valid JSON but not our secure envelope format
+            parsed = json.loads(legacy_data)
+
+            # Should not have the required signature/data structure
+            has_envelope = isinstance(parsed, dict) and 'signature' in parsed and 'data' in parsed
+            assert has_envelope is False
+

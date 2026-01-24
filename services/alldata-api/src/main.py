@@ -292,12 +292,23 @@ def get_credentials(dataset_id: str):
                 bucket = minio_client.default_bucket
 
             # 生成预签名 URL（有效期 1 小时）
+            # SECURITY: MinIO credentials must be explicitly configured - no defaults
+            minio_access_key = os.getenv('MINIO_ACCESS_KEY')
+            minio_secret_key = os.getenv('MINIO_SECRET_KEY')
+
+            if not minio_access_key or not minio_secret_key:
+                logger.error("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be configured")
+                return jsonify({
+                    "code": 50001,
+                    "message": "Storage credentials not configured"
+                }), 500
+
             return jsonify({
                 "code": 0,
                 "message": "success",
                 "data": {
-                    "access_key": os.getenv('MINIO_ACCESS_KEY', 'minioadmin'),
-                    "secret_key": os.getenv('MINIO_SECRET_KEY', 'minioadmin'),
+                    "access_key": minio_access_key,
+                    "secret_key": minio_secret_key,
                     "endpoint": os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000'),
                     "bucket": bucket,
                     "expires_at": (datetime.utcnow().replace(hour=23, minute=59, second=59)).isoformat() + "Z"

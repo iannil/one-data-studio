@@ -35,7 +35,9 @@ data:
 
     [security]
     admin_user = admin
-    admin_password = GrafanaAdmin123!
+    # IMPORTANT: admin_password is set via environment variable GF_SECURITY_ADMIN_PASSWORD
+    # from Kubernetes Secret. Do NOT hardcode passwords here.
+    # See grafana-credentials Secret below.
 
     [users]
     default_theme = dark
@@ -472,15 +474,25 @@ metadata:
 
 ---
 # Grafana Credentials Secret
+# IMPORTANT: For production environments:
+# 1. Use External Secrets Operator to fetch from Vault/AWS Secrets Manager
+# 2. Or use Sealed Secrets to encrypt credentials
+# 3. NEVER commit production credentials to version control
+# 4. Generate strong passwords: openssl rand -base64 32
 apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-credentials
   namespace: one-data-system
+  annotations:
+    # Mark as placeholder - must be overridden in production
+    one-data.io/placeholder: "true"
 type: Opaque
 stringData:
+  # PLACEHOLDER VALUES - MUST BE CHANGED IN PRODUCTION
+  # These values are for local development only
   admin-user: "admin"
-  admin-password: "GrafanaAdmin123!"  # 生产环境请使用强密码
+  admin-password: "CHANGE_ME_USE_STRONG_PASSWORD"
 
 ---
 # Grafana Ingress

@@ -1,0 +1,300 @@
+# ONE-DATA-STUDIO Production Values Overlay
+# 生产环境配置覆盖
+#
+# Usage:
+#   helm install one-data ./deploy/helm/charts/one-data \
+#     -f ./deploy/helm/charts/one-data/values.yaml \
+#     -f ./deploy/helm/charts/one-data/values-production.yaml \
+#     --set infrastructure.minio.credentials.rootUser=$MINIO_ROOT_USER \
+#     --set infrastructure.minio.credentials.rootPassword=$MINIO_ROOT_PASSWORD \
+#     --set infrastructure.mysql.database.password=$MYSQL_PASSWORD \
+#     --set infrastructure.redis.password=$REDIS_PASSWORD
+#
+# CRITICAL: All credential values MUST be provided via --set or external secrets.
+# Do NOT commit credentials to version control.
+
+# ============================================
+# 全局生产配置
+# ============================================
+global:
+  # 生产环境标识 - 触发 Helm 模板中的凭据验证
+  environment: "production"
+
+  # 存储类配置（根据云提供商调整）
+  storageClass:
+    data: "standard"  # AWS: gp3, GCP: standard, Azure: managed-premium
+    database: "fast"  # AWS: io1, GCP: pd-ssd, Azure: premium-ssd
+
+# ============================================
+# 基础设施 - 生产配置
+# ============================================
+infrastructure:
+  minio:
+    # 生产环境资源配置
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+    persistence:
+      size: 500Gi  # 生产环境需要更大存储
+
+  mysql:
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 1000m
+      limits:
+        memory: 8Gi
+        cpu: 4000m
+    persistence:
+      size: 100Gi
+    # 生产环境 MySQL 配置
+    config:
+      maxConnections: 500
+      innodbBufferPoolSize: "4G"
+      slowQueryLog: true
+
+  redis:
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+    persistence:
+      size: 20Gi
+    # Redis Sentinel 高可用（可选）
+    sentinel:
+      enabled: false  # 在需要高可用时启用
+      replicas: 3
+
+# ============================================
+# Alldata 平台 - 生产配置
+# ============================================
+alldata:
+  # 生产环境至少 3 副本
+  replicaCount: 3
+
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+  # 启用自动扩缩容
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  ingress:
+    # CRITICAL: 生产环境必须启用 TLS
+    tls: true
+    # 使用 cert-manager 自动管理证书
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # 配置 TLS secret（cert-manager 自动创建）
+    tlsSecret: alldata-tls
+
+  # Pod 安全配置
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# ============================================
+# Bisheng 平台 - 生产配置
+# ============================================
+bisheng:
+  replicaCount: 3
+
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  ingress:
+    tls: true
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    tlsSecret: bisheng-tls
+
+  # 生产环境配置
+  config:
+    # 禁用 mock 数据
+    mockData: false
+    # 启用 SSL 验证
+    verifySSL: true
+    # 缓存签名密钥（从 Secret 注入）
+    cacheSigningKeySecret: bisheng-cache-signing-key
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# ============================================
+# Cube Studio - 生产配置
+# ============================================
+cube:
+  modelServing:
+    replicaCount: 2
+
+    resources:
+      requests:
+        memory: 8Gi
+        cpu: 2000m
+      limits:
+        memory: 16Gi
+        cpu: 8000m
+
+    # GPU 配置（如果可用）
+    gpu:
+      enabled: false  # 根据集群情况启用
+      count: 1
+      type: nvidia.com/gpu
+
+    ingress:
+      tls: true
+      annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      tlsSecret: cube-tls
+
+# ============================================
+# 监控 - 生产环境建议启用
+# ============================================
+monitoring:
+  enabled: true
+
+  prometheus:
+    enabled: true
+    persistence:
+      size: 50Gi
+    retention: "15d"
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+
+  grafana:
+    enabled: true
+    persistence:
+      size: 10Gi
+    # adminPassword 必须通过 --set 提供
+    # --set monitoring.grafana.adminPassword=$GRAFANA_PASSWORD
+
+# ============================================
+# 安全配置
+# ============================================
+security:
+  # 网络策略
+  networkPolicies:
+    enabled: true
+    # 限制 Pod 间通信
+    defaultDenyIngress: true
+    defaultDenyEgress: false
+
+  # Pod 安全标准
+  podSecurityStandards:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+
+  # Istio（可选但推荐）
+  istio:
+    enabled: false  # 根据集群情况启用
+    mtls:
+      mode: STRICT  # 强制 mTLS
+
+# ============================================
+# 资源配额 - 生产环境建议启用
+# ============================================
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "32"
+    memory: "64Gi"
+    nvidia.com/gpu: "4"
+  limits:
+    cpu: "64"
+    memory: "128Gi"
+    nvidia.com/gpu: "8"
+
+# ============================================
+# Pod 中断预算
+# ============================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # 或使用 maxUnavailable: 1
+
+# ============================================
+# 节点亲和性和容忍
+# ============================================
+nodeSelector: {}
+  # kubernetes.io/os: linux
+  # node-type: application
+
+tolerations: []
+  # - key: "dedicated"
+  #   operator: "Equal"
+  #   value: "one-data"
+  #   effect: "NoSchedule"
+
+affinity:
+  # Pod 反亲和性 - 分布到不同节点
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - alldata-api
+                  - bisheng-api
+          topologyKey: kubernetes.io/hostname

@@ -1,0 +1,175 @@
+# ONE-DATA-STUDIO Pre-commit Hooks Configuration
+# See https://pre-commit.com for more information
+#
+# Install:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually:
+#   pre-commit run --all-files
+
+default_language_version:
+  python: python3.10
+
+repos:
+  # ===========================================
+  # General Hooks
+  # ===========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.txt)$
+      - id: end-of-file-fixer
+        exclude: ^(.*\.md)$
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^(deploy/helm/|deploy/kubernetes/)
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: no-commit-to-branch
+        args: [--branch, main, --branch, master]
+
+  # ===========================================
+  # Python Code Quality
+  # ===========================================
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3.10
+        args: [--line-length=100]
+        files: ^services/.*\.py$
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+        files: ^services/.*\.py$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=100, --ignore=E501,W503,E203]
+        files: ^services/.*\.py$
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports, --no-strict-optional]
+        files: ^services/.*\.py$
+        additional_dependencies:
+          - types-requests
+          - types-redis
+
+  # ===========================================
+  # Python Security
+  # ===========================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: [-r, --severity-level=medium, --confidence-level=medium]
+        files: ^services/.*\.py$
+        exclude: ^(tests/|.*_test\.py)
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(\.secrets\.baseline|tests/|.*\.lock)$
+
+  # ===========================================
+  # JavaScript/TypeScript
+  # ===========================================
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: ^web/src/.*\.(js|jsx|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - "@typescript-eslint/parser@6.19.0"
+          - "@typescript-eslint/eslint-plugin@6.19.0"
+          - eslint-plugin-react@7.33.2
+          - eslint-plugin-react-hooks@4.6.0
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^web/src/.*\.(js|jsx|ts|tsx|json|css|scss|md)$
+        args: [--write]
+
+  # ===========================================
+  # Docker & Kubernetes
+  # ===========================================
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3013, --ignore, DL3018]
+        files: Dockerfile.*$
+
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.2.0
+    hooks:
+      - id: checkov
+        args: [--framework, kubernetes, --quiet]
+        files: ^deploy/kubernetes/.*\.yaml$
+
+  # ===========================================
+  # Helm Charts
+  # ===========================================
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.23
+    hooks:
+      - id: helmlint
+        files: ^deploy/helm/
+
+  # ===========================================
+  # Git Commit Message
+  # ===========================================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # ===========================================
+  # Markdown
+  # ===========================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+      - id: markdownlint
+        args: [--fix, --disable, MD013, MD033, MD041]
+        files: ^(docs/|.*\.md)$
+
+# CI Configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [hadolint-docker, checkov, helmlint]
+  submodules: false

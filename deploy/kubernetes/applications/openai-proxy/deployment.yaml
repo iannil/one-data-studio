@@ -3,16 +3,23 @@
 
 ---
 # OpenAI API Key Secret (需要用户配置)
+# SECURITY WARNING: This is a template. Use external secret management in production.
+# Recommended: Sealed Secrets, External Secrets Operator, or HashiCorp Vault
 apiVersion: v1
 kind: Secret
 metadata:
   name: openai-secret
   namespace: one-data-cube
+  annotations:
+    # Mark as template - must be replaced before production use
+    one-data.io/secret-template: "true"
+    one-data.io/requires-replacement: "api-key"
 type: Opaque
 stringData:
-  # 请在使用前替换为真实的 OpenAI API Key
-  api-key: "your-openai-api-key-here"
-  # 可选：使用 Azure OpenAI 或其他兼容服务
+  # IMPORTANT: Replace this placeholder before deploying
+  # Use: kubectl create secret generic openai-secret --from-literal=api-key=$OPENAI_API_KEY
+  api-key: "REPLACE_WITH_REAL_API_KEY"
+  # Optional: Use Azure OpenAI or other compatible services
   # base-url: "https://api.openai.com/v1"
 
 ---
@@ -45,10 +52,22 @@ spec:
                 matchLabels:
                   app: openai-proxy
               topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: proxy
-        image: openai-proxy:latest
+        image: openai-proxy:v1.0.0  # Use semantic versioning or git SHA, never :latest
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         - name: PYTHONUNBUFFERED
           value: "true"

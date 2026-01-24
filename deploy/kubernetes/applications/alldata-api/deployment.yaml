@@ -50,10 +50,22 @@ spec:
                 matchLabels:
                   app: alldata-api
               topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: api
-        image: alldata-api:latest
+        image: alldata-api:v1.0.0  # Use semantic versioning or git SHA, never :latest
         imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         - name: PYTHONUNBUFFERED
           value: "true"

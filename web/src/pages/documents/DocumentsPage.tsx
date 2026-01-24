@@ -24,13 +24,20 @@ import {
   InboxOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { UploadProps } from 'antd';
+import type { UploadFile } from 'antd';
 import dayjs from 'dayjs';
 import bisheng, { type IndexedDocument } from '@/services/bisheng';
 
 const { Dragger } = Upload;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// 批量删除响应类型
+interface BatchDeleteResponse {
+  deleted_count: number;
+  failed_count: number;
+  failed_ids?: string[];
+}
 
 function DocumentsPage() {
   const queryClient = useQueryClient();
@@ -42,7 +49,7 @@ function DocumentsPage() {
   const [selectedCollection, setSelectedCollection] = useState<string | undefined>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [uploadForm] = Form.useForm();
-  const [fileList, setFileList] = useState<any[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   // 获取文档列表
   const { data: documentsData, isLoading } = useQuery({
@@ -60,7 +67,7 @@ function DocumentsPage() {
       uploadForm.resetFields();
       queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`文档上传失败: ${error.message || '未知错误'}`);
     },
   });
@@ -73,7 +80,7 @@ function DocumentsPage() {
       setIsPreviewDrawerOpen(false);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`文档删除失败: ${error.message || '未知错误'}`);
     },
   });
@@ -81,8 +88,10 @@ function DocumentsPage() {
   // 批量删除文档
   const batchDeleteMutation = useMutation({
     mutationFn: bisheng.batchDeleteDocuments,
-    onSuccess: (data: any) => {
-      const { deleted_count, failed_count, failed_ids } = data.data || {};
+    onSuccess: (data) => {
+      const result = data.data as BatchDeleteResponse | undefined;
+      const deleted_count = result?.deleted_count ?? 0;
+      const failed_count = result?.failed_count ?? 0;
       if (failed_count > 0) {
         message.warning(`已删除 ${deleted_count} 个文档，${failed_count} 个文档删除失败`);
       } else {
@@ -92,7 +101,7 @@ function DocumentsPage() {
       setSelectedRowKeys([]);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`批量删除失败: ${error.message || '未知错误'}`);
     },
   });

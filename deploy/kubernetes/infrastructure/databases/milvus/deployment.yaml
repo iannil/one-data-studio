@@ -50,9 +50,19 @@ spec:
         app: milvus
         component: infrastructure
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: milvus
           image: milvusdb/milvus:v2.3.7
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
           command: ["milvus", "run", "standalone"]
           env:
             - name: ETCD_ENDPOINTS

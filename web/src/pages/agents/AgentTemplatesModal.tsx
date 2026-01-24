@@ -72,7 +72,7 @@ function AgentTemplatesModal({
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });
       handleClose();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`创建失败: ${error.message || '未知错误'}`);
     },
   });
@@ -86,7 +86,7 @@ function AgentTemplatesModal({
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });
       handleClose();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`更新失败: ${error.message || '未知错误'}`);
     },
   });

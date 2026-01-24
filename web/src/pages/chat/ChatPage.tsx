@@ -313,7 +313,10 @@ function ChatPage() {
         role: 'user',
         content: currentInput,
         model,
-      }).catch((err) => console.error('Failed to save user message:', err));
+      }).catch((err) => {
+        // Log error but don't block the chat - message is already displayed locally
+        console.error('Failed to save user message:', err instanceof Error ? err.message : 'Unknown error');
+      });
     }
 
     try {
@@ -383,7 +386,10 @@ function ChatPage() {
                 // 刷新 token 使用统计
                 loadTokenUsage(conversationId!);
               })
-              .catch((err) => console.error('Failed to save assistant message:', err));
+              .catch((err) => {
+                // Log error but don't disrupt the user experience
+                console.error('Failed to save assistant message:', err instanceof Error ? err.message : 'Unknown error');
+              });
           }
         },
         // onError

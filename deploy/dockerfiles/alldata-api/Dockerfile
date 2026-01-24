@@ -1,7 +1,7 @@
 # Alldata API - 持久化版本
 # Sprint 1.1: MySQL + SQLAlchemy 实现
 
-FROM python:3.10-slim
+FROM python:3.10.14-slim
 
 WORKDIR /app
 

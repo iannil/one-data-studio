@@ -1,9 +1,40 @@
 # ONE-DATA-STUDIO Security Best Practices
-# Sprint 23: Production Readiness
+# Sprint 23-24: Production Readiness
 
 ## Overview
 
 This document outlines security best practices for deploying and operating ONE-DATA-STUDIO in production environments.
+
+## Recent Security Enhancements (Sprint 24)
+
+### Cache Security
+- **Pickle RCE Prevention**: Cache module now uses JSON serialization with HMAC signature verification instead of pickle
+- **Production Requirement**: `CACHE_SIGNING_KEY` environment variable is required in production
+- **Tamper Detection**: Cached data is signed and verified to prevent cache poisoning attacks
+
+### Code Execution Sandbox
+- **AST-based Validation**: Complete AST analysis to detect dangerous patterns
+- **Forbidden Module Blocking**: os, subprocess, socket, pickle, and other dangerous modules blocked
+- **Forbidden Function Blocking**: eval, exec, open, __import__, and other dangerous functions blocked
+- **Dunder Attribute Blocking**: __class__, __subclasses__, __globals__, etc. blocked to prevent sandbox escapes
+- **Timeout Enforcement**: All code execution has configurable timeout limits
+
+### SQL Injection Protection
+- **Pattern Detection**: Dangerous SQL patterns (DROP, DELETE, UNION, --, etc.) are blocked
+- **Parameterized Queries**: All database operations use parameterized queries
+- **Production Validation**: Mock data is rejected in production environment
+
+### SSRF Protection
+- **Private IP Blocking**: 10.x.x.x, 172.16.x.x, 192.168.x.x blocked
+- **Localhost Blocking**: localhost, 127.0.0.1 blocked
+- **Cloud Metadata Blocking**: 169.254.169.254 (AWS/GCP/Azure metadata endpoints) blocked
+- **Kubernetes Internal Blocking**: kubernetes.default.svc blocked
+- **Protocol Validation**: Only http:// and https:// allowed
+
+### Production Environment Enforcement
+- **Mock Data Rejection**: mock_data=True is not allowed in production
+- **SSL Verification**: SSL verification cannot be disabled in production
+- **Credential Validation**: Helm templates validate that all required credentials are set
 
 ## Authentication & Authorization
 
@@ -243,6 +274,35 @@ Before deployment:
 - [ ] Backup encryption enabled
 - [ ] Network policies applied
 - [ ] Container images scanned
+- [ ] CACHE_SIGNING_KEY set for production
+- [ ] ENVIRONMENT=production set
+- [ ] Mock data disabled
+- [ ] SSL verification enabled
+
+### Required Environment Variables (Production)
+
+```bash
+# Authentication
+JWT_SECRET_KEY=<min 32 chars, random>
+CSRF_SECRET_KEY=<min 32 chars, random>
+
+# Cache Security
+CACHE_SIGNING_KEY=<min 32 chars, random>
+
+# Environment
+ENVIRONMENT=production
+
+# Database
+MYSQL_PASSWORD=<strong password>
+REDIS_PASSWORD=<strong password>
+
+# Storage
+MINIO_ACCESS_KEY=<access key>
+MINIO_SECRET_KEY=<min 40 chars>
+
+# External APIs
+OPENAI_API_KEY=<api key>
+```
 
 ### Useful Commands
 

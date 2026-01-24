@@ -137,12 +137,15 @@ function getCacheStrategyForKey(queryKey: readonly unknown[]): { staleTime: numb
 function createQueryCache() {
   return new QueryCache({
     onError: (error, query) => {
-      // 全局查询错误处理
-      console.error('Query error:', error, 'for query:', query.queryKey);
+      // Global query error handling - avoid logging sensitive data
+      const sanitizedKey = Array.isArray(query.queryKey)
+        ? query.queryKey.slice(0, 2).join('/')
+        : 'unknown';
+      console.error(`Query error for [${sanitizedKey}]:`, error instanceof Error ? error.message : 'Unknown error');
 
       // 只对非静默查询显示错误消息
       if (query.meta?.errorMessage !== false) {
-        const errorMessage = (error as any)?.message || '加载数据失败';
+        const errorMessage = (error as Error)?.message || '加载数据失败';
         message.error(errorMessage);
       }
     },
@@ -191,16 +194,17 @@ const MutationInvalidationMap: Record<string, readonly unknown[][]> = {
  */
 function createMutationCache() {
   return new MutationCache({
-    onError: (error, variables, context, mutation) => {
-      // 全局变更错误处理
-      console.error('Mutation error:', error, 'variables:', variables);
+    onError: (error, _variables, _context, mutation) => {
+      // Global mutation error handling - avoid logging sensitive variables
+      const mutationKey = mutation.options.mutationKey?.[0] || 'unknown';
+      console.error(`Mutation error for [${mutationKey}]:`, error instanceof Error ? error.message : 'Unknown error');
 
       if (mutation.meta?.errorMessage !== false) {
-        const errorMessage = (error as any)?.message || '操作失败';
+        const errorMessage = (error as Error)?.message || '操作失败';
         message.error(errorMessage);
       }
     },
-    onSuccess: (data, variables, context, mutation) => {
+    onSuccess: (_data, _variables, _context, mutation) => {
       // 成功提示
       if (mutation.meta?.successMessage) {
         message.success(mutation.meta.successMessage as string);

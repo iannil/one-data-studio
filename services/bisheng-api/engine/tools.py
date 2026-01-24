@@ -23,6 +23,19 @@ logger = logging.getLogger(__name__)
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
 
+# SSL verification for HTTP requests
+# In production, this should always be True. Only disable for local development with self-signed certs.
+VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
+if not VERIFY_SSL:
+    if os.getenv("ENVIRONMENT", "").lower() in ("production", "prod"):
+        raise ValueError(
+            "CRITICAL: VERIFY_SSL cannot be disabled in production environment."
+        )
+    logger.warning(
+        "SECURITY WARNING: SSL verification is disabled for HTTP tools. "
+        "This should ONLY be used for local development."
+    )
+
 
 class SafeMathEvaluator:
     """安全的数学表达式求值器
@@ -278,7 +291,18 @@ class SQLQueryTool(BaseTool):
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
-        self.mock_data = self.config.get("mock_data", True)
+        # Check environment - mock data is not allowed in production
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env in ("production", "prod"):
+            # In production, mock_data must be explicitly disabled
+            if self.config.get("mock_data", False):
+                raise RuntimeError(
+                    "SECURITY: mock_data=True is not allowed in production environment. "
+                    "Configure real database connections instead."
+                )
+            self.mock_data = False
+        else:
+            self.mock_data = self.config.get("mock_data", True)
         self.db_connections = self.config.get("db_connections", {})
 
     async def execute(self, sql: str, database: str = "sales_dw", timeout: int = 30) -> Dict[str, Any]:
@@ -323,6 +347,19 @@ class SQLQueryTool(BaseTool):
                         }
 
             if self.mock_data:
+                # Double-check production environment (defense in depth)
+                env = os.getenv("ENVIRONMENT", "development").lower()
+                if env in ("production", "prod"):
+                    logger.error("Mock data attempted in production environment!")
+                    return {
+                        "success": False,
+                        "error": "Mock data is not allowed in production",
+                        "results": []
+                    }
+
+                logger.warning(
+                    "SQL query returning mock data. This is only acceptable in development/testing."
+                )
                 # 模拟数据返回
                 if "SELECT" in sql_upper:
                     return {
@@ -719,13 +756,13 @@ class HTTPRequestTool(BaseTool):
             timeout = min(timeout, 60)
 
             if method == "GET":
-                response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)
+                response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False, verify=VERIFY_SSL)
             elif method == "POST":
-                response = requests.post(url, headers=headers, json=body, timeout=timeout, allow_redirects=False)
+                response = requests.post(url, headers=headers, json=body, timeout=timeout, allow_redirects=False, verify=VERIFY_SSL)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=body, timeout=timeout, allow_redirects=False)
+                response = requests.put(url, headers=headers, json=body, timeout=timeout, allow_redirects=False, verify=VERIFY_SSL)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers, timeout=timeout, allow_redirects=False)
+                response = requests.delete(url, headers=headers, timeout=timeout, allow_redirects=False, verify=VERIFY_SSL)
             else:
                 return {
                     "success": False,

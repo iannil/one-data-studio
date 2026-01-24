@@ -12,9 +12,16 @@ interface ToolExecuteModalProps {
   onClose: () => void;
 }
 
+// 工具执行结果类型
+interface ToolExecuteResult {
+  output?: unknown;
+  error?: string;
+  [key: string]: unknown;
+}
+
 function ToolExecuteModal({ tool, open, onClose }: ToolExecuteModalProps) {
   const [form] = Form.useForm();
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ToolExecuteResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasExecuted, setHasExecuted] = useState(false);
 
@@ -33,12 +40,13 @@ function ToolExecuteModal({ tool, open, onClose }: ToolExecuteModalProps) {
 
     try {
       const response = await bisheng.executeTool(tool.name, values);
-      setResult(response.data);
+      setResult(response.data as ToolExecuteResult);
       setHasExecuted(true);
       message.success('工具执行成功');
-    } catch (error: any) {
-      message.error(`工具执行失败: ${error.message || '未知错误'}`);
-      setResult({ error: error.message || '未知错误' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error(`工具执行失败: ${errorMessage}`);
+      setResult({ error: errorMessage });
       setHasExecuted(true);
     } finally {
       setLoading(false);

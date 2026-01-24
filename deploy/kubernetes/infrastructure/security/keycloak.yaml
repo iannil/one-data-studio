@@ -134,15 +134,19 @@ spec:
 
 ---
 # Keycloak Credentials Secret
+# 警告：这是占位符配置，生产环境必须通过 External Secrets 或 Sealed Secrets 管理
 apiVersion: v1
 kind: Secret
 metadata:
   name: keycloak-credentials
   namespace: one-data-system
+  annotations:
+    one-data.io/placeholder: "true"
+    one-data.io/description: "生产环境请替换为真实凭据"
 type: Opaque
 stringData:
-  admin-password: "KeycloakAdmin123!"      # Keycloak 管理员密码
-  postgres-password: "KeycloakDB123!"      # PostgreSQL 密码
+  admin-password: "CHANGE_ME_USE_STRONG_PASSWORD"      # Keycloak 管理员密码
+  postgres-password: "CHANGE_ME_USE_STRONG_PASSWORD"   # PostgreSQL 密码
   # 生产环境请使用强密码并通过 Secret Management 工具管理
 
 ---

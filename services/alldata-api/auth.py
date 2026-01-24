@@ -26,6 +26,18 @@ KEYCLOAK_URL = os.getenv(
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "one-data")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
+# SSL verification for external requests
+# In production, this should always be True. Only disable for local development with self-signed certs.
+VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
+if not VERIFY_SSL:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError(
+            "CRITICAL: VERIFY_SSL cannot be disabled in production environment."
+        )
+    logger.warning(
+        "SECURITY WARNING: SSL verification is disabled. This should ONLY be used for local development."
+    )
+
 # 安全警告: AUTH_MODE=false 将禁用所有认证检查
 if not AUTH_MODE:
     if os.getenv("ENVIRONMENT") == "production":
@@ -224,7 +236,8 @@ def _introspect_token(token: str) -> Optional[Dict]:
                 "client_id": client_id,
                 "client_secret": client_secret,
             },
-            timeout=5
+            timeout=5,
+            verify=VERIFY_SSL  # Use configurable SSL verification
         )
         if response.status_code == 200:
             return response.json()

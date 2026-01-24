@@ -36,7 +36,12 @@ class DatabaseManager:
         if self._initialized:
             return
 
-        # 从环境变量获取数据库配置 - Sprint 8: 使用共享配置
+        # 从环境变量获取数据库配置
+        # NOTE: For consistency, consider using shared.config.get_config().database
+        # instead of reading env vars directly. The shared config provides:
+        # - Centralized validation
+        # - Default value management
+        # - High availability (HA) support
         db_host = os.getenv('MYSQL_HOST', 'mysql.one-data-infra.svc.cluster.local')
         db_port = int(os.getenv('MYSQL_PORT', '3306'))
         db_user = os.getenv('MYSQL_USER', 'one_data')
@@ -50,9 +55,10 @@ class DatabaseManager:
                 "Please set it before starting the application."
             )
 
-        # Sprint 8: 连接池参数优化
-        pool_size = int(os.getenv('DB_POOL_SIZE', '20'))  # 增加默认值 10 -> 20
-        max_overflow = int(os.getenv('DB_MAX_OVERFLOW', '40'))  # 增加默认值 20 -> 40
+        # 连接池参数 - 已优化默认值，可根据负载测试调整
+        # NOTE: These values should be coordinated with shared/config.py DatabaseConfig
+        pool_size = int(os.getenv('DB_POOL_SIZE', '20'))  # Higher values need monitoring
+        max_overflow = int(os.getenv('DB_MAX_OVERFLOW', '40'))  # Total max = pool_size + max_overflow
         pool_timeout = int(os.getenv('DB_POOL_TIMEOUT', '30'))
         pool_recycle = int(os.getenv('DB_POOL_RECYCLE', '3600'))
         pool_pre_ping = os.getenv('DB_POOL_PRE_PING', 'true').lower() == 'true'

@@ -4,11 +4,16 @@ Sprint 8: API 响应缓存
 Sprint 14: Redis Sentinel 高可用支持
 
 提供 Redis 缓存功能，支持多种缓存策略和 TTL 配置
+
+SECURITY: This module uses JSON serialization with HMAC signature verification
+instead of pickle to prevent remote code execution attacks.
 """
 
+import hashlib
+import hmac
 import json
 import logging
-import pickle
+import os
 from typing import Any, Optional, Callable, TypeVar, Union, Dict
 from functools import wraps
 from datetime import timedelta
@@ -21,6 +26,49 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 from .config import get_config
+
+# Cache signing key for HMAC verification
+# In production, this should be set via environment variable
+_CACHE_SIGNING_KEY: Optional[bytes] = None
+
+
+def _get_signing_key() -> bytes:
+    """Get the cache signing key for HMAC verification.
+
+    The key is used to sign cached data to prevent tampering.
+    If Redis is compromised, an attacker cannot inject malicious data
+    without knowing this key.
+    """
+    global _CACHE_SIGNING_KEY
+    if _CACHE_SIGNING_KEY is None:
+        key = os.getenv("CACHE_SIGNING_KEY", "")
+        if not key:
+            # In production, require explicit key
+            env = os.getenv("ENVIRONMENT", "development").lower()
+            if env in ("production", "prod"):
+                raise ValueError(
+                    "CACHE_SIGNING_KEY environment variable is required in production. "
+                    "Generate a secure key with: python -c 'import secrets; print(secrets.token_hex(32))'"
+                )
+            # Development fallback - NOT secure for production
+            key = "dev-only-insecure-key-do-not-use-in-production"
+            logging.getLogger(__name__).warning(
+                "Using insecure default cache signing key. "
+                "Set CACHE_SIGNING_KEY environment variable for production."
+            )
+        _CACHE_SIGNING_KEY = key.encode('utf-8')
+    return _CACHE_SIGNING_KEY
+
+
+def _sign_data(data: bytes) -> str:
+    """Generate HMAC signature for cached data."""
+    return hmac.new(_get_signing_key(), data, hashlib.sha256).hexdigest()
+
+
+def _verify_signature(data: bytes, signature: str) -> bool:
+    """Verify HMAC signature of cached data."""
+    expected = hmac.new(_get_signing_key(), data, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 logger = logging.getLogger(__name__)
 
@@ -222,35 +270,82 @@ class RedisCache(CacheBackend):
             return self.client
 
     def get(self, key: str) -> Optional[Any]:
-        """获取缓存值"""
+        """获取缓存值
+
+        SECURITY: Uses JSON deserialization with HMAC signature verification
+        to prevent cache poisoning attacks. If Redis is compromised, attacker
+        cannot inject malicious data without knowing the signing key.
+        """
         if not self.client:
             return _get_memory_cache().get(key)
 
         try:
             data = self.client.get(self._make_key(key))
             if data:
-                # 尝试 pickle 反序列化
                 try:
-                    return pickle.loads(data)
-                except (pickle.PickleError, EOFError):
-                    # 回退到 JSON
-                    return json.loads(data.decode('utf-8'))
+                    # Parse the stored format: {"signature": "...", "data": "..."}
+                    envelope = json.loads(data.decode('utf-8'))
+
+                    if isinstance(envelope, dict) and 'signature' in envelope and 'data' in envelope:
+                        # New secure format with signature
+                        json_data = envelope['data'].encode('utf-8')
+                        signature = envelope['signature']
+
+                        if not _verify_signature(json_data, signature):
+                            logger.warning(f"Cache signature verification failed for key {key}. Data may be tampered.")
+                            # Delete potentially compromised cache entry
+                            self.delete(key)
+                            return None
+
+                        return json.loads(json_data)
+                    else:
+                        # Legacy unsigned data - treat as untrusted
+                        logger.warning(f"Legacy unsigned cache entry found for key {key}. Ignoring for security.")
+                        self.delete(key)
+                        return None
+
+                except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as e:
+                    logger.warning(f"Cache deserialization failed for key {key}: {e}")
+                    return None
             return None
         except Exception as e:
             logger.warning(f"Redis get error: {e}")
             return None
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """设置缓存值"""
+        """设置缓存值
+
+        SECURITY: Uses JSON serialization with HMAC signature to prevent
+        cache poisoning attacks.
+
+        Note: Only JSON-serializable values can be cached. Complex objects
+        like functions, classes, or objects with circular references cannot
+        be cached. This is a security feature - pickle allowed arbitrary code
+        execution which was a critical security vulnerability.
+        """
         if not self.client:
             return _get_memory_cache().set(key, value, ttl)
 
         try:
-            serialized = pickle.dumps(value)
+            # Serialize to JSON
+            json_data = json.dumps(value, ensure_ascii=False, default=str)
+            json_bytes = json_data.encode('utf-8')
+
+            # Create signed envelope
+            signature = _sign_data(json_bytes)
+            envelope = json.dumps({
+                "signature": signature,
+                "data": json_data
+            })
+
             if ttl:
-                return self.client.setex(self._make_key(key), ttl, serialized)
+                return self.client.setex(self._make_key(key), ttl, envelope)
             else:
-                return self.client.set(self._make_key(key), serialized)
+                return self.client.set(self._make_key(key), envelope)
+        except (TypeError, ValueError) as e:
+            # Value is not JSON serializable
+            logger.warning(f"Cannot cache value for key {key}: not JSON serializable: {e}")
+            return False
         except Exception as e:
             logger.warning(f"Redis set error: {e}")
             return False

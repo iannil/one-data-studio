@@ -164,6 +164,12 @@ export async function streamChatMessage(
   onComplete: () => void,
   onError: (error: Error) => void
 ): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+    onError(new Error('Request timeout after 60 seconds'));
+  }, 60000); // 60 second timeout
+
   try {
     const response = await fetch('/api/v1/chat', {
       method: 'POST',
@@ -172,9 +178,20 @@ export async function streamChatMessage(
         Authorization: `Bearer ${localStorage.getItem('access_token') || ''}`,
       },
       body: JSON.stringify({ ...data, stream: true }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
+
     if (!response.ok) {
+      // Handle specific HTTP status codes
+      if (response.status === 401) {
+        throw new Error('Unauthorized: Please login again');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (response.status >= 500) {
+        throw new Error(`Server error: ${response.status}`);
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -186,33 +203,42 @@ export async function streamChatMessage(
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === 'data: [DONE]') continue;
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const json = JSON.parse(trimmed.slice(6));
-            const content = json.content || json.choices?.[0]?.delta?.content;
-            if (content) {
-              onChunk(content);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const content = json.content || json.choices?.[0]?.delta?.content;
+              if (content) {
+                onChunk(content);
+              }
+            } catch {
+              // Silently ignore parse errors for malformed SSE chunks
             }
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
           }
         }
       }
+    } finally {
+      reader.releaseLock();
     }
     onComplete();
   } catch (error) {
-    onError(error as Error);
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === 'AbortError') {
+      onError(new Error('Request was cancelled'));
+    } else {
+      onError(error as Error);
+    }
   }
 }
 
@@ -423,7 +449,7 @@ export interface Tool {
     type: string;
     description: string;
     required: boolean;
-    default?: any;
+    default?: unknown;
   }>;
 }
 
@@ -434,7 +460,7 @@ export interface ToolSchema {
     description: string;
     parameters: {
       type: 'object';
-      properties: Record<string, any>;
+      properties: Record<string, { type: string; description?: string; default?: unknown }>;
       required: string[];
     };
   };
@@ -450,7 +476,7 @@ export interface AgentRunRequest {
 export interface AgentStep {
   type: 'thought' | 'action' | 'observation' | 'final' | 'plan' | 'error';
   content: string;
-  tool_output?: any;
+  tool_output?: unknown;
   timestamp: string;
 }
 
@@ -495,8 +521,8 @@ export async function getToolSchemas(): Promise<ApiResponse<{ schemas: ToolSchem
  */
 export async function executeTool(
   toolName: string,
-  parameters: Record<string, any>
-): Promise<ApiResponse<any>> {
+  parameters: Record<string, unknown>
+): Promise<ApiResponse<unknown>> {
   return apiClient.post(`/api/v1/tools/${toolName}/execute`, parameters);
 }
 
@@ -524,6 +550,13 @@ export async function runAgentStream(
     onError?: (error: string) => void;
   }
 ): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+    callbacks.onError?.('Request timeout after 120 seconds');
+    callbacks.onComplete?.({ success: false, answer: undefined });
+  }, 120000); // 120 second timeout for agent operations
+
   try {
     const response = await fetch('/api/v1/agent/run-stream', {
       method: 'POST',
@@ -532,9 +565,20 @@ export async function runAgentStream(
         Authorization: `Bearer ${localStorage.getItem('access_token') || ''}`,
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
+
     if (!response.ok) {
+      // Handle specific HTTP status codes
+      if (response.status === 401) {
+        throw new Error('Unauthorized: Please login again');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (response.status >= 500) {
+        throw new Error(`Server error: ${response.status}`);
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -546,70 +590,79 @@ export async function runAgentStream(
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event: AgentStreamEvent = JSON.parse(trimmed.slice(6));
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const event: AgentStreamEvent = JSON.parse(trimmed.slice(6));
 
-            switch (event.type) {
-              case 'start':
-                callbacks.onStart?.(event.agent_type || 'unknown');
-                break;
-              case 'step':
-                if (event.data) {
-                  callbacks.onStep?.(event.data);
-                }
-                break;
-              case 'iteration':
-                if (event.iteration !== undefined && event.max_iterations !== undefined) {
-                  callbacks.onIteration?.(event.iteration, event.max_iterations);
-                }
-                break;
-              case 'tool_start':
-                if (event.tool) {
-                  callbacks.onToolStart?.(event.tool);
-                }
-                break;
-              case 'tool_end':
-                if (event.tool) {
-                  callbacks.onToolEnd?.(event.tool);
-                }
-                break;
-              case 'status':
-                if (event.message) {
-                  callbacks.onStatus?.(event.message);
-                }
-                break;
-              case 'end':
-                callbacks.onComplete?.({
-                  success: event.success || false,
-                  answer: event.answer,
-                  iterations: event.iterations,
-                });
-                break;
-              case 'error':
-                callbacks.onError?.(event.message || 'Unknown error');
-                callbacks.onComplete?.({ success: false, answer: undefined });
-                break;
+              switch (event.type) {
+                case 'start':
+                  callbacks.onStart?.(event.agent_type || 'unknown');
+                  break;
+                case 'step':
+                  if (event.data) {
+                    callbacks.onStep?.(event.data);
+                  }
+                  break;
+                case 'iteration':
+                  if (event.iteration !== undefined && event.max_iterations !== undefined) {
+                    callbacks.onIteration?.(event.iteration, event.max_iterations);
+                  }
+                  break;
+                case 'tool_start':
+                  if (event.tool) {
+                    callbacks.onToolStart?.(event.tool);
+                  }
+                  break;
+                case 'tool_end':
+                  if (event.tool) {
+                    callbacks.onToolEnd?.(event.tool);
+                  }
+                  break;
+                case 'status':
+                  if (event.message) {
+                    callbacks.onStatus?.(event.message);
+                  }
+                  break;
+                case 'end':
+                  callbacks.onComplete?.({
+                    success: event.success || false,
+                    answer: event.answer,
+                    iterations: event.iterations,
+                  });
+                  break;
+                case 'error':
+                  callbacks.onError?.(event.message || 'Unknown error');
+                  callbacks.onComplete?.({ success: false, answer: undefined });
+                  break;
+              }
+            } catch {
+              // Silently ignore parse errors for malformed SSE chunks
             }
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
           }
         }
       }
+    } finally {
+      reader.releaseLock();
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    callbacks.onError?.(errorMsg);
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === 'AbortError') {
+      callbacks.onError?.('Request was cancelled');
+    } else {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      callbacks.onError?.(errorMsg);
+    }
     callbacks.onComplete?.({ success: false, answer: undefined });
   }
 }

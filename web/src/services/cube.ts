@@ -147,6 +147,12 @@ export async function streamChatCompletion(
   onComplete: (usage?: ChatCompletionUsage) => void,
   onError: (error: Error) => void
 ): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+    onError(new Error('Request timeout after 60 seconds'));
+  }, 60000); // 60 second timeout
+
   try {
     const response = await fetch('/v1/chat/completions', {
       method: 'POST',
@@ -155,9 +161,20 @@ export async function streamChatCompletion(
         Authorization: `Bearer ${localStorage.getItem('access_token') || ''}`,
       },
       body: JSON.stringify({ ...data, stream: true }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
+
     if (!response.ok) {
+      // Handle specific HTTP status codes
+      if (response.status === 401) {
+        throw new Error('Unauthorized: Please login again');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (response.status >= 500) {
+        throw new Error(`Server error: ${response.status}`);
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -170,56 +187,82 @@ export async function streamChatCompletion(
     let buffer = '';
     let usage: ChatCompletionUsage | undefined;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === 'data: [DONE]') continue;
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const json = JSON.parse(trimmed.slice(6));
-            const content = json.choices?.[0]?.delta?.content;
-            if (content) {
-              onChunk(content);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const content = json.choices?.[0]?.delta?.content;
+              if (content) {
+                onChunk(content);
+              }
+              // Extract usage data from the final chunk (OpenAI format)
+              if (json.usage) {
+                usage = {
+                  prompt_tokens: json.usage.prompt_tokens || 0,
+                  completion_tokens: json.usage.completion_tokens || 0,
+                  total_tokens: json.usage.total_tokens || 0,
+                };
+              }
+              // Some providers include usage in x_groq or similar
+              if (json.x_groq?.usage) {
+                usage = {
+                  prompt_tokens: json.x_groq.usage.prompt_tokens || 0,
+                  completion_tokens: json.x_groq.usage.completion_tokens || 0,
+                  total_tokens: json.x_groq.usage.total_tokens || 0,
+                };
+              }
+            } catch {
+              // Silently ignore parse errors for malformed SSE chunks
             }
-            // Extract usage data from the final chunk (OpenAI format)
-            if (json.usage) {
-              usage = {
-                prompt_tokens: json.usage.prompt_tokens || 0,
-                completion_tokens: json.usage.completion_tokens || 0,
-                total_tokens: json.usage.total_tokens || 0,
-              };
-            }
-            // Some providers include usage in x_groq or similar
-            if (json.x_groq?.usage) {
-              usage = {
-                prompt_tokens: json.x_groq.usage.prompt_tokens || 0,
-                completion_tokens: json.x_groq.usage.completion_tokens || 0,
-                total_tokens: json.x_groq.usage.total_tokens || 0,
-              };
-            }
-          } catch {
-            // Ignore parse errors for incomplete chunks
           }
         }
       }
+    } finally {
+      reader.releaseLock();
     }
     onComplete(usage);
   } catch (error) {
-    onError(error as Error);
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === 'AbortError') {
+      onError(new Error('Request was cancelled'));
+    } else {
+      onError(error as Error);
+    }
   }
+}
+
+export interface TextCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    text: string;
+    index: number;
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 /**
  * 文本补全
  */
-export async function createCompletion(data: TextCompletionRequest): Promise<any> {
+export async function createCompletion(data: TextCompletionRequest): Promise<TextCompletionResponse> {
   return apiClient.post('/v1/completions', data);
 }
 

@@ -27,9 +27,20 @@ spec:
         prometheus.io/port: "9121"
     spec:
       terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999    # redis user
+        runAsGroup: 999
+        fsGroup: 999
       containers:
       - name: redis
         image: redis:7.2-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         command: ["/bin/sh", "/etc/redis/start-redis.sh"]
         env:
         - name: REDIS_PASSWORD

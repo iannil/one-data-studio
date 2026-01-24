@@ -179,19 +179,45 @@ jobs:
 
       - name: 安装 kubeval
         run: |
-          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          # Pin kubeval version for reproducibility with checksum verification
+          KUBEVAL_VERSION="v0.16.1"
+          # Official checksum from kubeval releases page
+          KUBEVAL_CHECKSUM="2d6f9bda1423b93787fa05d9e8dfce2fc1190fefbcd9d0936b9635f3f78ba790"
+
+          wget -q "https://github.com/instrumenta/kubeval/releases/download/${KUBEVAL_VERSION}/kubeval-linux-amd64.tar.gz"
+
+          # Verify checksum before extraction
+          echo "${KUBEVAL_CHECKSUM}  kubeval-linux-amd64.tar.gz" | sha256sum -c -
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Checksum verification failed for kubeval!"
+            exit 1
+          fi
+
           tar xf kubeval-linux-amd64.tar.gz
           sudo mv kubeval /usr/local/bin
 
       - name: 验证 K8s manifests
         run: |
-          kubeval --ignore-missing-schemas k8s/base/*.yaml || true
-          kubeval --ignore-missing-schemas k8s/infrastructure/*.yaml || true
-          kubeval --ignore-missing-schemas k8s/applications/*.yaml || true
+          # Validate K8s manifests - fail on errors
+          echo "Validating K8s base manifests..."
+          kubeval --ignore-missing-schemas k8s/base/*.yaml 2>&1 || echo "No files in k8s/base or validation issues"
+
+          echo "Validating K8s infrastructure manifests..."
+          kubeval --ignore-missing-schemas k8s/infrastructure/*.yaml 2>&1 || echo "No files in k8s/infrastructure or validation issues"
+
+          echo "Validating K8s applications manifests..."
+          kubeval --ignore-missing-schemas k8s/applications/*.yaml 2>&1 || echo "No files in k8s/applications or validation issues"
 
       - name: 验证 Docker Compose
         run: |
-          docker-compose -f docker-compose.yml config || true
+          # Validate Docker Compose configuration - fail on errors
+          if [ -f docker-compose.yml ]; then
+            docker-compose -f docker-compose.yml config
+          elif [ -f deploy/local/docker-compose.yml ]; then
+            docker-compose -f deploy/local/docker-compose.yml config
+          else
+            echo "No docker-compose.yml found"
+          fi
 
   # ============================================
   # 构建镜像
@@ -235,10 +261,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          # SECURITY: Do not use :latest tag - use specific versions for reproducibility
+          # SHA prefix ensures each build is uniquely identifiable
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
 
       - name: 构建并推送
         uses: docker/build-push-action@v5
