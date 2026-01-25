@@ -24,6 +24,7 @@ from functools import wraps
 
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
+from sqlalchemy import func
 
 # 添加项目路径
 sys.path.insert(0, '/app')
@@ -970,6 +971,61 @@ def get_audit_statistics():
     })
 
 
+@app.route("/api/v1/admin/audit-logs/active-users", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_active_users():
+    """获取活跃用户列表"""
+    db = get_db_session()
+
+    # 获取最近有操作的用户（按最近活动时间排序）
+    from datetime import timedelta
+
+    days = int(request.args.get("days", 7))
+    since = datetime.now() - timedelta(days=days)
+
+    # 从审计日志中获取活跃用户
+    active_users = db.query(
+        AuditLog.user_id,
+        AuditLog.username,
+        func.count(AuditLog.audit_id).label('action_count')
+    ).filter(
+        AuditLog.created_at >= since
+    ).group_by(
+        AuditLog.user_id,
+        AuditLog.username
+    ).order_by(
+        func.count(AuditLog.audit_id).desc()
+    ).limit(20).all()
+
+    # 获取用户详细信息
+    result = []
+    for user_id, username, action_count in active_users:
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if user:
+            result.append({
+                "user_id": user_id,
+                "username": username or user.username,
+                "display_name": user.display_name,
+                "email": user.email,
+                "department": user.department,
+                "action_count": action_count,
+                "last_activity": db.query(func.max(AuditLog.created_at)).filter(
+                    AuditLog.user_id == user_id
+                ).scalar()
+            })
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "active_users": result,
+            "total_active_count": len(result),
+            "period_days": days
+        }
+    })
+
+
 # ==================== 系统设置 API ====================
 
 @app.route("/api/v1/settings", methods=["GET"])
@@ -1138,6 +1194,273 @@ def create_notification_channel():
         "message": "success",
         "data": {"channel_id": channel.channel_id}
     }), 201
+
+
+@app.route("/api/v1/notification-channels/<channel_id>", methods=["GET"])
+@app.route("/api/v1/admin/settings/notification-channels/<channel_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_notification_channel(channel_id: str):
+    """获取通知渠道详情"""
+    db = get_db_session()
+
+    channel = db.query(NotificationChannel).filter(NotificationChannel.channel_id == channel_id).first()
+    if not channel:
+        return jsonify({"code": 40401, "message": "通知渠道不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": channel.to_dict(hide_secrets=False)
+    })
+
+
+@app.route("/api/v1/notification-channels/<channel_id>", methods=["PUT"])
+@app.route("/api/v1/admin/settings/notification-channels/<channel_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def update_notification_channel(channel_id: str):
+    """更新通知渠道"""
+    db = get_db_session()
+    data = request.json
+
+    channel = db.query(NotificationChannel).filter(NotificationChannel.channel_id == channel_id).first()
+    if not channel:
+        return jsonify({"code": 40401, "message": "通知渠道不存在"}), 404
+
+    old_data = channel.to_dict()
+
+    if data.get("name"):
+        channel.name = data["name"]
+    if data.get("type") is not None:
+        channel.channel_type = data["type"]
+    if data.get("enabled") is not None:
+        channel.enabled = data["enabled"]
+    if data.get("config") is not None:
+        channel.set_config(data["config"])
+
+    db.commit()
+    db.refresh(channel)
+
+    log_audit("update", "system", channel.channel_id, f"notification_channel: {channel.name}", changes={"before": old_data, "after": channel.to_dict()})
+    logger.info(f"更新通知渠道: {channel_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": channel.to_dict(hide_secrets=False)
+    })
+
+
+@app.route("/api/v1/notification-channels/<channel_id>", methods=["DELETE"])
+@app.route("/api/v1/admin/settings/notification-channels/<channel_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.DELETE)
+def delete_notification_channel(channel_id: str):
+    """删除通知渠道"""
+    db = get_db_session()
+
+    channel = db.query(NotificationChannel).filter(NotificationChannel.channel_id == channel_id).first()
+    if not channel:
+        return jsonify({"code": 40401, "message": "通知渠道不存在"}), 404
+
+    channel_name = channel.name
+    db.delete(channel)
+    db.commit()
+
+    log_audit("delete", "system", channel_id, f"notification_channel: {channel_name}")
+    logger.info(f"删除通知渠道: {channel_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/notification-channels/<channel_id>/test", methods=["POST"])
+@app.route("/api/v1/admin/settings/notification-channels/<channel_id>/test", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def test_notification_channel(channel_id: str):
+    """测试通知渠道"""
+    db = get_db_session()
+
+    channel = db.query(NotificationChannel).filter(NotificationChannel.channel_id == channel_id).first()
+    if not channel:
+        return jsonify({"code": 40401, "message": "通知渠道不存在"}), 404
+
+    # 简化实现 - 实际应该根据渠道类型发送测试通知
+    logger.info(f"测试通知渠道: {channel_id} ({channel.channel_type})")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "sent": True,
+            "message": "测试通知已发送"
+        }
+    })
+
+
+# ==================== 通知规则 API ====================
+
+@app.route("/api/v1/notification-rules", methods=["GET"])
+@app.route("/api/v1/admin/settings/notification-rules", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def list_notification_rules():
+    """列出通知规则"""
+    db = get_db_session()
+
+    enabled = request.args.get("enabled")
+    event_type = request.args.get("event_type")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(NotificationRule)
+
+    if enabled is not None:
+        query = query.filter(NotificationRule.enabled == (enabled.lower() == 'true'))
+    if event_type:
+        query = query.filter(NotificationRule.events.like(f'%"{event_type}"%'))
+
+    total = query.count()
+    rules = query.order_by(NotificationRule.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "rules": [r.to_dict() for r in rules],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/notification-rules", methods=["POST"])
+@app.route("/api/v1/admin/settings/notification-rules", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_notification_rule():
+    """创建通知规则"""
+    db = get_db_session()
+    data = request.json
+
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "规则名称不能为空"}), 400
+
+    rule = NotificationRule(
+        rule_id=generate_id("rule_"),
+        name=name,
+        enabled=data.get("enabled", True),
+        created_by=getattr(g, 'username', 'system')
+    )
+
+    if data.get("events"):
+        rule.set_events(data["events"])
+    if data.get("channel_ids"):
+        rule.set_channel_ids(data["channel_ids"])
+    if data.get("conditions"):
+        rule.conditions = data["conditions"]
+
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+
+    log_audit("create", "system", rule.rule_id, f"notification_rule: {name}")
+    logger.info(f"创建通知规则: {rule.rule_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": rule.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/notification-rules/<rule_id>", methods=["GET"])
+@app.route("/api/v1/admin/settings/notification-rules/<rule_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_notification_rule(rule_id: str):
+    """获取通知规则详情"""
+    db = get_db_session()
+
+    rule = db.query(NotificationRule).filter(NotificationRule.rule_id == rule_id).first()
+    if not rule:
+        return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": rule.to_dict()
+    })
+
+
+@app.route("/api/v1/notification-rules/<rule_id>", methods=["PUT"])
+@app.route("/api/v1/admin/settings/notification-rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def update_notification_rule(rule_id: str):
+    """更新通知规则"""
+    db = get_db_session()
+    data = request.json
+
+    rule = db.query(NotificationRule).filter(NotificationRule.rule_id == rule_id).first()
+    if not rule:
+        return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+    old_data = rule.to_dict()
+
+    if data.get("name"):
+        rule.name = data["name"]
+    if data.get("enabled") is not None:
+        rule.enabled = data["enabled"]
+    if data.get("events") is not None:
+        rule.set_events(data["events"])
+    if data.get("channel_ids") is not None:
+        rule.set_channel_ids(data["channel_ids"])
+    if data.get("conditions") is not None:
+        rule.conditions = data["conditions"]
+
+    db.commit()
+    db.refresh(rule)
+
+    log_audit("update", "system", rule.rule_id, rule.name, changes={"before": old_data, "after": rule.to_dict()})
+    logger.info(f"更新通知规则: {rule_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": rule.to_dict()
+    })
+
+
+@app.route("/api/v1/notification-rules/<rule_id>", methods=["DELETE"])
+@app.route("/api/v1/admin/settings/notification-rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.DELETE)
+def delete_notification_rule(rule_id: str):
+    """删除通知规则"""
+    db = get_db_session()
+
+    rule = db.query(NotificationRule).filter(NotificationRule.rule_id == rule_id).first()
+    if not rule:
+        return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+    rule_name = rule.name
+    db.delete(rule)
+    db.commit()
+
+    log_audit("delete", "system", rule_id, f"notification_rule: {rule_name}")
+    logger.info(f"删除通知规则: {rule_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
 
 
 # ==================== 成本报告 API ====================
@@ -1357,7 +1680,7 @@ def init_default_data():
 # ==================== 启动应用 ====================
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8003))
+    port = int(os.getenv("PORT", 8004))
 
     # 初始化数据库
     try:

@@ -245,7 +245,7 @@ def health():
 
 
 @app.route("/v1/models")
-@require_jwt()
+@require_jwt(optional=True)
 def list_models():
     """列出可用模型"""
     client = get_openai_client()
@@ -274,6 +274,18 @@ def list_models():
                 },
                 {
                     "id": "gpt-4o",
+                    "object": "model",
+                    "created": 1234567890,
+                    "owned_by": "openai"
+                },
+                {
+                    "id": "gpt-4-turbo",
+                    "object": "model",
+                    "created": 1234567890,
+                    "owned_by": "openai"
+                },
+                {
+                    "id": "gpt-3.5-turbo",
                     "object": "model",
                     "created": 1234567890,
                     "owned_by": "openai"

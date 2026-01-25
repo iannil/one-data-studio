@@ -4,7 +4,7 @@ Sprint 4.1: MetadataDatabase, MetadataTable, MetadataColumn 模型
 """
 
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, Text, Boolean, Integer, TIMESTAMP, BIGINT, ForeignKey
+from sqlalchemy import Column, BigInteger, String, Text, Boolean, Integer, TIMESTAMP, BIGINT, ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -48,9 +48,10 @@ class MetadataTable(Base):
     row_count = Column(BIGINT, default=0, comment='行数')
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp(), onupdate=func.current_timestamp(), comment='更新时间')
 
-    # 外键
+    # 外键和约束
     __table_args__ = (
         ForeignKeyConstraint(['database_name'], ['metadata_databases.database_name'], ondelete='CASCADE'),
+        UniqueConstraint('table_name', 'database_name', name='uq_table_database'),
     )
 
     # 关系

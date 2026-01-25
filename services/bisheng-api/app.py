@@ -370,6 +370,199 @@ def stats_overview():
         db.close()
 
 
+# ==================== 应用 API ====================
+
+@app.route("/api/v1/apps", methods=["GET"])
+@require_jwt(optional=True)
+def list_apps():
+    """列出应用"""
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 10))
+    app_type = request.args.get("type")
+
+    # 模拟应用数据，包含前端期望的所有字段
+    mock_apps = [
+        {
+            "app_id": "app-001",
+            "name": "智能客服助手",
+            "description": "基于 RAG 的智能客服系统，支持多轮对话",
+            "type": "chat",
+            "workflow_id": "wf-12345678",
+            "status": "published",
+            "icon": "robot",
+            "version": "1.2.0",
+            "created_by": "admin",
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-22T14:30:00Z",
+            "published_at": "2024-01-20T10:00:00Z",
+            "endpoint": "https://api.example.com/apps/app-001",
+            "access_count": 15420,
+            "api_key_count": 3,
+            "last_accessed": "2024-01-22T14:25:00Z",
+            "tags": ["rag", "客服", "中文"]
+        },
+        {
+            "app_id": "app-002",
+            "name": "数据分析助手",
+            "description": "自然语言查询数据库，生成可视化图表",
+            "type": "workflow",
+            "workflow_id": "wf-87654321",
+            "status": "published",
+            "icon": "bar-chart",
+            "version": "2.0.1",
+            "created_by": "admin",
+            "created_at": "2024-01-10T09:00:00Z",
+            "updated_at": "2024-01-20T16:45:00Z",
+            "published_at": "2024-01-18T09:00:00Z",
+            "endpoint": "https://api.example.com/apps/app-002",
+            "access_count": 8932,
+            "api_key_count": 2,
+            "last_accessed": "2024-01-22T13:15:00Z",
+            "tags": ["数据分析", "Text2SQL", "可视化"]
+        },
+        {
+            "app_id": "app-003",
+            "name": "文档问答系统",
+            "description": "上传文档，智能问答检索",
+            "type": "agent",
+            "workflow_id": "wf-11112222",
+            "status": "draft",
+            "icon": "file-text",
+            "version": "1.0.5",
+            "created_by": "dev",
+            "created_at": "2024-01-05T11:00:00Z",
+            "updated_at": "2024-01-18T10:15:00Z",
+            "published_at": None,
+            "endpoint": None,
+            "access_count": 0,
+            "api_key_count": 0,
+            "last_accessed": None,
+            "tags": ["文档", "问答"]
+        },
+        {
+            "app_id": "app-004",
+            "name": "代码生成助手",
+            "description": "根据需求描述生成代码，支持多种语言",
+            "type": "chat",
+            "workflow_id": "wf-33334444",
+            "status": "published",
+            "icon": "code",
+            "version": "1.5.0",
+            "created_by": "dev",
+            "created_at": "2024-01-08T14:20:00Z",
+            "updated_at": "2024-01-21T09:50:00Z",
+            "published_at": "2024-01-19T14:00:00Z",
+            "endpoint": "https://api.example.com/apps/app-004",
+            "access_count": 5621,
+            "api_key_count": 1,
+            "last_accessed": "2024-01-21T16:30:00Z",
+            "tags": ["代码生成", "多语言"]
+        },
+        {
+            "app_id": "app-005",
+            "name": "营销文案生成",
+            "description": "快速生成营销文案、广告语",
+            "type": "agent",
+            "workflow_id": "wf-55556666",
+            "status": "draft",
+            "icon": "edit",
+            "version": "1.1.0",
+            "created_by": "marketing",
+            "created_at": "2024-01-12T16:00:00Z",
+            "updated_at": "2024-01-19T11:30:00Z",
+            "published_at": None,
+            "endpoint": None,
+            "access_count": 0,
+            "api_key_count": 0,
+            "last_accessed": None,
+            "tags": ["营销", "文案"]
+        }
+    ]
+
+    # 按类型筛选
+    filtered_apps = mock_apps
+    if app_type:
+        filtered_apps = [a for a in mock_apps if a["type"] == app_type]
+
+    total = len(filtered_apps)
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_data = filtered_apps[start:end]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "apps": paginated_data,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/apps/<app_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_app(app_id: str):
+    """获取应用详情"""
+    mock_app = {
+        "app_id": app_id,
+        "name": "智能客服助手",
+        "description": "基于 RAG 的智能客服系统，支持多轮对话",
+        "type": "chatbot",
+        "workflow_id": "wf-12345678",
+        "status": "running",
+        "icon": "robot",
+        "version": "1.2.0",
+        "config": {
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 2000,
+            "enable_rag": True,
+            "knowledge_base_ids": ["kb-001", "kb-002"]
+        },
+        "statistics": {
+            "total_calls": 15420,
+            "total_users": 892,
+            "avg_response_time_ms": 1250,
+            "success_rate": 98.5
+        },
+        "created_by": "admin",
+        "created_at": "2024-01-15T10:00:00Z",
+        "updated_at": "2024-01-22T14:30:00Z"
+    }
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": mock_app
+    })
+
+
+@app.route("/api/v1/apps", methods=["POST"])
+@require_jwt()
+def create_app():
+    """创建应用"""
+    data = request.json
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "Name is required"}), 400
+
+    app_id = f"app-{uuid.uuid4().hex[:8]}"
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "app_id": app_id,
+            "name": name,
+            "description": data.get("description", ""),
+            "type": data.get("type", "chatbot"),
+            "status": "creating"
+        }
+    }), 201
+
+
 @app.route("/api/v1/chat", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
@@ -2122,6 +2315,138 @@ def delete_collection(collection_name):
         return jsonify({"code": 50001, "message": str(e)}), 500
 
 
+# ==================== 知识库 API ====================
+
+@app.route("/api/v1/knowledge-bases", methods=["GET"])
+@require_jwt(optional=True)
+def list_knowledge_bases():
+    """列出知识库"""
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 10))
+
+    # 模拟知识库数据
+    mock_knowledge_bases = [
+        {
+            "knowledge_base_id": "kb-001",
+            "name": "产品文档知识库",
+            "description": "包含产品手册、API 文档等",
+            "type": "document",
+            "collection_name": "product_docs",
+            "embedding_model": "text-embedding-ada-002",
+            "chunk_size": 512,
+            "chunk_overlap": 50,
+            "document_count": 156,
+            "status": "active",
+            "created_by": "admin",
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-20T14:22:00Z"
+        },
+        {
+            "knowledge_base_id": "kb-002",
+            "name": "技术 FAQ 知识库",
+            "description": "常见技术问题解答",
+            "type": "faq",
+            "collection_name": "tech_faq",
+            "embedding_model": "text-embedding-ada-002",
+            "chunk_size": 256,
+            "chunk_overlap": 25,
+            "document_count": 89,
+            "status": "active",
+            "created_by": "admin",
+            "created_at": "2024-01-10T09:15:00Z",
+            "updated_at": "2024-01-18T16:45:00Z"
+        },
+        {
+            "knowledge_base_id": "kb-003",
+            "name": "代码示例知识库",
+            "description": "各语言的代码示例和最佳实践",
+            "type": "code",
+            "collection_name": "code_examples",
+            "embedding_model": "text-embedding-ada-002",
+            "chunk_size": 1024,
+            "chunk_overlap": 128,
+            "document_count": 234,
+            "status": "active",
+            "created_by": "dev",
+            "created_at": "2024-01-05T11:00:00Z",
+            "updated_at": "2024-01-22T10:30:00Z"
+        }
+    ]
+
+    total = len(mock_knowledge_bases)
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_data = mock_knowledge_bases[start:end]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "knowledge_bases": paginated_data,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/knowledge-bases/<knowledge_base_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_knowledge_base(knowledge_base_id: str):
+    """获取知识库详情"""
+    mock_kb = {
+        "knowledge_base_id": knowledge_base_id,
+        "name": "产品文档知识库",
+        "description": "包含产品手册、API 文档等",
+        "type": "document",
+        "collection_name": "product_docs",
+        "embedding_model": "text-embedding-ada-002",
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "chunk_strategy": "recursive",
+        "document_count": 156,
+        "status": "active",
+        "created_by": "admin",
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-20T14:22:00Z",
+        "metadata": {
+            "total_chunks": 1248,
+            "last_indexed": "2024-01-20T14:22:00Z",
+            "indexing_status": "completed"
+        }
+    }
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": mock_kb
+    })
+
+
+@app.route("/api/v1/knowledge-bases", methods=["POST"])
+@require_jwt()
+def create_knowledge_base():
+    """创建知识库"""
+    data = request.json
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "Name is required"}), 400
+
+    kb_id = f"kb-{uuid.uuid4().hex[:8]}"
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "knowledge_base_id": kb_id,
+            "name": name,
+            "description": data.get("description", ""),
+            "type": data.get("type", "document"),
+            "status": "creating"
+        }
+    }), 201
+
+
 @app.route("/api/v1/rag/query", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
@@ -2210,10 +2535,125 @@ async def rag_query():
 def list_tools():
     """列出可用工具"""
     if not TOOLS_AVAILABLE:
+        # 返回模拟数据，包含 parameters 字段以匹配前端期望
+        mock_tools = [
+            {
+                "name": "web_search",
+                "display_name": "网络搜索",
+                "description": "使用搜索引擎查找信息",
+                "category": "search",
+                "enabled": True,
+                "parameters": [
+                    {
+                        "name": "query",
+                        "type": "string",
+                        "description": "搜索查询关键词",
+                        "required": True,
+                        "default": None
+                    },
+                    {
+                        "name": "num_results",
+                        "type": "integer",
+                        "description": "返回结果数量",
+                        "required": False,
+                        "default": 5
+                    }
+                ]
+            },
+            {
+                "name": "calculator",
+                "display_name": "计算器",
+                "description": "执行数学计算",
+                "category": "utility",
+                "enabled": True,
+                "parameters": [
+                    {
+                        "name": "expression",
+                        "type": "string",
+                        "description": "数学表达式",
+                        "required": True,
+                        "default": None
+                    }
+                ]
+            },
+            {
+                "name": "sql_query",
+                "display_name": "SQL 查询",
+                "description": "执行 SQL 查询获取数据",
+                "category": "database",
+                "enabled": True,
+                "parameters": [
+                    {
+                        "name": "query",
+                        "type": "string",
+                        "description": "SQL 查询语句",
+                        "required": True,
+                        "default": None
+                    },
+                    {
+                        "name": "database",
+                        "type": "string",
+                        "description": "数据库名称",
+                        "required": False,
+                        "default": "default"
+                    }
+                ]
+            },
+            {
+                "name": "python_executor",
+                "display_name": "Python 代码执行",
+                "description": "执行 Python 代码片段",
+                "category": "code",
+                "enabled": True,
+                "parameters": [
+                    {
+                        "name": "code",
+                        "type": "string",
+                        "description": "Python 代码",
+                        "required": True,
+                        "default": None
+                    },
+                    {
+                        "name": "timeout",
+                        "type": "integer",
+                        "description": "超时时间（秒）",
+                        "required": False,
+                        "default": 30
+                    }
+                ]
+            },
+            {
+                "name": "file_reader",
+                "display_name": "文件读取",
+                "description": "读取文件内容",
+                "category": "file",
+                "enabled": True,
+                "parameters": [
+                    {
+                        "name": "file_path",
+                        "type": "string",
+                        "description": "文件路径",
+                        "required": True,
+                        "default": None
+                    },
+                    {
+                        "name": "encoding",
+                        "type": "string",
+                        "description": "文件编码",
+                        "required": False,
+                        "default": "utf-8"
+                    }
+                ]
+            }
+        ]
         return jsonify({
-            "code": 50003,
-            "message": "Tools module not available"
-        }), 503
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tools": mock_tools,
+                "total": len(mock_tools)
+            }
+        })
 
     try:
         registry = get_tool_registry()
@@ -2236,10 +2676,111 @@ def list_tools():
 def get_tool_schemas():
     """获取工具的 Function Calling 格式 schema"""
     if not TOOLS_AVAILABLE:
+        # 返回 OpenAI Function Calling 格式的模拟数据
+        mock_schemas = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "使用搜索引擎查找信息",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "搜索查询关键词"
+                            },
+                            "num_results": {
+                                "type": "integer",
+                                "description": "返回结果数量",
+                                "default": 5
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculator",
+                    "description": "执行数学计算",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "expression": {
+                                "type": "string",
+                                "description": "数学表达式，如 2+2 或 sin(0.5)"
+                            }
+                        },
+                        "required": ["expression"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "sql_query",
+                    "description": "执行 SQL 查询获取数据",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "SQL 查询语句"
+                            },
+                            "database": {
+                                "type": "string",
+                                "description": "数据库名称"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "python_executor",
+                    "description": "执行 Python 代码片段",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "description": "Python 代码"
+                            }
+                        },
+                        "required": ["code"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "file_reader",
+                    "description": "读取文件内容",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "文件路径"
+                            }
+                        },
+                        "required": ["path"]
+                    }
+                }
+            }
+        ]
         return jsonify({
-            "code": 50003,
-            "message": "Tools module not available"
-        }), 503
+            "code": 0,
+            "message": "success",
+            "data": {
+                "schemas": mock_schemas,
+                "total": len(mock_schemas)
+            }
+        })
 
     try:
         registry = get_tool_registry()
@@ -3488,6 +4029,315 @@ def duplicate_prompt(prompt_id):
         db.close()
 
 
+# ==================== 工作流模板 API ====================
+
+@app.route("/api/v1/templates", methods=["GET"])
+@require_jwt(optional=True)
+def list_workflow_templates():
+    """列出工作流模板（用于 ChatPage 和 PromptsPage）"""
+    category = request.args.get("category")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    # 模拟模板数据
+    mock_templates = [
+        {
+            "template_id": "tpl-001",
+            "name": "智能客服",
+            "description": "基于 RAG 的智能客服工作流模板",
+            "category": "chatbot",
+            "type": "rag",
+            "icon": "customer-service",
+            "nodes": [
+                {"id": "input", "type": "input", "name": "用户输入"},
+                {"id": "retriever", "type": "retriever", "name": "知识库检索"},
+                {"id": "llm", "type": "llm", "name": "大模型生成"},
+                {"id": "output", "type": "output", "name": "输出回复"}
+            ],
+            "edges": [
+                {"source": "input", "target": "retriever"},
+                {"source": "retriever", "target": "llm"},
+                {"source": "llm", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 2000,
+                "knowledge_base_ids": ["kb-001"]
+            },
+            "use_count": 1256,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["rag", "客服", "知识库"],
+            "created_by": "system",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z"
+        },
+        {
+            "template_id": "tpl-002",
+            "name": "文档问答",
+            "description": "上传文档后进行智能问答",
+            "category": "document-qa",
+            "type": "rag",
+            "icon": "file-search",
+            "nodes": [
+                {"id": "upload", "type": "upload", "name": "文档上传"},
+                {"id": "parse", "type": "parse", "name": "文档解析"},
+                {"id": "embed", "type": "embedding", "name": "向量化"},
+                {"id": "store", "type": "store", "name": "存储"},
+                {"id": "query", "type": "input", "name": "问题输入"},
+                {"id": "retrieve", "type": "retriever", "name": "检索"},
+                {"id": "llm", "type": "llm", "name": "生成回答"},
+                {"id": "output", "type": "output", "name": "输出"}
+            ],
+            "edges": [
+                {"source": "upload", "target": "parse"},
+                {"source": "parse", "target": "embed"},
+                {"source": "embed", "target": "store"},
+                {"source": "query", "target": "retrieve"},
+                {"source": "retrieve", "target": "llm"},
+                {"source": "llm", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o-mini",
+                "chunk_size": 512,
+                "chunk_overlap": 50
+            },
+            "use_count": 892,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["rag", "文档", "问答"],
+            "created_by": "system",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-10T14:30:00Z"
+        },
+        {
+            "template_id": "tpl-003",
+            "name": "数据分析",
+            "description": "自然语言查询数据库并生成图表",
+            "category": "data-analysis",
+            "type": "text2sql",
+            "icon": "database",
+            "nodes": [
+                {"id": "input", "type": "input", "name": "自然语言查询"},
+                {"id": "schema", "type": "schema", "name": "获取数据库结构"},
+                {"id": "sql", "type": "llm", "name": "生成 SQL"},
+                {"id": "execute", "type": "database", "name": "执行查询"},
+                {"id": "visualize", "type": "chart", "name": "生成图表"},
+                {"id": "output", "type": "output", "name": "输出结果"}
+            ],
+            "edges": [
+                {"source": "input", "target": "schema"},
+                {"source": "input", "target": "sql"},
+                {"source": "schema", "target": "sql"},
+                {"source": "sql", "target": "execute"},
+                {"source": "execute", "target": "visualize"},
+                {"source": "visualize", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o",
+                "database": "sales_dw"
+            },
+            "use_count": 645,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["text2sql", "数据分析", "可视化"],
+            "created_by": "system",
+            "created_at": "2024-01-05T09:00:00Z",
+            "updated_at": "2024-01-12T16:00:00Z"
+        },
+        {
+            "template_id": "tpl-004",
+            "name": "Agent 助手",
+            "description": "使用工具调用增强的 Agent",
+            "category": "agent",
+            "type": "agent",
+            "icon": "robot",
+            "nodes": [
+                {"id": "input", "type": "input", "name": "用户输入"},
+                {"id": "planner", "type": "planner", "name": "任务规划"},
+                {"id": "tools", "type": "tools", "name": "工具调用"},
+                {"id": "llm", "type": "llm", "name": "大模型"},
+                {"id": "output", "type": "output", "name": "输出"}
+            ],
+            "edges": [
+                {"source": "input", "target": "planner"},
+                {"source": "planner", "target": "tools"},
+                {"source": "tools", "target": "llm"},
+                {"source": "llm", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o",
+                "max_iterations": 10,
+                "tools": ["web_search", "calculator", "sql_query"]
+            },
+            "use_count": 423,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["agent", "工具调用"],
+            "created_by": "system",
+            "created_at": "2024-01-08T11:00:00Z",
+            "updated_at": "2024-01-18T13:45:00Z"
+        },
+        {
+            "template_id": "tpl-005",
+            "name": "内容生成",
+            "description": "营销文案、邮件、报告等内容生成",
+            "category": "content",
+            "type": "generation",
+            "icon": "edit",
+            "nodes": [
+                {"id": "input", "type": "input", "name": "输入需求"},
+                {"id": "prompt", "type": "prompt", "name": "Prompt 模板"},
+                {"id": "llm", "type": "llm", "name": "大模型生成"},
+                {"id": "review", "type": "llm", "name": "内容审核"},
+                {"id": "output", "type": "output", "name": "输出内容"}
+            ],
+            "edges": [
+                {"source": "input", "target": "prompt"},
+                {"source": "prompt", "target": "llm"},
+                {"source": "llm", "target": "review"},
+                {"source": "review", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o",
+                "temperature": 0.8,
+                "max_tokens": 3000
+            },
+            "use_count": 1089,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["生成", "文案", "创作"],
+            "created_by": "system",
+            "created_at": "2024-01-03T15:20:00Z",
+            "updated_at": "2024-01-20T10:30:00Z"
+        },
+        {
+            "template_id": "tpl-006",
+            "name": "代码生成",
+            "description": "根据需求描述生成代码",
+            "category": "code",
+            "type": "generation",
+            "icon": "code",
+            "nodes": [
+                {"id": "input", "type": "input", "name": "需求描述"},
+                {"id": "analyze", "type": "llm", "name": "需求分析"},
+                {"id": "generate", "type": "llm", "name": "代码生成"},
+                {"id": "review", "type": "llm", "name": "代码审查"},
+                {"id": "output", "type": "output", "name": "输出代码"}
+            ],
+            "edges": [
+                {"source": "input", "target": "analyze"},
+                {"source": "analyze", "target": "generate"},
+                {"source": "generate", "target": "review"},
+                {"source": "review", "target": "output"}
+            ],
+            "config": {
+                "model": "gpt-4o",
+                "language": "python",
+                "temperature": 0.3
+            },
+            "use_count": 756,
+            "is_public": True,
+            "is_official": True,
+            "tags": ["代码", "生成", "开发"],
+            "created_by": "system",
+            "created_at": "2024-01-06T14:00:00Z",
+            "updated_at": "2024-01-16T09:15:00Z"
+        }
+    ]
+
+    # 按分类筛选
+    filtered_templates = mock_templates
+    if category:
+        filtered_templates = [t for t in mock_templates if t["category"] == category]
+
+    total = len(filtered_templates)
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_data = filtered_templates[start:end]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "templates": paginated_data,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/templates/<template_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_workflow_template(template_id: str):
+    """获取工作流模板详情"""
+    mock_template = {
+        "template_id": template_id,
+        "name": "智能客服",
+        "description": "基于 RAG 的智能客服工作流模板",
+        "category": "chatbot",
+        "type": "rag",
+        "icon": "customer-service",
+        "nodes": [
+            {"id": "input", "type": "input", "name": "用户输入", "config": {}},
+            {"id": "retriever", "type": "retriever", "name": "知识库检索", "config": {"top_k": 5}},
+            {"id": "llm", "type": "llm", "name": "大模型生成", "config": {"model": "gpt-4o-mini", "temperature": 0.7}},
+            {"id": "output", "type": "output", "name": "输出回复", "config": {}}
+        ],
+        "edges": [
+            {"source": "input", "target": "retriever"},
+            {"source": "retriever", "target": "llm"},
+            {"source": "llm", "target": "output"}
+        ],
+        "config": {
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 2000,
+            "knowledge_base_ids": ["kb-001"]
+        },
+        "use_count": 1256,
+        "is_public": True,
+        "is_official": True,
+        "tags": ["rag", "客服", "知识库"],
+        "created_by": "system",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-15T10:00:00Z",
+        "version": "1.2.0"
+    }
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": mock_template
+    })
+
+
+@app.route("/api/v1/templates", methods=["POST"])
+@require_jwt()
+def create_workflow_template():
+    """创建工作流模板"""
+    data = request.json
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "Name is required"}), 400
+
+    template_id = f"tpl-{uuid.uuid4().hex[:8]}"
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "template_id": template_id,
+            "name": name,
+            "description": data.get("description", ""),
+            "category": data.get("category", "custom"),
+            "status": "created"
+        }
+    }), 201
+
+
 # ============================================
 # P3.2: 模型评估 API
 # ============================================
@@ -3805,6 +4655,35 @@ def create_evaluation_dataset():
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
+
+
+# 评估路径别名（前端调用路径不同）
+@app.route("/api/v1/evaluation/datasets", methods=["GET"])
+@require_jwt(optional=True)
+def list_evaluation_datasets_alias():
+    """列出评估数据集（别名路径）"""
+    return list_evaluation_datasets()
+
+
+@app.route("/api/v1/evaluation/datasets", methods=["POST"])
+@require_jwt()
+def create_evaluation_dataset_alias():
+    """创建评估数据集（别名路径）"""
+    return create_evaluation_dataset()
+
+
+@app.route("/api/v1/evaluation/tasks", methods=["GET"])
+@require_jwt(optional=True)
+def list_evaluation_tasks():
+    """列出评估任务（别名路径）"""
+    return list_evaluations()
+
+
+@app.route("/api/v1/evaluation/tasks", methods=["POST"])
+@require_jwt()
+def create_evaluation_task_alias():
+    """创建评估任务（别名路径）"""
+    return create_evaluation()
 
 
 # ============================================

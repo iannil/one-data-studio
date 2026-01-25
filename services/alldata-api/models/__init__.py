@@ -6,6 +6,7 @@ P5: 数据监控、BI、离线处理、资产、标准、服务
 """
 
 from .base import Base, engine, SessionLocal, get_db
+from .datasource import DataSource
 from .dataset import Dataset, DatasetColumn, DatasetVersion
 from .metadata import MetadataDatabase, MetadataTable, MetadataColumn
 from .file_upload import FileUpload
@@ -28,6 +29,8 @@ __all__ = [
     "engine",
     "SessionLocal",
     "get_db",
+    # DataSource models
+    "DataSource",
     # Dataset models
     "Dataset",
     "DatasetColumn",

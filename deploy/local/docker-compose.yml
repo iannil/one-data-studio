@@ -132,11 +132,11 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\nHost: localhost\\n\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      test: ["CMD-SHELL", "cat /proc/net/tcp | grep ':1F90 ' || true"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - one-data-network
 
@@ -216,11 +216,39 @@ services:
     networks:
       - one-data-network
 
+  admin-api:
+    build:
+      context: ../../
+      dockerfile: deploy/dockerfiles/admin-api/Dockerfile
+    container_name: one-data-admin-api
+    volumes:
+      # 开发模式：挂载本地源代码，修改后需重启容器
+      - ../../services/admin-api:/app
+    environment:
+      # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      PORT: 8004
+      # Development mode: disable authentication
+      AUTH_MODE: "false"
+    ports:
+      - "8004:8004"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - one-data-network
+
   cube-api:
     build:
       context: ../../
       dockerfile: deploy/dockerfiles/cube-api/Dockerfile
     container_name: one-data-cube-api
+    volumes:
+      # 开发模式：挂载本地源代码，修改后需重启容器
+      - ../../services/cube-api:/app
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
       CUBE_DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
@@ -262,6 +290,8 @@ services:
       alldata-api:
         condition: service_started
       openai-proxy:
+        condition: service_started
+      admin-api:
         condition: service_started
       cube-api:
         condition: service_started

@@ -39,6 +39,10 @@ export default defineConfig({
         target: 'http://localhost:8001',
         changeOrigin: true,
       },
+      '/api/v1/datasources': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
       '/api/v1/metadata': {
         target: 'http://localhost:8001',
         changeOrigin: true,

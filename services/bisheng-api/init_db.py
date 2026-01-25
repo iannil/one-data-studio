@@ -71,12 +71,14 @@ def init_database():
         # 创建示例消息
         messages = [
             Message(
+                message_id="msg-001",
                 conversation_id="conv-001",
                 role="user",
                 content="ONE-DATA-STUDIO 是什么？",
                 tokens=20
             ),
             Message(
+                message_id="msg-002",
                 conversation_id="conv-001",
                 role="assistant",
                 content="ONE-DATA-STUDIO 是一个融合了 Alldata（数据治理）、Cube Studio（模型训练）、Bisheng（应用编排）的企业级 AI 平台。",

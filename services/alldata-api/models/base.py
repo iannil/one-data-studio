@@ -11,13 +11,24 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
-# 数据库配置 - 必须从环境变量读取
+# 数据库配置 - 支持从 DATABASE_URL 或 MYSQL_* 变量构造
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise ValueError(
-        "DATABASE_URL environment variable is required. "
-        "Example: mysql+pymysql://user:password@host:3306/database"
-    )
+    # 从 MYSQL_* 环境变量构造 DATABASE_URL
+    db_host = os.getenv("MYSQL_HOST", "localhost")
+    db_port = os.getenv("MYSQL_PORT", "3306")
+    db_user = os.getenv("MYSQL_USER", "root")
+    db_password = os.getenv("MYSQL_PASSWORD")
+    db_name = os.getenv("MYSQL_DATABASE", "onedata")
+
+    if not db_password:
+        raise ValueError(
+            "Either DATABASE_URL or MYSQL_PASSWORD environment variable is required. "
+            "Example: DATABASE_URL=mysql+pymysql://user:password@host:3306/database"
+        )
+
+    DATABASE_URL = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    logger.info(f"Constructed DATABASE_URL from MYSQL_* variables")
 
 # 创建引擎
 engine = create_engine(
