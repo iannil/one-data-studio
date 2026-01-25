@@ -35,7 +35,10 @@ sys.path.insert(0, '/app')
 sys.path.insert(1, '/app/shared')
 
 # 导入模型
-from models import get_db, Workflow, Conversation, Message, WorkflowExecution, ExecutionLog, IndexedDocument
+from models import (
+    get_db, Workflow, Conversation, Message, WorkflowExecution, ExecutionLog, IndexedDocument,
+    PromptTemplate, Evaluation, EvaluationResult, EvaluationDataset, SFTTask, SFTDataset
+)
 
 # 导入执行引擎
 from engine import WorkflowExecutor, register_execution, unregister_execution, stop_execution
@@ -3133,6 +3136,937 @@ def not_found(error):
         "code": 40400,
         "message": "Resource not found"
     }), 404
+
+
+# ============================================
+# P3.1: Prompt 模板管理 API
+# ============================================
+
+def generate_id(prefix: str = "") -> str:
+    """生成唯一ID"""
+    return f"{prefix}{uuid.uuid4().hex[:16]}"
+
+
+@app.route("/api/v1/prompts", methods=["GET"])
+@require_jwt()
+def list_prompts():
+    """列出 Prompt 模板"""
+    db = next(get_db())
+
+    try:
+        category = request.args.get("category")
+        is_public = request.args.get("is_public")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(PromptTemplate).filter(PromptTemplate.is_active == True)
+
+        if category:
+            query = query.filter(PromptTemplate.category == category)
+        if is_public is not None:
+            query = query.filter(PromptTemplate.is_public == (is_public.lower() == "true"))
+
+        total = query.count()
+        prompts = query.order_by(PromptTemplate.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "prompts": [p.to_dict() for p in prompts],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts", methods=["POST"])
+@require_jwt()
+def create_prompt():
+    """创建 Prompt 模板"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        content = data.get("content")
+        if not name or not content:
+            return jsonify({"code": 40001, "message": "name 和 content 必填"}), 400
+
+        prompt = PromptTemplate(
+            template_id=generate_id("prompt_"),
+            name=name,
+            description=data.get("description", ""),
+            category=data.get("category"),
+            content=content,
+            variables=data.get("variables"),
+            model=data.get("model"),
+            temperature=data.get("temperature", 0.7),
+            max_tokens=data.get("max_tokens"),
+            system_prompt=data.get("system_prompt"),
+            version=data.get("version", "1.0.0"),
+            tags=data.get("tags"),
+            is_public=data.get("is_public", False),
+            created_by=get_user_id()
+        )
+
+        db.add(prompt)
+        db.commit()
+        db.refresh(prompt)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": prompt.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts/<prompt_id>", methods=["GET"])
+@require_jwt()
+def get_prompt(prompt_id):
+    """获取 Prompt 模板详情"""
+    db = next(get_db())
+
+    try:
+        prompt = db.query(PromptTemplate).filter(PromptTemplate.template_id == prompt_id).first()
+        if not prompt:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": prompt.to_dict()
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts/<prompt_id>", methods=["PUT"])
+@require_jwt()
+def update_prompt(prompt_id):
+    """更新 Prompt 模板"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        prompt = db.query(PromptTemplate).filter(PromptTemplate.template_id == prompt_id).first()
+        if not prompt:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        if data.get("name"):
+            prompt.name = data["name"]
+        if data.get("description") is not None:
+            prompt.description = data["description"]
+        if data.get("category"):
+            prompt.category = data["category"]
+        if data.get("content"):
+            prompt.content = data["content"]
+        if data.get("variables") is not None:
+            prompt.variables = data["variables"]
+        if data.get("model"):
+            prompt.model = data["model"]
+        if data.get("temperature") is not None:
+            prompt.temperature = data["temperature"]
+        if data.get("max_tokens") is not None:
+            prompt.max_tokens = data["max_tokens"]
+        if data.get("system_prompt") is not None:
+            prompt.system_prompt = data["system_prompt"]
+        if data.get("tags"):
+            prompt.tags = data["tags"]
+        if data.get("is_public") is not None:
+            prompt.is_public = data["is_public"]
+
+        prompt.updated_by = get_user_id()
+        db.commit()
+        db.refresh(prompt)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": prompt.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts/<prompt_id>", methods=["DELETE"])
+@require_jwt()
+def delete_prompt(prompt_id):
+    """删除 Prompt 模板"""
+    db = next(get_db())
+
+    try:
+        prompt = db.query(PromptTemplate).filter(PromptTemplate.template_id == prompt_id).first()
+        if not prompt:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        prompt.is_active = False
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts/<prompt_id>/test", methods=["POST"])
+@require_jwt()
+def test_prompt(prompt_id):
+    """测试 Prompt 模板"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        prompt = db.query(PromptTemplate).filter(PromptTemplate.template_id == prompt_id).first()
+        if not prompt:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        # 获取变量值
+        variables = data.get("variables", {})
+
+        # 替换模板中的变量
+        content = prompt.content
+        for var_name, var_value in variables.items():
+            content = content.replace(f"{{{{{var_name}}}}}", str(var_value))
+
+        # 调用 LLM 进行测试（这里简化处理，实际应调用 OpenAI Proxy）
+        # 更新使用计数
+        prompt.use_count = (prompt.use_count or 0) + 1
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rendered_content": content,
+                "model": prompt.model,
+                "temperature": prompt.temperature,
+                "response": f"[测试响应] 使用模型 {prompt.model} 处理: {content[:100]}..."
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prompts/<prompt_id>/duplicate", methods=["POST"])
+@require_jwt()
+def duplicate_prompt(prompt_id):
+    """复制 Prompt 模板"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        prompt = db.query(PromptTemplate).filter(PromptTemplate.template_id == prompt_id).first()
+        if not prompt:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        new_prompt = PromptTemplate(
+            template_id=generate_id("prompt_"),
+            name=data.get("name", f"{prompt.name} (副本)"),
+            description=prompt.description,
+            category=prompt.category,
+            content=prompt.content,
+            variables=prompt.variables,
+            model=prompt.model,
+            temperature=prompt.temperature,
+            max_tokens=prompt.max_tokens,
+            system_prompt=prompt.system_prompt,
+            version="1.0.0",
+            tags=prompt.tags,
+            is_public=False,
+            parent_id=prompt.template_id,
+            created_by=get_user_id()
+        )
+
+        db.add(new_prompt)
+        db.commit()
+        db.refresh(new_prompt)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": new_prompt.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
+# P3.2: 模型评估 API
+# ============================================
+
+@app.route("/api/v1/evaluations", methods=["GET"])
+@require_jwt()
+def list_evaluations():
+    """列出评估任务"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        model_id = request.args.get("model_id")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(Evaluation)
+
+        if status:
+            query = query.filter(Evaluation.status == status)
+        if model_id:
+            query = query.filter(Evaluation.model_id == model_id)
+
+        total = query.count()
+        evaluations = query.order_by(Evaluation.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "evaluations": [e.to_dict() for e in evaluations],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations", methods=["POST"])
+@require_jwt()
+def create_evaluation():
+    """创建评估任务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        model_id = data.get("model_id")
+        dataset_id = data.get("dataset_id")
+        if not name or not model_id or not dataset_id:
+            return jsonify({"code": 40001, "message": "name、model_id 和 dataset_id 必填"}), 400
+
+        evaluation = Evaluation(
+            evaluation_id=generate_id("eval_"),
+            name=name,
+            description=data.get("description", ""),
+            model_id=model_id,
+            model_name=data.get("model_name"),
+            dataset_id=dataset_id,
+            dataset_name=data.get("dataset_name"),
+            eval_type=data.get("eval_type", "auto"),
+            metrics=data.get("metrics", ["accuracy", "f1"]),
+            status="pending",
+            created_by=get_user_id()
+        )
+
+        db.add(evaluation)
+        db.commit()
+        db.refresh(evaluation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": evaluation.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations/<evaluation_id>", methods=["GET"])
+@require_jwt()
+def get_evaluation(evaluation_id):
+    """获取评估任务详情"""
+    db = next(get_db())
+
+    try:
+        evaluation = db.query(Evaluation).filter(Evaluation.evaluation_id == evaluation_id).first()
+        if not evaluation:
+            return jsonify({"code": 40401, "message": "评估任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": evaluation.to_dict()
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations/<evaluation_id>", methods=["DELETE"])
+@require_jwt()
+def delete_evaluation(evaluation_id):
+    """删除评估任务"""
+    db = next(get_db())
+
+    try:
+        evaluation = db.query(Evaluation).filter(Evaluation.evaluation_id == evaluation_id).first()
+        if not evaluation:
+            return jsonify({"code": 40401, "message": "评估任务不存在"}), 404
+
+        # 删除关联的结果
+        db.query(EvaluationResult).filter(EvaluationResult.evaluation_id == evaluation_id).delete()
+        db.delete(evaluation)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations/<evaluation_id>/run", methods=["POST"])
+@require_jwt()
+def run_evaluation(evaluation_id):
+    """执行评估任务"""
+    db = next(get_db())
+
+    try:
+        evaluation = db.query(Evaluation).filter(Evaluation.evaluation_id == evaluation_id).first()
+        if not evaluation:
+            return jsonify({"code": 40401, "message": "评估任务不存在"}), 404
+
+        if evaluation.status == "running":
+            return jsonify({"code": 40002, "message": "评估任务正在运行"}), 400
+
+        # 模拟启动评估
+        evaluation.status = "running"
+        evaluation.started_at = datetime.utcnow()
+        db.commit()
+
+        # 模拟完成评估（实际应异步执行）
+        evaluation.status = "completed"
+        evaluation.finished_at = datetime.utcnow()
+        evaluation.duration_seconds = 60
+        evaluation.samples_evaluated = 100
+        evaluation.samples_total = 100
+        evaluation.results = {
+            "accuracy": 0.85,
+            "f1": 0.82,
+            "precision": 0.88,
+            "recall": 0.80
+        }
+        evaluation.summary = "评估完成，模型表现良好"
+        db.commit()
+        db.refresh(evaluation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": evaluation.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations/<evaluation_id>/results", methods=["GET"])
+@require_jwt()
+def get_evaluation_results(evaluation_id):
+    """获取评估结果"""
+    db = next(get_db())
+
+    try:
+        evaluation = db.query(Evaluation).filter(Evaluation.evaluation_id == evaluation_id).first()
+        if not evaluation:
+            return jsonify({"code": 40401, "message": "评估任务不存在"}), 404
+
+        # 获取详细结果
+        results = db.query(EvaluationResult).filter(
+            EvaluationResult.evaluation_id == evaluation_id
+        ).order_by(EvaluationResult.sample_index).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "evaluation": evaluation.to_dict(),
+                "results": [r.to_dict() for r in results]
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluations/compare", methods=["POST"])
+@require_jwt()
+def compare_evaluations():
+    """对比评估报告"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        evaluation_ids = data.get("evaluation_ids", [])
+        if len(evaluation_ids) < 2:
+            return jsonify({"code": 40001, "message": "至少需要两个评估ID进行对比"}), 400
+
+        evaluations = db.query(Evaluation).filter(
+            Evaluation.evaluation_id.in_(evaluation_ids)
+        ).all()
+
+        if len(evaluations) != len(evaluation_ids):
+            return jsonify({"code": 40401, "message": "部分评估任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "evaluations": [e.to_dict() for e in evaluations]
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluation-datasets", methods=["GET"])
+@require_jwt()
+def list_evaluation_datasets():
+    """列出评估数据集"""
+    db = next(get_db())
+
+    try:
+        dataset_type = request.args.get("dataset_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(EvaluationDataset)
+
+        if dataset_type:
+            query = query.filter(EvaluationDataset.dataset_type == dataset_type)
+
+        total = query.count()
+        datasets = query.order_by(EvaluationDataset.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "datasets": [d.to_dict() for d in datasets],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/evaluation-datasets", methods=["POST"])
+@require_jwt()
+def create_evaluation_dataset():
+    """创建/上传评估数据集"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "数据集名称不能为空"}), 400
+
+        dataset = EvaluationDataset(
+            dataset_id=generate_id("evds_"),
+            name=name,
+            description=data.get("description", ""),
+            dataset_type=data.get("dataset_type", "qa"),
+            storage_path=data.get("storage_path"),
+            file_format=data.get("file_format", "jsonl"),
+            sample_count=data.get("sample_count", 0),
+            file_size=data.get("file_size"),
+            schema=data.get("schema"),
+            tags=data.get("tags"),
+            is_public=data.get("is_public", False),
+            created_by=get_user_id()
+        )
+
+        db.add(dataset)
+        db.commit()
+        db.refresh(dataset)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": dataset.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
+# P3.3: SFT 微调 API
+# ============================================
+
+@app.route("/api/v1/sft/tasks", methods=["GET"])
+@require_jwt()
+def list_sft_tasks():
+    """列出 SFT 任务"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        method = request.args.get("method")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(SFTTask)
+
+        if status:
+            query = query.filter(SFTTask.status == status)
+        if method:
+            query = query.filter(SFTTask.method == method)
+
+        total = query.count()
+        tasks = query.order_by(SFTTask.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tasks": [t.to_dict() for t in tasks],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks", methods=["POST"])
+@require_jwt()
+def create_sft_task():
+    """创建 SFT 任务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        base_model = data.get("base_model")
+        dataset_id = data.get("dataset_id")
+        if not name or not base_model or not dataset_id:
+            return jsonify({"code": 40001, "message": "name、base_model 和 dataset_id 必填"}), 400
+
+        task = SFTTask(
+            task_id=generate_id("sft_"),
+            name=name,
+            description=data.get("description", ""),
+            base_model=base_model,
+            base_model_path=data.get("base_model_path"),
+            method=data.get("method", "lora"),
+            dataset_id=dataset_id,
+            dataset_name=data.get("dataset_name"),
+            dataset_path=data.get("dataset_path"),
+            epochs=data.get("epochs", 3),
+            batch_size=data.get("batch_size", 4),
+            learning_rate=data.get("learning_rate", 2e-5),
+            warmup_steps=data.get("warmup_steps", 100),
+            max_seq_length=data.get("max_seq_length", 512),
+            gradient_accumulation_steps=data.get("gradient_accumulation_steps", 4),
+            lora_r=data.get("lora_r", 8),
+            lora_alpha=data.get("lora_alpha", 16),
+            lora_dropout=data.get("lora_dropout", 0.05),
+            target_modules=data.get("target_modules"),
+            use_4bit=data.get("use_4bit", False),
+            gpu_count=data.get("gpu_count", 1),
+            gpu_type=data.get("gpu_type"),
+            memory_limit=data.get("memory_limit"),
+            tags=data.get("tags"),
+            status="pending",
+            created_by=get_user_id()
+        )
+
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks/<task_id>", methods=["GET"])
+@require_jwt()
+def get_sft_task(task_id):
+    """获取 SFT 任务详情"""
+    db = next(get_db())
+
+    try:
+        task = db.query(SFTTask).filter(SFTTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "SFT 任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks/<task_id>", methods=["DELETE"])
+@require_jwt()
+def delete_sft_task(task_id):
+    """删除 SFT 任务"""
+    db = next(get_db())
+
+    try:
+        task = db.query(SFTTask).filter(SFTTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "SFT 任务不存在"}), 404
+
+        if task.status == "running":
+            return jsonify({"code": 40002, "message": "运行中的任务不能删除"}), 400
+
+        db.delete(task)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks/<task_id>/start", methods=["POST"])
+@require_jwt()
+def start_sft_task(task_id):
+    """启动 SFT 任务"""
+    db = next(get_db())
+
+    try:
+        task = db.query(SFTTask).filter(SFTTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "SFT 任务不存在"}), 404
+
+        if task.status == "running":
+            return jsonify({"code": 40002, "message": "任务已在运行"}), 400
+
+        task.status = "running"
+        task.started_at = datetime.utcnow()
+        task.current_step = 0
+        task.current_epoch = 0
+        task.total_steps = task.epochs * 100  # 模拟
+        db.commit()
+        db.refresh(task)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks/<task_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_sft_task(task_id):
+    """停止 SFT 任务"""
+    db = next(get_db())
+
+    try:
+        task = db.query(SFTTask).filter(SFTTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "SFT 任务不存在"}), 404
+
+        if task.status != "running":
+            return jsonify({"code": 40002, "message": "任务未在运行"}), 400
+
+        task.status = "stopped"
+        task.finished_at = datetime.utcnow()
+        if task.started_at:
+            task.duration_seconds = int((task.finished_at - task.started_at).total_seconds())
+        db.commit()
+        db.refresh(task)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/tasks/<task_id>/deploy", methods=["POST"])
+@require_jwt()
+def deploy_sft_model(task_id):
+    """部署微调模型"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        task = db.query(SFTTask).filter(SFTTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "SFT 任务不存在"}), 404
+
+        if task.status != "completed":
+            return jsonify({"code": 40002, "message": "任务未完成，无法部署"}), 400
+
+        if not task.output_model_path:
+            return jsonify({"code": 40002, "message": "模型输出路径不存在"}), 400
+
+        # 模拟部署（实际应调用 Cube Studio 服务）
+        deployment_id = generate_id("deploy_")
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "deployment_id": deployment_id,
+                "task_id": task_id,
+                "model_path": task.output_model_path,
+                "status": "deploying",
+                "endpoint": f"http://serving.one-data.svc.cluster.local/{deployment_id}"
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/datasets", methods=["GET"])
+@require_jwt()
+def list_sft_datasets():
+    """列出 SFT 数据集"""
+    db = next(get_db())
+
+    try:
+        dataset_type = request.args.get("dataset_type")
+        status = request.args.get("status")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(SFTDataset)
+
+        if dataset_type:
+            query = query.filter(SFTDataset.dataset_type == dataset_type)
+        if status:
+            query = query.filter(SFTDataset.status == status)
+
+        total = query.count()
+        datasets = query.order_by(SFTDataset.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "datasets": [d.to_dict() for d in datasets],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/sft/datasets", methods=["POST"])
+@require_jwt()
+def create_sft_dataset():
+    """创建/上传 SFT 数据集"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "数据集名称不能为空"}), 400
+
+        dataset = SFTDataset(
+            dataset_id=generate_id("sftds_"),
+            name=name,
+            description=data.get("description", ""),
+            dataset_type=data.get("dataset_type", "instruction"),
+            storage_path=data.get("storage_path"),
+            file_format=data.get("file_format", "jsonl"),
+            sample_count=data.get("sample_count", 0),
+            file_size=data.get("file_size"),
+            schema=data.get("schema"),
+            preprocessing_config=data.get("preprocessing_config"),
+            tags=data.get("tags"),
+            is_public=data.get("is_public", False),
+            status="ready",
+            created_by=get_user_id()
+        )
+
+        db.add(dataset)
+        db.commit()
+        db.refresh(dataset)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": dataset.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

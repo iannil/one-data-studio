@@ -1,6 +1,8 @@
 """
 Alldata API 模型
 Sprint 4.1: SQLAlchemy 数据模型
+P4: Flink 实时计算、特征存储
+P5: 数据监控、BI、离线处理、资产、标准、服务
 """
 
 from .base import Base, engine, SessionLocal, get_db
@@ -11,6 +13,14 @@ from .etl import ETLTask, ETLTaskLog
 from .quality import QualityRule, QualityTask, QualityReport, QualityAlert
 from .lineage import LineageNode, LineageEdge, LineageSnapshot
 from .metrics import MetricDefinition, MetricValue, MetricCategory
+from .flink import FlinkJob, FlinkJobLog, FlinkSavedQuery
+from .feature import Feature, FeatureGroup
+from .data_monitoring import DataMonitoringRule, DataAlert
+from .bi import BIDashboard, BIChart
+from .offline import OfflineTask, OfflineTaskLog
+from .assets import DataAsset, AssetCategory, AssetCollection
+from .standards import DataStandard, StandardValidation
+from .data_service import DataService, ServiceCallLog
 
 __all__ = [
     # Base
@@ -44,4 +54,30 @@ __all__ = [
     "MetricDefinition",
     "MetricValue",
     "MetricCategory",
+    # Flink models (P4.1, P4.2)
+    "FlinkJob",
+    "FlinkJobLog",
+    "FlinkSavedQuery",
+    # Feature models (P4.3)
+    "Feature",
+    "FeatureGroup",
+    # Data Monitoring models (P5.1)
+    "DataMonitoringRule",
+    "DataAlert",
+    # BI models (P5.2)
+    "BIDashboard",
+    "BIChart",
+    # Offline models (P5.3)
+    "OfflineTask",
+    "OfflineTaskLog",
+    # Asset models (P5.4)
+    "DataAsset",
+    "AssetCategory",
+    "AssetCollection",
+    # Standard models (P5.5)
+    "DataStandard",
+    "StandardValidation",
+    # Data Service models (P5.6)
+    "DataService",
+    "ServiceCallLog",
 ]

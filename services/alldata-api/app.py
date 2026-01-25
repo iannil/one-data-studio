@@ -26,7 +26,15 @@ from models import (
     ETLTask, ETLTaskLog,
     QualityRule, QualityTask, QualityReport, QualityAlert,
     LineageNode, LineageEdge, LineageSnapshot,
-    MetricDefinition, MetricValue, MetricCategory
+    MetricDefinition, MetricValue, MetricCategory,
+    FlinkJob, FlinkJobLog, FlinkSavedQuery,
+    Feature, FeatureGroup,
+    DataMonitoringRule, DataAlert,
+    BIDashboard, BIChart,
+    OfflineTask, OfflineTaskLog,
+    DataAsset, AssetCategory, AssetCollection,
+    DataStandard, StandardValidation,
+    DataService, ServiceCallLog
 )
 from sqlalchemy.orm import joinedload
 
@@ -2276,6 +2284,2383 @@ def list_metric_categories():
             "message": "success",
             "data": {
                 "categories": [c.to_dict() for c in categories]
+            }
+        })
+    finally:
+        db.close()
+
+
+# ==================== P4.1: Flink 作业管理 ====================
+
+@app.route("/api/v1/flink/jobs", methods=["GET"])
+@require_jwt()
+def list_flink_jobs():
+    """列出 Flink 作业"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        job_type = request.args.get("job_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(FlinkJob)
+
+        if status:
+            query = query.filter(FlinkJob.status == status)
+        if job_type:
+            query = query.filter(FlinkJob.job_type == job_type)
+
+        total = query.count()
+        jobs = query.order_by(FlinkJob.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "jobs": [j.to_dict() for j in jobs],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs", methods=["POST"])
+@require_jwt()
+def create_flink_job():
+    """创建 Flink 作业"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "作业名称不能为空"}), 400
+
+        job = FlinkJob(
+            job_id=generate_id("flink_"),
+            name=name,
+            description=data.get("description", ""),
+            job_type=data.get("job_type", "sql"),
+            sql_content=data.get("sql_content"),
+            jar_path=data.get("jar_path"),
+            main_class=data.get("main_class"),
+            program_args=data.get("program_args"),
+            parallelism=data.get("parallelism", 1),
+            checkpoint_interval=data.get("checkpoint_interval", 60000),
+            task_manager_memory=data.get("task_manager_memory", "1024m"),
+            job_manager_memory=data.get("job_manager_memory", "1024m"),
+            task_slots=data.get("task_slots", 1),
+            tags=data.get("tags"),
+            status="created",
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": job.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>", methods=["GET"])
+@require_jwt()
+def get_flink_job(job_id):
+    """获取 Flink 作业详情"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": job.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>", methods=["PUT"])
+@require_jwt()
+def update_flink_job(job_id):
+    """更新 Flink 作业"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        if job.status == "running":
+            return jsonify({"code": 40002, "message": "运行中的作业不能修改"}), 400
+
+        if data.get("name"):
+            job.name = data["name"]
+        if data.get("description") is not None:
+            job.description = data["description"]
+        if data.get("sql_content"):
+            job.sql_content = data["sql_content"]
+        if data.get("parallelism"):
+            job.parallelism = data["parallelism"]
+        if data.get("tags"):
+            job.tags = data["tags"]
+
+        db.commit()
+        db.refresh(job)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": job.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>", methods=["DELETE"])
+@require_jwt()
+def delete_flink_job(job_id):
+    """删除 Flink 作业"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        if job.status == "running":
+            return jsonify({"code": 40002, "message": "运行中的作业不能删除"}), 400
+
+        db.query(FlinkJobLog).filter(FlinkJobLog.job_id == job_id).delete()
+        db.delete(job)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>/start", methods=["POST"])
+@require_jwt()
+def start_flink_job(job_id):
+    """启动 Flink 作业"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        if job.status == "running":
+            return jsonify({"code": 40002, "message": "作业已在运行"}), 400
+
+        job.status = "running"
+        job.started_at = datetime.utcnow()
+        job.flink_job_id = generate_id("fj_")
+        db.commit()
+        db.refresh(job)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": job.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_flink_job(job_id):
+    """停止 Flink 作业"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        if job.status != "running":
+            return jsonify({"code": 40002, "message": "作业未在运行"}), 400
+
+        job.status = "stopped"
+        job.stopped_at = datetime.utcnow()
+        if job.started_at:
+            job.duration_seconds = int((job.stopped_at - job.started_at).total_seconds())
+        db.commit()
+        db.refresh(job)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": job.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>/logs", methods=["GET"])
+@require_jwt()
+def get_flink_job_logs(job_id):
+    """获取 Flink 作业日志"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        level = request.args.get("level")
+        limit = int(request.args.get("limit", 100))
+
+        query = db.query(FlinkJobLog).filter(FlinkJobLog.job_id == job_id)
+        if level:
+            query = query.filter(FlinkJobLog.level == level)
+
+        logs = query.order_by(FlinkJobLog.timestamp.desc()).limit(limit).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "logs": [log.to_dict() for log in logs]
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/jobs/<job_id>/metrics", methods=["GET"])
+@require_jwt()
+def get_flink_job_metrics(job_id):
+    """获取 Flink 作业指标"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "作业不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "job_id": job_id,
+                "status": job.status,
+                "records_in": job.records_in,
+                "records_out": job.records_out,
+                "bytes_in": job.bytes_in,
+                "bytes_out": job.bytes_out,
+                "started_at": job.started_at.isoformat() if job.started_at else None,
+                "duration_seconds": job.duration_seconds
+            }
+        })
+    finally:
+        db.close()
+
+
+# ==================== P4.2: Streaming IDE ====================
+
+@app.route("/api/v1/flink/sql/validate", methods=["POST"])
+@require_jwt()
+def validate_flink_sql():
+    """验证 Flink SQL 语法"""
+    data = request.json
+    sql = data.get("sql", "")
+
+    if not sql.strip():
+        return jsonify({"code": 40001, "message": "SQL 不能为空"}), 400
+
+    # 模拟 SQL 验证（实际应调用 Flink 服务）
+    is_valid = True
+    error_message = None
+
+    # 简单语法检查
+    sql_upper = sql.upper().strip()
+    if not any(sql_upper.startswith(kw) for kw in ["SELECT", "INSERT", "CREATE", "DROP", "ALTER", "WITH"]):
+        is_valid = False
+        error_message = "无效的 SQL 语句，必须以 SELECT/INSERT/CREATE/DROP/ALTER/WITH 开头"
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "is_valid": is_valid,
+            "error_message": error_message
+        }
+    })
+
+
+@app.route("/api/v1/flink/sql/execute", methods=["POST"])
+@require_jwt()
+def execute_flink_sql():
+    """执行 Flink SQL"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        sql = data.get("sql", "")
+        if not sql.strip():
+            return jsonify({"code": 40001, "message": "SQL 不能为空"}), 400
+
+        # 创建执行记录
+        job = FlinkJob(
+            job_id=generate_id("flink_"),
+            name=data.get("name", "Ad-hoc SQL Query"),
+            job_type="sql",
+            sql_content=sql,
+            parallelism=data.get("parallelism", 1),
+            status="running",
+            started_at=datetime.utcnow(),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(job)
+        db.commit()
+
+        # 模拟执行完成
+        job.status = "finished"
+        job.stopped_at = datetime.utcnow()
+        job.duration_seconds = 1
+        job.records_out = 100
+        db.commit()
+        db.refresh(job)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "job_id": job.job_id,
+                "status": job.status,
+                "message": "SQL 执行完成"
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/sql/results/<job_id>", methods=["GET"])
+@require_jwt()
+def get_flink_sql_results(job_id):
+    """获取 Flink SQL 执行结果"""
+    db = next(get_db())
+
+    try:
+        job = db.query(FlinkJob).filter(FlinkJob.job_id == job_id).first()
+        if not job:
+            return jsonify({"code": 40401, "message": "执行记录不存在"}), 404
+
+        # 模拟返回结果
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "job_id": job_id,
+                "status": job.status,
+                "columns": [{"name": "id", "type": "INT"}, {"name": "value", "type": "STRING"}],
+                "rows": [{"id": 1, "value": "sample"}, {"id": 2, "value": "data"}],
+                "row_count": job.records_out
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/sql/saved", methods=["GET"])
+@require_jwt()
+def list_flink_saved_queries():
+    """列出已保存的 Flink SQL"""
+    db = next(get_db())
+
+    try:
+        category = request.args.get("category")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(FlinkSavedQuery)
+
+        if category:
+            query = query.filter(FlinkSavedQuery.category == category)
+
+        total = query.count()
+        queries = query.order_by(FlinkSavedQuery.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "queries": [q.to_dict() for q in queries],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/flink/sql/saved", methods=["POST"])
+@require_jwt()
+def save_flink_query():
+    """保存 Flink SQL 查询"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        sql_content = data.get("sql_content")
+        if not name or not sql_content:
+            return jsonify({"code": 40001, "message": "name 和 sql_content 必填"}), 400
+
+        query = FlinkSavedQuery(
+            query_id=generate_id("fsql_"),
+            name=name,
+            description=data.get("description", ""),
+            sql_content=sql_content,
+            category=data.get("category"),
+            tags=data.get("tags"),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(query)
+        db.commit()
+        db.refresh(query)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": query.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== P4.3: 特征存储 ====================
+
+@app.route("/api/v1/features", methods=["GET"])
+@require_jwt()
+def list_features():
+    """列出特征"""
+    db = next(get_db())
+
+    try:
+        group_id = request.args.get("group_id")
+        feature_type = request.args.get("feature_type")
+        status = request.args.get("status")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(Feature)
+
+        if group_id:
+            query = query.filter(Feature.group_id == group_id)
+        if feature_type:
+            query = query.filter(Feature.feature_type == feature_type)
+        if status:
+            query = query.filter(Feature.status == status)
+
+        total = query.count()
+        features = query.order_by(Feature.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "features": [f.to_dict() for f in features],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/features", methods=["POST"])
+@require_jwt()
+def create_feature():
+    """创建特征"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "特征名称不能为空"}), 400
+
+        feature = Feature(
+            feature_id=generate_id("feat_"),
+            name=name,
+            description=data.get("description", ""),
+            group_id=data.get("group_id"),
+            group_name=data.get("group_name"),
+            data_type=data.get("data_type", "float"),
+            feature_type=data.get("feature_type", "raw"),
+            expression=data.get("expression"),
+            dependencies=data.get("dependencies"),
+            aggregation_type=data.get("aggregation_type"),
+            aggregation_window=data.get("aggregation_window"),
+            tags=data.get("tags"),
+            status="active",
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(feature)
+        db.commit()
+        db.refresh(feature)
+
+        # 更新特征组计数
+        if feature.group_id:
+            group = db.query(FeatureGroup).filter(FeatureGroup.group_id == feature.group_id).first()
+            if group:
+                group.feature_count = (group.feature_count or 0) + 1
+                db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": feature.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/features/<feature_id>", methods=["GET"])
+@require_jwt()
+def get_feature(feature_id):
+    """获取特征详情"""
+    db = next(get_db())
+
+    try:
+        feature = db.query(Feature).filter(Feature.feature_id == feature_id).first()
+        if not feature:
+            return jsonify({"code": 40401, "message": "特征不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": feature.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/features/<feature_id>", methods=["PUT"])
+@require_jwt()
+def update_feature(feature_id):
+    """更新特征"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        feature = db.query(Feature).filter(Feature.feature_id == feature_id).first()
+        if not feature:
+            return jsonify({"code": 40401, "message": "特征不存在"}), 404
+
+        if data.get("name"):
+            feature.name = data["name"]
+        if data.get("description") is not None:
+            feature.description = data["description"]
+        if data.get("expression"):
+            feature.expression = data["expression"]
+        if data.get("tags"):
+            feature.tags = data["tags"]
+        if data.get("status"):
+            feature.status = data["status"]
+
+        db.commit()
+        db.refresh(feature)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": feature.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/features/<feature_id>", methods=["DELETE"])
+@require_jwt()
+def delete_feature(feature_id):
+    """删除特征"""
+    db = next(get_db())
+
+    try:
+        feature = db.query(Feature).filter(Feature.feature_id == feature_id).first()
+        if not feature:
+            return jsonify({"code": 40401, "message": "特征不存在"}), 404
+
+        group_id = feature.group_id
+        db.delete(feature)
+        db.commit()
+
+        # 更新特征组计数
+        if group_id:
+            group = db.query(FeatureGroup).filter(FeatureGroup.group_id == group_id).first()
+            if group and group.feature_count:
+                group.feature_count = max(0, group.feature_count - 1)
+                db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/feature-groups", methods=["GET"])
+@require_jwt()
+def list_feature_groups():
+    """列出特征组"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(FeatureGroup)
+
+        if status:
+            query = query.filter(FeatureGroup.status == status)
+
+        total = query.count()
+        groups = query.order_by(FeatureGroup.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "groups": [g.to_dict() for g in groups],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/feature-groups", methods=["POST"])
+@require_jwt()
+def create_feature_group():
+    """创建特征组"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "特征组名称不能为空"}), 400
+
+        group = FeatureGroup(
+            group_id=generate_id("fgrp_"),
+            name=name,
+            description=data.get("description", ""),
+            entity_name=data.get("entity_name"),
+            entity_key=data.get("entity_key"),
+            source_type=data.get("source_type"),
+            source_config=data.get("source_config"),
+            online_store=data.get("online_store", True),
+            offline_store=data.get("offline_store", True),
+            ttl_days=data.get("ttl_days"),
+            tags=data.get("tags"),
+            status="active",
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(group)
+        db.commit()
+        db.refresh(group)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": group.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/feature-groups/<group_id>", methods=["GET"])
+@require_jwt()
+def get_feature_group(group_id):
+    """获取特征组详情"""
+    db = next(get_db())
+
+    try:
+        group = db.query(FeatureGroup).filter(FeatureGroup.group_id == group_id).first()
+        if not group:
+            return jsonify({"code": 40401, "message": "特征组不存在"}), 404
+
+        # 获取该组的特征
+        features = db.query(Feature).filter(Feature.group_id == group_id).all()
+
+        result = group.to_dict()
+        result["features"] = [f.to_dict() for f in features]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+    finally:
+        db.close()
+
+
+# ==================== P5.1: 数据监控 ====================
+
+@app.route("/api/v1/data-monitoring/health", methods=["GET"])
+@require_jwt()
+def get_data_health():
+    """获取数据健康度概览"""
+    db = next(get_db())
+
+    try:
+        # 获取规则统计
+        total_rules = db.query(DataMonitoringRule).count()
+        enabled_rules = db.query(DataMonitoringRule).filter(DataMonitoringRule.is_enabled == True).count()
+
+        # 按状态统计
+        healthy_count = db.query(DataMonitoringRule).filter(DataMonitoringRule.status == "healthy").count()
+        warning_count = db.query(DataMonitoringRule).filter(DataMonitoringRule.status == "warning").count()
+        critical_count = db.query(DataMonitoringRule).filter(DataMonitoringRule.status == "critical").count()
+
+        # 告警统计
+        active_alerts = db.query(DataAlert).filter(DataAlert.status == "active").count()
+
+        # 计算健康分数
+        if total_rules > 0:
+            health_score = round((healthy_count / total_rules) * 100, 1)
+        else:
+            health_score = 100.0
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "health_score": health_score,
+                "total_rules": total_rules,
+                "enabled_rules": enabled_rules,
+                "status_breakdown": {
+                    "healthy": healthy_count,
+                    "warning": warning_count,
+                    "critical": critical_count
+                },
+                "active_alerts": active_alerts
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/rules", methods=["GET"])
+@require_jwt()
+def list_data_monitoring_rules():
+    """获取数据监控规则列表"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        rule_type = request.args.get("rule_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(DataMonitoringRule)
+
+        if status:
+            query = query.filter(DataMonitoringRule.status == status)
+        if rule_type:
+            query = query.filter(DataMonitoringRule.rule_type == rule_type)
+
+        total = query.count()
+        rules = query.order_by(DataMonitoringRule.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": [r.to_dict() for r in rules],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/rules", methods=["POST"])
+@require_jwt()
+def create_data_monitoring_rule():
+    """创建数据监控规则"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "规则名称不能为空"}), 400
+
+        rule = DataMonitoringRule(
+            rule_id=generate_id("dmon_rule_"),
+            name=name,
+            description=data.get("description"),
+            target_type=data.get("target_type"),
+            target_id=data.get("target_id"),
+            target_name=data.get("target_name"),
+            rule_type=data.get("rule_type"),
+            condition=data.get("condition"),
+            threshold=data.get("threshold"),
+            threshold_min=data.get("threshold_min"),
+            threshold_max=data.get("threshold_max"),
+            check_interval=data.get("check_interval", 3600),
+            severity=data.get("severity", "warning"),
+            notification_channels=data.get("notification_channels"),
+            is_enabled=data.get("is_enabled", True),
+            status="healthy",
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(rule)
+        db.commit()
+        db.refresh(rule)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_data_monitoring_rule(rule_id):
+    """更新数据监控规则"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        rule = db.query(DataMonitoringRule).filter(DataMonitoringRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        if "name" in data:
+            rule.name = data["name"]
+        if "description" in data:
+            rule.description = data["description"]
+        if "threshold" in data:
+            rule.threshold = data["threshold"]
+        if "severity" in data:
+            rule.severity = data["severity"]
+        if "is_enabled" in data:
+            rule.is_enabled = data["is_enabled"]
+        if "notification_channels" in data:
+            rule.notification_channels = data["notification_channels"]
+
+        rule.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(rule)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_data_monitoring_rule(rule_id):
+    """删除数据监控规则"""
+    db = next(get_db())
+
+    try:
+        rule = db.query(DataMonitoringRule).filter(DataMonitoringRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        db.delete(rule)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/alerts", methods=["GET"])
+@require_jwt()
+def list_data_alerts():
+    """获取数据告警列表"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        severity = request.args.get("severity")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(DataAlert)
+
+        if status:
+            query = query.filter(DataAlert.status == status)
+        if severity:
+            query = query.filter(DataAlert.severity == severity)
+
+        total = query.count()
+        alerts = query.order_by(DataAlert.triggered_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "alerts": [a.to_dict() for a in alerts],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/alerts/<alert_id>/acknowledge", methods=["POST"])
+@require_jwt()
+def acknowledge_data_alert(alert_id):
+    """确认数据告警"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        alert = db.query(DataAlert).filter(DataAlert.alert_id == alert_id).first()
+        if not alert:
+            return jsonify({"code": 40401, "message": "告警不存在"}), 404
+
+        alert.status = "acknowledged"
+        alert.acknowledged_at = datetime.utcnow()
+        alert.acknowledged_by = data.get("acknowledged_by", "system")
+
+        db.commit()
+        db.refresh(alert)
+
+        return jsonify({
+            "code": 0,
+            "message": "确认成功",
+            "data": alert.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-monitoring/alerts/<alert_id>/resolve", methods=["POST"])
+@require_jwt()
+def resolve_data_alert(alert_id):
+    """解决数据告警"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        alert = db.query(DataAlert).filter(DataAlert.alert_id == alert_id).first()
+        if not alert:
+            return jsonify({"code": 40401, "message": "告警不存在"}), 404
+
+        alert.status = "resolved"
+        alert.resolved_at = datetime.utcnow()
+        alert.resolved_by = data.get("resolved_by", "system")
+
+        db.commit()
+        db.refresh(alert)
+
+        return jsonify({
+            "code": 0,
+            "message": "解决成功",
+            "data": alert.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== P5.2: BI 仪表板 ====================
+
+@app.route("/api/v1/bi/dashboards", methods=["GET"])
+@require_jwt()
+def list_bi_dashboards():
+    """获取 BI 仪表板列表"""
+    db = next(get_db())
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        search = request.args.get("search")
+
+        query = db.query(BIDashboard)
+
+        if search:
+            query = query.filter(BIDashboard.name.ilike(f"%{search}%"))
+
+        total = query.count()
+        dashboards = query.order_by(BIDashboard.updated_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "dashboards": [d.to_dict() for d in dashboards],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/dashboards", methods=["POST"])
+@require_jwt()
+def create_bi_dashboard():
+    """创建 BI 仪表板"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "仪表板名称不能为空"}), 400
+
+        dashboard = BIDashboard(
+            dashboard_id=generate_id("bi_dash_"),
+            name=name,
+            description=data.get("description"),
+            layout=data.get("layout"),
+            theme=data.get("theme", "light"),
+            filters=data.get("filters"),
+            auto_refresh=data.get("auto_refresh", False),
+            refresh_interval=data.get("refresh_interval", 300),
+            is_public=data.get("is_public", False),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(dashboard)
+        db.commit()
+        db.refresh(dashboard)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": dashboard.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/dashboards/<dashboard_id>", methods=["GET"])
+@require_jwt()
+def get_bi_dashboard(dashboard_id):
+    """获取 BI 仪表板详情"""
+    db = next(get_db())
+
+    try:
+        dashboard = db.query(BIDashboard).filter(BIDashboard.dashboard_id == dashboard_id).first()
+        if not dashboard:
+            return jsonify({"code": 40401, "message": "仪表板不存在"}), 404
+
+        # 增加浏览次数
+        dashboard.view_count = (dashboard.view_count or 0) + 1
+        db.commit()
+
+        # 获取关联的图表
+        charts = db.query(BIChart).filter(BIChart.dashboard_id == dashboard_id).all()
+
+        result = dashboard.to_dict()
+        result["charts"] = [c.to_dict() for c in charts]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/dashboards/<dashboard_id>", methods=["PUT"])
+@require_jwt()
+def update_bi_dashboard(dashboard_id):
+    """更新 BI 仪表板"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        dashboard = db.query(BIDashboard).filter(BIDashboard.dashboard_id == dashboard_id).first()
+        if not dashboard:
+            return jsonify({"code": 40401, "message": "仪表板不存在"}), 404
+
+        if "name" in data:
+            dashboard.name = data["name"]
+        if "description" in data:
+            dashboard.description = data["description"]
+        if "layout" in data:
+            dashboard.layout = data["layout"]
+        if "theme" in data:
+            dashboard.theme = data["theme"]
+        if "filters" in data:
+            dashboard.filters = data["filters"]
+        if "auto_refresh" in data:
+            dashboard.auto_refresh = data["auto_refresh"]
+        if "refresh_interval" in data:
+            dashboard.refresh_interval = data["refresh_interval"]
+        if "is_public" in data:
+            dashboard.is_public = data["is_public"]
+
+        dashboard.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(dashboard)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": dashboard.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/dashboards/<dashboard_id>", methods=["DELETE"])
+@require_jwt()
+def delete_bi_dashboard(dashboard_id):
+    """删除 BI 仪表板"""
+    db = next(get_db())
+
+    try:
+        dashboard = db.query(BIDashboard).filter(BIDashboard.dashboard_id == dashboard_id).first()
+        if not dashboard:
+            return jsonify({"code": 40401, "message": "仪表板不存在"}), 404
+
+        # 删除关联的图表
+        db.query(BIChart).filter(BIChart.dashboard_id == dashboard_id).delete()
+        db.delete(dashboard)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/charts", methods=["GET"])
+@require_jwt()
+def list_bi_charts():
+    """获取 BI 图表列表"""
+    db = next(get_db())
+
+    try:
+        dashboard_id = request.args.get("dashboard_id")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(BIChart)
+
+        if dashboard_id:
+            query = query.filter(BIChart.dashboard_id == dashboard_id)
+
+        total = query.count()
+        charts = query.order_by(BIChart.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "charts": [c.to_dict() for c in charts],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/charts", methods=["POST"])
+@require_jwt()
+def create_bi_chart():
+    """创建 BI 图表"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "图表名称不能为空"}), 400
+
+        chart = BIChart(
+            chart_id=generate_id("bi_chart_"),
+            name=name,
+            description=data.get("description"),
+            dashboard_id=data.get("dashboard_id"),
+            chart_type=data.get("chart_type"),
+            datasource_type=data.get("datasource_type"),
+            datasource_id=data.get("datasource_id"),
+            sql_query=data.get("sql_query"),
+            config=data.get("config"),
+            dimensions=data.get("dimensions"),
+            metrics=data.get("metrics"),
+            filters=data.get("filters"),
+            cache_enabled=data.get("cache_enabled", True),
+            cache_ttl=data.get("cache_ttl", 300),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(chart)
+        db.commit()
+        db.refresh(chart)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": chart.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/charts/<chart_id>", methods=["PUT"])
+@require_jwt()
+def update_bi_chart(chart_id):
+    """更新 BI 图表"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        chart = db.query(BIChart).filter(BIChart.chart_id == chart_id).first()
+        if not chart:
+            return jsonify({"code": 40401, "message": "图表不存在"}), 404
+
+        if "name" in data:
+            chart.name = data["name"]
+        if "description" in data:
+            chart.description = data["description"]
+        if "chart_type" in data:
+            chart.chart_type = data["chart_type"]
+        if "sql_query" in data:
+            chart.sql_query = data["sql_query"]
+        if "config" in data:
+            chart.config = data["config"]
+        if "dimensions" in data:
+            chart.dimensions = data["dimensions"]
+        if "metrics" in data:
+            chart.metrics = data["metrics"]
+        if "filters" in data:
+            chart.filters = data["filters"]
+
+        chart.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(chart)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": chart.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/charts/<chart_id>", methods=["DELETE"])
+@require_jwt()
+def delete_bi_chart(chart_id):
+    """删除 BI 图表"""
+    db = next(get_db())
+
+    try:
+        chart = db.query(BIChart).filter(BIChart.chart_id == chart_id).first()
+        if not chart:
+            return jsonify({"code": 40401, "message": "图表不存在"}), 404
+
+        db.delete(chart)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/bi/query", methods=["POST"])
+@require_jwt()
+def execute_bi_query():
+    """执行 BI 数据查询"""
+    data = request.json
+
+    sql = data.get("sql")
+    if not sql:
+        return jsonify({"code": 40001, "message": "SQL 不能为空"}), 400
+
+    # 模拟查询结果
+    import random
+
+    columns = data.get("columns", ["date", "value", "category"])
+    rows = []
+    for i in range(min(100, random.randint(10, 50))):
+        row = {
+            "date": f"2024-01-{i + 1:02d}",
+            "value": round(random.random() * 1000, 2),
+            "category": random.choice(["A", "B", "C", "D"])
+        }
+        rows.append(row)
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "columns": columns,
+            "rows": rows,
+            "row_count": len(rows)
+        }
+    })
+
+
+# ==================== P5.3: 离线处理 ====================
+
+@app.route("/api/v1/offline/tasks", methods=["GET"])
+@require_jwt()
+def list_offline_tasks():
+    """获取离线任务列表"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        task_type = request.args.get("task_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(OfflineTask)
+
+        if status:
+            query = query.filter(OfflineTask.status == status)
+        if task_type:
+            query = query.filter(OfflineTask.task_type == task_type)
+
+        total = query.count()
+        tasks = query.order_by(OfflineTask.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tasks": [t.to_dict() for t in tasks],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks", methods=["POST"])
+@require_jwt()
+def create_offline_task():
+    """创建离线任务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "任务名称不能为空"}), 400
+
+        task = OfflineTask(
+            task_id=generate_id("offline_"),
+            name=name,
+            description=data.get("description"),
+            task_type=data.get("task_type"),
+            sql_content=data.get("sql_content"),
+            script_path=data.get("script_path"),
+            script_content=data.get("script_content"),
+            parameters=data.get("parameters"),
+            executor_memory=data.get("executor_memory", "2g"),
+            executor_cores=data.get("executor_cores", 2),
+            num_executors=data.get("num_executors", 2),
+            schedule_type=data.get("schedule_type", "manual"),
+            cron_expression=data.get("cron_expression"),
+            dependencies=data.get("dependencies"),
+            output_table=data.get("output_table"),
+            output_path=data.get("output_path"),
+            output_format=data.get("output_format"),
+            status="idle",
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks/<task_id>", methods=["GET"])
+@require_jwt()
+def get_offline_task(task_id):
+    """获取离线任务详情"""
+    db = next(get_db())
+
+    try:
+        task = db.query(OfflineTask).filter(OfflineTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks/<task_id>", methods=["PUT"])
+@require_jwt()
+def update_offline_task(task_id):
+    """更新离线任务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        task = db.query(OfflineTask).filter(OfflineTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        if task.status == "running":
+            return jsonify({"code": 40002, "message": "运行中的任务无法修改"}), 400
+
+        if "name" in data:
+            task.name = data["name"]
+        if "description" in data:
+            task.description = data["description"]
+        if "sql_content" in data:
+            task.sql_content = data["sql_content"]
+        if "parameters" in data:
+            task.parameters = data["parameters"]
+        if "schedule_type" in data:
+            task.schedule_type = data["schedule_type"]
+        if "cron_expression" in data:
+            task.cron_expression = data["cron_expression"]
+
+        task.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(task)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks/<task_id>", methods=["DELETE"])
+@require_jwt()
+def delete_offline_task(task_id):
+    """删除离线任务"""
+    db = next(get_db())
+
+    try:
+        task = db.query(OfflineTask).filter(OfflineTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        if task.status == "running":
+            return jsonify({"code": 40002, "message": "请先停止运行中的任务"}), 400
+
+        db.delete(task)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks/<task_id>/run", methods=["POST"])
+@require_jwt()
+def run_offline_task(task_id):
+    """执行离线任务"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        task = db.query(OfflineTask).filter(OfflineTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        if task.status == "running":
+            return jsonify({"code": 40002, "message": "任务已在运行中"}), 400
+
+        # 更新任务状态
+        task.status = "running"
+        task.last_run_at = datetime.utcnow()
+        task.run_count = (task.run_count or 0) + 1
+
+        # 创建执行日志
+        log = OfflineTaskLog(
+            log_id=generate_id("offline_log_"),
+            task_id=task_id,
+            execution_id=generate_id("exec_"),
+            status="running",
+            started_at=datetime.utcnow(),
+            triggered_by=data.get("triggered_by", "manual"),
+            triggered_user=data.get("triggered_user", "system")
+        )
+
+        db.add(log)
+        db.commit()
+        db.refresh(task)
+        db.refresh(log)
+
+        return jsonify({
+            "code": 0,
+            "message": "任务已启动",
+            "data": {
+                "task": task.to_dict(),
+                "execution_id": log.execution_id
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/offline/tasks/<task_id>/logs", methods=["GET"])
+@require_jwt()
+def list_offline_task_logs(task_id):
+    """获取离线任务执行日志"""
+    db = next(get_db())
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(OfflineTaskLog).filter(OfflineTaskLog.task_id == task_id)
+        total = query.count()
+        logs = query.order_by(OfflineTaskLog.started_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "logs": [l.to_dict() for l in logs],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+# ==================== P5.4: 数据资产目录 ====================
+
+@app.route("/api/v1/assets", methods=["GET"])
+@require_jwt()
+def list_data_assets():
+    """获取数据资产列表"""
+    db = next(get_db())
+
+    try:
+        category_id = request.args.get("category_id")
+        asset_type = request.args.get("asset_type")
+        search = request.args.get("search")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(DataAsset).filter(DataAsset.status == "active")
+
+        if category_id:
+            query = query.filter(DataAsset.category_id == category_id)
+        if asset_type:
+            query = query.filter(DataAsset.asset_type == asset_type)
+        if search:
+            query = query.filter(
+                (DataAsset.name.ilike(f"%{search}%")) |
+                (DataAsset.description.ilike(f"%{search}%"))
+            )
+
+        total = query.count()
+        assets = query.order_by(DataAsset.updated_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "assets": [a.to_dict() for a in assets],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/assets/<asset_id>", methods=["GET"])
+@require_jwt()
+def get_data_asset(asset_id):
+    """获取数据资产详情"""
+    db = next(get_db())
+
+    try:
+        asset = db.query(DataAsset).filter(DataAsset.asset_id == asset_id).first()
+        if not asset:
+            return jsonify({"code": 40401, "message": "资产不存在"}), 404
+
+        # 增加访问次数
+        asset.view_count = (asset.view_count or 0) + 1
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": asset.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/assets/<asset_id>/collect", methods=["POST"])
+@require_jwt()
+def collect_data_asset(asset_id):
+    """收藏数据资产"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        asset = db.query(DataAsset).filter(DataAsset.asset_id == asset_id).first()
+        if not asset:
+            return jsonify({"code": 40401, "message": "资产不存在"}), 404
+
+        user_id = data.get("user_id", "system")
+
+        # 检查是否已收藏
+        existing = db.query(AssetCollection).filter(
+            AssetCollection.asset_id == asset_id,
+            AssetCollection.user_id == user_id
+        ).first()
+
+        if existing:
+            return jsonify({"code": 40002, "message": "已收藏该资产"}), 400
+
+        collection = AssetCollection(
+            asset_id=asset_id,
+            user_id=user_id
+        )
+
+        db.add(collection)
+
+        # 更新收藏计数
+        asset.collect_count = (asset.collect_count or 0) + 1
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "收藏成功"
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/assets/<asset_id>/uncollect", methods=["POST"])
+@require_jwt()
+def uncollect_data_asset(asset_id):
+    """取消收藏数据资产"""
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        user_id = data.get("user_id", "system")
+
+        collection = db.query(AssetCollection).filter(
+            AssetCollection.asset_id == asset_id,
+            AssetCollection.user_id == user_id
+        ).first()
+
+        if not collection:
+            return jsonify({"code": 40401, "message": "未收藏该资产"}), 404
+
+        db.delete(collection)
+
+        # 更新收藏计数
+        asset = db.query(DataAsset).filter(DataAsset.asset_id == asset_id).first()
+        if asset and asset.collect_count and asset.collect_count > 0:
+            asset.collect_count -= 1
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "取消收藏成功"
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/assets/categories", methods=["GET"])
+@require_jwt()
+def list_asset_categories():
+    """获取资产分类列表"""
+    db = next(get_db())
+
+    try:
+        categories = db.query(AssetCategory).order_by(AssetCategory.sort_order).all()
+
+        # 如果没有数据，返回默认分类
+        if not categories:
+            default_categories = [
+                {"id": "database", "name": "数据库表", "icon": "Database", "asset_count": 0},
+                {"id": "file", "name": "文件数据", "icon": "File", "asset_count": 0},
+                {"id": "api", "name": "API 接口", "icon": "Globe", "asset_count": 0},
+                {"id": "report", "name": "报表", "icon": "BarChart", "asset_count": 0},
+            ]
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "categories": default_categories
+                }
+            })
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "categories": [c.to_dict() for c in categories]
+            }
+        })
+    finally:
+        db.close()
+
+
+# ==================== P5.5: 数据标准管理 ====================
+
+@app.route("/api/v1/standards", methods=["GET"])
+@require_jwt()
+def list_data_standards():
+    """获取数据标准列表"""
+    db = next(get_db())
+
+    try:
+        category = request.args.get("category")
+        status = request.args.get("status")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(DataStandard)
+
+        if category:
+            query = query.filter(DataStandard.category == category)
+        if status:
+            query = query.filter(DataStandard.status == status)
+
+        total = query.count()
+        standards = query.order_by(DataStandard.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "standards": [s.to_dict() for s in standards],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/standards", methods=["POST"])
+@require_jwt()
+def create_data_standard():
+    """创建数据标准"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "标准名称不能为空"}), 400
+
+        standard = DataStandard(
+            standard_id=generate_id("std_"),
+            name=name,
+            description=data.get("description"),
+            category=data.get("category"),
+            rule_type=data.get("rule_type"),
+            rule_config=data.get("rule_config"),
+            apply_to=data.get("apply_to"),
+            data_types=data.get("data_types"),
+            examples=data.get("examples"),
+            status=data.get("status", "active"),
+            is_required=data.get("is_required", False),
+            version=data.get("version", "1.0"),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(standard)
+        db.commit()
+        db.refresh(standard)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": standard.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/standards/<standard_id>", methods=["GET"])
+@require_jwt()
+def get_data_standard(standard_id):
+    """获取数据标准详情"""
+    db = next(get_db())
+
+    try:
+        standard = db.query(DataStandard).filter(DataStandard.standard_id == standard_id).first()
+        if not standard:
+            return jsonify({"code": 40401, "message": "标准不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": standard.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/standards/<standard_id>", methods=["PUT"])
+@require_jwt()
+def update_data_standard(standard_id):
+    """更新数据标准"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        standard = db.query(DataStandard).filter(DataStandard.standard_id == standard_id).first()
+        if not standard:
+            return jsonify({"code": 40401, "message": "标准不存在"}), 404
+
+        if "name" in data:
+            standard.name = data["name"]
+        if "description" in data:
+            standard.description = data["description"]
+        if "rule_config" in data:
+            standard.rule_config = data["rule_config"]
+        if "apply_to" in data:
+            standard.apply_to = data["apply_to"]
+        if "status" in data:
+            standard.status = data["status"]
+        if "is_required" in data:
+            standard.is_required = data["is_required"]
+
+        standard.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(standard)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": standard.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/standards/<standard_id>", methods=["DELETE"])
+@require_jwt()
+def delete_data_standard(standard_id):
+    """删除数据标准"""
+    db = next(get_db())
+
+    try:
+        standard = db.query(DataStandard).filter(DataStandard.standard_id == standard_id).first()
+        if not standard:
+            return jsonify({"code": 40401, "message": "标准不存在"}), 404
+
+        db.delete(standard)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/standards/validate", methods=["POST"])
+@require_jwt()
+def validate_data_standard():
+    """验证数据是否符合标准"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        standard_id = data.get("standard_id")
+        input_value = data.get("value")
+
+        if not standard_id:
+            return jsonify({"code": 40001, "message": "标准 ID 不能为空"}), 400
+
+        standard = db.query(DataStandard).filter(DataStandard.standard_id == standard_id).first()
+        if not standard:
+            return jsonify({"code": 40401, "message": "标准不存在"}), 404
+
+        # 执行验证（模拟）
+        import re
+        is_valid = True
+        error_message = None
+
+        if standard.rule_type == "regex" and standard.rule_config:
+            pattern = standard.rule_config.get("pattern")
+            if pattern and input_value:
+                try:
+                    if not re.match(pattern, str(input_value)):
+                        is_valid = False
+                        error_message = f"值 '{input_value}' 不符合正则表达式: {pattern}"
+                except re.error:
+                    error_message = "无效的正则表达式"
+
+        # 记录验证结果
+        validation = StandardValidation(
+            validation_id=generate_id("val_"),
+            standard_id=standard_id,
+            standard_name=standard.name,
+            input_value=str(input_value) if input_value else None,
+            is_valid=is_valid,
+            error_message=error_message,
+            validated_by=data.get("validated_by", "system")
+        )
+
+        db.add(validation)
+
+        # 更新统计
+        standard.apply_count = (standard.apply_count or 0) + 1
+        if not is_valid:
+            standard.violation_count = (standard.violation_count or 0) + 1
+
+        db.commit()
+        db.refresh(validation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "is_valid": is_valid,
+                "error_message": error_message,
+                "validation": validation.to_dict()
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== P5.6: 数据服务发布 ====================
+
+@app.route("/api/v1/data-services", methods=["GET"])
+@require_jwt()
+def list_data_services():
+    """获取数据服务列表"""
+    db = next(get_db())
+
+    try:
+        status = request.args.get("status")
+        service_type = request.args.get("service_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(DataService)
+
+        if status:
+            query = query.filter(DataService.status == status)
+        if service_type:
+            query = query.filter(DataService.service_type == service_type)
+
+        total = query.count()
+        services = query.order_by(DataService.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "services": [s.to_dict() for s in services],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services", methods=["POST"])
+@require_jwt()
+def create_data_service():
+    """创建数据服务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        if not name:
+            return jsonify({"code": 40001, "message": "服务名称不能为空"}), 400
+
+        service = DataService(
+            service_id=generate_id("dsvc_"),
+            name=name,
+            description=data.get("description"),
+            service_type=data.get("service_type", "api"),
+            source_type=data.get("source_type"),
+            source_id=data.get("source_id"),
+            sql_query=data.get("sql_query"),
+            path=data.get("path"),
+            method=data.get("method", "GET"),
+            parameters=data.get("parameters"),
+            response_format=data.get("response_format", "json"),
+            auth_type=data.get("auth_type", "none"),
+            auth_config=data.get("auth_config"),
+            rate_limit_enabled=data.get("rate_limit_enabled", True),
+            rate_limit_per_minute=data.get("rate_limit_per_minute", 60),
+            rate_limit_per_day=data.get("rate_limit_per_day", 10000),
+            cache_enabled=data.get("cache_enabled", True),
+            cache_ttl=data.get("cache_ttl", 300),
+            status="stopped",
+            version=data.get("version", "v1"),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(service)
+        db.commit()
+        db.refresh(service)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": service.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["GET"])
+@require_jwt()
+def get_data_service(service_id):
+    """获取数据服务详情"""
+    db = next(get_db())
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": service.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["PUT"])
+@require_jwt()
+def update_data_service(service_id):
+    """更新数据服务"""
+    db = next(get_db())
+    data = request.json
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        if "name" in data:
+            service.name = data["name"]
+        if "description" in data:
+            service.description = data["description"]
+        if "sql_query" in data:
+            service.sql_query = data["sql_query"]
+        if "path" in data:
+            service.path = data["path"]
+        if "parameters" in data:
+            service.parameters = data["parameters"]
+        if "auth_type" in data:
+            service.auth_type = data["auth_type"]
+        if "rate_limit_per_minute" in data:
+            service.rate_limit_per_minute = data["rate_limit_per_minute"]
+        if "cache_enabled" in data:
+            service.cache_enabled = data["cache_enabled"]
+        if "cache_ttl" in data:
+            service.cache_ttl = data["cache_ttl"]
+
+        service.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(service)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": service.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["DELETE"])
+@require_jwt()
+def delete_data_service(service_id):
+    """删除数据服务"""
+    db = next(get_db())
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        if service.status == "running":
+            return jsonify({"code": 40002, "message": "请先停止运行中的服务"}), 400
+
+        db.delete(service)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>/start", methods=["POST"])
+@require_jwt()
+def start_data_service(service_id):
+    """启动数据服务"""
+    db = next(get_db())
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        if service.status == "running":
+            return jsonify({"code": 40002, "message": "服务已在运行中"}), 400
+
+        service.status = "running"
+        service.started_at = datetime.utcnow()
+        service.stopped_at = None
+
+        db.commit()
+        db.refresh(service)
+
+        return jsonify({
+            "code": 0,
+            "message": "服务已启动",
+            "data": service.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_data_service(service_id):
+    """停止数据服务"""
+    db = next(get_db())
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        if service.status != "running":
+            return jsonify({"code": 40002, "message": "服务未在运行"}), 400
+
+        service.status = "stopped"
+        service.stopped_at = datetime.utcnow()
+
+        db.commit()
+        db.refresh(service)
+
+        return jsonify({
+            "code": 0,
+            "message": "服务已停止",
+            "data": service.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data-services/<service_id>/stats", methods=["GET"])
+@require_jwt()
+def get_data_service_stats(service_id):
+    """获取数据服务调用统计"""
+    db = next(get_db())
+
+    try:
+        service = db.query(DataService).filter(DataService.service_id == service_id).first()
+        if not service:
+            return jsonify({"code": 40401, "message": "服务不存在"}), 404
+
+        # 获取最近的调用日志统计
+        from sqlalchemy import func
+
+        # 今日统计
+        today = datetime.utcnow().date()
+        today_calls = db.query(func.count(ServiceCallLog.id)).filter(
+            ServiceCallLog.service_id == service_id,
+            func.date(ServiceCallLog.called_at) == today
+        ).scalar() or 0
+
+        # 错误率
+        error_rate = 0
+        if service.total_calls and service.total_calls > 0:
+            error_rate = round((service.error_calls or 0) / service.total_calls * 100, 2)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "service_id": service_id,
+                "total_calls": service.total_calls or 0,
+                "success_calls": service.success_calls or 0,
+                "error_calls": service.error_calls or 0,
+                "today_calls": today_calls,
+                "avg_response_time_ms": service.avg_response_time_ms,
+                "error_rate": error_rate
             }
         })
     finally:
