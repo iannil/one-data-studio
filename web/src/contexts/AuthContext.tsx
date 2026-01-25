@@ -63,8 +63,11 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
     const accessToken = getAccessToken();
     const userInfo = getUserInfo();
 
+    console.log('[AuthContext] checkAuth - isAuth:', isAuth, 'accessToken:', accessToken ? 'exists' : 'null');
+
     if (isAuth && accessToken) {
       // Token 未过期
+      console.log('[AuthContext] Token valid, setting authenticated=true');
       setAuthenticated(true);
       setToken(accessToken);
       setUser(userInfo);
@@ -81,19 +84,8 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
       return true;
     }
 
-    // Token 过期或不存在，尝试刷新
-    if (accessToken) {
-      const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        setAuthenticated(true);
-        setToken(getAccessToken());
-        setUser(getUserInfo());
-        setLoading(false);
-        return true;
-      }
-    }
-
-    // 认证失败
+    // Token 不存在或已过期，不尝试刷新（刷新由用户主动触发）
+    console.log('[AuthContext] Token invalid or missing, setting authenticated=false');
     setAuthenticated(false);
     setToken(null);
     setUser(null);
@@ -147,6 +139,11 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
 
   // 初始化检查
   useEffect(() => {
+    // 在 callback 页面跳过初始认证检查，让 CallbackPage 处理
+    if (window.location.pathname === '/callback') {
+      setLoading(false);
+      return;
+    }
     checkAuth();
   }, [checkAuth]);
 
@@ -219,6 +216,8 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { authenticated, loading, user } = useAuth();
 
+  console.log('[ProtectedRoute] Check - loading:', loading, 'authenticated:', authenticated, 'path:', window.location.pathname);
+
   // 加载中
   if (loading) {
     return fallback || <div>Loading...</div>;
@@ -226,6 +225,7 @@ export function ProtectedRoute({
 
   // 需要认证但未认证
   if (requireAuth && !authenticated) {
+    console.log('[ProtectedRoute] Not authenticated, redirecting to login');
     // 重定向到登录页
     const currentPath = window.location.pathname;
     const loginUrl = new URL('/login', window.location.origin);

@@ -46,8 +46,18 @@ export interface AuthState {
 
 // ============= Keycloak 配置 =============
 
+// 在生产环境使用代理路径，开发环境直接访问
+const getKeycloakUrl = () => {
+  // 如果设置了 VITE_KEYCLOAK_URL 并且是开发模式，直接使用
+  if (import.meta.env.DEV && import.meta.env.VITE_KEYCLOAK_URL) {
+    return import.meta.env.VITE_KEYCLOAK_URL;
+  }
+  // 生产环境使用 nginx 代理
+  return window.location.origin + '/auth';
+};
+
 const KEYCLOAK_CONFIG: KeycloakConfig = {
-  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://keycloak.one-data.local',
+  url: getKeycloakUrl(),
   realm: import.meta.env.VITE_KEYCLOAK_REALM || 'one-data-studio',
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'web-frontend',
 };
@@ -277,8 +287,11 @@ export function buildLogoutUrl(redirectUri?: string): string {
 export async function handleCallback(code: string, state: string): Promise<boolean> {
   // 验证状态
   const storedState = sessionStorage.getItem('oauth_state');
+  console.log('[Auth] Callback - state:', state, 'storedState:', storedState);
+
   if (state !== storedState) {
-    logError('Invalid state parameter', 'Auth');
+    logError(`Invalid state parameter: received=${state}, stored=${storedState}`, 'Auth');
+    console.error('[Auth] State mismatch!');
     return false;
   }
 
@@ -286,6 +299,9 @@ export async function handleCallback(code: string, state: string): Promise<boole
     // 使用授权码交换 Token
     const redirectUri = window.location.origin + '/callback';
     const tokenEndpoint = `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/token`;
+
+    console.log('[Auth] Token endpoint:', tokenEndpoint);
+    console.log('[Auth] Redirect URI:', redirectUri);
 
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
@@ -300,11 +316,16 @@ export async function handleCallback(code: string, state: string): Promise<boole
       }),
     });
 
+    console.log('[Auth] Token response status:', response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Auth] Token exchange failed:', errorText);
       throw new Error('Failed to exchange code for tokens');
     }
 
     const tokens: AuthTokens = await response.json();
+    console.log('[Auth] Tokens received, expires_in:', tokens.expires_in);
     storeTokens(tokens);
 
     // 解析并存储用户信息
@@ -369,7 +390,8 @@ export async function refreshAccessToken(): Promise<boolean> {
     return false;
   } catch (e) {
     logError('Token refresh failed', 'Auth', e);
-    clearAuthData();
+    // 注意：刷新失败不应该清除认证数据，因为原有 token 可能仍然有效
+    // clearAuthData(); // 移除此调用
     return false;
   }
 }

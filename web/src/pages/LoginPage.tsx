@@ -32,7 +32,10 @@ function LoginPage() {
 
   // 检查是否已登录
   useEffect(() => {
-    if (isAuthenticated()) {
+    const isAuth = isAuthenticated();
+    console.log('[LoginPage] Checking auth - isAuthenticated:', isAuth);
+    if (isAuth) {
+      console.log('[LoginPage] Already authenticated, redirecting to:', redirect);
       navigate(redirect, { replace: true });
     }
   }, [navigate, redirect]);

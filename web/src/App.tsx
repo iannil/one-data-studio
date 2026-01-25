@@ -64,6 +64,8 @@ const UsersPage = lazy(() => import('./pages/admin/users/UsersPage'));
 const GroupsPage = lazy(() => import('./pages/admin/groups/GroupsPage'));
 const SettingsPage = lazy(() => import('./pages/admin/settings/SettingsPage'));
 const AuditPage = lazy(() => import('./pages/admin/audit/AuditPage'));
+const RolesPage = lazy(() => import('./pages/admin/RolesPage'));
+const CostReportPage = lazy(() => import('./pages/admin/CostReportPage'));
 
 // 懒加载组件的包装器，显示加载状态
 function LazyWrapper({ children }: { children: React.ReactNode }) {
@@ -151,6 +153,8 @@ function AppRoutes() {
         <Route path="admin/groups" element={<LazyWrapper><GroupsPage /></LazyWrapper>} />
         <Route path="admin/settings" element={<LazyWrapper><SettingsPage /></LazyWrapper>} />
         <Route path="admin/audit" element={<LazyWrapper><AuditPage /></LazyWrapper>} />
+        <Route path="admin/roles" element={<LazyWrapper><RolesPage /></LazyWrapper>} />
+        <Route path="admin/cost-report" element={<LazyWrapper><CostReportPage /></LazyWrapper>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

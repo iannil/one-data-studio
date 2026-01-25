@@ -113,6 +113,34 @@ services:
       - one-data-network
 
   # ============================================
+  # Authentication
+  # ============================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: one-data-keycloak
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-onedata}
+      KC_DB_USERNAME: ${MYSQL_USER:-onedata}
+      KC_DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+    command: start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\nHost: localhost\\n\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - one-data-network
+
+  # ============================================
   # Application Services
   # ============================================
   bisheng-api:
@@ -217,6 +245,10 @@ services:
     build:
       context: ../../web
       dockerfile: Dockerfile
+      args:
+        VITE_KEYCLOAK_URL: http://localhost:8080
+        VITE_KEYCLOAK_REALM: one-data-studio
+        VITE_KEYCLOAK_CLIENT_ID: web-frontend
     container_name: one-data-web
     environment:
       VITE_API_BASE_URL: http://localhost:8000
@@ -230,6 +262,8 @@ services:
       openai-proxy:
         condition: service_started
       cube-api:
+        condition: service_started
+      keycloak:
         condition: service_started
     networks:
       - one-data-network

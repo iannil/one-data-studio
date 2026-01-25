@@ -97,38 +97,24 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // 智能分包策略
-        manualChunks: (id) => {
-          // React 核心库
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-vendor';
-          }
-          // 路由库
-          if (id.includes('node_modules/react-router')) {
-            return 'router-vendor';
-          }
-          // Ant Design - 拆分为核心和图标
-          if (id.includes('node_modules/@ant-design/icons')) {
-            return 'antd-icons';
-          }
-          if (id.includes('node_modules/antd')) {
-            return 'antd-vendor';
-          }
-          // React Query 和 Zustand
-          if (id.includes('node_modules/@tanstack/react-query') || id.includes('node_modules/zustand')) {
-            return 'state-vendor';
-          }
-          // React Flow (流程图库)
-          if (id.includes('node_modules/reactflow') || id.includes('node_modules/@reactflow')) {
-            return 'reactflow-vendor';
-          }
-          // 工具库 (axios, dayjs 等)
-          if (id.includes('node_modules/axios') || id.includes('node_modules/dayjs')) {
-            return 'utils-vendor';
-          }
-          // 其他 node_modules 合并为一个 vendor chunk
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+        manualChunks: {
+          // 将 React 生态系统放在一起，避免循环依赖
+          'react-vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'scheduler',
+          ],
+          // Ant Design 全家桶（包含所有 rc-* 组件）
+          'antd-vendor': ['antd'],
+          // 图标单独分包（体积较大）
+          'antd-icons': ['@ant-design/icons'],
+          // 状态管理
+          'state-vendor': ['@tanstack/react-query', 'zustand'],
+          // 流程图
+          'reactflow-vendor': ['reactflow'],
+          // 工具库
+          'utils-vendor': ['axios', 'dayjs', 'i18next'],
         },
         // 资源文件名 - 使用内容哈希
         chunkFileNames: 'assets/js/[name]-[hash].js',

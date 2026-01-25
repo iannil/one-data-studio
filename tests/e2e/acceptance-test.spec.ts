@@ -28,9 +28,24 @@ const summary: TestSummary[] = [];
 test.describe('综合验收测试 - 平台架构验证', () => {
   test('平台架构完整性验证', async ({ page }) => {
     test.setTimeout(120000); // 增加超时到 2 分钟
-    // 验证四层架构的所有路由都可以访问
+    // 验证四层架构的所有路由都可以访问 (共50个路由)
     const routes = [
-      // L2 数据底座层
+      // 核心页面 (9个)
+      '/',                    // 首页
+      '/datasets',            // 数据集
+      '/documents',           // 文档
+      '/chat',                // 对话
+      '/metadata',            // 元数据
+      '/schedules',           // 调度
+      '/agents',              // Agent
+      '/text2sql',            // Text2SQL
+      '/executions',          // 执行记录
+
+      // 工作流 (4个)
+      '/workflows',           // 工作流列表
+      '/workflows/new',       // 新建工作流
+
+      // L2 数据底座层 - Alldata (14个)
       '/alldata/datasources',
       '/alldata/etl',
       '/alldata/quality',
@@ -46,9 +61,10 @@ test.describe('综合验收测试 - 平台架构验证', () => {
       '/alldata/offline',
       '/alldata/metrics',
 
-      // L3 算法引擎层
+      // L3 算法引擎层 - Cube Studio (12个)
       '/cube/notebooks',
       '/cube/experiments',
+      '/cube/experiments/compare', // 新增：实验对比
       '/cube/models',
       '/cube/training',
       '/cube/serving',
@@ -59,29 +75,20 @@ test.describe('综合验收测试 - 平台架构验证', () => {
       '/cube/llm-tuning',
       '/cube/sql-lab',
 
-      // L4 应用编排层
+      // L4 应用编排层 - Bisheng (5个)
       '/bisheng/prompts',
       '/bisheng/knowledge',
       '/bisheng/apps',
       '/bisheng/evaluation',
       '/bisheng/sft',
 
-      // 核心功能
-      '/datasets',
-      '/documents',
-      '/chat',
-      '/workflows',
-      '/metadata',
-      '/schedules',
-      '/agents',
-      '/text2sql',
-      '/executions',
-
-      // 管理后台
+      // 管理后台 - Admin (6个)
       '/admin/users',
       '/admin/groups',
       '/admin/settings',
       '/admin/audit',
+      '/admin/roles',         // 新增：角色管理
+      '/admin/cost-report',   // 新增：成本报告
     ];
 
     const accessibleRoutes: string[] = [];
