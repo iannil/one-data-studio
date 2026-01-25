@@ -180,6 +180,15 @@ export interface CostTrendItem {
   total: number;
 }
 
+// 模型成本类型
+export interface ModelCost {
+  model: string;
+  calls: number;
+  tokens: number;
+  cost: number;
+  avg_cost: number;
+}
+
 // 系统配置类型
 export interface SystemSettings {
   // 通用设置
@@ -725,6 +734,13 @@ export async function getCostTrends(params?: { days?: number }): Promise<ApiResp
   return apiClient.get('/api/v1/cost/trends', { params });
 }
 
+/**
+ * 获取模型成本明细
+ */
+export async function getModelCosts(params?: { period?: string }): Promise<ApiResponse<{ models: ModelCost[] }>> {
+  return apiClient.get('/api/v1/cost/models', { params });
+}
+
 export default {
   // 用户管理
   getUsers,
@@ -759,6 +775,7 @@ export default {
   getCostSummary,
   getCostUsage,
   getCostTrends,
+  getModelCosts,
 
   // 系统配置
   getSystemSettings,

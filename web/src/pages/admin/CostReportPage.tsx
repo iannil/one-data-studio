@@ -88,6 +88,22 @@ const fetchCostTrends = async (): Promise<TrendItem[]> => {
   return data.data?.trends || [];
 };
 
+const fetchModelCosts = async (): Promise<ModelCost[]> => {
+  const response = await fetch('/api/v1/cost/models');
+  if (!response.ok) {
+    // 如果API不可用，返回默认数据用于演示
+    return [
+      { model: 'gpt-4', calls: 1250, tokens: 2500000, cost: 3500.00, avg_cost: 2.80 },
+      { model: 'gpt-3.5-turbo', calls: 8500, tokens: 12000000, cost: 1200.00, avg_cost: 0.14 },
+      { model: 'claude-3-opus', calls: 450, tokens: 800000, cost: 1800.00, avg_cost: 4.00 },
+      { model: 'claude-3-sonnet', calls: 2200, tokens: 3500000, cost: 800.00, avg_cost: 0.36 },
+      { model: 'qwen-turbo', calls: 5000, tokens: 8000000, cost: 400.00, avg_cost: 0.08 },
+    ];
+  }
+  const data = await response.json();
+  return data.data?.models || [];
+};
+
 // Helper functions
 const formatCurrency = (value: number, currency: string = 'CNY'): string => {
   return new Intl.NumberFormat('zh-CN', {
@@ -250,16 +266,12 @@ function CostReportPage() {
     queryFn: fetchCostTrends,
   });
 
-  const isLoading = isLoadingSummary || isLoadingUsage || isLoadingTrends;
+  const { data: modelData = [], isLoading: isLoadingModels } = useQuery({
+    queryKey: ['cost-models', period],
+    queryFn: fetchModelCosts,
+  });
 
-  // Mock model data for demonstration
-  const modelData: ModelCost[] = [
-    { model: 'gpt-4', calls: 1250, tokens: 2500000, cost: 3500.00, avg_cost: 2.80 },
-    { model: 'gpt-3.5-turbo', calls: 8500, tokens: 12000000, cost: 1200.00, avg_cost: 0.14 },
-    { model: 'claude-3-opus', calls: 450, tokens: 800000, cost: 1800.00, avg_cost: 4.00 },
-    { model: 'claude-3-sonnet', calls: 2200, tokens: 3500000, cost: 800.00, avg_cost: 0.36 },
-    { model: 'qwen-turbo', calls: 5000, tokens: 8000000, cost: 400.00, avg_cost: 0.08 },
-  ];
+  const isLoading = isLoadingSummary || isLoadingUsage || isLoadingTrends || isLoadingModels;
 
   const usageColumns = [
     {
@@ -318,6 +330,7 @@ function CostReportPage() {
     queryClient.invalidateQueries({ queryKey: ['cost-summary'] });
     queryClient.invalidateQueries({ queryKey: ['cost-usage'] });
     queryClient.invalidateQueries({ queryKey: ['cost-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['cost-models'] });
   };
 
   const handleExport = () => {

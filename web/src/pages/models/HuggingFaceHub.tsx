@@ -119,10 +119,11 @@ function HuggingFaceHub() {
           limit: 50,
         },
       });
-      setModels(response.data || []);
+      // 后端返回 { code, message, data: { models: [...] } }
+      setModels(response.data?.models || response.data || []);
     } catch (error) {
       message.error('Failed to search models');
-      // 使用模拟数据
+      // API 调用失败时使用模拟数据作为后备
       setModels(getMockModels());
     } finally {
       setLoading(false);
@@ -139,10 +140,11 @@ function HuggingFaceHub() {
           limit: 50,
         },
       });
-      setDatasets(response.data || []);
+      // 后端返回 { code, message, data: { datasets: [...] } }
+      setDatasets(response.data?.datasets || response.data || []);
     } catch (error) {
       message.error('Failed to search datasets');
-      // 使用模拟数据
+      // API 调用失败时使用模拟数据作为后备
       setDatasets(getMockDatasets());
     } finally {
       setLoading(false);

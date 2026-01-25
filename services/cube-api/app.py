@@ -43,6 +43,7 @@ from models import (
     AIHubModel, AIHubCategory
 )
 from services.huggingface import get_huggingface_service, HuggingFaceService
+from services.inference import get_inference_service, ModelInferenceService
 
 # 尝试导入认证模块
 try:
@@ -845,19 +846,63 @@ def predict(deployment_id: str):
                 "_warning": "This is mock data. Configure USE_MOCK_INFERENCE=false for production."
             }
     else:
-        # Real inference - to be implemented with actual model serving
-        # Options:
-        # 1. Call vLLM/TGI serving endpoint
-        # 2. Load model directly using transformers
-        # 3. Use external inference API
-        logger.error(
-            f"Real model inference requested but not implemented for deployment {deployment_id}. "
-            "Configure model serving endpoint or enable mock mode."
-        )
-        return jsonify({
-            "code": 50010,
-            "message": "Model inference not configured. Contact administrator."
-        }), 503
+        # Real inference - 使用实际的模型推理服务
+        inference_service = get_inference_service()
+
+        if not inference_service.is_available():
+            logger.error(
+                f"Model inference requested but no service available for deployment {deployment_id}. "
+                "Set MODEL_SERVING_ENDPOINT or OPENAI_API_KEY environment variable."
+            )
+            return jsonify({
+                "code": 50010,
+                "message": "Model inference service not available. Configure MODEL_SERVING_ENDPOINT or OPENAI_API_KEY."
+            }), 503
+
+        try:
+            # 获取输入数据
+            input_data = data.get("input", data.get("inputs", ""))
+            model_type = model.model_type if model else "text-generation"
+            model_name = model.name if model else data.get("model", "gpt-3.5-turbo")
+
+            # 获取推理参数
+            inference_params = data.get("parameters", {})
+
+            # 执行推理
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            async def _infer():
+                return await inference_service.infer(
+                    model=model_name,
+                    input_data=input_data,
+                    model_type=model_type,
+                    parameters=inference_params
+                )
+
+            infer_result = loop.run_until_complete(_infer())
+            loop.close()
+
+            # 构建响应
+            result = infer_result.output
+            if infer_result.tokens_used:
+                result["tokens_used"] = infer_result.tokens_used
+            if infer_result.latency_ms:
+                result["latency_ms"] = round(infer_result.latency_ms, 2)
+            result["backend"] = infer_result.backend
+            result["model"] = model_name
+
+            logger.info(
+                f"Inference completed for deployment {deployment_id}: "
+                f"backend={infer_result.backend}, latency={infer_result.latency_ms:.2f}ms"
+            )
+
+        except Exception as e:
+            logger.error(f"Model inference failed for deployment {deployment_id}: {e}")
+            return jsonify({
+                "code": 50011,
+                "message": f"Model inference failed: {str(e)}"
+            }), 500
 
     return jsonify({
         "code": 0,

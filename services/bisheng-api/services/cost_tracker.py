@@ -245,6 +245,51 @@ class CostTracker:
         self._batch_size = 100
         self._record_counter = 0
 
+        # Price cache to avoid repeated price lookups
+        self._price_cache: Dict[str, ModelPricing] = {}
+        self._price_cache_lock = threading.Lock()
+        self._price_cache_ttl = 3600  # Cache for 1 hour
+        self._price_cache_timestamps: Dict[str, float] = {}
+
+    def get_cached_price(
+        self,
+        model: str,
+        force_refresh: bool = False
+    ) -> ModelPricing:
+        """
+        Get cached pricing for a model
+
+        Args:
+            model: Model name
+            force_refresh: Force refresh from pricing source
+
+        Returns:
+            ModelPricing for the model
+        """
+        current_time = time.time()
+
+        with self._price_cache_lock:
+            # Check if cache is valid
+            if not force_refresh and model in self._price_cache:
+                cache_time = self._price_cache_timestamps.get(model, 0)
+                if current_time - cache_time < self._price_cache_ttl:
+                    logger.debug(f"Using cached price for model: {model}")
+                    return self._price_cache[model]
+
+            # Get from pricing dict
+            pricing = self.pricing.get(model)
+            if pricing:
+                # Update cache
+                self._price_cache[model] = pricing
+                self._price_cache_timestamps[model] = current_time
+                logger.debug(f"Cached price for model: {model}, input={pricing.input_price}, output={pricing.output_price}")
+            else:
+                # Use default pricing for unknown models
+                pricing = ModelPricing(input_price=0.0, output_price=0.0)
+                logger.warning(f"No pricing found for model '{model}', using free pricing")
+
+            return pricing
+
     def record_usage(
         self,
         user_id: str,
@@ -276,8 +321,8 @@ class CostTracker:
         Returns:
             Created CostRecord
         """
-        # Calculate cost
-        pricing = self.pricing.get(model, ModelPricing(0, 0))
+        # Calculate cost using cached pricing
+        pricing = self.get_cached_price(model)
         cost = pricing.calculate_cost(input_tokens, output_tokens)
 
         # Create record

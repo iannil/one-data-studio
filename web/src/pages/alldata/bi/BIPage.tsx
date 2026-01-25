@@ -44,6 +44,7 @@ function BIPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [chartData, setChartData] = useState<any>(null); // 真实图表数据
 
   const [form] = Form.useForm();
 
@@ -108,7 +109,13 @@ function BIPage() {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: Report) => (
-        <a onClick={() => { setSelectedReport(record); setIsDetailDrawerOpen(true); }}>
+        <a onClick={async () => {
+          setSelectedReport(record);
+          setIsDetailDrawerOpen(true);
+          // 尝试获取真实图表数据
+          const data = await fetchReportChartData(record.report_id);
+          setChartData(data);
+        }}>
           {name}
         </a>
       ),
@@ -166,7 +173,13 @@ function BIPage() {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => { setSelectedReport(record); setIsDetailDrawerOpen(true); }}
+            onClick={async () => {
+              setSelectedReport(record);
+              setIsDetailDrawerOpen(true);
+              // 尝试获取真实图表数据
+              const data = await fetchReportChartData(record.report_id);
+              setChartData(data);
+            }}
           />
           <Button
             type="text"
@@ -192,7 +205,19 @@ function BIPage() {
     });
   };
 
-  // 模拟图表数据
+  // 获取报表图表数据（真实API调用）
+  const fetchReportChartData = async (reportId: string) => {
+    try {
+      const response = await alldata.getReportData(reportId);
+      // 类型断言：API返回的data包含chart_data字段
+      return (response.data as { chart_data?: any })?.chart_data || null;
+    } catch (error) {
+      console.warn('Failed to fetch chart data, using demo data:', error);
+      return null;
+    }
+  };
+
+  // 模拟图表数据（仅用于演示，实际生产环境应从API获取真实数据）
   const mockChartData = {
     line: [
       { date: '2024-01', value: 120 },
@@ -340,6 +365,7 @@ function BIPage() {
         onClose={() => {
           setIsDetailDrawerOpen(false);
           setSelectedReport(null);
+          setChartData(null);
         }}
         width={1000}
       >
@@ -360,12 +386,12 @@ function BIPage() {
                       <Row gutter={16}>
                         <Col span={12}>
                           <Card
-                            title={<><LineChartOutlined /> 趋势分析（示例）</>}
+                            title={<><LineChartOutlined /> 趋势分析{chartData ? '' : '（示例）'}</>}
                             size="small"
                             style={{ height: 300 }}
                           >
                             <div style={{ height: 220, display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-                              {mockChartData.line.map((d) => (
+                              {(chartData?.line || mockChartData.line).map((d) => (
                                 <div
                                   key={d.date}
                                   style={{
@@ -378,7 +404,7 @@ function BIPage() {
                               ))}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                              {mockChartData.line.map((d) => (
+                              {(chartData?.line || mockChartData.line).map((d) => (
                                 <span key={d.date} style={{ fontSize: 10 }}>{d.date}</span>
                               ))}
                             </div>
@@ -386,12 +412,12 @@ function BIPage() {
                         </Col>
                         <Col span={12}>
                           <Card
-                            title={<><BarChartOutlined /> 数据质量评分（示例）</>}
+                            title={<><BarChartOutlined /> 数据质量评分{chartData ? '' : '（示例）'}</>}
                             size="small"
                             style={{ height: 300 }}
                           >
                             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 200 }}>
-                              {mockChartData.bar.map((d) => (
+                              {(chartData?.bar || mockChartData.bar).map((d) => (
                                 <div
                                   key={d.category}
                                   style={{
@@ -420,12 +446,12 @@ function BIPage() {
                       <Row gutter={16} style={{ marginTop: 16 }}>
                         <Col span={12}>
                           <Card
-                            title={<><PieChartOutlined /> 数据源分布（示例）</>}
+                            title={<><PieChartOutlined /> 数据源分布{chartData ? '' : '（示例）'}</>}
                             size="small"
                             style={{ height: 300 }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-                              {mockChartData.pie.map((d, i) => {
+                              {(chartData?.pie || mockChartData.pie).map((d, i) => {
                                 const colors = ['#1677ff', '#52c41a', '#faad14', '#722ed1'];
                                 return (
                                   <div
@@ -454,7 +480,7 @@ function BIPage() {
                         </Col>
                         <Col span={12}>
                           <Card
-                            title={<><TableOutlined /> 数据预览（示例）</>}
+                            title={<><TableOutlined /> 数据预览{chartData ? '' : '（示例）'}</>}
                             size="small"
                             style={{ height: 300 }}
                           >

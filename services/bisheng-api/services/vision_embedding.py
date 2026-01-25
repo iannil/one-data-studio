@@ -388,6 +388,29 @@ class MultimodalRetriever:
         self.text_collection = text_collection
         self.image_collection = image_collection
 
+        # 确保图片向量集合存在（使用正确的CLIP维度）
+        self._ensure_image_collection()
+
+    def _ensure_image_collection(self):
+        """确保图片向量集合存在且使用正确的维度"""
+        if self.vector_store is None:
+            return
+
+        try:
+            from pymilvus import utility
+
+            # 检查集合是否存在
+            if not utility.has_collection(self.image_collection):
+                # 使用CLIP模型的维度创建集合
+                self.vector_store.create_collection(
+                    name=self.image_collection,
+                    dimension=self.vision.dimension,
+                    drop_existing=False
+                )
+                logger.info(f"Created image collection '{self.image_collection}' with dimension {self.vision.dimension}")
+        except Exception as e:
+            logger.error(f"Failed to ensure image collection: {e}")
+
     def search(
         self,
         query: str,
@@ -443,20 +466,102 @@ class MultimodalRetriever:
         ]
 
     def _search_text(self, query: str, top_k: int) -> List[Dict]:
-        """搜索文本"""
-        # 这里应该调用实际的向量存储搜索
-        # 示例实现
-        return []
+        """
+        搜索文本
+
+        使用文本嵌入在文档向量集合中搜索相关内容
+
+        Args:
+            query: 查询文本
+            top_k: 返回结果数量
+
+        Returns:
+            搜索结果列表，每个结果包含 id, score, type, content, metadata
+        """
+        if self.vector_store is None:
+            logger.warning("Vector store not configured for text search")
+            return []
+
+        try:
+            # 生成查询文本的嵌入向量
+            query_embedding = self.vision.embed_text(query)
+
+            # 在文本向量集合中搜索
+            search_result = self.vector_store.search(
+                collection_name=self.text_collection,
+                query_embedding=query_embedding,
+                top_k=top_k,
+                output_fields=["text", "metadata"]
+            )
+
+            # 转换结果格式
+            results = []
+            for item in search_result.get("results", []):
+                metadata = item.get("metadata", {})
+                results.append({
+                    "id": item.get("id", ""),
+                    "score": item.get("score", 0.0),
+                    "type": "text",
+                    "content": item.get("text", ""),
+                    "metadata": metadata
+                })
+
+            logger.debug(f"Text search returned {len(results)} results")
+            return results
+
+        except Exception as e:
+            logger.error(f"Text search failed: {e}")
+            return []
 
     def _search_images(self, query: str, top_k: int) -> List[Dict]:
-        """搜索图片"""
-        # 生成查询文本的嵌入
-        query_embedding = self.vision.embed_text(query)
+        """
+        搜索图片
 
-        # 在图片向量集合中搜索
-        # 这里应该调用实际的向量存储搜索
-        # 示例实现
-        return []
+        使用视觉嵌入在图片向量集合中搜索相关图片
+
+        Args:
+            query: 查询文本
+            top_k: 返回结果数量
+
+        Returns:
+            搜索结果列表，每个结果包含 id, score, type, content, metadata
+        """
+        if self.vector_store is None:
+            logger.warning("Vector store not configured for image search")
+            return []
+
+        try:
+            # 生成查询文本的视觉嵌入向量（CLIP支持图文跨模态检索）
+            query_embedding = self.vision.embed_text(query)
+
+            # 在图片向量集合中搜索
+            search_result = self.vector_store.search(
+                collection_name=self.image_collection,
+                query_embedding=query_embedding,
+                top_k=top_k,
+                output_fields=["text", "metadata"]
+            )
+
+            # 转换结果格式
+            results = []
+            for item in search_result.get("results", []):
+                metadata = item.get("metadata", {})
+                # 从 metadata 中提取图片 URL 或路径
+                image_url = metadata.get("url") or metadata.get("path") or item.get("text", "")
+                results.append({
+                    "id": item.get("id", ""),
+                    "score": item.get("score", 0.0),
+                    "type": "image",
+                    "content": image_url,
+                    "metadata": metadata
+                })
+
+            logger.debug(f"Image search returned {len(results)} results")
+            return results
+
+        except Exception as e:
+            logger.error(f"Image search failed: {e}")
+            return []
 
     def index_image(
         self,
@@ -467,25 +572,46 @@ class MultimodalRetriever:
         """
         索引图片
 
+        生成图片的视觉嵌入并存储到向量数据库中
+
         Args:
-            image_id: 图片 ID
-            image_data: 图片数据
-            metadata: 元数据
+            image_id: 图片 ID（用作文档标识）
+            image_data: 图片二进制数据
+            metadata: 元数据（可包含 url, path, caption, tags 等信息）
 
         Returns:
             是否成功
         """
+        if self.vector_store is None:
+            logger.warning("Vector store not configured for image indexing")
+            return False
+
         try:
-            # 生成嵌入
-            result = self.vision.embed_image(image_data)
+            # 生成图片嵌入向量
+            embed_result = self.vision.embed_image(image_data)
+
+            # 准备元数据，包含图片 ID 和原始元数据
+            enhanced_metadata = {
+                "doc_id": image_id,
+                "image_hash": embed_result.image_hash,
+                "model": embed_result.model,
+                **(metadata or {})
+            }
+
+            # 准备文本描述（用于结果显示）
+            text_description = metadata.get("caption") or metadata.get("description") or ""
 
             # 存储到向量数据库
-            if self.vector_store:
-                # 调用向量存储的插入方法
-                pass
+            # 注意：需要使用正确的图片向量维度（CLIP模型可能需要创建新集合）
+            count = self.vector_store.insert(
+                collection_name=self.image_collection,
+                texts=[text_description],
+                embeddings=[embed_result.embedding],
+                metadata=[enhanced_metadata]
+            )
 
-            logger.info(f"Indexed image: {image_id}")
-            return True
+            logger.info(f"Indexed image: {image_id}, embedding dimension: {embed_result.dimension}")
+            return count > 0
 
         except Exception as e:
             logger.error(f"Failed to index image {image_id}: {e}")

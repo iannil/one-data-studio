@@ -76,6 +76,7 @@ function MetricsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -97,6 +98,17 @@ function MetricsPage() {
   const { data: categoriesData } = useQuery({
     queryKey: ['metricCategories'],
     queryFn: alldata.getMetricCategories,
+  });
+
+  // 获取指标趋势数据
+  const { data: trendData, isLoading: isLoadingTrend } = useQuery({
+    queryKey: ['metricTrend', selectedMetric?.metric_id],
+    queryFn: () =>
+      alldata.getMetricTrend(selectedMetric!.metric_id, {
+        start_time: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+        end_time: dayjs().format('YYYY-MM-DD'),
+      }),
+    enabled: isTrendModalOpen && selectedMetric !== null,
   });
 
   // 获取计算任务列表
@@ -761,10 +773,7 @@ function MetricsPage() {
               <Space>
                 <Button
                   icon={<LineChartOutlined />}
-                  onClick={() => {
-                    // TODO: 打开趋势图表
-                    message.info('趋势图表功能开发中');
-                  }}
+                  onClick={() => setIsTrendModalOpen(true)}
                 >
                   查看趋势
                 </Button>
@@ -784,6 +793,71 @@ function MetricsPage() {
           </div>
         )}
       </Drawer>
+
+      {/* 趋势图表模态框 */}
+      <Modal
+        title={
+          <span>
+            <LineChartOutlined style={{ marginRight: 8 }} />
+            {selectedMetric?.name} - 趋势图表
+          </span>
+        }
+        open={isTrendModalOpen}
+        onCancel={() => setIsTrendModalOpen(false)}
+        footer={null}
+        width={900}
+      >
+        {isLoadingTrend ? (
+          <div style={{ padding: '40px 0', textAlign: 'center' }}>加载中...</div>
+        ) : trendData?.data?.data_points && trendData.data.data_points.length > 0 ? (
+          <div>
+            <div style={{ height: 300, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '20px 0' }}>
+              {trendData.data.data_points.map((point, index) => {
+                const maxValue = Math.max(...trendData.data.data_points.map(p => p.value || 0));
+                const height = maxValue > 0 ? ((point.value || 0) / maxValue) * 100 : 0;
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '80%',
+                        height: `${height}%`,
+                        minHeight: 4,
+                        background: '#1677ff',
+                        borderRadius: '4px 4px 0 0',
+                        transition: 'height 0.3s ease',
+                      }}
+                    />
+                    <span style={{ fontSize: 10, marginTop: 4 }}>
+                      {dayjs(point.timestamp).format('MM-DD')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 16, textAlign: 'center', color: '#666' }}>
+              <Space size="large">
+                <span>时间范围: 近30天</span>
+                <span>数据点: {trendData.data.data_points.length} 个</span>
+                <span>
+                  最新值: {trendData.data.data_points[trendData.data.data_points.length - 1]?.value || '-'}
+                </span>
+              </Space>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
+            暂无趋势数据，请先执行指标计算
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

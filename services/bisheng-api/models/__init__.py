@@ -5,6 +5,7 @@ Phase 6: Sprint 6.1-6.3 - 添加执行记录和文档索引模型
 Phase 7: Sprint 7.4 - 添加调度模型
 P1 - Agent 模板管理
 P3 - Prompt 模板、模型评估、SFT 微调
+P4 - 应用、知识库、工具、模板管理
 """
 
 from .base import Base, engine, SessionLocal, get_db
@@ -18,6 +19,10 @@ from .agent_template import AgentTemplate
 from .prompt import PromptTemplate
 from .evaluation import Evaluation, EvaluationResult, EvaluationDataset
 from .sft import SFTTask, SFTDataset
+from .app import App
+from .knowledge_base import KnowledgeBase
+from .tool import Tool
+from .template import Template
 
 __all__ = [
     # Base
@@ -48,4 +53,9 @@ __all__ = [
     # P3.3: SFT
     "SFTTask",
     "SFTDataset",
+    # P4: 应用、知识库、工具、模板
+    "App",
+    "KnowledgeBase",
+    "Tool",
+    "Template",
 ]
