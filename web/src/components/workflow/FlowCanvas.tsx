@@ -54,6 +54,7 @@ interface FlowCanvasProps {
   onEdgesChange?: (edges: Edge[]) => void;
   onNodeSelect?: (node: Node | null) => void;
   onConnectionValidate?: (connection: Connection) => boolean;
+  onNodeAdd?: (nodeType: string, config: Record<string, unknown>) => void;
   readonly?: boolean;
   minimap?: boolean;
 }
@@ -99,6 +100,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
     onEdgesChange,
     onNodeSelect,
     onConnectionValidate,
+    onNodeAdd,
     readonly = false,
     minimap = true,
   },
@@ -174,6 +176,74 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
     [nodes, edges, onConnectionValidate]
   );
 
+  // 处理拖拽放置
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+
+      if (readonly) return;
+
+      const dataStr = event.dataTransfer.getData('application/reactflow');
+      if (!dataStr) return;
+
+      try {
+        const { type, config } = JSON.parse(dataStr);
+
+        // 计算放置位置
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        // 如果有外部添加回调，使用它
+        if (onNodeAdd) {
+          onNodeAdd(type, config);
+          return;
+        }
+
+        // 否则直接添加节点
+        const nodeLabels: Record<string, string> = {
+          input: '输入',
+          output: '输出',
+          retriever: '检索',
+          llm: '大模型',
+          agent: 'Agent',
+          tool_call: '工具',
+          think: '思考',
+          condition: '条件',
+          loop: '循环',
+          human_task: '人工审批',
+        };
+
+        const newNode: Node = {
+          id: `${type}-${Date.now()}`,
+          type,
+          position,
+          data: {
+            label: nodeLabels[type] || type,
+            config: config || {},
+          },
+        };
+
+        setNodes((nds) => {
+          const updated = [...nds, newNode];
+          if (onNodesChange) {
+            onNodesChange(updated);
+          }
+          return updated;
+        });
+      } catch (e) {
+        // Ignore invalid drop data
+      }
+    },
+    [reactFlowInstance, readonly, onNodeAdd, onNodesChange, setNodes]
+  );
+
   // 处理连接
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -188,31 +258,47 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
           type: MarkerType.ArrowClosed,
         },
       };
-      setEdges((eds) => addEdge(edge, eds));
+      setEdges((eds) => {
+        const updated = addEdge(edge, eds);
+        if (onEdgesChange) {
+          onEdgesChange(updated);
+        }
+        return updated;
+      });
     },
-    [setEdges, isValidConnection]
+    [setEdges, isValidConnection, onEdgesChange]
   );
 
   // 处理节点变化
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChangeInternal(changes);
-      if (onNodesChange) {
-        onNodesChange(nodes);
-      }
+      // 使用 setNodes 获取最新状态并通知父组件
+      setNodes((currentNodes) => {
+        if (onNodesChange) {
+          // 使用 setTimeout 确保状态已更新
+          setTimeout(() => onNodesChange(currentNodes), 0);
+        }
+        return currentNodes;
+      });
     },
-    [onNodesChangeInternal, nodes, onNodesChange]
+    [onNodesChangeInternal, onNodesChange, setNodes]
   );
 
   // 处理边变化
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       onEdgesChangeInternal(changes);
-      if (onEdgesChange) {
-        onEdgesChange(edges);
-      }
+      // 使用 setEdges 获取最新状态并通知父组件
+      setEdges((currentEdges) => {
+        if (onEdgesChange) {
+          // 使用 setTimeout 确保状态已更新
+          setTimeout(() => onEdgesChange(currentEdges), 0);
+        }
+        return currentEdges;
+      });
     },
-    [onEdgesChangeInternal, edges, onEdgesChange]
+    [onEdgesChangeInternal, onEdgesChange, setEdges]
   );
 
   // 处理节点点击
@@ -249,7 +335,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
   );
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

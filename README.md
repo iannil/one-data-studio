@@ -5,11 +5,13 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.27%2B-326ce5.svg)](https://kubernetes.io/)
+[![Docker](https://img.shields.io/badge/Docker-20.10%2B-2496ED.svg)](https://www.docker.com/)
 
 **Enterprise-Grade DataOps + MLOps + LLMOps Converged Platform**
 
-[Features](#features) • [Quick Start](#quick-start) • [Architecture](#architecture) • [Documentation](#documentation) • [Contributing](#contributing) • [简体中文](README_ZH.md)
+[Features](#features) | [Quick Start](#quick-start) | [Architecture](#architecture) | [Documentation](#documentation) | [Contributing](#contributing) | [简体中文](README_ZH.md)
 
 </div>
 
@@ -49,10 +51,10 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 ### Data Operations (DataOps)
 
-- Data integration and EEL pipelines
+- Data integration and ETL pipelines
 - Metadata management and data governance
 - Feature store for ML models
-- Vector storage for RAG applications
+- Vector storage for RAG applications (Milvus)
 
 ### Machine Learning Operations (MLOps)
 
@@ -64,38 +66,45 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 ### LLM Operations (LLMOps)
 
 - RAG (Retrieval-Augmented Generation) pipelines
-- Agent orchestration and workflow builder
+- Agent orchestration and visual workflow builder
 - Prompt management and templates
 - Knowledge base management
+
+### Platform Administration
+
+- Unified user management with Keycloak SSO
+- Role-based access control (RBAC)
+- Multi-tenant support
+- Comprehensive audit logging
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                  L4 Application Layer (Bisheng)                  │
-│                   RAG Pipeline | Agent Orchestration              │
+│                 L4 Application Layer (Bisheng)                  │
+│             RAG Pipeline | Agent Orchestration | Workflow       │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ OpenAI API / Metadata
 ┌─────────────────────────────────────────────────────────────────┐
-│                 L3 Algorithm Engine Layer (Cube Studio)          │
-│              Notebook | Distributed Training | Model Serving     │
+│                L3 Algorithm Engine Layer (Cube Studio)          │
+│             Notebook | Distributed Training | Model Serving     │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ Mount Data Volumes
 ┌─────────────────────────────────────────────────────────────────┐
-│                   L2 Data Foundation Layer (Alldata)             │
-│         Data Integration | ETL | Governance | Vector Store       │
+│                  L2 Data Foundation Layer (Alldata)             │
+│        Data Integration | ETL | Governance | Vector Store       │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ Storage Protocol
 ┌─────────────────────────────────────────────────────────────────┐
-│                   L1 Infrastructure Layer (Kubernetes)           │
-│              CPU/GPU Pool | Storage | Network | Monitoring       │
+│                  L1 Infrastructure Layer (Kubernetes)           │
+│             CPU/GPU Pool | Storage | Network | Monitoring       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Key Integrations
 
 | Integration | Description | Status |
-|-------------|-------------|--------|
+| ------------- | ------------- | -------- |
 | **Alldata → Cube** | Unified storage protocol with dataset versioning | 90% |
 | **Cube → Bisheng** | OpenAI-compatible model serving API | 85% |
 | **Alldata → Bisheng** | Metadata-based Text-to-SQL | 75% |
@@ -104,27 +113,40 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 ### Frontend
 
-- **React 18.3** with TypeScript
-- **Ant Design 5.14** UI components
-- **React Router 6.22** for navigation
-- **React Query 5.24** for server state
-- **Zustand 4.5** for client state
-- **Vite 5.1** for building
+| Technology | Version | Purpose |
+| ------------ | --------- | --------- |
+| React | 18.3 | UI Framework |
+| TypeScript | 5.4 | Type Safety |
+| Ant Design | 5.14 | UI Components |
+| React Router | 6.22 | Navigation |
+| React Query | 5.24 | Server State |
+| Zustand | 4.5 | Client State |
+| ReactFlow | 11.10 | Workflow Canvas |
+| Vite | 5.1 | Build Tool |
+| Vitest | 1.3 | Testing |
 
 ### Backend Services
 
-- **Python 3.10+** with FastAPI/Flask
-- **MySQL 8.0** for persistent storage
-- **Redis 7.0** for caching
-- **MinIO** for S3-compatible object storage
-- **Milvus 2.3** for vector database
+| Technology | Version | Purpose |
+| ------------ | --------- | --------- |
+| Python | 3.10+ | Runtime |
+| Flask | - | Web Framework (Alldata, Bisheng) |
+| FastAPI | - | Web Framework (OpenAI Proxy, Cube) |
+| MySQL | 8.0 | Persistent Storage |
+| Redis | 7.0 | Caching & Session |
+| MinIO | Latest | S3-compatible Object Storage |
+| Milvus | 2.3 | Vector Database |
 
 ### Infrastructure
 
-- **Kubernetes 1.27+** for orchestration
-- **Helm 3.13+** for package management
-- **Prometheus + Grafana** for monitoring
-- **Keycloak** for authentication
+| Technology | Version | Purpose |
+| ------------ | --------- | --------- |
+| Kubernetes | 1.27+ | Container Orchestration |
+| Docker | 20.10+ | Containerization |
+| Helm | 3.13+ | Package Management |
+| Keycloak | 23.0 | Identity & Access Management |
+| Prometheus | - | Metrics Collection |
+| Grafana | - | Monitoring Dashboard |
 
 ## Quick Start
 
@@ -132,6 +154,8 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 - Docker 20.10+
 - Docker Compose 2.0+
+- Node.js 18+ (for frontend development)
+- Python 3.10+ (for backend development)
 - kubectl 1.25+ (for Kubernetes deployment)
 - Helm 3.x (for Helm deployment)
 
@@ -142,6 +166,10 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 git clone https://github.com/one-data-studio/one-data-studio.git
 cd one-data-studio
 
+# Copy environment configuration
+cp .env.example .env
+# Edit .env and set required passwords (MYSQL_PASSWORD, REDIS_PASSWORD, etc.)
+
 # Start all services
 docker-compose -f deploy/local/docker-compose.yml up -d
 
@@ -149,10 +177,19 @@ docker-compose -f deploy/local/docker-compose.yml up -d
 docker-compose -f deploy/local/docker-compose.yml ps
 ```
 
+Or use the Makefile shortcuts:
+
+```bash
+make dev        # Start development environment
+make dev-status # Check service status
+make dev-logs   # View service logs
+make dev-stop   # Stop all services
+```
+
 ### Option 2: Kubernetes (Recommended for Production)
 
 ```bash
-# Create Kind cluster
+# Create Kind cluster (for local testing)
 make kind-cluster
 
 # Deploy all services
@@ -167,59 +204,88 @@ make forward
 
 ### Access the Platform
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Web UI | <http://localhost:3000> | Development mode: no auth |
-| Alldata API | <http://localhost:8001> | - |
-| Bisheng API | <http://localhost:8000> | - |
-| OpenAI Proxy | <http://localhost:8003> | - |
-| MinIO Console | <http://localhost:9001> | See `.env` |
-| Prometheus | <http://localhost:9090> | - |
-| Grafana | <http://localhost:3001> | admin/admin |
+| Service | URL | Description |
+| --------- | ----- | ------------- |
+| Web UI | <http://localhost:3000> | Main application interface |
+| Bisheng API | <http://localhost:8000> | Application orchestration API |
+| Alldata API | <http://localhost:8001> | Data governance API |
+| Cube API | <http://localhost:8002> | Model service API |
+| OpenAI Proxy | <http://localhost:8003> | OpenAI-compatible proxy |
+| Admin API | <http://localhost:8004> | Platform administration API |
+| Keycloak | <http://localhost:8080> | Identity management |
+| MinIO Console | <http://localhost:9001> | Object storage console |
+| Prometheus | <http://localhost:9090> | Metrics dashboard |
+| Grafana | <http://localhost:3001> | Monitoring (admin/admin) |
 
 ## Project Structure
 
 ```
 one-data-studio/
-├── services/               # Backend services
-│   ├── alldata-api/        # Data governance API (Flask)
-│   ├── bisheng-api/        # Application orchestration API (Flask)
-│   ├── openai-proxy/       # OpenAI-compatible proxy (FastAPI)
-│   ├── cube-api/           # Model service API (FastAPI)
-│   └── shared/             # Shared modules (auth, storage)
-├── web/                    # Frontend application (React + TypeScript)
-├── deploy/                 # Deployment configurations
-│   ├── local/              # Docker Compose files
-│   ├── kubernetes/         # Kubernetes manifests
-│   ├── helm/               # Helm charts
-│   ├── dockerfiles/        # Docker build files
-│   └── scripts/            # Deployment scripts
-├── scripts/                # Operations scripts
-├── tests/                  # Test files
-├── docs/                   # Documentation
-└── examples/               # Usage examples
+├── services/                 # Backend services
+│   ├── alldata-api/          # Data governance API (Flask)
+│   ├── bisheng-api/          # Application orchestration API (Flask)
+│   ├── cube-api/             # Model service API (FastAPI)
+│   ├── openai-proxy/         # OpenAI-compatible proxy (FastAPI)
+│   ├── admin-api/            # Platform administration API (Flask)
+│   └── shared/               # Shared modules (auth, storage, utils)
+├── web/                      # Frontend application (React + TypeScript)
+│   ├── src/
+│   │   ├── components/       # Reusable UI components
+│   │   ├── pages/            # Page components
+│   │   ├── services/         # API clients
+│   │   ├── stores/           # Zustand state stores
+│   │   └── locales/          # i18n translations
+│   └── public/               # Static assets
+├── deploy/                   # Deployment configurations
+│   ├── local/                # Docker Compose files
+│   ├── kubernetes/           # Kubernetes manifests
+│   ├── helm/                 # Helm charts
+│   ├── dockerfiles/          # Docker build files
+│   └── scripts/              # Deployment scripts
+├── scripts/                  # Development & operations scripts
+│   └── dev/                  # Development environment scripts
+├── tests/                    # Test files
+│   ├── unit/                 # Unit tests
+│   ├── integration/          # Integration tests
+│   └── e2e/                  # End-to-end tests
+├── docs/                     # Documentation
+│   ├── 01-architecture/      # Architecture documentation
+│   ├── 02-integration/       # Integration guides
+│   ├── 05-development/       # Development guides
+│   ├── 06-operations/        # Operations guides
+│   └── 07-user-guide/        # User documentation
+└── examples/                 # Usage examples
+    ├── langchain/            # LangChain integration examples
+    ├── python/               # Python SDK examples
+    └── workflows/            # Workflow definition examples
 ```
 
 ## Use Cases
 
 ### Enterprise Knowledge Center
 
-Unified management of enterprise document knowledge with intelligent Q&A capabilities.
+Unified management of enterprise document knowledge with intelligent Q&A capabilities. Combine internal documents, policies, and procedures into a searchable knowledge base with natural language queries.
 
-### ChatBI
+### ChatBI (Business Intelligence)
 
-Query databases using natural language with automatic report generation.
+Query databases using natural language with automatic report generation. Connect to your data warehouse and ask questions like "Show me last quarter's sales by region" - the system generates SQL and visualizes results.
 
 ### Industrial Quality Inspection
 
-Real-time sensor data analysis with predictive maintenance.
+Real-time sensor data analysis with predictive maintenance. Process streaming IoT data, train anomaly detection models, and deploy them for real-time monitoring.
+
+### Custom AI Applications
+
+Build sophisticated AI applications using the visual workflow builder. Combine RAG, agents, and tools to create customer service bots, document processors, or research assistants.
 
 ## Documentation
 
-- [Quick Start Guide](QUICKSTART.md)
 - [Architecture Overview](docs/01-architecture/platform-overview.md)
+- [Four-Layer Stack](docs/01-architecture/four-layer-stack.md)
+- [Integration Guide](docs/02-integration/integration-overview.md)
 - [API Specifications](docs/02-integration/api-specifications.md)
 - [Development Guide](docs/05-development/poc-playbook.md)
+- [Operations Guide](docs/06-operations/operations-guide.md)
 - [User Guide](docs/07-user-guide/getting-started.md)
 
 ## Contributing
@@ -231,6 +297,8 @@ We welcome contributions from the community!
 ```bash
 # Backend development
 cd services/bisheng-api
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 
@@ -243,13 +311,13 @@ npm run dev
 ### Code Style
 
 - **Python**: Follow PEP 8, use `logging` instead of `print()`
-- **TypeScript**: Follow ESLint rules, avoid `console.log` (use `console.error` only)
-- **Commits**: Use clear commit messages
+- **TypeScript**: Follow ESLint rules, avoid `console.log` (use `console.error` only for errors)
+- **Commits**: Use clear, descriptive commit messages
 
 ### Testing
 
 ```bash
-# Run all tests
+# Run all Python tests
 pytest tests/
 
 # Run with coverage
@@ -257,31 +325,38 @@ pytest tests/ --cov=services/ --cov-report=html
 
 # Run frontend tests
 cd web && npm test
+
+# Run frontend tests with UI
+cd web && npm run test:ui
 ```
 
-### Pull Requests
+### Pull Request Process
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes and add tests
+4. Ensure all tests pass (`pytest tests/ && cd web && npm test`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## Roadmap
 
-- [ ] Enhanced vector search capabilities
-- [ ] Real-time data streaming with Kafka
-- [ ] Multi-model orchestration
-- [ ] Advanced Agent framework
+- [ ] Enhanced vector search with hybrid retrieval
+- [ ] Real-time data streaming with Kafka integration
+- [ ] Multi-model orchestration and routing
+- [ ] Advanced Agent framework with tool learning
 - [ ] Performance optimization and benchmarking
-- [ ] Enhanced security features
+- [ ] Enhanced security features (audit logging, encryption)
+- [ ] Mobile-responsive UI improvements
+- [ ] Plugin system for extensibility
 
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```
-Copyright 2024 ONE-DATA-STUDIO Contributors
+Copyright 2024-2025 ONE-DATA-STUDIO Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -298,20 +373,23 @@ limitations under the License.
 
 ## Acknowledgments
 
+This project builds upon the shoulders of giants:
+
 - [Alldata](https://github.com/Computing-Data/Alldata) - Data governance platform
 - [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform
-- [Bisheng](https://github.com/Tencent/Bisheng) - LLM application development platform
+- [Bisheng](https://github.com/dataelement/bisheng) - LLM application development platform
 
-## Contact
+## Community
 
-- **Website**: <https://one-data-studio.io>
-- **Documentation**: <https://docs.one-data-studio.io>
-- **Issues**: <https://github.com/one-data-studio/one-data-studio/issues>
+- **Issues**: [GitHub Issues](https://github.com/one-data-studio/one-data-studio/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/one-data-studio/one-data-studio/discussions)
 
 ---
 
 <div align="center">
 
-**Built with ❤️ by the ONE-DATA-STUDIO Community**
+**Built with care by the ONE-DATA-STUDIO Community**
+
+If you find this project useful, please consider giving it a star!
 
 </div>

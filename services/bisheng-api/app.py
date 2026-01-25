@@ -153,6 +153,87 @@ KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://keycloak.one-data-system.svc.cl
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
 
+# ============================================================
+# 启动时环境验证
+# ============================================================
+def validate_production_environment():
+    """
+    验证生产环境配置
+
+    在应用启动时检查关键配置，确保生产环境不会使用不安全的设置。
+    如果检测到不安全配置，将记录错误并抛出异常阻止启动。
+    """
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    is_production = env in ("production", "prod")
+
+    issues = []
+
+    # 检查 1: 生产环境必须启用认证
+    if is_production and not AUTH_ENABLED:
+        issues.append(
+            "认证模块未加载。生产环境必须启用认证。"
+            "确保 auth.py 存在且所有依赖已安装。"
+        )
+
+    # 检查 2: 生产环境禁用 DEBUG 模式
+    if is_production and os.getenv("DEBUG", "false").lower() == "true":
+        issues.append(
+            "DEBUG 模式已启用。生产环境必须禁用 DEBUG 模式。"
+            "设置环境变量 DEBUG=false。"
+        )
+
+    # 检查 3: 生产环境禁用 SSL 验证跳过
+    if is_production and os.getenv("VERIFY_SSL", "true").lower() != "true":
+        issues.append(
+            "SSL 验证已禁用。生产环境必须启用 SSL 验证。"
+            "设置环境变量 VERIFY_SSL=true 或移除该设置。"
+        )
+
+    # 检查 4: 生产环境必须配置数据库
+    if is_production and not os.getenv("DATABASE_URL"):
+        issues.append(
+            "未配置数据库连接。生产环境必须设置 DATABASE_URL。"
+        )
+
+    # 检查 5: 检查 mock 相关环境变量
+    mock_vars = [
+        ("MOCK_DATA", os.getenv("MOCK_DATA", "")),
+        ("USE_MOCK", os.getenv("USE_MOCK", "")),
+        ("ENABLE_MOCK", os.getenv("ENABLE_MOCK", "")),
+    ]
+    for var_name, var_value in mock_vars:
+        if is_production and var_value.lower() in ("true", "1", "yes"):
+            issues.append(
+                f"环境变量 {var_name} 设置为启用状态。"
+                f"生产环境禁止使用 mock 数据。"
+            )
+
+    # 汇总检查结果
+    if issues:
+        error_msg = (
+            f"\n{'='*60}\n"
+            f"⚠️  生产环境配置检查失败\n"
+            f"{'='*60}\n"
+            f"检测到 {len(issues)} 个配置问题：\n\n"
+        )
+        for i, issue in enumerate(issues, 1):
+            error_msg += f"  {i}. {issue}\n"
+        error_msg += (
+            f"\n{'='*60}\n"
+            f"请修复以上问题后重新启动应用。\n"
+            f"{'='*60}\n"
+        )
+        logger.error(error_msg)
+        raise RuntimeError(f"生产环境配置检查失败: 检测到 {len(issues)} 个问题")
+
+    # 记录环境信息
+    logger.info(f"环境验证通过: ENVIRONMENT={env}, AUTH_ENABLED={AUTH_ENABLED}")
+
+
+# 执行启动验证
+validate_production_environment()
+
+
 def get_db_session():
     """获取数据库会话"""
     from models import SessionLocal
@@ -414,6 +495,74 @@ def list_apps():
         db.close()
 
 
+def calculate_workflow_statistics(db, workflow_id: str) -> dict:
+    """
+    从执行日志计算工作流统计数据
+
+    Args:
+        db: 数据库会话
+        workflow_id: 工作流ID
+
+    Returns:
+        包含统计数据的字典
+    """
+    from sqlalchemy import func
+
+    try:
+        # 获取该工作流的所有执行记录统计
+        stats_query = db.query(
+            func.count(WorkflowExecution.id).label('total_executions'),
+            func.count(
+                func.nullif(WorkflowExecution.status == 'completed', False)
+            ).label('completed_count'),
+            func.avg(
+                func.nullif(WorkflowExecution.duration_ms, None)
+            ).label('avg_duration')
+        ).filter(
+            WorkflowExecution.workflow_id == workflow_id
+        ).first()
+
+        total_executions = stats_query.total_executions or 0
+        completed_count = stats_query.completed_count or 0
+        avg_duration = stats_query.avg_duration
+
+        # 计算成功率
+        if total_executions > 0:
+            # 成功 = completed 状态
+            success_query = db.query(
+                func.count(WorkflowExecution.id)
+            ).filter(
+                WorkflowExecution.workflow_id == workflow_id,
+                WorkflowExecution.status == 'completed'
+            ).scalar() or 0
+
+            success_rate = round((success_query / total_executions) * 100, 1)
+        else:
+            success_rate = 0.0
+
+        # 计算平均响应时间（仅完成的执行）
+        if avg_duration is not None:
+            avg_response_time_ms = round(float(avg_duration), 0)
+        else:
+            avg_response_time_ms = 0
+
+        return {
+            "total_executions": total_executions,
+            "completed_count": completed_count,
+            "avg_response_time_ms": avg_response_time_ms,
+            "success_rate": success_rate
+        }
+
+    except Exception as e:
+        logger.warning(f"计算工作流统计失败: {e}")
+        return {
+            "total_executions": 0,
+            "completed_count": 0,
+            "avg_response_time_ms": 0,
+            "success_rate": 0.0
+        }
+
+
 @app.route("/api/v1/apps/<app_id>", methods=["GET"])
 @require_jwt(optional=True)
 def get_app(app_id: str):
@@ -431,17 +580,22 @@ def get_app(app_id: str):
         workflow = db.query(Workflow).filter(Workflow.workflow_id == app.workflow_id).first()
         if workflow:
             app_data["config"] = workflow.get_definition()
-            # 计算统计数据
-            total_calls = app.access_count or 0
-            # 估算独立用户数（基于访问次数，实际应从访问日志聚合获取）
-            # TODO: 实现用户访问统计表，基于 user_id 去重统计
+
+            # 从执行记录计算真实统计数据
+            workflow_stats = calculate_workflow_statistics(db, app.workflow_id)
+
+            # 计算总调用数：使用 access_count（API访问）+ 执行记录数（工作流执行）
+            total_calls = (app.access_count or 0) + workflow_stats["total_executions"]
+
+            # 估算独立用户数（基于访问次数）
+            # 注：精确的用户统计需要在 WorkflowExecution 表中添加 user_id 字段
             estimated_users = min(total_calls, max(1, total_calls // 10)) if total_calls > 0 else 0
 
             app_data["statistics"] = {
                 "total_calls": total_calls,
                 "total_users": estimated_users,
-                "avg_response_time_ms": 0,  # TODO: 从执行日志计算平均响应时间
-                "success_rate": 98.5  # TODO: 从执行日志计算成功率
+                "avg_response_time_ms": workflow_stats["avg_response_time_ms"],
+                "success_rate": workflow_stats["success_rate"]
             }
 
         return jsonify({
