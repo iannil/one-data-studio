@@ -1,0 +1,91 @@
+{
+  "testUsers": {
+    "test_admin": {
+      "username": "test_admin",
+      "email": "testadmin@example.com",
+      "password": "Admin1234!",
+      "roles": ["admin"],
+      "status": "active"
+    },
+    "test_de": {
+      "username": "test_de",
+      "email": "testde@example.com",
+      "password": "De1234!",
+      "roles": ["data_engineer"],
+      "status": "active"
+    },
+    "test_ai": {
+      "username": "test_ai",
+      "email": "testai@example.com",
+      "password": "Ai1234!",
+      "roles": ["ai_developer"],
+      "status": "active"
+    },
+    "test_da": {
+      "username": "test_da",
+      "email": "testda@example.com",
+      "password": "Da1234!",
+      "roles": ["data_analyst"],
+      "status": "active"
+    },
+    "test_user": {
+      "username": "test_user",
+      "email": "testuser@example.com",
+      "password": "User1234!",
+      "roles": ["user"],
+      "status": "active"
+    },
+    "test_guest": {
+      "username": "test_guest",
+      "email": "testguest@example.com",
+      "password": "Guest1234!",
+      "roles": ["guest"],
+      "status": "active"
+    },
+    "test_pending": {
+      "username": "test_pending",
+      "email": "testpending@example.com",
+      "password": "Pending1234!",
+      "roles": ["user"],
+      "status": "pending"
+    },
+    "test_inactive": {
+      "username": "test_inactive",
+      "email": "testinactive@example.com",
+      "password": "Inactive1234!",
+      "roles": ["user"],
+      "status": "inactive"
+    },
+    "test_locked": {
+      "username": "test_locked",
+      "email": "testlocked@example.com",
+      "password": "Locked1234!",
+      "roles": ["user"],
+      "status": "locked"
+    },
+    "test_deleted": {
+      "username": "test_deleted",
+      "email": "testdeleted@example.com",
+      "password": "Deleted1234!",
+      "roles": ["user"],
+      "status": "deleted"
+    }
+  },
+  "apiEndpoints": {
+    "baseURL": "http://localhost:3000",
+    "bisheng": "http://localhost:8000",
+    "alldata": "http://localhost:8001",
+    "cube": "http://localhost:8002",
+    "openai": "http://localhost:8003",
+    "keycloak": "http://localhost:8080"
+  },
+  "testTimeouts": {
+    "default": 60000,
+    "short": 10000,
+    "long": 120000
+  },
+  "retryConfig": {
+    "retries": 2,
+    "retryOnFlakyTests": true
+  }
+}

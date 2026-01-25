@@ -1,0 +1,275 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e8]: ONE-DATA
+      - menu [ref=e9]:
+        - menuitem "home 工作台" [ref=e10] [cursor=pointer]:
+          - img "home" [ref=e11]:
+            - img [ref=e12]
+          - generic [ref=e14]: 工作台
+        - menuitem "database 数据管理" [ref=e15] [cursor=pointer]:
+          - img "database" [ref=e16]:
+            - img [ref=e17]
+          - generic [ref=e19]: 数据管理
+        - menuitem "swap 数据开发" [ref=e20] [cursor=pointer]:
+          - img "swap" [ref=e21]:
+            - img [ref=e22]
+          - generic [ref=e24]: 数据开发
+        - menuitem "experiment 模型开发" [ref=e25] [cursor=pointer]:
+          - img "experiment" [ref=e26]:
+            - img [ref=e27]
+          - generic [ref=e29]: 模型开发
+        - menuitem "cloud-server 模型服务" [ref=e30] [cursor=pointer]:
+          - img "cloud-server" [ref=e31]:
+            - img [ref=e32]
+          - generic [ref=e36]: 模型服务
+        - menuitem "robot AI 应用" [ref=e37] [cursor=pointer]:
+          - img "robot" [ref=e38]:
+            - img [ref=e39]
+          - generic [ref=e41]: AI 应用
+        - menuitem "clock-circle 运维中心" [ref=e42] [cursor=pointer]:
+          - img "clock-circle" [ref=e43]:
+            - img [ref=e44]
+          - generic [ref=e47]: 运维中心
+        - menuitem "setting 系统管理" [expanded] [ref=e48] [cursor=pointer]:
+          - img "setting" [ref=e49]:
+            - img [ref=e50]
+          - generic [ref=e52]: 系统管理
+        - menu [ref=e53]:
+          - menuitem "team 用户管理" [ref=e54] [cursor=pointer]:
+            - img "team" [ref=e55]:
+              - img [ref=e56]
+            - generic [ref=e58]: 用户管理
+          - menuitem "team 用户组管理" [ref=e59] [cursor=pointer]:
+            - img "team" [ref=e60]:
+              - img [ref=e61]
+            - generic [ref=e63]: 用户组管理
+          - menuitem "control 系统设置" [ref=e64] [cursor=pointer]:
+            - img "control" [ref=e65]:
+              - img [ref=e66]
+            - generic [ref=e68]: 系统设置
+          - menuitem "audit 审计日志" [ref=e69] [cursor=pointer]:
+            - img "audit" [ref=e70]:
+              - img [ref=e71]
+            - generic [ref=e73]: 审计日志
+  - generic [ref=e74]:
+    - banner [ref=e75]:
+      - generic [ref=e76]:
+        - button "menu-fold" [ref=e78] [cursor=pointer]:
+          - img "menu-fold" [ref=e80]:
+            - img [ref=e81]
+        - strong [ref=e85]: ONE-DATA-STUDIO
+      - generic [ref=e86]:
+        - generic [ref=e87]: Data + AI + LLM Integration Platform
+        - button "global 🇺🇸" [ref=e89] [cursor=pointer]:
+          - img "global" [ref=e91]:
+            - img [ref=e92]
+          - generic [ref=e94]: 🇺🇸
+        - img "user" [ref=e97] [cursor=pointer]:
+          - img [ref=e98]
+    - main [ref=e100]:
+      - generic [ref=e102]:
+        - generic [ref=e104]:
+          - generic: 用户管理
+          - generic [ref=e106]:
+            - button "sync 刷新" [ref=e108] [cursor=pointer]:
+              - img "sync" [ref=e110]:
+                - img [ref=e111]
+              - generic [ref=e113]: 刷新
+            - button "plus 新建用户" [ref=e115] [cursor=pointer]:
+              - img "plus" [ref=e117]:
+                - img [ref=e118]
+              - generic [ref=e121]: 新建用户
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e126]:
+              - searchbox "搜索用户名/邮箱" [ref=e128]
+              - button "search" [ref=e131] [cursor=pointer]:
+                - img "search" [ref=e133]:
+                  - img [ref=e134]
+            - generic [ref=e137] [cursor=pointer]:
+              - generic [ref=e139]:
+                - combobox [ref=e141]
+                - generic: 状态筛选
+              - generic:
+                - img:
+                  - img
+          - generic [ref=e144]:
+            - table [ref=e148]:
+              - rowgroup [ref=e158]:
+                - row "用户 邮箱 手机 角色 状态 最后登录 创建时间 操作" [ref=e159]:
+                  - columnheader "用户" [ref=e160]
+                  - columnheader "邮箱" [ref=e161]
+                  - columnheader "手机" [ref=e162]
+                  - columnheader "角色" [ref=e163]
+                  - columnheader "状态" [ref=e164]
+                  - columnheader "最后登录" [ref=e165]
+                  - columnheader "创建时间" [ref=e166]
+                  - columnheader "操作" [ref=e167]
+              - rowgroup [ref=e168]:
+                - row "user 管理员 @admin admin@example.com - 管理员 正常 2024-01-25 18:00 2024-01-01 08:00 eye edit" [ref=e169]:
+                  - cell "user 管理员 @admin" [ref=e170]:
+                    - generic [ref=e171]:
+                      - img "user" [ref=e174]:
+                        - img [ref=e175]
+                      - generic [ref=e178]:
+                        - generic [ref=e179]: 管理员
+                        - generic [ref=e180]: "@admin"
+                  - cell "admin@example.com" [ref=e181]
+                  - cell "-" [ref=e182]
+                  - cell "管理员" [ref=e183]:
+                    - generic [ref=e186]: 管理员
+                  - cell "正常" [ref=e187]:
+                    - generic [ref=e188]: 正常
+                  - cell "2024-01-25 18:00" [ref=e189]
+                  - cell "2024-01-01 08:00" [ref=e190]
+                  - cell "eye edit" [ref=e191]:
+                    - generic [ref=e192]:
+                      - button "eye" [ref=e194] [cursor=pointer]:
+                        - img "eye" [ref=e196]:
+                          - img [ref=e197]
+                      - button "edit" [ref=e200] [cursor=pointer]:
+                        - img "edit" [ref=e202]:
+                          - img [ref=e203]
+                      - switch [checked] [ref=e206] [cursor=pointer]
+                - row "user 测试工程师 @test_de test_de@example.com - 数据工程师 正常 2024-01-25 17:00 2024-01-02 08:00 eye edit" [ref=e209]:
+                  - cell "user 测试工程师 @test_de" [ref=e210]:
+                    - generic [ref=e211]:
+                      - img "user" [ref=e214]:
+                        - img [ref=e215]
+                      - generic [ref=e218]:
+                        - generic [ref=e219]: 测试工程师
+                        - generic [ref=e220]: "@test_de"
+                  - cell "test_de@example.com" [ref=e221]
+                  - cell "-" [ref=e222]
+                  - cell "数据工程师" [ref=e223]:
+                    - generic [ref=e226]: 数据工程师
+                  - cell "正常" [ref=e227]:
+                    - generic [ref=e228]: 正常
+                  - cell "2024-01-25 17:00" [ref=e229]
+                  - cell "2024-01-02 08:00" [ref=e230]
+                  - cell "eye edit" [ref=e231]:
+                    - generic [ref=e232]:
+                      - button "eye" [ref=e234] [cursor=pointer]:
+                        - img "eye" [ref=e236]:
+                          - img [ref=e237]
+                      - button "edit" [ref=e240] [cursor=pointer]:
+                        - img "edit" [ref=e242]:
+                          - img [ref=e243]
+                      - switch [checked] [ref=e246] [cursor=pointer]
+                - row "user 测试AI开发者 @test_ai test_ai@example.com - AI 开发者 正常 2024-01-25 16:00 2024-01-03 08:00 eye edit" [ref=e249]:
+                  - cell "user 测试AI开发者 @test_ai" [ref=e250]:
+                    - generic [ref=e251]:
+                      - img "user" [ref=e254]:
+                        - img [ref=e255]
+                      - generic [ref=e258]:
+                        - generic [ref=e259]: 测试AI开发者
+                        - generic [ref=e260]: "@test_ai"
+                  - cell "test_ai@example.com" [ref=e261]
+                  - cell "-" [ref=e262]
+                  - cell "AI 开发者" [ref=e263]:
+                    - generic [ref=e266]: AI 开发者
+                  - cell "正常" [ref=e267]:
+                    - generic [ref=e268]: 正常
+                  - cell "2024-01-25 16:00" [ref=e269]
+                  - cell "2024-01-03 08:00" [ref=e270]
+                  - cell "eye edit" [ref=e271]:
+                    - generic [ref=e272]:
+                      - button "eye" [ref=e274] [cursor=pointer]:
+                        - img "eye" [ref=e276]:
+                          - img [ref=e277]
+                      - button "edit" [ref=e280] [cursor=pointer]:
+                        - img "edit" [ref=e282]:
+                          - img [ref=e283]
+                      - switch [checked] [ref=e286] [cursor=pointer]
+                - row "user 测试用户 @test_user test_user@example.com - 普通用户 正常 2024-01-25 15:00 2024-01-04 08:00 eye edit" [ref=e289]:
+                  - cell "user 测试用户 @test_user" [ref=e290]:
+                    - generic [ref=e291]:
+                      - img "user" [ref=e294]:
+                        - img [ref=e295]
+                      - generic [ref=e298]:
+                        - generic [ref=e299]: 测试用户
+                        - generic [ref=e300]: "@test_user"
+                  - cell "test_user@example.com" [ref=e301]
+                  - cell "-" [ref=e302]
+                  - cell "普通用户" [ref=e303]:
+                    - generic [ref=e306]: 普通用户
+                  - cell "正常" [ref=e307]:
+                    - generic [ref=e308]: 正常
+                  - cell "2024-01-25 15:00" [ref=e309]
+                  - cell "2024-01-04 08:00" [ref=e310]
+                  - cell "eye edit" [ref=e311]:
+                    - generic [ref=e312]:
+                      - button "eye" [ref=e314] [cursor=pointer]:
+                        - img "eye" [ref=e316]:
+                          - img [ref=e317]
+                      - button "edit" [ref=e320] [cursor=pointer]:
+                        - img "edit" [ref=e322]:
+                          - img [ref=e323]
+                      - switch [checked] [ref=e326] [cursor=pointer]
+                - row "user 待激活用户 @test_pending test_pending@example.com - 普通用户 停用 - 2024-01-05 08:00 eye edit" [ref=e329]:
+                  - cell "user 待激活用户 @test_pending" [ref=e330]:
+                    - generic [ref=e331]:
+                      - img "user" [ref=e334]:
+                        - img [ref=e335]
+                      - generic [ref=e338]:
+                        - generic [ref=e339]: 待激活用户
+                        - generic [ref=e340]: "@test_pending"
+                  - cell "test_pending@example.com" [ref=e341]
+                  - cell "-" [ref=e342]
+                  - cell "普通用户" [ref=e343]:
+                    - generic [ref=e346]: 普通用户
+                  - cell "停用" [ref=e347]:
+                    - generic [ref=e348]: 停用
+                  - cell "-" [ref=e349]
+                  - cell "2024-01-05 08:00" [ref=e350]
+                  - cell "eye edit" [ref=e351]:
+                    - generic [ref=e352]:
+                      - button "eye" [ref=e354] [cursor=pointer]:
+                        - img "eye" [ref=e356]:
+                          - img [ref=e357]
+                      - button "edit" [ref=e360] [cursor=pointer]:
+                        - img "edit" [ref=e362]:
+                          - img [ref=e363]
+                      - switch [ref=e366] [cursor=pointer]
+                - row "user 停用用户 @test_inactive test_inactive@example.com - 普通用户 停用 - 2024-01-06 08:00 eye edit" [ref=e369]:
+                  - cell "user 停用用户 @test_inactive" [ref=e370]:
+                    - generic [ref=e371]:
+                      - img "user" [ref=e374]:
+                        - img [ref=e375]
+                      - generic [ref=e378]:
+                        - generic [ref=e379]: 停用用户
+                        - generic [ref=e380]: "@test_inactive"
+                  - cell "test_inactive@example.com" [ref=e381]
+                  - cell "-" [ref=e382]
+                  - cell "普通用户" [ref=e383]:
+                    - generic [ref=e386]: 普通用户
+                  - cell "停用" [ref=e387]:
+                    - generic [ref=e388]: 停用
+                  - cell "-" [ref=e389]
+                  - cell "2024-01-06 08:00" [ref=e390]
+                  - cell "eye edit" [ref=e391]:
+                    - generic [ref=e392]:
+                      - button "eye" [ref=e394] [cursor=pointer]:
+                        - img "eye" [ref=e396]:
+                          - img [ref=e397]
+                      - button "edit" [ref=e400] [cursor=pointer]:
+                        - img "edit" [ref=e402]:
+                          - img [ref=e403]
+                      - switch [ref=e406] [cursor=pointer]
+            - list [ref=e409]:
+              - listitem [ref=e410]: 共 6 条
+              - listitem "Previous Page" [ref=e411]:
+                - button "left" [disabled] [ref=e412]:
+                  - img "left" [ref=e413]:
+                    - img [ref=e414]
+              - listitem "1" [ref=e416] [cursor=pointer]:
+                - generic [ref=e417]: "1"
+              - listitem "Next Page" [ref=e418]:
+                - button "right" [disabled] [ref=e419]:
+                  - img "right" [ref=e420]:
+                    - img [ref=e421]
+```
