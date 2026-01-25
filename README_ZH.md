@@ -163,7 +163,7 @@ Alldata 擅长处理结构化数据，Bisheng 擅长处理非结构化文档。�
 
 ```bash
 # 克隆仓库
-git clone https://github.com/one-data-studio/one-data-studio.git
+git clone https://github.com/iannil/one-data-studio.git
 cd one-data-studio
 
 # 复制环境配置
@@ -381,8 +381,8 @@ limitations under the License.
 
 ## 社区
 
-- **问题反馈**: [GitHub Issues](https://github.com/one-data-studio/one-data-studio/issues)
-- **讨论交流**: [GitHub Discussions](https://github.com/one-data-studio/one-data-studio/discussions)
+- **问题反馈**: [GitHub Issues](https://github.com/iannil/one-data-studio/issues)
+- **讨论交流**: [GitHub Discussions](https://github.com/iannil/one-data-studio/discussions)
 
 ---
 

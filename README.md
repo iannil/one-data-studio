@@ -163,7 +163,7 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 ```bash
 # Clone the repository
-git clone https://github.com/one-data-studio/one-data-studio.git
+git clone https://github.com/iannil/one-data-studio.git
 cd one-data-studio
 
 # Copy environment configuration
@@ -381,8 +381,8 @@ This project builds upon the shoulders of giants:
 
 ## Community
 
-- **Issues**: [GitHub Issues](https://github.com/one-data-studio/one-data-studio/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/one-data-studio/one-data-studio/discussions)
+- **Issues**: [GitHub Issues](https://github.com/iannil/one-data-studio/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/iannil/one-data-studio/discussions)
 
 ---
 
