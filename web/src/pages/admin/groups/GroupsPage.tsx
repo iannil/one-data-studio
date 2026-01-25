@@ -18,6 +18,7 @@ import {
   Row,
   Col,
   Transfer,
+  Spin,
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,97 +33,136 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
-// Mock API functions (to be replaced with actual API calls)
-const mockGroups = [
-  {
-    group_id: '1',
-    group_name: '默认组',
-    description: '系统默认用户组',
-    max_qps: 100,
-    max_tokens_per_day: 1000000,
-    user_count: 5,
-    status: 'active',
-    created_at: '2024-01-01T00:00:00Z',
-  },
-  {
-    group_id: '2',
-    group_name: 'VIP 用户组',
-    description: 'VIP 级别用户组，享受更高配额',
-    max_qps: 1000,
-    max_tokens_per_day: 10000000,
-    user_count: 10,
-    status: 'active',
-    created_at: '2024-01-05T00:00:00Z',
-  },
-];
+// API functions
+const fetchGroups = async (params: {
+  page: number;
+  page_size: number;
+  type?: string;
+  search?: string;
+}) => {
+  const searchParams = new URLSearchParams();
+  searchParams.set('page', params.page.toString());
+  searchParams.set('page_size', params.page_size.toString());
+  if (params.type) searchParams.set('type', params.type);
+  if (params.search) searchParams.set('search', params.search);
 
-const mockUsers = [
-  { user_id: '1', username: 'admin', full_name: '系统管理员' },
-  { user_id: '2', username: 'developer', full_name: '开发工程师' },
-  { user_id: '3', username: 'analyst', full_name: '数据分析师' },
-];
-
-const getGroups = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { groups: mockGroups, total: mockGroups.length } };
+  const response = await fetch(`/api/v1/groups?${searchParams.toString()}`);
+  if (!response.ok) throw new Error('Failed to fetch groups');
+  const data = await response.json();
+  return data.data;
 };
 
-// Placeholder for future use
-// const getGroupMembers = async (groupId: string) => {
-//   await new Promise((resolve) => setTimeout(resolve, 300));
-//   return { data: { members: mockUsers.slice(0, groupId === '1' ? 2 : 1) } };
-// };
-
-const createGroup = async (data: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { group: { ...data, group_id: Date.now().toString(), created_at: new Date().toISOString() } } };
+const fetchGroupDetail = async (groupId: string) => {
+  const response = await fetch(`/api/v1/groups/${groupId}?include_members=true`);
+  if (!response.ok) throw new Error('Failed to fetch group detail');
+  const data = await response.json();
+  return data.data;
 };
 
-const updateGroup = async (_groupId: string, data: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { group: { ...data, group_id: _groupId } } };
+const fetchUsers = async () => {
+  const response = await fetch('/api/v1/users?page=1&page_size=1000');
+  if (!response.ok) throw new Error('Failed to fetch users');
+  const data = await response.json();
+  return data.data?.users || [];
 };
 
-const deleteGroup = async (_groupId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { success: true } };
+const createGroup = async (groupData: any) => {
+  const response = await fetch('/api/v1/groups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(groupData),
+  });
+  if (!response.ok) throw new Error('Failed to create group');
+  const data = await response.json();
+  return data.data;
+};
+
+const updateGroup = async (groupId: string, groupData: any) => {
+  const response = await fetch(`/api/v1/groups/${groupId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(groupData),
+  });
+  if (!response.ok) throw new Error('Failed to update group');
+  const data = await response.json();
+  return data.data;
+};
+
+const deleteGroup = async (groupId: string) => {
+  const response = await fetch(`/api/v1/groups/${groupId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete group');
+  return true;
+};
+
+const addGroupMembers = async (groupId: string, userIds: string[]) => {
+  const response = await fetch(`/api/v1/groups/${groupId}/members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_ids: userIds }),
+  });
+  if (!response.ok) throw new Error('Failed to add members');
+  const data = await response.json();
+  return data.data;
+};
+
+const removeGroupMember = async (groupId: string, userId: string) => {
+  const response = await fetch(`/api/v1/groups/${groupId}/members/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to remove member');
+  return true;
 };
 
 interface UserGroup {
-  group_id: string;
-  group_name: string;
-  description: string;
-  max_qps: number;
-  max_tokens_per_day: number;
-  user_count: number;
-  status: string;
+  id: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  group_type: string;
+  is_active: boolean;
+  member_count: number;
+  members?: { id: string; username: string; display_name: string }[];
   created_at: string;
+  updated_at?: string;
+}
+
+interface User {
+  id: string;
+  username: string;
+  display_name: string;
 }
 
 function GroupsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<UserGroup | null>(null);
+  const [targetKeys, setTargetKeys] = useState<string[]>([]);
 
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
   // Queries
   const { data: groupsData, isLoading: isLoadingList } = useQuery({
-    queryKey: ['user-groups', page, pageSize, statusFilter],
-    queryFn: () =>
-      getGroups().then((res) => {
-        let groups = res.data.groups;
-                        if (statusFilter) groups = groups.filter((g) => g.status === statusFilter);
-                        return { data: { groups: groups.slice((page - 1) * pageSize, page * pageSize), total: groups.length } };
-                      }),
+    queryKey: ['user-groups', page, pageSize, typeFilter],
+    queryFn: () => fetchGroups({
+      page,
+      page_size: pageSize,
+      type: typeFilter || undefined,
+    }),
+  });
+
+  const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['all-users'],
+    queryFn: fetchUsers,
   });
 
   // Mutations
@@ -164,22 +204,43 @@ function GroupsPage() {
     },
   });
 
-  const getStatusColor = (status: string) => {
-    return status === 'active' ? 'success' : 'default';
+  const addMembersMutation = useMutation({
+    mutationFn: ({ groupId, userIds }: { groupId: string; userIds: string[] }) =>
+      addGroupMembers(groupId, userIds),
+    onSuccess: () => {
+      message.success('成员添加成功');
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+    },
+    onError: () => {
+      message.error('成员添加失败');
+    },
+  });
+
+  const getStatusColor = (isActive: boolean) => {
+    return isActive ? 'success' : 'default';
   };
 
-  const getStatusText = (status: string) => {
-    return status === 'active' ? '正常' : '停用';
+  const getStatusText = (isActive: boolean) => {
+    return isActive ? '正常' : '停用';
+  };
+
+  const getTypeText = (type: string) => {
+    const types: Record<string, string> = {
+      department: '部门',
+      team: '团队',
+      project: '项目',
+      custom: '自定义',
+    };
+    return types[type] || type;
   };
 
   const columns = [
     {
       title: '组名称',
-      dataIndex: 'group_name',
-      key: 'group_name',
-      render: (name: string, record: UserGroup) => (
+      key: 'name',
+      render: (_: unknown, record: UserGroup) => (
         <a onClick={() => { setSelectedGroup(record); setIsDetailDrawerOpen(true); }}>
-          {name}
+          {record.display_name || record.name}
         </a>
       ),
     },
@@ -188,36 +249,31 @@ function GroupsPage() {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
+      render: (desc?: string) => desc || '-',
     },
     {
-      title: 'QPS 限制',
-      dataIndex: 'max_qps',
-      key: 'max_qps',
-      render: (qps: number) => (
-        <Tag color="blue"><ThunderboltOutlined /> {qps.toLocaleString()}</Tag>
-      ),
+      title: '类型',
+      dataIndex: 'group_type',
+      key: 'group_type',
+      width: 100,
+      render: (type: string) => <Tag>{getTypeText(type)}</Tag>,
     },
     {
-      title: '日 Token 限制',
-      dataIndex: 'max_tokens_per_day',
-      key: 'max_tokens_per_day',
-      render: (tokens: number) => `${(tokens / 10000).toFixed(0)} 万`,
-    },
-    {
-      title: '用户数',
-      dataIndex: 'user_count',
-      key: 'user_count',
+      title: '成员数',
+      dataIndex: 'member_count',
+      key: 'member_count',
+      width: 100,
       render: (count: number) => (
         <Tag><TeamOutlined /> {count}</Tag>
       ),
     },
     {
       title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      dataIndex: 'is_active',
+      key: 'is_active',
       width: 100,
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
+      render: (isActive: boolean) => (
+        <Tag color={getStatusColor(isActive)}>{getStatusText(isActive)}</Tag>
       ),
     },
     {
@@ -230,7 +286,7 @@ function GroupsPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 200,
       render: (_: unknown, record: UserGroup) => (
         <Space>
           <Button
@@ -247,7 +303,11 @@ function GroupsPage() {
             icon={<EditOutlined />}
             onClick={() => {
               setSelectedGroup(record);
-              editForm.setFieldsValue(record);
+              editForm.setFieldsValue({
+                display_name: record.display_name,
+                description: record.description,
+                group_type: record.group_type,
+              });
               setIsEditModalOpen(true);
             }}
           >
@@ -259,6 +319,7 @@ function GroupsPage() {
             icon={<UserAddOutlined />}
             onClick={() => {
               setSelectedGroup(record);
+              setTargetKeys(record.members?.map(m => m.id) || []);
               setIsMemberModalOpen(true);
             }}
           >
@@ -278,9 +339,28 @@ function GroupsPage() {
   const handleUpdate = () => {
     editForm.validateFields().then((values) => {
       if (selectedGroup) {
-        updateMutation.mutate({ groupId: selectedGroup.group_id, data: values });
+        updateMutation.mutate({ groupId: selectedGroup.id, data: values });
       }
     });
+  };
+
+  const handleMemberChange = (newTargetKeys: string[]) => {
+    setTargetKeys(newTargetKeys);
+  };
+
+  const handleMemberSave = () => {
+    if (selectedGroup) {
+      const currentMembers = selectedGroup.members?.map(m => m.id) || [];
+      const newMembers = targetKeys.filter(k => !currentMembers.includes(k));
+
+      if (newMembers.length > 0) {
+        addMembersMutation.mutate({
+          groupId: selectedGroup.id,
+          userIds: newMembers,
+        });
+      }
+      setIsMemberModalOpen(false);
+    }
   };
 
   return (
@@ -300,26 +380,28 @@ function GroupsPage() {
       >
         <Space style={{ marginBottom: 16 }} size="middle">
           <Select
-            placeholder="状态筛选"
+            placeholder="类型筛选"
             allowClear
             style={{ width: 120 }}
-            onChange={setStatusFilter}
-            value={statusFilter || undefined}
+            onChange={setTypeFilter}
+            value={typeFilter || undefined}
           >
-            <Select.Option value="active">正常</Select.Option>
-            <Select.Option value="inactive">停用</Select.Option>
+            <Select.Option value="department">部门</Select.Option>
+            <Select.Option value="team">团队</Select.Option>
+            <Select.Option value="project">项目</Select.Option>
+            <Select.Option value="custom">自定义</Select.Option>
           </Select>
         </Space>
 
         <Table
           columns={columns}
-          dataSource={groupsData?.data?.groups || []}
-          rowKey="group_id"
+          dataSource={groupsData?.groups || []}
+          rowKey="id"
           loading={isLoadingList}
           pagination={{
             current: page,
             pageSize: pageSize,
-            total: groupsData?.data?.total || 0,
+            total: groupsData?.total || 0,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
             onChange: (newPage, newPageSize) => {
@@ -343,59 +425,41 @@ function GroupsPage() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            label="组名称"
-            name="group_name"
-            rules={[{ required: true, message: '请输入组名称' }]}
-          >
-            <Input placeholder="请输入组名称" />
-          </Form.Item>
-          <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} placeholder="请输入描述" />
-          </Form.Item>
-
-          <Divider orientation="left">流量控制</Divider>
-
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="QPS 限制"
-                name="max_qps"
-                rules={[{ required: true, message: '请输入 QPS 限制' }]}
-                initialValue={100}
+                label="组名称"
+                name="name"
+                rules={[{ required: true, message: '请输入组名称' }]}
               >
-                <InputNumber
-                  min={1}
-                  max={10000}
-                  style={{ width: '100%' }}
-                  addonAfter="次/秒"
-                />
+                <Input placeholder="请输入组名称（英文标识）" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="日 Token 限制"
-                name="max_tokens_per_day"
-                rules={[{ required: true, message: '请输入 Token 限制' }]}
-                initialValue={1000000}
+                label="显示名称"
+                name="display_name"
+                rules={[{ required: true, message: '请输入显示名称' }]}
               >
-                <InputNumber
-                  min={10000}
-                  max={100000000}
-                  step={10000}
-                  style={{ width: '100%' }}
-                  addonAfter="Token"
-                />
+                <Input placeholder="请输入显示名称" />
               </Form.Item>
             </Col>
           </Row>
-
-          <Alert
-            message="提示"
-            description="流量控制设置将应用于该组所有用户。设置后，该组用户的 API 调用将受到限制。"
-            type="info"
-            showIcon
-          />
+          <Form.Item label="描述" name="description">
+            <Input.TextArea rows={3} placeholder="请输入描述" />
+          </Form.Item>
+          <Form.Item
+            label="类型"
+            name="group_type"
+            initialValue="custom"
+          >
+            <Select>
+              <Select.Option value="department">部门</Select.Option>
+              <Select.Option value="team">团队</Select.Option>
+              <Select.Option value="project">项目</Select.Option>
+              <Select.Option value="custom">自定义</Select.Option>
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -413,79 +477,63 @@ function GroupsPage() {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            label="组名称"
-            name="group_name"
-            rules={[{ required: true, message: '请输入组名称' }]}
+            label="显示名称"
+            name="display_name"
+            rules={[{ required: true, message: '请输入显示名称' }]}
           >
-            <Input placeholder="请输入组名称" />
+            <Input placeholder="请输入显示名称" />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea rows={3} placeholder="请输入描述" />
           </Form.Item>
-
-          <Divider orientation="left">流量控制</Divider>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="QPS 限制"
-                name="max_qps"
-                rules={[{ required: true, message: '请输入 QPS 限制' }]}
-              >
-                <InputNumber
-                  min={1}
-                  max={10000}
-                  style={{ width: '100%' }}
-                  addonAfter="次/秒"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="日 Token 限制"
-                name="max_tokens_per_day"
-                rules={[{ required: true, message: '请输入 Token 限制' }]}
-              >
-                <InputNumber
-                  min={10000}
-                  max={100000000}
-                  step={10000}
-                  style={{ width: '100%' }}
-                  addonAfter="Token"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item label="类型" name="group_type">
+            <Select>
+              <Select.Option value="department">部门</Select.Option>
+              <Select.Option value="team">团队</Select.Option>
+              <Select.Option value="project">项目</Select.Option>
+              <Select.Option value="custom">自定义</Select.Option>
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
       {/* 成员管理模态框 */}
       <Modal
-        title={`成员管理 - ${selectedGroup?.group_name}`}
+        title={`成员管理 - ${selectedGroup?.display_name || selectedGroup?.name}`}
         open={isMemberModalOpen}
         onCancel={() => setIsMemberModalOpen(false)}
-        onOk={() => {
-          message.success('成员更新成功');
-          setIsMemberModalOpen(false);
-        }}
-        width={600}
+        onOk={handleMemberSave}
+        confirmLoading={addMembersMutation.isPending}
+        width={700}
       >
         <Alert
           message="成员管理"
-          description="拖动用户在不同列表之间移动，添加或移除组成员。"
+          description="将用户添加到组成员列表中。移动用户到右侧即可添加为成员。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
         />
-        <Transfer
-          dataSource={mockUsers.map((u) => ({ ...u, key: u.user_id }))}
-          targetKeys={selectedGroup?.group_id === '1' ? ['1', '2'] : ['3']}
-          render={(item) => `${item.full_name} (@${item.username})`}
-          titles={['所有用户', '组成员']}
-          onChange={(keys) => {
-            console.log('Selected keys:', keys);
-          }}
-        />
+        {isLoadingUsers ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : (
+          <Transfer
+            dataSource={allUsers.map((u: User) => ({
+              key: u.id,
+              title: `${u.display_name} (@${u.username})`,
+              ...u,
+            }))}
+            targetKeys={targetKeys}
+            onChange={handleMemberChange}
+            render={(item) => item.title}
+            titles={['所有用户', '组成员']}
+            listStyle={{ width: 280, height: 350 }}
+            showSearch
+            filterOption={(inputValue, option) =>
+              option.username.toLowerCase().includes(inputValue.toLowerCase()) ||
+              option.display_name.toLowerCase().includes(inputValue.toLowerCase())
+            }
+          />
+        )}
       </Modal>
 
       {/* 用户组详情抽屉 */}
@@ -501,26 +549,26 @@ function GroupsPage() {
         {selectedGroup && (
           <div>
             <Alert
-              message={selectedGroup.group_name}
-              description={selectedGroup.description}
+              message={selectedGroup.display_name || selectedGroup.name}
+              description={selectedGroup.description || '暂无描述'}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
             />
 
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="组ID">{selectedGroup.group_id}</Descriptions.Item>
+              <Descriptions.Item label="组ID">{selectedGroup.id}</Descriptions.Item>
+              <Descriptions.Item label="组标识">{selectedGroup.name}</Descriptions.Item>
+              <Descriptions.Item label="类型">
+                <Tag>{getTypeText(selectedGroup.group_type)}</Tag>
+              </Descriptions.Item>
               <Descriptions.Item label="状态">
-                <Tag color={getStatusColor(selectedGroup.status)}>{getStatusText(selectedGroup.status)}</Tag>
+                <Tag color={getStatusColor(selectedGroup.is_active)}>
+                  {getStatusText(selectedGroup.is_active)}
+                </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="QPS 限制">
-                <Tag color="blue"><ThunderboltOutlined /> {selectedGroup.max_qps.toLocaleString()} 次/秒</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="日 Token 限制">
-                {(selectedGroup.max_tokens_per_day / 10000).toFixed(0)} 万 Token
-              </Descriptions.Item>
-              <Descriptions.Item label="用户数">
-                <Tag><TeamOutlined /> {selectedGroup.user_count} 人</Tag>
+              <Descriptions.Item label="成员数">
+                <Tag><TeamOutlined /> {selectedGroup.member_count} 人</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {dayjs(selectedGroup.created_at).format('YYYY-MM-DD HH:mm:ss')}
@@ -533,26 +581,27 @@ function GroupsPage() {
               <Button
                 block
                 icon={<UserAddOutlined />}
-                onClick={() => setIsMemberModalOpen(true)}
+                onClick={() => {
+                  setTargetKeys(selectedGroup.members?.map(m => m.id) || []);
+                  setIsMemberModalOpen(true);
+                }}
               >
                 管理成员
               </Button>
-              {selectedGroup.group_name !== '默认组' && (
-                <Button
-                  block
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: '确认删除',
-                      content: `确定要删除用户组 ${selectedGroup.group_name} 吗？`,
-                      onOk: () => deleteMutation.mutate(selectedGroup.group_id),
-                    });
-                  }}
-                >
-                  删除用户组
-                </Button>
-              )}
+              <Button
+                block
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确认删除',
+                    content: `确定要删除用户组 "${selectedGroup.display_name || selectedGroup.name}" 吗？`,
+                    onOk: () => deleteMutation.mutate(selectedGroup.id),
+                  });
+                }}
+              >
+                删除用户组
+              </Button>
             </Space>
           </div>
         )}

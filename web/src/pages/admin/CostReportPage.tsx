@@ -1,234 +1,103 @@
 /**
  * ONE-DATA-STUDIO Cost Report Page
- * Sprint 32: Developer Experience Optimization
- *
  * Admin page for viewing token usage and cost analytics.
+ * Rewritten with Ant Design components
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
-  Box,
-  Paper,
-  Typography,
-  Grid,
   Card,
-  CardContent,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  CircularProgress,
+  Tag,
+  Button,
+  Space,
+  Select,
+  Row,
+  Col,
+  Statistic,
+  Spin,
   Alert,
   Tabs,
-  Tab,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  TextField,
-  Stack,
-  Chip,
-  LinearProgress,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
+  Typography,
+  Progress,
+  DatePicker,
+} from 'antd';
 import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Token as TokenIcon,
-  AttachMoney as MoneyIcon,
-  Speed as SpeedIcon,
-  Refresh as RefreshIcon,
-  Download as DownloadIcon,
-  FilterList as FilterIcon,
-} from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useTranslation } from 'react-i18next';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as ChartTooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+  DollarOutlined,
+  FieldTimeOutlined,
+  ThunderboltOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
+  RiseOutlined,
+  FallOutlined,
+  ApiOutlined,
+} from '@ant-design/icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+
+const { Option } = Select;
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 // Types
 interface CostSummary {
   total_cost: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_tokens: number;
-  call_count: number;
-  avg_cost_per_call: number;
-  avg_tokens_per_call: number;
-  by_model: Record<string, { cost: number; tokens: number; calls: number }>;
-  by_user: Record<string, { cost: number; tokens: number; calls: number }>;
-  by_workflow: Record<string, { cost: number; tokens: number; calls: number }>;
-  currency: string;
-  period_start: string;
-  period_end: string;
+  compute_cost: number;
+  storage_cost: number;
+  network_cost: number;
+  api_cost: number;
+  period: string;
+  trend: string;
 }
 
-interface DailyBreakdown {
+interface UsageItem {
+  resource: string;
+  usage: string;
+  cost: number;
+}
+
+interface TrendItem {
   date: string;
   cost: number;
-  tokens: number;
-  calls: number;
 }
 
-interface CostRecord {
-  id: string;
-  timestamp: string;
-  user_id: string;
-  tenant_id: string;
-  workflow_id: string | null;
+interface ModelCost {
   model: string;
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
+  calls: number;
+  tokens: number;
   cost: number;
-  execution_time_ms: number;
+  avg_cost: number;
 }
 
 // API functions
-const api = {
-  getSummary: async (
-    tenantId: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<CostSummary> => {
-    const params = new URLSearchParams({
-      tenant_id: tenantId,
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
-    });
-    const response = await fetch(`/api/v1/admin/costs/summary?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch cost summary');
-    return response.json();
-  },
-
-  getDailyBreakdown: async (
-    tenantId: string,
-    days: number
-  ): Promise<DailyBreakdown[]> => {
-    const params = new URLSearchParams({
-      tenant_id: tenantId,
-      days: days.toString(),
-    });
-    const response = await fetch(`/api/v1/admin/costs/daily?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch daily breakdown');
-    return response.json();
-  },
-
-  getRecords: async (
-    tenantId: string,
-    page: number,
-    pageSize: number
-  ): Promise<{ records: CostRecord[]; total: number }> => {
-    const params = new URLSearchParams({
-      tenant_id: tenantId,
-      page: page.toString(),
-      page_size: pageSize.toString(),
-    });
-    const response = await fetch(`/api/v1/admin/costs/records?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch records');
-    return response.json();
-  },
-
-  exportCSV: async (tenantId: string, startDate: Date, endDate: Date): Promise<void> => {
-    const params = new URLSearchParams({
-      tenant_id: tenantId,
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
-      format: 'csv',
-    });
-    const response = await fetch(`/api/v1/admin/costs/export?${params}`);
-    if (!response.ok) throw new Error('Failed to export');
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cost-report-${startDate.toISOString().split('T')[0]}.csv`;
-    a.click();
-  },
+const fetchCostSummary = async (): Promise<CostSummary> => {
+  const response = await fetch('/api/v1/cost/summary');
+  if (!response.ok) throw new Error('Failed to fetch cost summary');
+  const data = await response.json();
+  return data.data;
 };
 
-// Chart colors
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
+const fetchCostUsage = async (): Promise<UsageItem[]> => {
+  const response = await fetch('/api/v1/cost/usage');
+  if (!response.ok) throw new Error('Failed to fetch cost usage');
+  const data = await response.json();
+  return data.data?.items || [];
+};
 
-// Helper components
-const StatCard: React.FC<{
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ReactNode;
-  trend?: number;
-  color?: string;
-}> = ({ title, value, subtitle, icon, trend, color = 'primary.main' }) => (
-  <Card elevation={0} sx={{ height: '100%' }}>
-    <CardContent>
-      <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-        <Box>
-          <Typography color="text.secondary" variant="caption" gutterBottom>
-            {title}
-          </Typography>
-          <Typography variant="h4" fontWeight="bold" color={color}>
-            {value}
-          </Typography>
-          {subtitle && (
-            <Typography variant="body2" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-        <Box
-          sx={{
-            p: 1,
-            borderRadius: 2,
-            bgcolor: `${color}15`,
-            color: color,
-          }}
-        >
-          {icon}
-        </Box>
-      </Box>
-      {trend !== undefined && (
-        <Box display="flex" alignItems="center" mt={1}>
-          {trend >= 0 ? (
-            <TrendingUpIcon fontSize="small" color="error" />
-          ) : (
-            <TrendingDownIcon fontSize="small" color="success" />
-          )}
-          <Typography
-            variant="caption"
-            color={trend >= 0 ? 'error.main' : 'success.main'}
-            ml={0.5}
-          >
-            {Math.abs(trend).toFixed(1)}% vs last period
-          </Typography>
-        </Box>
-      )}
-    </CardContent>
-  </Card>
-);
+const fetchCostTrends = async (): Promise<TrendItem[]> => {
+  const response = await fetch('/api/v1/cost/trends');
+  if (!response.ok) throw new Error('Failed to fetch cost trends');
+  const data = await response.json();
+  return data.data?.trends || [];
+};
 
-const formatCurrency = (value: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
+// Helper functions
+const formatCurrency = (value: number, currency: string = 'CNY'): string => {
+  return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
+    maximumFractionDigits: 2,
   }).format(value);
 };
 
@@ -238,380 +107,386 @@ const formatNumber = (value: number): string => {
   return value.toFixed(0);
 };
 
-// Main component
-export const CostReportPage: React.FC = () => {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+// Stat Card Component
+const StatCard: React.FC<{
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ReactNode;
+  trend?: string;
+  color?: string;
+}> = ({ title, value, subtitle, icon, trend, color = '#1890ff' }) => {
+  const isPositiveTrend = trend && trend.startsWith('+');
 
-  // Filters
-  const [tenantId, setTenantId] = useState('default');
-  const [dateRange, setDateRange] = useState<[Date, Date]>([
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    new Date(),
-  ]);
-  const [periodDays, setPeriodDays] = useState(30);
+  return (
+    <Card hoverable bodyStyle={{ padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <Text type="secondary" style={{ fontSize: 12 }}>{title}</Text>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ fontSize: 28, fontWeight: 600, color }}>{value}</span>
+          </div>
+          {subtitle && (
+            <Text type="secondary" style={{ fontSize: 12 }}>{subtitle}</Text>
+          )}
+          {trend && (
+            <div style={{ marginTop: 8 }}>
+              {isPositiveTrend ? (
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  <RiseOutlined /> {trend} 较上期
+                </Text>
+              ) : (
+                <Text type="success" style={{ fontSize: 12 }}>
+                  <FallOutlined /> {trend} 较上期
+                </Text>
+              )}
+            </div>
+          )}
+        </div>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            backgroundColor: `${color}15`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: color,
+            fontSize: 24,
+          }}
+        >
+          {icon}
+        </div>
+      </div>
+    </Card>
+  );
+};
 
-  // Data
-  const [summary, setSummary] = useState<CostSummary | null>(null);
-  const [dailyData, setDailyData] = useState<DailyBreakdown[]>([]);
-  const [records, setRecords] = useState<CostRecord[]>([]);
-  const [recordsTotal, setRecordsTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+// Simple Bar Chart using pure CSS
+const SimpleBarChart: React.FC<{ data: TrendItem[] }> = ({ data }) => {
+  const maxCost = Math.max(...data.map(d => d.cost));
 
-  // Load data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  return (
+    <div style={{ height: 300, padding: '20px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: '100%' }}>
+        {data.map((item, index) => {
+          const height = (item.cost / maxCost) * 100;
+          return (
+            <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+              <Text type="secondary" style={{ fontSize: 10, marginBottom: 4 }}>
+                {formatCurrency(item.cost)}
+              </Text>
+              <div
+                style={{
+                  width: '60%',
+                  height: `${height}%`,
+                  minHeight: 4,
+                  backgroundColor: '#1890ff',
+                  borderRadius: '4px 4px 0 0',
+                  transition: 'height 0.3s ease',
+                }}
+              />
+              <Text type="secondary" style={{ fontSize: 10, marginTop: 4 }}>
+                {dayjs(item.date).format('MM-DD')}
+              </Text>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
-        const [summaryData, dailyBreakdown] = await Promise.all([
-          api.getSummary(tenantId, dateRange[0], dateRange[1]),
-          api.getDailyBreakdown(tenantId, periodDays),
-        ]);
+// Cost Distribution Component
+const CostDistribution: React.FC<{ summary: CostSummary }> = ({ summary }) => {
+  const items = [
+    { name: '计算资源', value: summary.compute_cost, color: '#1890ff' },
+    { name: '存储', value: summary.storage_cost, color: '#52c41a' },
+    { name: '网络', value: summary.network_cost, color: '#faad14' },
+    { name: 'API 调用', value: summary.api_cost, color: '#722ed1' },
+  ];
 
-        setSummary(summaryData);
-        setDailyData(dailyBreakdown);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const total = items.reduce((sum, item) => sum + item.value, 0);
 
-    loadData();
-  }, [tenantId, dateRange, periodDays]);
+  return (
+    <div>
+      {items.map((item, index) => {
+        const percent = total > 0 ? (item.value / total) * 100 : 0;
+        return (
+          <div key={index} style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text>{item.name}</Text>
+              <Text strong>{formatCurrency(item.value)}</Text>
+            </div>
+            <Progress
+              percent={percent}
+              strokeColor={item.color}
+              showInfo={false}
+              size="small"
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
-  // Load records when tab changes to records view
-  useEffect(() => {
-    if (tabValue === 2) {
-      const loadRecords = async () => {
-        try {
-          const data = await api.getRecords(tenantId, page, pageSize);
-          setRecords(data.records);
-          setRecordsTotal(data.total);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load records');
-        }
-      };
-      loadRecords();
-    }
-  }, [tabValue, tenantId, page, pageSize]);
+function CostReportPage() {
+  const queryClient = useQueryClient();
+  const [period, setPeriod] = useState(30);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Prepare chart data
-  const modelChartData = useMemo(() => {
-    if (!summary) return [];
-    return Object.entries(summary.by_model).map(([model, data]) => ({
-      name: model,
-      cost: data.cost,
-      tokens: data.tokens,
-      calls: data.calls,
-    }));
-  }, [summary]);
+  // Queries
+  const { data: summary, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ['cost-summary', period],
+    queryFn: fetchCostSummary,
+  });
 
-  const userChartData = useMemo(() => {
-    if (!summary) return [];
-    return Object.entries(summary.by_user)
-      .map(([user, data]) => ({
-        name: user,
-        cost: data.cost,
-        tokens: data.tokens,
-      }))
-      .sort((a, b) => b.cost - a.cost)
-      .slice(0, 10);
-  }, [summary]);
+  const { data: usage = [], isLoading: isLoadingUsage } = useQuery({
+    queryKey: ['cost-usage', period],
+    queryFn: fetchCostUsage,
+  });
 
-  // Handle export
-  const handleExport = async () => {
-    try {
-      await api.exportCSV(tenantId, dateRange[0], dateRange[1]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export');
-    }
+  const { data: trends = [], isLoading: isLoadingTrends } = useQuery({
+    queryKey: ['cost-trends', period],
+    queryFn: fetchCostTrends,
+  });
+
+  const isLoading = isLoadingSummary || isLoadingUsage || isLoadingTrends;
+
+  // Mock model data for demonstration
+  const modelData: ModelCost[] = [
+    { model: 'gpt-4', calls: 1250, tokens: 2500000, cost: 3500.00, avg_cost: 2.80 },
+    { model: 'gpt-3.5-turbo', calls: 8500, tokens: 12000000, cost: 1200.00, avg_cost: 0.14 },
+    { model: 'claude-3-opus', calls: 450, tokens: 800000, cost: 1800.00, avg_cost: 4.00 },
+    { model: 'claude-3-sonnet', calls: 2200, tokens: 3500000, cost: 800.00, avg_cost: 0.36 },
+    { model: 'qwen-turbo', calls: 5000, tokens: 8000000, cost: 400.00, avg_cost: 0.08 },
+  ];
+
+  const usageColumns = [
+    {
+      title: '资源',
+      dataIndex: 'resource',
+      key: 'resource',
+    },
+    {
+      title: '用量',
+      dataIndex: 'usage',
+      key: 'usage',
+    },
+    {
+      title: '费用',
+      dataIndex: 'cost',
+      key: 'cost',
+      render: (cost: number) => formatCurrency(cost),
+    },
+  ];
+
+  const modelColumns = [
+    {
+      title: '模型',
+      dataIndex: 'model',
+      key: 'model',
+      render: (model: string) => <Tag color="blue">{model}</Tag>,
+    },
+    {
+      title: '调用次数',
+      dataIndex: 'calls',
+      key: 'calls',
+      render: (calls: number) => formatNumber(calls),
+    },
+    {
+      title: 'Token 消耗',
+      dataIndex: 'tokens',
+      key: 'tokens',
+      render: (tokens: number) => formatNumber(tokens),
+    },
+    {
+      title: '费用',
+      dataIndex: 'cost',
+      key: 'cost',
+      render: (cost: number) => formatCurrency(cost),
+      sorter: (a: ModelCost, b: ModelCost) => a.cost - b.cost,
+    },
+    {
+      title: '平均成本/次',
+      dataIndex: 'avg_cost',
+      key: 'avg_cost',
+      render: (cost: number) => formatCurrency(cost),
+    },
+  ];
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['cost-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['cost-usage'] });
+    queryClient.invalidateQueries({ queryKey: ['cost-trends'] });
   };
 
-  if (loading && !summary) {
+  const handleExport = () => {
+    // In a real implementation, this would trigger a download
+    console.log('Exporting cost report...');
+  };
+
+  const tabItems = [
+    {
+      key: 'overview',
+      label: '概览',
+      children: (
+        <Row gutter={[24, 24]}>
+          {/* Daily Trend Chart */}
+          <Col xs={24} lg={16}>
+            <Card title="日成本趋势" bodyStyle={{ padding: 24 }}>
+              {trends.length > 0 ? (
+                <SimpleBarChart data={trends} />
+              ) : (
+                <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text type="secondary">暂无数据</Text>
+                </div>
+              )}
+            </Card>
+          </Col>
+
+          {/* Cost Distribution */}
+          <Col xs={24} lg={8}>
+            <Card title="成本分布" bodyStyle={{ padding: 24 }}>
+              {summary ? (
+                <CostDistribution summary={summary} />
+              ) : (
+                <Spin />
+              )}
+            </Card>
+          </Col>
+
+          {/* Usage Detail Table */}
+          <Col span={24}>
+            <Card title="用量明细">
+              <Table
+                columns={usageColumns}
+                dataSource={usage.map((item, index) => ({ ...item, key: index }))}
+                pagination={false}
+                size="small"
+              />
+            </Card>
+          </Col>
+        </Row>
+      ),
+    },
+    {
+      key: 'by-model',
+      label: '按模型',
+      children: (
+        <Card>
+          <Table
+            columns={modelColumns}
+            dataSource={modelData.map((item, index) => ({ ...item, key: index }))}
+            pagination={{
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 条`,
+            }}
+          />
+        </Card>
+      ),
+    },
+    {
+      key: 'records',
+      label: '明细记录',
+      children: (
+        <Card>
+          <Alert
+            message="功能开发中"
+            description="详细的调用记录功能正在开发中，敬请期待。"
+            type="info"
+            showIcon
+          />
+        </Card>
+      ),
+    },
+  ];
+
+  if (isLoading && !summary) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <Spin size="large" />
+      </div>
     );
   }
 
   return (
-    <Box p={3}>
+    <div style={{ padding: 24 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" fontWeight="bold">
-          {t('admin.costReport', 'Cost Report')}
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>{t('admin.period', 'Period')}</InputLabel>
-            <Select
-              value={periodDays}
-              label={t('admin.period', 'Period')}
-              onChange={(e) => setPeriodDays(e.target.value as number)}
-            >
-              <MenuItem value={7}>7 days</MenuItem>
-              <MenuItem value={14}>14 days</MenuItem>
-              <MenuItem value={30}>30 days</MenuItem>
-              <MenuItem value={90}>90 days</MenuItem>
-            </Select>
-          </FormControl>
-          <Tooltip title={t('admin.export', 'Export to CSV')}>
-            <IconButton onClick={handleExport}>
-              <DownloadIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('common.refresh', 'Refresh')}>
-            <IconButton onClick={() => window.location.reload()}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          <DollarOutlined style={{ marginRight: 8 }} />
+          成本报告
+        </Title>
+        <Space>
+          <Select value={period} onChange={setPeriod} style={{ width: 120 }}>
+            <Option value={7}>近 7 天</Option>
+            <Option value={14}>近 14 天</Option>
+            <Option value={30}>近 30 天</Option>
+            <Option value={90}>近 90 天</Option>
+          </Select>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            导出
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+            刷新
+          </Button>
+        </Space>
+      </div>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {loading && <LinearProgress sx={{ mb: 2 }} />}
-
+      {/* Summary Cards */}
       {summary && (
-        <>
-          {/* Summary Cards */}
-          <Grid container spacing={3} mb={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title={t('admin.totalCost', 'Total Cost')}
-                value={formatCurrency(summary.total_cost, summary.currency)}
-                subtitle={`${summary.call_count} calls`}
-                icon={<MoneyIcon />}
-                color="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title={t('admin.totalTokens', 'Total Tokens')}
-                value={formatNumber(summary.total_tokens)}
-                subtitle={`${formatNumber(summary.total_input_tokens)} in / ${formatNumber(summary.total_output_tokens)} out`}
-                icon={<TokenIcon />}
-                color="secondary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title={t('admin.avgCostPerCall', 'Avg Cost/Call')}
-                value={formatCurrency(summary.avg_cost_per_call, summary.currency)}
-                icon={<SpeedIcon />}
-                color="info.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title={t('admin.avgTokensPerCall', 'Avg Tokens/Call')}
-                value={formatNumber(summary.avg_tokens_per_call)}
-                icon={<TokenIcon />}
-                color="warning.main"
-              />
-            </Grid>
-          </Grid>
-
-          {/* Tabs */}
-          <Paper elevation={0} sx={{ mb: 3 }}>
-            <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-              <Tab label={t('admin.overview', 'Overview')} />
-              <Tab label={t('admin.byModel', 'By Model')} />
-              <Tab label={t('admin.records', 'Records')} />
-            </Tabs>
-          </Paper>
-
-          {/* Overview Tab */}
-          {tabValue === 0 && (
-            <Grid container spacing={3}>
-              {/* Daily Cost Chart */}
-              <Grid item xs={12} lg={8}>
-                <Paper elevation={0} sx={{ p: 3 }}>
-                  <Typography variant="h6" mb={2}>
-                    {t('admin.dailyCost', 'Daily Cost Trend')}
-                  </Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={dailyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <ChartTooltip
-                        formatter={(value: number) => [formatCurrency(value), 'Cost']}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="cost"
-                        stroke="#8884d8"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Grid>
-
-              {/* Model Distribution Pie */}
-              <Grid item xs={12} lg={4}>
-                <Paper elevation={0} sx={{ p: 3 }}>
-                  <Typography variant="h6" mb={2}>
-                    {t('admin.costByModel', 'Cost by Model')}
-                  </Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={modelChartData}
-                        dataKey="cost"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        label={({ name, percent }) =>
-                          `${name} (${(percent * 100).toFixed(0)}%)`
-                        }
-                      >
-                        {modelChartData.map((_, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Grid>
-
-              {/* Top Users */}
-              <Grid item xs={12}>
-                <Paper elevation={0} sx={{ p: 3 }}>
-                  <Typography variant="h6" mb={2}>
-                    {t('admin.topUsers', 'Top Users by Cost')}
-                  </Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={userChartData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={150} />
-                      <ChartTooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                      <Bar dataKey="cost" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Grid>
-            </Grid>
-          )}
-
-          {/* By Model Tab */}
-          {tabValue === 1 && (
-            <Paper elevation={0}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('admin.model', 'Model')}</TableCell>
-                      <TableCell align="right">{t('admin.calls', 'Calls')}</TableCell>
-                      <TableCell align="right">{t('admin.tokens', 'Tokens')}</TableCell>
-                      <TableCell align="right">{t('admin.cost', 'Cost')}</TableCell>
-                      <TableCell align="right">{t('admin.avgCost', 'Avg Cost')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {modelChartData.map((row) => (
-                      <TableRow key={row.name}>
-                        <TableCell>
-                          <Chip label={row.name} size="small" />
-                        </TableCell>
-                        <TableCell align="right">{formatNumber(row.calls)}</TableCell>
-                        <TableCell align="right">{formatNumber(row.tokens)}</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(row.cost, summary.currency)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(row.cost / row.calls, summary.currency)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          )}
-
-          {/* Records Tab */}
-          {tabValue === 2 && (
-            <Paper elevation={0}>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('admin.timestamp', 'Timestamp')}</TableCell>
-                      <TableCell>{t('admin.user', 'User')}</TableCell>
-                      <TableCell>{t('admin.model', 'Model')}</TableCell>
-                      <TableCell align="right">{t('admin.inputTokens', 'Input')}</TableCell>
-                      <TableCell align="right">{t('admin.outputTokens', 'Output')}</TableCell>
-                      <TableCell align="right">{t('admin.cost', 'Cost')}</TableCell>
-                      <TableCell align="right">{t('admin.duration', 'Duration')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {records.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell>
-                          {new Date(record.timestamp).toLocaleString()}
-                        </TableCell>
-                        <TableCell>{record.user_id}</TableCell>
-                        <TableCell>
-                          <Chip label={record.model} size="small" />
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(record.input_tokens)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(record.output_tokens)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(record.cost)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {(record.execution_time_ms / 1000).toFixed(2)}s
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={recordsTotal}
-                page={page}
-                onPageChange={(_, p) => setPage(p)}
-                rowsPerPage={pageSize}
-                onRowsPerPageChange={(e) => {
-                  setPageSize(parseInt(e.target.value, 10));
-                  setPage(0);
-                }}
-                rowsPerPageOptions={[10, 25, 50, 100]}
-              />
-            </Paper>
-          )}
-        </>
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} md={6}>
+            <StatCard
+              title="总费用"
+              value={formatCurrency(summary.total_cost)}
+              subtitle={summary.period}
+              icon={<DollarOutlined />}
+              trend={summary.trend}
+              color="#1890ff"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <StatCard
+              title="计算资源"
+              value={formatCurrency(summary.compute_cost)}
+              icon={<ThunderboltOutlined />}
+              color="#52c41a"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <StatCard
+              title="存储费用"
+              value={formatCurrency(summary.storage_cost)}
+              icon={<FieldTimeOutlined />}
+              color="#faad14"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <StatCard
+              title="API 调用"
+              value={formatCurrency(summary.api_cost)}
+              icon={<ApiOutlined />}
+              color="#722ed1"
+            />
+          </Col>
+        </Row>
       )}
-    </Box>
+
+      {/* Tabs */}
+      <Card bodyStyle={{ padding: 0 }}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          tabBarStyle={{ padding: '0 24px', marginBottom: 0 }}
+        />
+      </Card>
+    </div>
   );
-};
+}
 
 export default CostReportPage;

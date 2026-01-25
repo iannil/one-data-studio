@@ -1,0 +1,9 @@
+# Admin API Dependencies
+Flask>=2.3.0
+flask-cors>=4.0.0
+SQLAlchemy>=2.0.0
+PyMySQL>=1.1.0
+cryptography>=41.0.0
+bcrypt>=4.0.0
+PyJWT>=2.8.0
+python-dotenv>=1.0.0

@@ -35,87 +35,98 @@ const { Option } = Select;
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
-// Mock API functions (to be replaced with actual API calls)
-const mockUsers = [
-  {
-    user_id: '1',
-    username: 'admin',
-    email: 'admin@example.com',
-    full_name: '系统管理员',
-    phone: '13800138000',
-    role: 'admin',
-    status: 'active',
-    created_at: '2024-01-01T00:00:00Z',
-    last_login: '2024-01-24T10:00:00Z',
-  },
-  {
-    user_id: '2',
-    username: 'developer',
-    email: 'developer@example.com',
-    full_name: '开发工程师',
-    phone: '13800138001',
-    role: 'developer',
-    status: 'active',
-    created_at: '2024-01-05T00:00:00Z',
-    last_login: '2024-01-24T09:00:00Z',
-  },
-  {
-    user_id: '3',
-    username: 'analyst',
-    email: 'analyst@example.com',
-    full_name: '数据分析师',
-    phone: '13800138002',
-    role: 'analyst',
-    status: 'active',
-    created_at: '2024-01-10T00:00:00Z',
-    last_login: '2024-01-23T15:00:00Z',
-  },
-];
+// API functions
+const fetchUsers = async (params: {
+  page: number;
+  page_size: number;
+  status?: string;
+  department?: string;
+  search?: string;
+}) => {
+  const searchParams = new URLSearchParams();
+  searchParams.set('page', params.page.toString());
+  searchParams.set('page_size', params.page_size.toString());
+  if (params.status) searchParams.set('status', params.status);
+  if (params.department) searchParams.set('department', params.department);
+  if (params.search) searchParams.set('search', params.search);
 
-const getUsers = async () => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { users: mockUsers, total: mockUsers.length } };
+  const response = await fetch(`/api/v1/users?${searchParams.toString()}`);
+  if (!response.ok) throw new Error('Failed to fetch users');
+  const data = await response.json();
+  return data.data;
 };
 
-const createUser = async (data: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { user: { ...data, user_id: Date.now().toString(), created_at: new Date().toISOString() } } };
+const createUser = async (userData: any) => {
+  const response = await fetch('/api/v1/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+  });
+  if (!response.ok) throw new Error('Failed to create user');
+  const data = await response.json();
+  return data.data;
 };
 
-const updateUser = async (userId: string, data: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { user: { ...data, user_id: userId } } };
+const updateUser = async (userId: string, userData: any) => {
+  const response = await fetch(`/api/v1/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+  });
+  if (!response.ok) throw new Error('Failed to update user');
+  const data = await response.json();
+  return data.data;
 };
 
-const deleteUser = async (_userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { success: true } };
+const deleteUser = async (userId: string) => {
+  const response = await fetch(`/api/v1/users/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete user');
+  return true;
 };
 
-const resetPassword = async (_userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { success: true, new_password: 'NewPass123!' } };
+const resetPassword = async (userId: string) => {
+  const response = await fetch(`/api/v1/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error('Failed to reset password');
+  const data = await response.json();
+  return data.data;
+};
+
+const toggleUserStatus = async (userId: string) => {
+  const response = await fetch(`/api/v1/users/${userId}/toggle-status`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to toggle status');
+  const data = await response.json();
+  return data.data;
 };
 
 interface User {
-  user_id: string;
+  id: string;
   username: string;
   email: string;
-  full_name: string;
+  display_name: string;
   phone?: string;
-  role: string;
+  department?: string;
+  position?: string;
+  roles?: { id: string; name: string; display_name: string }[];
   status: string;
   created_at: string;
-  last_login?: string;
+  last_login_at?: string;
 }
 
 function UsersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [roleFilter, setRoleFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [searchText, setSearchText] = useState<string>('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -127,14 +138,14 @@ function UsersPage() {
 
   // Queries
   const { data: usersData, isLoading: isLoadingList } = useQuery({
-    queryKey: ['users', page, pageSize, roleFilter, statusFilter],
-    queryFn: () =>
-      getUsers().then((res) => {
-        let users = res.data.users;
-                        if (roleFilter) users = users.filter((u) => u.role === roleFilter);
-                        if (statusFilter) users = users.filter((u) => u.status === statusFilter);
-                        return { data: { users: users.slice((page - 1) * pageSize, page * pageSize), total: users.length } };
-                      }),
+    queryKey: ['users', page, pageSize, statusFilter, departmentFilter, searchText],
+    queryFn: () => fetchUsers({
+      page,
+      page_size: pageSize,
+      status: statusFilter || undefined,
+      department: departmentFilter || undefined,
+      search: searchText || undefined,
+    }),
   });
 
   // Mutations
@@ -181,7 +192,7 @@ function UsersPage() {
     onSuccess: (data) => {
       Modal.success({
         title: '密码重置成功',
-        content: `新密码: ${data.data.new_password}`,
+        content: data?.new_password ? `新密码: ${data.new_password}` : '密码已重置',
       });
     },
     onError: () => {
@@ -190,8 +201,7 @@ function UsersPage() {
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: ({ userId, status }: { userId: string; status: string }) =>
-      updateUser(userId, { status }),
+    mutationFn: toggleUserStatus,
     onSuccess: () => {
       message.success('用户状态更新成功');
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -204,9 +214,9 @@ function UsersPage() {
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: 'red',
-      developer: 'blue',
-      analyst: 'green',
-      viewer: 'default',
+      data_engineer: 'blue',
+      ai_developer: 'green',
+      user: 'default',
     };
     return colors[role] || 'default';
   };
@@ -214,9 +224,9 @@ function UsersPage() {
   const getRoleText = (role: string) => {
     const texts: Record<string, string> = {
       admin: '管理员',
-      developer: '开发者',
-      analyst: '分析师',
-      viewer: '访客',
+      data_engineer: '数据工程师',
+      ai_developer: 'AI 开发者',
+      user: '普通用户',
     };
     return texts[role] || role;
   };
@@ -237,7 +247,7 @@ function UsersPage() {
         <Space>
           <Avatar icon={<UserOutlined />} />
           <div>
-            <div>{record.full_name}</div>
+            <div>{record.display_name}</div>
             <div style={{ fontSize: 12, color: '#999' }}>@{record.username}</div>
           </div>
         </Space>
@@ -256,10 +266,15 @@ function UsersPage() {
     },
     {
       title: '角色',
-      dataIndex: 'role',
-      key: 'role',
-      render: (role: string) => (
-        <Tag color={getRoleColor(role)}>{getRoleText(role)}</Tag>
+      key: 'roles',
+      render: (_: unknown, record: User) => (
+        <Space wrap>
+          {record.roles?.map((role) => (
+            <Tag key={role.id} color={getRoleColor(role.name)}>
+              {role.display_name || getRoleText(role.name)}
+            </Tag>
+          )) || <Tag>无角色</Tag>}
+        </Space>
       ),
     },
     {
@@ -273,8 +288,8 @@ function UsersPage() {
     },
     {
       title: '最后登录',
-      dataIndex: 'last_login',
-      key: 'last_login',
+      dataIndex: 'last_login_at',
+      key: 'last_login_at',
       render: (date?: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
@@ -302,19 +317,20 @@ function UsersPage() {
             icon={<EditOutlined />}
             onClick={() => {
               setSelectedUser(record);
-              editForm.setFieldsValue(record);
+              editForm.setFieldsValue({
+                display_name: record.display_name,
+                email: record.email,
+                phone: record.phone,
+                department: record.department,
+                position: record.position,
+              });
               setIsEditModalOpen(true);
             }}
           />
           <Switch
             size="small"
             checked={record.status === 'active'}
-            onChange={(checked) => {
-              toggleStatusMutation.mutate({
-                userId: record.user_id,
-                status: checked ? 'active' : 'inactive',
-              });
-            }}
+            onChange={() => toggleStatusMutation.mutate(record.id)}
           />
         </Space>
       ),
@@ -323,9 +339,9 @@ function UsersPage() {
 
   const roles = [
     { value: 'admin', label: '管理员' },
-    { value: 'developer', label: '开发者' },
-    { value: 'analyst', label: '分析师' },
-    { value: 'viewer', label: '访客' },
+    { value: 'data_engineer', label: '数据工程师' },
+    { value: 'ai_developer', label: 'AI 开发者' },
+    { value: 'user', label: '普通用户' },
   ];
 
   const handleCreate = () => {
@@ -337,7 +353,7 @@ function UsersPage() {
   const handleUpdate = () => {
     editForm.validateFields().then((values) => {
       if (selectedUser) {
-        updateMutation.mutate({ userId: selectedUser.user_id, data: values });
+        updateMutation.mutate({ userId: selectedUser.id, data: values });
       }
     });
   };
@@ -358,19 +374,12 @@ function UsersPage() {
         }
       >
         <Space style={{ marginBottom: 16 }} size="middle">
-          <Select
-            placeholder="角色筛选"
+          <Input.Search
+            placeholder="搜索用户名/邮箱"
             allowClear
-            style={{ width: 120 }}
-            onChange={setRoleFilter}
-            value={roleFilter || undefined}
-          >
-            {roles.map((role) => (
-              <Option key={role.value} value={role.value}>
-                {role.label}
-              </Option>
-            ))}
-          </Select>
+            style={{ width: 200 }}
+            onSearch={setSearchText}
+          />
           <Select
             placeholder="状态筛选"
             allowClear
@@ -385,13 +394,13 @@ function UsersPage() {
 
         <Table
           columns={columns}
-          dataSource={usersData?.data?.users || []}
-          rowKey="user_id"
+          dataSource={usersData?.users || []}
+          rowKey="id"
           loading={isLoadingList}
           pagination={{
             current: page,
             pageSize: pageSize,
-            total: usersData?.data?.total || 0,
+            total: usersData?.total || 0,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
             onChange: (newPage, newPageSize) => {
@@ -430,11 +439,11 @@ function UsersPage() {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="姓名"
-                name="full_name"
-                rules={[{ required: true, message: '请输入姓名' }]}
+                label="显示名称"
+                name="display_name"
+                rules={[{ required: true, message: '请输入显示名称' }]}
               >
-                <Input placeholder="请输入姓名" />
+                <Input placeholder="请输入显示名称" />
               </Form.Item>
             </Col>
           </Row>
@@ -478,18 +487,10 @@ function UsersPage() {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="角色"
-                name="role"
-                rules={[{ required: true, message: '请选择角色' }]}
-                initialValue="viewer"
+                label="部门"
+                name="department"
               >
-                <Select>
-                  {roles.map((role) => (
-                    <Option key={role.value} value={role.value}>
-                      {role.label}
-                    </Option>
-                  ))}
-                </Select>
+                <Input placeholder="请输入部门" />
               </Form.Item>
             </Col>
           </Row>
@@ -512,11 +513,11 @@ function UsersPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="姓名"
-                name="full_name"
-                rules={[{ required: true, message: '请输入姓名' }]}
+                label="显示名称"
+                name="display_name"
+                rules={[{ required: true, message: '请输入显示名称' }]}
               >
-                <Input placeholder="请输入姓名" />
+                <Input placeholder="请输入显示名称" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -545,18 +546,8 @@ function UsersPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="角色"
-                name="role"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
-                <Select>
-                  {roles.map((role) => (
-                    <Option key={role.value} value={role.value}>
-                      {role.label}
-                    </Option>
-                  ))}
-                </Select>
+              <Form.Item label="部门" name="department">
+                <Input placeholder="请输入部门" />
               </Form.Item>
             </Col>
           </Row>
@@ -577,16 +568,21 @@ function UsersPage() {
           <div>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <Avatar size={80} icon={<UserOutlined />} style={{ marginBottom: 16 }} />
-              <h3>{selectedUser.full_name}</h3>
+              <h3>{selectedUser.display_name}</h3>
               <p style={{ color: '#999' }}>@{selectedUser.username}</p>
             </div>
 
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="用户ID">{selectedUser.user_id}</Descriptions.Item>
+              <Descriptions.Item label="用户ID">{selectedUser.id}</Descriptions.Item>
               <Descriptions.Item label="邮箱">{selectedUser.email}</Descriptions.Item>
               <Descriptions.Item label="手机号">{selectedUser.phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="部门">{selectedUser.department || '-'}</Descriptions.Item>
               <Descriptions.Item label="角色">
-                <Tag color={getRoleColor(selectedUser.role)}>{getRoleText(selectedUser.role)}</Tag>
+                {selectedUser.roles?.map((role) => (
+                  <Tag key={role.id} color={getRoleColor(role.name)}>
+                    {role.display_name || getRoleText(role.name)}
+                  </Tag>
+                )) || <Tag>无角色</Tag>}
               </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Tag color={getStatusColor(selectedUser.status)}>{getStatusText(selectedUser.status)}</Tag>
@@ -595,8 +591,8 @@ function UsersPage() {
                 {dayjs(selectedUser.created_at).format('YYYY-MM-DD HH:mm:ss')}
               </Descriptions.Item>
               <Descriptions.Item label="最后登录">
-                {selectedUser.last_login
-                  ? dayjs(selectedUser.last_login).format('YYYY-MM-DD HH:mm:ss')
+                {selectedUser.last_login_at
+                  ? dayjs(selectedUser.last_login_at).format('YYYY-MM-DD HH:mm:ss')
                   : '从未登录'}
               </Descriptions.Item>
             </Descriptions>
@@ -607,7 +603,7 @@ function UsersPage() {
               <Button
                 block
                 icon={<UnlockOutlined />}
-                onClick={() => resetPasswordMutation.mutate(selectedUser.user_id)}
+                onClick={() => resetPasswordMutation.mutate(selectedUser.id)}
               >
                 重置密码
               </Button>
@@ -619,8 +615,8 @@ function UsersPage() {
                   onClick={() => {
                     Modal.confirm({
                       title: '确认删除',
-                      content: `确定要删除用户 ${selectedUser.full_name} 吗？`,
-                      onOk: () => deleteMutation.mutate(selectedUser.user_id),
+                      content: `确定要删除用户 ${selectedUser.display_name} 吗？`,
+                      onOk: () => deleteMutation.mutate(selectedUser.id),
                     });
                   }}
                 >

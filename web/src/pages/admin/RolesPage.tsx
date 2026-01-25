@@ -1,591 +1,525 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Box,
-  Button,
   Card,
-  CardContent,
-  Checkbox,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  FormControlLabel,
-  FormGroup,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
+  Tag,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+  Drawer,
+  Descriptions,
+  Checkbox,
+  Divider,
+  Row,
+  Col,
   Typography,
+  Spin,
   Alert,
-  CircularProgress,
-} from '@mui/material';
+} from 'antd';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Security as SecurityIcon,
-  Person as PersonIcon,
-  Shield as ShieldIcon,
-} from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+  SyncOutlined,
+  LockOutlined,
+} from '@ant-design/icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import admin from '../../services/admin';
+
+const { Option } = Select;
+const { Title, Text } = Typography;
 
 // Types
 interface Permission {
   id: string;
   name: string;
-  displayName: string;
+  code: string;
   resource: string;
   operation: string;
-  scope: string;
-  isSystem: boolean;
+  category?: string;
+  is_system?: boolean;
 }
 
 interface Role {
   id: string;
   name: string;
-  displayName: string;
-  description: string;
-  roleType: 'system' | 'custom';
-  tenantId: string | null;
-  parentRoleId: string | null;
-  isActive: boolean;
-  isSystem: boolean;
+  display_name: string;
+  description?: string;
+  role_type: 'system' | 'custom';
+  is_system: boolean;
+  is_active: boolean;
   priority: number;
-  permissions: Permission[];
-  createdAt: string;
-  updatedAt: string;
+  parent_role_id?: string;
+  permissions?: Permission[];
+  user_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
-
-// Available resources and operations
-const RESOURCES = [
-  { value: 'dataset', label: 'Dataset' },
-  { value: 'workflow', label: 'Workflow' },
-  { value: 'chat', label: 'Chat' },
-  { value: 'model', label: 'Model' },
-  { value: 'user', label: 'User' },
-  { value: 'system', label: 'System' },
-  { value: 'role', label: 'Role' },
-];
-
-const OPERATIONS = [
-  { value: 'create', label: 'Create' },
-  { value: 'read', label: 'Read' },
-  { value: 'update', label: 'Update' },
-  { value: 'delete', label: 'Delete' },
-  { value: 'execute', label: 'Execute' },
-  { value: 'manage', label: 'Manage' },
-];
 
 // API functions
-const api = {
-  async getRoles(): Promise<Role[]> {
-    const response = await fetch('/api/v1/admin/roles');
-    if (!response.ok) throw new Error('Failed to fetch roles');
-    const data = await response.json();
-    return data.roles || [];
-  },
-
-  async getPermissions(): Promise<Permission[]> {
-    const response = await fetch('/api/v1/admin/permissions');
-    if (!response.ok) throw new Error('Failed to fetch permissions');
-    const data = await response.json();
-    return data.permissions || [];
-  },
-
-  async createRole(role: Partial<Role>): Promise<Role> {
-    const response = await fetch('/api/v1/admin/roles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(role),
-    });
-    if (!response.ok) throw new Error('Failed to create role');
-    return response.json();
-  },
-
-  async updateRole(roleId: string, updates: Partial<Role>): Promise<Role> {
-    const response = await fetch(`/api/v1/admin/roles/${roleId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
-    if (!response.ok) throw new Error('Failed to update role');
-    return response.json();
-  },
-
-  async deleteRole(roleId: string): Promise<void> {
-    const response = await fetch(`/api/v1/admin/roles/${roleId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete role');
-  },
-
-  async addPermissionToRole(roleId: string, permission: string): Promise<void> {
-    const response = await fetch(`/api/v1/admin/roles/${roleId}/permissions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ permission }),
-    });
-    if (!response.ok) throw new Error('Failed to add permission');
-  },
-
-  async removePermissionFromRole(roleId: string, permission: string): Promise<void> {
-    const response = await fetch(`/api/v1/admin/roles/${roleId}/permissions/${permission}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to remove permission');
-  },
+const fetchRoles = async (): Promise<{ roles: Role[]; total: number }> => {
+  const response = await fetch('/api/v1/roles');
+  if (!response.ok) throw new Error('Failed to fetch roles');
+  const data = await response.json();
+  return { roles: data.data?.roles || [], total: data.data?.total || 0 };
 };
 
-// Role Dialog Component
-interface RoleDialogProps {
-  open: boolean;
-  role: Role | null;
-  roles: Role[];
-  permissions: Permission[];
-  onClose: () => void;
-  onSave: (role: Partial<Role>) => Promise<void>;
-}
+const fetchPermissions = async (): Promise<Permission[]> => {
+  const response = await fetch('/api/v1/permissions');
+  if (!response.ok) throw new Error('Failed to fetch permissions');
+  const data = await response.json();
+  return data.data?.permissions || [];
+};
 
-const RoleDialog: React.FC<RoleDialogProps> = ({
-  open,
-  role,
-  roles,
-  permissions,
-  onClose,
-  onSave,
-}) => {
-  const { t } = useTranslation();
-  const [formData, setFormData] = useState({
-    name: '',
-    displayName: '',
-    description: '',
-    parentRoleId: '',
-    permissions: [] as string[],
+const createRole = async (role: Partial<Role> & { permission_ids?: string[] }): Promise<Role> => {
+  const response = await fetch('/api/v1/roles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(role),
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  if (!response.ok) throw new Error('Failed to create role');
+  const data = await response.json();
+  return data.data;
+};
 
-  useEffect(() => {
-    if (role) {
-      setFormData({
-        name: role.name,
-        displayName: role.displayName,
-        description: role.description || '',
-        parentRoleId: role.parentRoleId || '',
-        permissions: role.permissions.map((p) => `${p.resource}:${p.operation}`),
-      });
-    } else {
-      setFormData({
-        name: '',
-        displayName: '',
-        description: '',
-        parentRoleId: '',
-        permissions: [],
-      });
-    }
-    setError(null);
-  }, [role, open]);
+const updateRole = async (roleId: string, updates: Partial<Role> & { permission_ids?: string[] }): Promise<Role> => {
+  const response = await fetch(`/api/v1/roles/${roleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) throw new Error('Failed to update role');
+  const data = await response.json();
+  return data.data;
+};
 
-  const handleSave = async () => {
-    if (!formData.name.trim()) {
-      setError('Role name is required');
-      return;
-    }
+const deleteRole = async (roleId: string): Promise<void> => {
+  const response = await fetch(`/api/v1/roles/${roleId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete role');
+};
 
-    setSaving(true);
-    setError(null);
+function RolesPage() {
+  const queryClient = useQueryClient();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
-    try {
-      await onSave({
-        ...formData,
-        parentRoleId: formData.parentRoleId || null,
-      });
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save role');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
-  const handlePermissionToggle = (permission: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter((p) => p !== permission)
-        : [...prev.permissions, permission],
-    }));
-  };
+  // Queries
+  const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: fetchRoles,
+  });
+
+  const { data: permissions = [], isLoading: isLoadingPermissions } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: fetchPermissions,
+  });
+
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: createRole,
+    onSuccess: () => {
+      message.success('角色创建成功');
+      setIsCreateModalOpen(false);
+      form.resetFields();
+      setSelectedPermissions([]);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+    onError: () => {
+      message.error('角色创建失败');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ roleId, data }: { roleId: string; data: Partial<Role> & { permission_ids?: string[] } }) =>
+      updateRole(roleId, data),
+    onSuccess: () => {
+      message.success('角色更新成功');
+      setIsEditModalOpen(false);
+      editForm.resetFields();
+      setSelectedPermissions([]);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+    onError: () => {
+      message.error('角色更新失败');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteRole,
+    onSuccess: () => {
+      message.success('角色删除成功');
+      setIsDetailDrawerOpen(false);
+      setSelectedRole(null);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+    onError: () => {
+      message.error('角色删除失败');
+    },
+  });
 
   // Group permissions by resource
-  const permissionsByResource = permissions.reduce(
-    (acc, perm) => {
-      if (!acc[perm.resource]) {
-        acc[perm.resource] = [];
+  const permissionsByResource = permissions.reduce((acc, perm) => {
+    const resource = perm.resource || 'other';
+    if (!acc[resource]) {
+      acc[resource] = [];
+    }
+    acc[resource].push(perm);
+    return acc;
+  }, {} as Record<string, Permission[]>);
+
+  const getResourceLabel = (resource: string) => {
+    const labels: Record<string, string> = {
+      user: '用户管理',
+      dataset: '数据集',
+      model: '模型',
+      workflow: '工作流',
+      system: '系统设置',
+      role: '角色',
+      other: '其他',
+    };
+    return labels[resource] || resource;
+  };
+
+  const handleCreate = () => {
+    form.validateFields().then((values) => {
+      createMutation.mutate({
+        ...values,
+        permission_ids: selectedPermissions,
+      });
+    });
+  };
+
+  const handleUpdate = () => {
+    editForm.validateFields().then((values) => {
+      if (selectedRole) {
+        updateMutation.mutate({
+          roleId: selectedRole.id,
+          data: {
+            ...values,
+            permission_ids: selectedPermissions,
+          },
+        });
       }
-      acc[perm.resource].push(perm);
-      return acc;
-    },
-    {} as Record<string, Permission[]>
-  );
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {role ? t('admin.editRole') : t('admin.createRole')}
-      </DialogTitle>
-      <DialogContent>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-          <TextField
-            label={t('admin.roleName')}
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            disabled={role?.isSystem}
-            required
-            fullWidth
-          />
-
-          <TextField
-            label={t('admin.displayName')}
-            value={formData.displayName}
-            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-            fullWidth
-          />
-
-          <TextField
-            label={t('admin.description')}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            multiline
-            rows={2}
-            fullWidth
-          />
-
-          <FormControl fullWidth>
-            <InputLabel>{t('admin.parentRole')}</InputLabel>
-            <Select
-              value={formData.parentRoleId}
-              onChange={(e) => setFormData({ ...formData, parentRoleId: e.target.value })}
-              label={t('admin.parentRole')}
-            >
-              <MenuItem value="">
-                <em>{t('common.none')}</em>
-              </MenuItem>
-              {roles
-                .filter((r) => r.id !== role?.id)
-                .map((r) => (
-                  <MenuItem key={r.id} value={r.id}>
-                    {r.displayName}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-
-          <Typography variant="subtitle1" sx={{ mt: 2 }}>
-            {t('admin.permissions')}
-          </Typography>
-
-          {Object.entries(permissionsByResource).map(([resource, perms]) => (
-            <Card key={resource} variant="outlined" sx={{ p: 1 }}>
-              <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                {resource.charAt(0).toUpperCase() + resource.slice(1)}
-              </Typography>
-              <FormGroup row>
-                {perms.map((perm) => {
-                  const permKey = `${perm.resource}:${perm.operation}`;
-                  return (
-                    <FormControlLabel
-                      key={perm.id}
-                      control={
-                        <Checkbox
-                          checked={formData.permissions.includes(permKey)}
-                          onChange={() => handlePermissionToggle(permKey)}
-                          disabled={role?.isSystem}
-                        />
-                      }
-                      label={perm.operation}
-                    />
-                  );
-                })}
-              </FormGroup>
-            </Card>
-          ))}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
-        <Button
-          onClick={handleSave}
-          variant="contained"
-          disabled={saving || role?.isSystem}
-          startIcon={saving ? <CircularProgress size={20} /> : null}
-        >
-          {t('common.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-// Main Roles Page Component
-const RolesPage: React.FC = () => {
-  const { t } = useTranslation();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [rolesData, permissionsData] = await Promise.all([
-        api.getRoles(),
-        api.getPermissions(),
-      ]);
-      setRoles(rolesData);
-      setPermissions(permissionsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleCreateRole = () => {
-    setEditingRole(null);
-    setDialogOpen(true);
+    });
   };
 
-  const handleEditRole = (role: Role) => {
-    setEditingRole(role);
-    setDialogOpen(true);
+  const handleEdit = (role: Role) => {
+    setSelectedRole(role);
+    editForm.setFieldsValue({
+      display_name: role.display_name,
+      description: role.description,
+      priority: role.priority,
+      is_active: role.is_active,
+    });
+    setSelectedPermissions(role.permissions?.map(p => p.id) || []);
+    setIsEditModalOpen(true);
   };
 
-  const handleDeleteClick = (role: Role) => {
-    setRoleToDelete(role);
-    setDeleteConfirmOpen(true);
+  const handleDelete = (role: Role) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除角色 "${role.display_name}" 吗？此操作不可恢复。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => deleteMutation.mutate(role.id),
+    });
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!roleToDelete) return;
-
-    try {
-      await api.deleteRole(roleToDelete.id);
-      setRoles((prev) => prev.filter((r) => r.id !== roleToDelete.id));
-      setDeleteConfirmOpen(false);
-      setRoleToDelete(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete role');
-    }
-  };
-
-  const handleSaveRole = async (roleData: Partial<Role>) => {
-    if (editingRole) {
-      const updated = await api.updateRole(editingRole.id, roleData);
-      setRoles((prev) =>
-        prev.map((r) => (r.id === editingRole.id ? updated : r))
-      );
+  const handlePermissionChange = (permId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedPermissions([...selectedPermissions, permId]);
     } else {
-      const created = await api.createRole(roleData);
-      setRoles((prev) => [...prev, created]);
+      setSelectedPermissions(selectedPermissions.filter(id => id !== permId));
     }
   };
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100%',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const columns = [
+    {
+      title: '角色名称',
+      key: 'name',
+      render: (_: unknown, record: Role) => (
+        <Space>
+          {record.is_system ? (
+            <LockOutlined style={{ color: '#1890ff' }} />
+          ) : (
+            <SafetyCertificateOutlined style={{ color: '#52c41a' }} />
+          )}
+          <div>
+            <div>{record.display_name}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{record.name}</Text>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      title: '类型',
+      dataIndex: 'role_type',
+      key: 'role_type',
+      width: 100,
+      render: (type: string, record: Role) => (
+        <Tag color={record.is_system ? 'blue' : 'default'}>
+          {record.is_system ? '系统' : '自定义'}
+        </Tag>
+      ),
+    },
+    {
+      title: '权限数量',
+      key: 'permissions',
+      width: 100,
+      render: (_: unknown, record: Role) => (
+        <Tag>{record.permissions?.length || 0} 个</Tag>
+      ),
+    },
+    {
+      title: '优先级',
+      dataIndex: 'priority',
+      key: 'priority',
+      width: 80,
+      sorter: (a: Role, b: Role) => (a.priority || 0) - (b.priority || 0),
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      width: 80,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? 'success' : 'default'}>
+          {isActive ? '启用' : '禁用'}
+        </Tag>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 160,
+      render: (date?: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-',
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, record: Role) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+          {!record.is_system && (
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record)}
+            >
+              删除
+            </Button>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  // Permission selection component
+  const PermissionSelector = () => (
+    <div style={{ maxHeight: 400, overflow: 'auto' }}>
+      {Object.entries(permissionsByResource).map(([resource, perms]) => (
+        <Card
+          key={resource}
+          size="small"
+          title={getResourceLabel(resource)}
+          style={{ marginBottom: 12 }}
+          bodyStyle={{ padding: '8px 16px' }}
+        >
+          <Row gutter={[8, 8]}>
+            {perms.map(perm => (
+              <Col span={8} key={perm.id}>
+                <Checkbox
+                  checked={selectedPermissions.includes(perm.id)}
+                  onChange={(e) => handlePermissionChange(perm.id, e.target.checked)}
+                >
+                  {perm.operation}
+                </Checkbox>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      ))}
+    </div>
+  );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
+    <div style={{ padding: 24 }}>
+      <Card
+        title={
+          <Space>
+            <SafetyCertificateOutlined />
+            <span>角色管理</span>
+          </Space>
+        }
+        extra={
+          <Space>
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['roles'] })}
+            >
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setSelectedPermissions([]);
+                form.resetFields();
+                setIsCreateModalOpen(true);
+              }}
+            >
+              新建角色
+            </Button>
+          </Space>
+        }
       >
-        <Typography variant="h5" component="h1">
-          <SecurityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-          {t('admin.rolesManagement')}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreateRole}
-        >
-          {t('admin.createRole')}
-        </Button>
-      </Box>
+        <Table
+          columns={columns}
+          dataSource={rolesData?.roles || []}
+          rowKey="id"
+          loading={isLoadingRoles}
+          pagination={{
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
+        />
+      </Card>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {/* 创建角色模态框 */}
+      <Modal
+        title="新建角色"
+        open={isCreateModalOpen}
+        onCancel={() => {
+          setIsCreateModalOpen(false);
+          form.resetFields();
+          setSelectedPermissions([]);
+        }}
+        onOk={handleCreate}
+        confirmLoading={createMutation.isPending}
+        width={700}
+      >
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="角色标识"
+                name="name"
+                rules={[
+                  { required: true, message: '请输入角色标识' },
+                  { pattern: /^[a-z_]+$/, message: '只能包含小写字母和下划线' },
+                ]}
+              >
+                <Input placeholder="例如: data_analyst" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="显示名称"
+                name="display_name"
+                rules={[{ required: true, message: '请输入显示名称' }]}
+              >
+                <Input placeholder="例如: 数据分析师" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="描述" name="description">
+            <Input.TextArea rows={2} placeholder="角色描述" />
+          </Form.Item>
+          <Form.Item label="优先级" name="priority" initialValue={0}>
+            <Select>
+              <Option value={0}>低 (0)</Option>
+              <Option value={50}>中 (50)</Option>
+              <Option value={100}>高 (100)</Option>
+            </Select>
+          </Form.Item>
+          <Divider>权限配置</Divider>
+          {isLoadingPermissions ? <Spin /> : <PermissionSelector />}
+        </Form>
+      </Modal>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('admin.roleName')}</TableCell>
-              <TableCell>{t('admin.type')}</TableCell>
-              <TableCell>{t('admin.permissions')}</TableCell>
-              <TableCell>{t('admin.status')}</TableCell>
-              <TableCell align="right">{t('common.actions')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {roles.map((role) => (
-              <TableRow key={role.id}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {role.isSystem ? (
-                      <ShieldIcon color="primary" fontSize="small" />
-                    ) : (
-                      <PersonIcon color="action" fontSize="small" />
-                    )}
-                    <Box>
-                      <Typography variant="body1">{role.displayName}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {role.name}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={role.roleType}
-                    size="small"
-                    color={role.isSystem ? 'primary' : 'default'}
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {role.permissions.slice(0, 3).map((perm) => (
-                      <Chip
-                        key={perm.id}
-                        label={`${perm.resource}:${perm.operation}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                    {role.permissions.length > 3 && (
-                      <Tooltip
-                        title={role.permissions
-                          .slice(3)
-                          .map((p) => `${p.resource}:${p.operation}`)
-                          .join(', ')}
-                      >
-                        <Chip
-                          label={`+${role.permissions.length - 3}`}
-                          size="small"
-                        />
-                      </Tooltip>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={role.isActive ? t('common.active') : t('common.inactive')}
-                    size="small"
-                    color={role.isActive ? 'success' : 'default'}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <Tooltip title={t('common.edit')}>
-                    <IconButton
-                      onClick={() => handleEditRole(role)}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  {!role.isSystem && (
-                    <Tooltip title={t('common.delete')}>
-                      <IconButton
-                        onClick={() => handleDeleteClick(role)}
-                        size="small"
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Role Dialog */}
-      <RoleDialog
-        open={dialogOpen}
-        role={editingRole}
-        roles={roles}
-        permissions={permissions}
-        onClose={() => setDialogOpen(false)}
-        onSave={handleSaveRole}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-        <DialogTitle>{t('admin.deleteRole')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('admin.deleteRoleConfirmation', { name: roleToDelete?.displayName })}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            {t('common.delete')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {/* 编辑角色模态框 */}
+      <Modal
+        title={`编辑角色: ${selectedRole?.display_name || ''}`}
+        open={isEditModalOpen}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          editForm.resetFields();
+          setSelectedPermissions([]);
+          setSelectedRole(null);
+        }}
+        onOk={handleUpdate}
+        confirmLoading={updateMutation.isPending}
+        width={700}
+      >
+        {selectedRole?.is_system && (
+          <Alert
+            message="系统角色的部分属性无法修改"
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Form form={editForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="显示名称"
+                name="display_name"
+                rules={[{ required: true, message: '请输入显示名称' }]}
+              >
+                <Input placeholder="显示名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="优先级" name="priority">
+                <Select>
+                  <Option value={0}>低 (0)</Option>
+                  <Option value={50}>中 (50)</Option>
+                  <Option value={100}>高 (100)</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="描述" name="description">
+            <Input.TextArea rows={2} placeholder="角色描述" />
+          </Form.Item>
+          {!selectedRole?.is_system && (
+            <>
+              <Divider>权限配置</Divider>
+              {isLoadingPermissions ? <Spin /> : <PermissionSelector />}
+            </>
+          )}
+        </Form>
+      </Modal>
+    </div>
   );
-};
+}
 
 export default RolesPage;

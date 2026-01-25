@@ -22,7 +22,11 @@ sys.path.insert(0, '/app/shared')
 # 导入模型
 from models import (
     get_db, Dataset, DatasetColumn, DatasetVersion,
-    MetadataDatabase, MetadataTable, MetadataColumn
+    MetadataDatabase, MetadataTable, MetadataColumn,
+    ETLTask, ETLTaskLog,
+    QualityRule, QualityTask, QualityReport, QualityAlert,
+    LineageNode, LineageEdge, LineageSnapshot,
+    MetricDefinition, MetricValue, MetricCategory
 )
 from sqlalchemy.orm import joinedload
 
@@ -938,6 +942,1342 @@ def create_dataset_version(dataset_id):
     except Exception as e:
         db.rollback()
         return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
+# P1.1: ETL Task Management APIs
+# ============================================
+
+def generate_id(prefix: str) -> str:
+    """生成带前缀的唯一 ID"""
+    import uuid
+    return f"{prefix}{uuid.uuid4().hex[:12]}"
+
+
+@app.route("/api/v1/etl/tasks", methods=["GET"])
+@require_jwt(optional=True)
+def list_etl_tasks():
+    """
+    列出 ETL 任务
+    支持分页和状态/类型筛选
+    """
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    status_filter = request.args.get("status")
+    type_filter = request.args.get("type")
+    search = request.args.get("search")
+
+    db = get_db_session()
+    try:
+        query = db.query(ETLTask).order_by(ETLTask.created_at.desc())
+
+        # 过滤条件
+        if status_filter:
+            query = query.filter(ETLTask.status == status_filter)
+        if type_filter:
+            query = query.filter(ETLTask.task_type == type_filter)
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (ETLTask.name.ilike(search_pattern)) |
+                (ETLTask.description.ilike(search_pattern))
+            )
+
+        # 总数
+        total = query.count()
+
+        # 分页
+        offset = (page - 1) * page_size
+        tasks = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tasks": [t.to_dict() for t in tasks],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks", methods=["POST"])
+@require_jwt()
+def create_etl_task():
+    """创建 ETL 任务"""
+    data = request.json
+    if not data or not data.get("name"):
+        return jsonify({"code": 40001, "message": "Task name is required"}), 400
+
+    db = get_db_session()
+    try:
+        task_id = generate_id("etl_")
+
+        task = ETLTask(
+            task_id=task_id,
+            name=data.get("name"),
+            description=data.get("description", ""),
+            task_type=data.get("task_type", "batch"),
+            status="pending",
+            source_type=data.get("source_type"),
+            source_config=data.get("source_config"),
+            source_query=data.get("source_query"),
+            target_type=data.get("target_type"),
+            target_config=data.get("target_config"),
+            target_table=data.get("target_table"),
+            transform_config=data.get("transform_config"),
+            schedule_type=data.get("schedule_type", "manual"),
+            schedule_config=data.get("schedule_config"),
+            created_by=data.get("created_by"),
+        )
+
+        db.add(task)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"task_id": task_id}
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_etl_task(task_id):
+    """获取 ETL 任务详情"""
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>", methods=["PUT"])
+@require_jwt()
+def update_etl_task(task_id):
+    """更新 ETL 任务配置"""
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        data = request.json or {}
+
+        # 可更新字段
+        updatable_fields = [
+            "name", "description", "task_type",
+            "source_type", "source_config", "source_query",
+            "target_type", "target_config", "target_table",
+            "transform_config", "schedule_type", "schedule_config"
+        ]
+
+        for field in updatable_fields:
+            if field in data:
+                setattr(task, field, data[field])
+
+        if "updated_by" in data:
+            task.updated_by = data["updated_by"]
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>", methods=["DELETE"])
+@require_jwt()
+def delete_etl_task(task_id):
+    """删除 ETL 任务"""
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        # 检查任务是否正在运行
+        if task.status == "running":
+            return jsonify({
+                "code": 40002,
+                "message": "Cannot delete running task. Stop it first."
+            }), 400
+
+        db.delete(task)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>/start", methods=["POST"])
+@require_jwt()
+def start_etl_task(task_id):
+    """启动 ETL 任务"""
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        if task.status == "running":
+            return jsonify({
+                "code": 40002,
+                "message": "Task is already running"
+            }), 400
+
+        # 更新任务状态
+        task.status = "running"
+        task.last_run_at = datetime.utcnow()
+        task.run_count = (task.run_count or 0) + 1
+
+        # 创建执行日志
+        log_id = generate_id("etl_log_")
+        log = ETLTaskLog(
+            log_id=log_id,
+            task_id=task_id,
+            status="running",
+            trigger_type=request.json.get("trigger_type", "manual") if request.json else "manual",
+            triggered_by=request.json.get("triggered_by") if request.json else None,
+        )
+        db.add(log)
+        db.commit()
+
+        # 实际执行逻辑应该放在异步任务队列中
+        # 这里仅更新状态，模拟启动
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task_id": task_id,
+                "log_id": log_id,
+                "status": "running"
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_etl_task(task_id):
+    """停止 ETL 任务"""
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        if task.status != "running":
+            return jsonify({
+                "code": 40002,
+                "message": "Task is not running"
+            }), 400
+
+        # 更新任务状态
+        task.status = "stopped"
+
+        # 更新最近的执行日志
+        log = db.query(ETLTaskLog).filter(
+            ETLTaskLog.task_id == task_id,
+            ETLTaskLog.status == "running"
+        ).order_by(ETLTaskLog.started_at.desc()).first()
+
+        if log:
+            log.status = "stopped"
+            log.finished_at = datetime.utcnow()
+            if log.started_at:
+                log.duration_seconds = int((log.finished_at - log.started_at).total_seconds())
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"task_id": task_id, "status": "stopped"}
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/etl/tasks/<task_id>/logs", methods=["GET"])
+@require_jwt(optional=True)
+def get_etl_task_logs(task_id):
+    """获取 ETL 任务执行日志"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+
+    db = get_db_session()
+    try:
+        # 验证任务存在
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        query = db.query(ETLTaskLog).filter(
+            ETLTaskLog.task_id == task_id
+        ).order_by(ETLTaskLog.started_at.desc())
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        logs = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "logs": [log.to_dict() for log in logs],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+# ============================================
+# P1.2: Data Quality Management APIs
+# ============================================
+
+# ---------- Quality Rules ----------
+
+@app.route("/api/v1/quality/rules", methods=["GET"])
+@require_jwt(optional=True)
+def list_quality_rules():
+    """获取质量规则列表"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    rule_type = request.args.get("type")
+    is_active = request.args.get("is_active")
+
+    db = get_db_session()
+    try:
+        query = db.query(QualityRule).order_by(QualityRule.created_at.desc())
+
+        if rule_type:
+            query = query.filter(QualityRule.rule_type == rule_type)
+        if is_active is not None:
+            query = query.filter(QualityRule.is_active == (is_active.lower() == "true"))
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        rules = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": [r.to_dict() for r in rules],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/rules", methods=["POST"])
+@require_jwt()
+def create_quality_rule():
+    """创建质量规则"""
+    data = request.json
+    if not data or not data.get("name") or not data.get("rule_type"):
+        return jsonify({"code": 40001, "message": "Name and rule_type are required"}), 400
+
+    db = get_db_session()
+    try:
+        rule_id = generate_id("qr_")
+
+        rule = QualityRule(
+            rule_id=rule_id,
+            name=data.get("name"),
+            description=data.get("description", ""),
+            rule_type=data.get("rule_type"),
+            target_database=data.get("target_database"),
+            target_table=data.get("target_table"),
+            target_column=data.get("target_column"),
+            rule_expression=data.get("rule_expression"),
+            threshold=data.get("threshold", 100.0),
+            severity=data.get("severity", "warning"),
+            is_active=data.get("is_active", True),
+            created_by=data.get("created_by"),
+        )
+
+        db.add(rule)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"rule_id": rule_id}
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/rules/<rule_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_quality_rule(rule_id):
+    """获取质量规则详情"""
+    db = get_db_session()
+    try:
+        rule = db.query(QualityRule).filter(QualityRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "Rule not found"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_quality_rule(rule_id):
+    """更新质量规则"""
+    db = get_db_session()
+    try:
+        rule = db.query(QualityRule).filter(QualityRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "Rule not found"}), 404
+
+        data = request.json or {}
+        updatable_fields = [
+            "name", "description", "rule_type", "target_database",
+            "target_table", "target_column", "rule_expression",
+            "threshold", "severity", "is_active"
+        ]
+
+        for field in updatable_fields:
+            if field in data:
+                setattr(rule, field, data[field])
+
+        if "updated_by" in data:
+            rule.updated_by = data["updated_by"]
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_quality_rule(rule_id):
+    """删除质量规则"""
+    db = get_db_session()
+    try:
+        rule = db.query(QualityRule).filter(QualityRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "Rule not found"}), 404
+
+        db.delete(rule)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ---------- Quality Tasks ----------
+
+@app.route("/api/v1/quality/tasks", methods=["GET"])
+@require_jwt(optional=True)
+def list_quality_tasks():
+    """获取质量检查任务列表"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    status = request.args.get("status")
+
+    db = get_db_session()
+    try:
+        query = db.query(QualityTask).order_by(QualityTask.created_at.desc())
+
+        if status:
+            query = query.filter(QualityTask.status == status)
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        tasks = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tasks": [t.to_dict() for t in tasks],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/tasks", methods=["POST"])
+@require_jwt()
+def create_quality_task():
+    """创建质量检查任务"""
+    data = request.json
+    if not data or not data.get("name"):
+        return jsonify({"code": 40001, "message": "Task name is required"}), 400
+
+    db = get_db_session()
+    try:
+        task_id = generate_id("qt_")
+
+        task = QualityTask(
+            task_id=task_id,
+            name=data.get("name"),
+            description=data.get("description", ""),
+            rule_ids=data.get("rule_ids", []),
+            schedule_type=data.get("schedule_type", "manual"),
+            schedule_config=data.get("schedule_config"),
+            is_active=data.get("is_active", True),
+            created_by=data.get("created_by"),
+        )
+
+        db.add(task)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"task_id": task_id}
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/tasks/<task_id>/run", methods=["POST"])
+@require_jwt()
+def run_quality_task(task_id):
+    """执行质量检查任务"""
+    db = get_db_session()
+    try:
+        task = db.query(QualityTask).filter(QualityTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        if task.status == "running":
+            return jsonify({
+                "code": 40002,
+                "message": "Task is already running"
+            }), 400
+
+        # 更新任务状态
+        task.status = "running"
+        task.last_run_at = datetime.utcnow()
+        task.run_count = (task.run_count or 0) + 1
+
+        # 创建报告
+        report_id = generate_id("qrpt_")
+        report = QualityReport(
+            report_id=report_id,
+            task_id=task_id,
+            status="running",
+            total_rules=len(task.rule_ids) if task.rule_ids else 0,
+        )
+        db.add(report)
+        db.commit()
+
+        # 实际检查逻辑应放在异步任务队列中
+        # 这里仅创建报告和更新状态
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task_id": task_id,
+                "report_id": report_id,
+                "status": "running"
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ---------- Quality Reports ----------
+
+@app.route("/api/v1/quality/reports", methods=["GET"])
+@require_jwt(optional=True)
+def list_quality_reports():
+    """获取质量报告列表"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    task_id = request.args.get("task_id")
+    status = request.args.get("status")
+
+    db = get_db_session()
+    try:
+        query = db.query(QualityReport).order_by(QualityReport.created_at.desc())
+
+        if task_id:
+            query = query.filter(QualityReport.task_id == task_id)
+        if status:
+            query = query.filter(QualityReport.status == status)
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        reports = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "reports": [r.to_dict() for r in reports],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/reports/<report_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_quality_report(report_id):
+    """获取质量报告详情"""
+    db = get_db_session()
+    try:
+        report = db.query(QualityReport).filter(QualityReport.report_id == report_id).first()
+        if not report:
+            return jsonify({"code": 40401, "message": "Report not found"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": report.to_dict()
+        })
+    finally:
+        db.close()
+
+
+# ---------- Quality Alerts ----------
+
+@app.route("/api/v1/quality/alerts", methods=["GET"])
+@require_jwt(optional=True)
+def list_quality_alerts():
+    """获取质量告警列表"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    status = request.args.get("status")
+    severity = request.args.get("severity")
+
+    db = get_db_session()
+    try:
+        query = db.query(QualityAlert).order_by(QualityAlert.created_at.desc())
+
+        if status:
+            query = query.filter(QualityAlert.status == status)
+        if severity:
+            query = query.filter(QualityAlert.severity == severity)
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        alerts = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "alerts": [a.to_dict() for a in alerts],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/alerts/<alert_id>/acknowledge", methods=["PUT"])
+@require_jwt()
+def acknowledge_quality_alert(alert_id):
+    """确认质量告警"""
+    db = get_db_session()
+    try:
+        alert = db.query(QualityAlert).filter(QualityAlert.alert_id == alert_id).first()
+        if not alert:
+            return jsonify({"code": 40401, "message": "Alert not found"}), 404
+
+        data = request.json or {}
+
+        alert.status = "acknowledged"
+        alert.acknowledged_by = data.get("acknowledged_by")
+        alert.acknowledged_at = datetime.utcnow()
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": alert.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
+# P1.3: Data Lineage APIs
+# ============================================
+
+@app.route("/api/v1/lineage/table/<table_name>", methods=["GET"])
+@require_jwt(optional=True)
+def get_table_lineage(table_name):
+    """
+    获取表级血缘图
+    参数:
+    - database: 数据库名（可选）
+    - depth: 血缘深度（默认3）
+    - direction: upstream/downstream/both（默认both）
+    """
+    database = request.args.get("database")
+    depth = min(int(request.args.get("depth", 3)), 10)
+    direction = request.args.get("direction", "both")
+
+    db = get_db_session()
+    try:
+        # 查找目标表节点
+        query = db.query(LineageNode).filter(
+            LineageNode.table_name == table_name,
+            LineageNode.node_type == "table"
+        )
+        if database:
+            query = query.filter(LineageNode.database_name == database)
+
+        target_node = query.first()
+        if not target_node:
+            return jsonify({"code": 40401, "message": "Table not found in lineage"}), 404
+
+        # 收集节点和边
+        nodes = {target_node.node_id: target_node.to_dict()}
+        edges = []
+        visited = {target_node.node_id}
+
+        def collect_lineage(node_id, current_depth, go_upstream, go_downstream):
+            if current_depth >= depth:
+                return
+
+            # 上游（数据来源）
+            if go_upstream:
+                upstream_edges = db.query(LineageEdge).filter(
+                    LineageEdge.target_node_id == node_id,
+                    LineageEdge.is_active == True
+                ).all()
+
+                for edge in upstream_edges:
+                    if edge.edge_id not in [e["id"] for e in edges]:
+                        edges.append(edge.to_dict())
+
+                    if edge.source_node_id not in visited:
+                        visited.add(edge.source_node_id)
+                        source_node = db.query(LineageNode).filter(
+                            LineageNode.node_id == edge.source_node_id
+                        ).first()
+                        if source_node:
+                            nodes[source_node.node_id] = source_node.to_dict()
+                            collect_lineage(source_node.node_id, current_depth + 1, True, False)
+
+            # 下游（数据去向）
+            if go_downstream:
+                downstream_edges = db.query(LineageEdge).filter(
+                    LineageEdge.source_node_id == node_id,
+                    LineageEdge.is_active == True
+                ).all()
+
+                for edge in downstream_edges:
+                    if edge.edge_id not in [e["id"] for e in edges]:
+                        edges.append(edge.to_dict())
+
+                    if edge.target_node_id not in visited:
+                        visited.add(edge.target_node_id)
+                        target_node = db.query(LineageNode).filter(
+                            LineageNode.node_id == edge.target_node_id
+                        ).first()
+                        if target_node:
+                            nodes[target_node.node_id] = target_node.to_dict()
+                            collect_lineage(target_node.node_id, current_depth + 1, False, True)
+
+        # 根据方向收集血缘
+        go_upstream = direction in ("upstream", "both")
+        go_downstream = direction in ("downstream", "both")
+        collect_lineage(target_node.node_id, 0, go_upstream, go_downstream)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "target": target_node.to_dict(),
+                "nodes": list(nodes.values()),
+                "edges": edges,
+                "depth": depth,
+                "direction": direction
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/column/<table>/<column>", methods=["GET"])
+@require_jwt(optional=True)
+def get_column_lineage(table, column):
+    """
+    获取列级血缘
+    参数:
+    - database: 数据库名（可选）
+    - depth: 血缘深度（默认3）
+    """
+    database = request.args.get("database")
+    depth = min(int(request.args.get("depth", 3)), 10)
+
+    db = get_db_session()
+    try:
+        # 查找目标列节点
+        query = db.query(LineageNode).filter(
+            LineageNode.table_name == table,
+            LineageNode.column_name == column,
+            LineageNode.node_type == "column"
+        )
+        if database:
+            query = query.filter(LineageNode.database_name == database)
+
+        target_node = query.first()
+        if not target_node:
+            return jsonify({"code": 40401, "message": "Column not found in lineage"}), 404
+
+        # 收集血缘（简化版，只收集直接关联）
+        nodes = {target_node.node_id: target_node.to_dict()}
+        edges = []
+
+        # 上游
+        upstream_edges = db.query(LineageEdge).filter(
+            LineageEdge.target_node_id == target_node.node_id,
+            LineageEdge.is_active == True
+        ).all()
+
+        for edge in upstream_edges:
+            edges.append(edge.to_dict())
+            source_node = db.query(LineageNode).filter(
+                LineageNode.node_id == edge.source_node_id
+            ).first()
+            if source_node:
+                nodes[source_node.node_id] = source_node.to_dict()
+
+        # 下游
+        downstream_edges = db.query(LineageEdge).filter(
+            LineageEdge.source_node_id == target_node.node_id,
+            LineageEdge.is_active == True
+        ).all()
+
+        for edge in downstream_edges:
+            edges.append(edge.to_dict())
+            target = db.query(LineageNode).filter(
+                LineageNode.node_id == edge.target_node_id
+            ).first()
+            if target:
+                nodes[target.node_id] = target.to_dict()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "target": target_node.to_dict(),
+                "nodes": list(nodes.values()),
+                "edges": edges
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/impact-analysis", methods=["POST"])
+@require_jwt()
+def lineage_impact_analysis():
+    """
+    影响分析 - 分析某个节点变更会影响哪些下游节点
+    """
+    data = request.json or {}
+    node_id = data.get("node_id")
+    table_name = data.get("table_name")
+    column_name = data.get("column_name")
+    database = data.get("database")
+
+    if not node_id and not table_name:
+        return jsonify({"code": 40001, "message": "node_id or table_name is required"}), 400
+
+    db = get_db_session()
+    try:
+        # 查找源节点
+        if node_id:
+            source_node = db.query(LineageNode).filter(
+                LineageNode.node_id == node_id
+            ).first()
+        else:
+            query = db.query(LineageNode).filter(LineageNode.table_name == table_name)
+            if column_name:
+                query = query.filter(LineageNode.column_name == column_name)
+            if database:
+                query = query.filter(LineageNode.database_name == database)
+            source_node = query.first()
+
+        if not source_node:
+            return jsonify({"code": 40401, "message": "Source node not found"}), 404
+
+        # 收集所有下游影响
+        impacted_nodes = []
+        impacted_edges = []
+        visited = {source_node.node_id}
+
+        def collect_downstream(current_node_id, level):
+            if level > 10:  # 最大深度限制
+                return
+
+            downstream_edges = db.query(LineageEdge).filter(
+                LineageEdge.source_node_id == current_node_id,
+                LineageEdge.is_active == True
+            ).all()
+
+            for edge in downstream_edges:
+                impacted_edges.append({
+                    **edge.to_dict(),
+                    "impact_level": level
+                })
+
+                if edge.target_node_id not in visited:
+                    visited.add(edge.target_node_id)
+                    target_node = db.query(LineageNode).filter(
+                        LineageNode.node_id == edge.target_node_id
+                    ).first()
+                    if target_node:
+                        impacted_nodes.append({
+                            **target_node.to_dict(),
+                            "impact_level": level
+                        })
+                        collect_downstream(target_node.node_id, level + 1)
+
+        collect_downstream(source_node.node_id, 1)
+
+        # 统计影响
+        impact_summary = {
+            "total_impacted": len(impacted_nodes),
+            "by_type": {},
+            "by_level": {}
+        }
+
+        for node in impacted_nodes:
+            node_type = node.get("node_type", "unknown")
+            level = node.get("impact_level", 0)
+
+            impact_summary["by_type"][node_type] = impact_summary["by_type"].get(node_type, 0) + 1
+            impact_summary["by_level"][str(level)] = impact_summary["by_level"].get(str(level), 0) + 1
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "source": source_node.to_dict(),
+                "impacted_nodes": impacted_nodes,
+                "impacted_edges": impacted_edges,
+                "summary": impact_summary
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/search", methods=["GET"])
+@require_jwt(optional=True)
+def search_lineage():
+    """
+    搜索血缘节点
+    参数:
+    - query: 搜索关键字
+    - node_type: 节点类型筛选
+    - database: 数据库筛选
+    """
+    query_str = request.args.get("query", "")
+    node_type = request.args.get("node_type")
+    database = request.args.get("database")
+    limit = min(int(request.args.get("limit", 50)), 200)
+
+    db = get_db_session()
+    try:
+        query = db.query(LineageNode).filter(LineageNode.is_active == True)
+
+        if query_str:
+            search_pattern = f"%{query_str}%"
+            query = query.filter(
+                (LineageNode.name.ilike(search_pattern)) |
+                (LineageNode.full_name.ilike(search_pattern)) |
+                (LineageNode.table_name.ilike(search_pattern)) |
+                (LineageNode.column_name.ilike(search_pattern))
+            )
+
+        if node_type:
+            query = query.filter(LineageNode.node_type == node_type)
+        if database:
+            query = query.filter(LineageNode.database_name == database)
+
+        nodes = query.limit(limit).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "nodes": [n.to_dict() for n in nodes],
+                "total": len(nodes)
+            }
+        })
+    finally:
+        db.close()
+
+
+# ============================================
+# P1.4: Metrics Management APIs
+# ============================================
+
+@app.route("/api/v1/metrics/definitions", methods=["GET"])
+@require_jwt(optional=True)
+def list_metric_definitions():
+    """获取指标定义列表"""
+    page = int(request.args.get("page", 1))
+    page_size = min(int(request.args.get("page_size", 20)), 100)
+    category = request.args.get("category")
+    is_active = request.args.get("is_active")
+    is_certified = request.args.get("is_certified")
+    search = request.args.get("search")
+
+    db = get_db_session()
+    try:
+        query = db.query(MetricDefinition).order_by(MetricDefinition.created_at.desc())
+
+        if category:
+            query = query.filter(MetricDefinition.category == category)
+        if is_active is not None:
+            query = query.filter(MetricDefinition.is_active == (is_active.lower() == "true"))
+        if is_certified is not None:
+            query = query.filter(MetricDefinition.is_certified == (is_certified.lower() == "true"))
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (MetricDefinition.name.ilike(search_pattern)) |
+                (MetricDefinition.display_name.ilike(search_pattern)) |
+                (MetricDefinition.description.ilike(search_pattern))
+            )
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        metrics = query.offset(offset).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "metrics": [m.to_dict() for m in metrics],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/definitions", methods=["POST"])
+@require_jwt()
+def create_metric_definition():
+    """创建指标定义"""
+    data = request.json
+    if not data or not data.get("name"):
+        return jsonify({"code": 40001, "message": "Metric name is required"}), 400
+
+    db = get_db_session()
+    try:
+        metric_id = generate_id("metric_")
+
+        metric = MetricDefinition(
+            metric_id=metric_id,
+            name=data.get("name"),
+            display_name=data.get("display_name", data.get("name")),
+            description=data.get("description", ""),
+            category=data.get("category"),
+            subcategory=data.get("subcategory"),
+            tags=data.get("tags"),
+            metric_type=data.get("metric_type", "count"),
+            source_database=data.get("source_database"),
+            source_table=data.get("source_table"),
+            source_column=data.get("source_column"),
+            calculation_sql=data.get("calculation_sql"),
+            aggregation_type=data.get("aggregation_type", "daily"),
+            time_column=data.get("time_column"),
+            unit=data.get("unit"),
+            decimal_places=data.get("decimal_places", 2),
+            format_pattern=data.get("format_pattern"),
+            warning_threshold=data.get("warning_threshold"),
+            critical_threshold=data.get("critical_threshold"),
+            threshold_direction=data.get("threshold_direction", "above"),
+            owner=data.get("owner"),
+            owner_team=data.get("owner_team"),
+            is_active=data.get("is_active", True),
+            is_certified=data.get("is_certified", False),
+            created_by=data.get("created_by"),
+        )
+
+        db.add(metric)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"metric_id": metric_id}
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/definitions/<metric_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_metric_definition(metric_id):
+    """获取指标定义详情"""
+    db = get_db_session()
+    try:
+        metric = db.query(MetricDefinition).filter(
+            MetricDefinition.metric_id == metric_id
+        ).first()
+        if not metric:
+            return jsonify({"code": 40401, "message": "Metric not found"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": metric.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/definitions/<metric_id>", methods=["PUT"])
+@require_jwt()
+def update_metric_definition(metric_id):
+    """更新指标定义"""
+    db = get_db_session()
+    try:
+        metric = db.query(MetricDefinition).filter(
+            MetricDefinition.metric_id == metric_id
+        ).first()
+        if not metric:
+            return jsonify({"code": 40401, "message": "Metric not found"}), 404
+
+        data = request.json or {}
+        updatable_fields = [
+            "name", "display_name", "description", "category", "subcategory",
+            "tags", "metric_type", "source_database", "source_table",
+            "source_column", "calculation_sql", "aggregation_type", "time_column",
+            "unit", "decimal_places", "format_pattern", "warning_threshold",
+            "critical_threshold", "threshold_direction", "owner", "owner_team",
+            "is_active", "is_certified"
+        ]
+
+        for field in updatable_fields:
+            if field in data:
+                setattr(metric, field, data[field])
+
+        if "updated_by" in data:
+            metric.updated_by = data["updated_by"]
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": metric.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/definitions/<metric_id>", methods=["DELETE"])
+@require_jwt()
+def delete_metric_definition(metric_id):
+    """删除指标定义"""
+    db = get_db_session()
+    try:
+        metric = db.query(MetricDefinition).filter(
+            MetricDefinition.metric_id == metric_id
+        ).first()
+        if not metric:
+            return jsonify({"code": 40401, "message": "Metric not found"}), 404
+
+        db.delete(metric)
+        db.commit()
+
+        return jsonify({"code": 0, "message": "success"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/data", methods=["GET"])
+@require_jwt(optional=True)
+def query_metric_data():
+    """
+    查询指标数据
+    参数:
+    - metric_id: 指标ID（必须）
+    - start_time: 开始时间
+    - end_time: 结束时间
+    - granularity: 粒度（hourly, daily, weekly, monthly）
+    - dimensions: 维度筛选（JSON格式）
+    """
+    metric_id = request.args.get("metric_id")
+    if not metric_id:
+        return jsonify({"code": 40001, "message": "metric_id is required"}), 400
+
+    start_time = request.args.get("start_time")
+    end_time = request.args.get("end_time")
+    granularity = request.args.get("granularity")
+    limit = min(int(request.args.get("limit", 100)), 1000)
+
+    db = get_db_session()
+    try:
+        # 验证指标存在
+        metric = db.query(MetricDefinition).filter(
+            MetricDefinition.metric_id == metric_id
+        ).first()
+        if not metric:
+            return jsonify({"code": 40401, "message": "Metric not found"}), 404
+
+        # 查询数据
+        query = db.query(MetricValue).filter(
+            MetricValue.metric_id == metric_id
+        ).order_by(MetricValue.time_key.desc())
+
+        if start_time:
+            query = query.filter(MetricValue.time_key >= start_time)
+        if end_time:
+            query = query.filter(MetricValue.time_key <= end_time)
+        if granularity:
+            query = query.filter(MetricValue.granularity == granularity)
+
+        values = query.limit(limit).all()
+
+        # 计算统计
+        if values:
+            all_values = [v.value for v in values if v.value is not None]
+            stats = {
+                "count": len(all_values),
+                "min": min(all_values) if all_values else None,
+                "max": max(all_values) if all_values else None,
+                "avg": sum(all_values) / len(all_values) if all_values else None,
+                "latest": values[0].value if values else None
+            }
+        else:
+            stats = {"count": 0, "min": None, "max": None, "avg": None, "latest": None}
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "metric": metric.to_dict(),
+                "values": [v.to_dict() for v in values],
+                "stats": stats
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metrics/categories", methods=["GET"])
+@require_jwt(optional=True)
+def list_metric_categories():
+    """获取指标分类列表"""
+    db = get_db_session()
+    try:
+        categories = db.query(MetricCategory).filter(
+            MetricCategory.is_active == True
+        ).order_by(MetricCategory.level, MetricCategory.sort_order).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "categories": [c.to_dict() for c in categories]
+            }
+        })
     finally:
         db.close()
 
