@@ -5,14 +5,27 @@ import { apiClient, ApiResponse } from './api';
 // 人机循环 (Human-in-the-Loop) 类型
 export interface HumanTask {
   task_id: string;
+  human_task_id?: string;
   execution_id: string;
   node_id: string;
   task_type: 'approval' | 'review' | 'input' | 'confirmation';
+  task_name?: string;
+  approval_type?: 'single' | 'multi' | 'unanimous';
   title: string;
   description?: string;
   assignee?: string;
   assignees?: string[];
   status: 'pending' | 'approved' | 'rejected' | 'timeout' | 'cancelled';
+  input_data?: Record<string, unknown>;
+  timeout_at?: string;
+  form_schema?: Array<{
+    name: string;
+    type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'boolean' | 'date';
+    label: string;
+    required?: boolean;
+    options?: Array<{ label: string; value: string }>;
+    default?: unknown;
+  }>;
   data?: {
     input_data?: Record<string, unknown>;
     form_schema?: Array<{
@@ -43,7 +56,7 @@ export interface CreateHumanTaskRequest {
   assignees?: string[];
   data?: {
     input_data?: Record<string, unknown>;
-    form_schema?: HumanTask['data']['form_schema'];
+    form_schema?: NonNullable<HumanTask['data']>['form_schema'];
     context?: Record<string, unknown>;
     timeout_minutes?: number;
   };
@@ -51,6 +64,7 @@ export interface CreateHumanTaskRequest {
 
 export interface SubmitHumanTaskRequest {
   approved: boolean;
+  action?: 'approve' | 'reject';
   comment?: string;
   input_data?: Record<string, unknown>;
 }
@@ -116,9 +130,17 @@ export interface Conversation {
   conversation_id: string;
   title: string;
   model: string;
-  message_count: number;
+  message_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Message {
+  message_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at?: string;
+  timestamp?: string;
 }
 
 export interface ConversationMessage {
@@ -134,6 +156,10 @@ export interface Workflow {
   description?: string;
   type: 'rag' | 'text2sql' | 'custom';
   status: 'running' | 'stopped' | 'error' | 'pending';
+  definition?: {
+    nodes: unknown[];
+    edges: unknown[];
+  };
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -144,13 +170,17 @@ export interface CreateWorkflowRequest {
   description?: string;
   type: 'rag' | 'text2sql' | 'custom';
   config?: Record<string, unknown>;
+  definition?: {
+    nodes: unknown[];
+    edges: unknown[];
+  };
 }
 
 // 工作流执行相关类型 (Phase 6)
 export interface WorkflowExecution {
   id: string;
   workflow_id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'stopped';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'stopped' | 'waiting_human';
   inputs?: Record<string, unknown>;
   outputs?: unknown;
   node_results?: Record<string, unknown>;
@@ -322,6 +352,7 @@ export async function streamChatMessage(
     let buffer = '';
 
     try {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -709,6 +740,7 @@ export async function runAgentStream(
     let buffer = '';
 
     try {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -1853,10 +1885,14 @@ export async function getMyTasks(params?: {
  */
 export async function getMyTaskStatistics(): Promise<ApiResponse<{
   pending: number;
+  pending_count?: number;
   approved: number;
+  approved_count?: number;
   rejected: number;
+  rejected_count?: number;
   timeout: number;
   total: number;
+  avg_processing_time_minutes?: number;
 }>> {
   return apiClient.get('/api/v1/human-tasks/my-tasks/statistics');
 }

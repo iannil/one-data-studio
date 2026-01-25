@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import ImageUpload from './ImageUpload';
 
@@ -322,9 +322,9 @@ describe('ImageUpload 上传进度', () => {
   it('应该显示上传按钮带有 loading 图标', () => {
     render(<ImageUpload />);
 
-    // 验证上传按钮存在
-    const uploadButton = screen.getByRole('button', { name: /上传/i });
-    expect(uploadButton).toBeInTheDocument();
+    // 验证上传按钮存在 (可能有多个)
+    const uploadButtons = screen.getAllByRole('button', { name: /上传/i });
+    expect(uploadButtons.length).toBeGreaterThan(0);
   });
 });
 

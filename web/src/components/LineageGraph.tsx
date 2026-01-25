@@ -57,7 +57,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
       const rootNodes = nodes.filter((n) => !targets.has(n.id));
 
       // BFS 计算层级
-      let queue = rootNodes.map((n) => ({ id: n.id, level: 0 }));
+      const queue = rootNodes.map((n) => ({ id: n.id, level: 0 }));
       while (queue.length > 0) {
         const { id, level } = queue.shift()!;
         levels.set(id, level);
@@ -119,7 +119,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
       // 力导向布局（简化版）
       const centerX = canvasWidth / 2;
       const centerY = canvasHeight / 2;
-      nodes.forEach((node, index) => {
+      nodes.forEach((node) => {
         const angle = Math.random() * 2 * Math.PI;
         const dist = 50 + Math.random() * 100;
         nodePositions.set(node.id, {
@@ -272,7 +272,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
     canvas.style.cursor = dragging ? 'grabbing' : 'grab';
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = (_e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!hoveredNode) {
       setDragging(true);
     }
@@ -287,7 +287,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
     setHoveredNode(null);
   };
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = (_e: React.MouseEvent<HTMLCanvasElement>) => {
     if (hoveredNode && onNodeClick && graph) {
       const node = graph.nodes.find((n) => n.id === hoveredNode);
       if (node) {

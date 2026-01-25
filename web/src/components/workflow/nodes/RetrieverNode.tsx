@@ -2,7 +2,6 @@
  * 检索节点组件
  */
 
-import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { SearchOutlined } from '@ant-design/icons';
 

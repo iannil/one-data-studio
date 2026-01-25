@@ -80,7 +80,6 @@ export const logDebug = (message: string, context?: string, data?: unknown): voi
   }
 
   const prefix = context ? `[${context}]` : '';
-  // eslint-disable-next-line no-console
   console.debug(`${prefix} ${message}`, data !== undefined ? data : '');
 };
 
@@ -93,7 +92,6 @@ export const logInfo = (message: string, context?: string, data?: unknown): void
   }
 
   const prefix = context ? `[${context}]` : '';
-  // eslint-disable-next-line no-console
   console.info(`${prefix} ${message}`, data !== undefined ? data : '');
 };
 
@@ -113,7 +111,6 @@ export const logWarn = (message: string, context?: string, data?: unknown): void
 
   if (!isProduction() || isDevMode()) {
     const prefix = context ? `[${context}]` : '';
-    // eslint-disable-next-line no-console
     console.warn(`${prefix} ${message}`, data !== undefined ? data : '');
   }
 };
@@ -146,7 +143,6 @@ export const logError = (message: string, context?: string, error?: unknown): vo
   // Only log to console in development
   if (!isProduction() || isDevMode()) {
     const prefix = context ? `[${context}]` : '';
-    // eslint-disable-next-line no-console
     console.error(`${prefix} ${fullMessage}`, error !== undefined ? error : '');
   }
 
@@ -173,7 +169,8 @@ export const logError = (message: string, context?: string, error?: unknown): vo
  */
 const sendToErrorService = (entry: LogEntry, error?: unknown): void => {
   // Check if Sentry is available
-  const Sentry = (window as Record<string, unknown>).Sentry as {
+  const win = window as unknown as Record<string, unknown>;
+  const Sentry = win.Sentry as {
     captureException?: (error: unknown, context?: Record<string, unknown>) => void;
     captureMessage?: (message: string, level?: string) => void;
   } | undefined;

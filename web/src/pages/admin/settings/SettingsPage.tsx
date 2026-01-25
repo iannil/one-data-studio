@@ -20,7 +20,7 @@ import {
 } from 'antd';
 import {
   SaveOutlined,
-  TestOutlined,
+  ExperimentOutlined,
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -31,7 +31,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import admin from '@/services/admin';
-import type { SystemSettings, NotificationChannel, NotificationRule } from '@/services/admin';
+import type { NotificationChannel } from '@/services/admin';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -229,7 +229,7 @@ function SettingsPage() {
         <Space>
           <Button
             type="text"
-            icon={<TestOutlined />}
+            icon={<ExperimentOutlined />}
             onClick={() => testChannelMutation.mutate(record.id)}
           >
             测试

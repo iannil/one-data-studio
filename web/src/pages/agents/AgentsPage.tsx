@@ -42,16 +42,6 @@ const { Option } = Select;
 const { Text, Paragraph } = Typography;
 const { Panel } = Collapse;
 
-// 步骤类型配置
-const stepConfig = {
-  thought: { icon: '🧠', color: 'blue', label: '思考' },
-  action: { icon: '🔧', color: 'orange', label: '行动' },
-  observation: { icon: '👁', color: 'green', label: '观察' },
-  final: { icon: '✅', color: 'purple', label: '最终答案' },
-  plan: { icon: '📋', color: 'cyan', label: '计划' },
-  error: { icon: '❌', color: 'red', label: '错误' },
-};
-
 const agentTypes = [
   { value: 'react', label: 'ReAct', description: '推理-行动-观察循环' },
   { value: 'function_calling', label: 'Function Calling', description: 'OpenAI 函数调用模式' },
@@ -142,7 +132,7 @@ function AgentsPage() {
           onStep: (step) => {
             setSteps((prev) => [...prev, step]);
           },
-          onIteration: (iteration, maxIterations) => {
+          onIteration: (iteration, _maxIterations) => {
             setCurrentIteration(iteration);
           },
           onToolStart: (tool) => {
@@ -161,7 +151,7 @@ function AgentsPage() {
             if (result.success) {
               message.success(`Agent 运行完成，迭代 ${result.iterations || 1} 次`);
             } else {
-              message.error(`Agent 运行失败: ${result.error || '未知错误'}`);
+              message.error(`Agent 运行失败: ${(result as any).error || '未知错误'}`);
             }
             setStatusMessage('');
           },

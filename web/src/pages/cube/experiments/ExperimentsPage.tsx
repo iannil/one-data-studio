@@ -14,14 +14,12 @@ import {
   Card,
   Drawer,
   Descriptions,
-  Progress,
 } from 'antd';
 import {
   PlusOutlined,
   StopOutlined,
   DeleteOutlined,
   EyeOutlined,
-  ExperimentOutlined,
   LineChartOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
@@ -29,7 +27,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import cube from '@/services/cube';
-import type { Experiment, CreateExperimentRequest } from '@/services/cube';
+import type { Experiment } from '@/services/cube';
 
 dayjs.extend(duration);
 

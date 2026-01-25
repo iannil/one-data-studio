@@ -115,7 +115,7 @@ function Header({ collapsed, onToggle }: HeaderProps) {
       </Space>
 
       <Space size="middle">
-        <Text type="secondary" style={{ display: { xs: 'none', md: 'block' } }}>
+        <Text type="secondary" className="hidden md:block">
           {t('app.title')}
         </Text>
 

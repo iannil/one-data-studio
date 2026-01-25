@@ -1,7 +1,7 @@
-import React, { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Card, Typography, Space, Tag, InputNumber, Select, Tooltip } from 'antd';
-import { BranchesOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
+import { Card, Typography, Space, Tag, InputNumber, Select } from 'antd';
+import { BranchesOutlined, PlusOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -25,12 +25,6 @@ interface ParallelNodeData {
  */
 const ParallelNode: React.FC<NodeProps<ParallelNodeData>> = ({ data, selected }) => {
   const [branches, setBranches] = useState(data.branches || []);
-
-  const strategyLabels = {
-    all: '等待全部完成',
-    any: '任意一个完成',
-    majority: '多数完成',
-  };
 
   return (
     <Card

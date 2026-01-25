@@ -21,15 +21,16 @@ const logLevelConfig = {
 };
 
 function ExecutionLogsModal({ executionId, open, onClose }: ExecutionLogsModalProps) {
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll] = useState(true);
 
-  const { data: logsData, isLoading, error } = useQuery({
+  const { data: logsData, isLoading } = useQuery({
     queryKey: ['execution-logs', executionId],
     queryFn: () => bisheng.getExecutionLogs(executionId!),
     enabled: open && !!executionId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // 如果执行仍在运行，每3秒刷新一次
-      const hasRunningLogs = data?.data?.logs?.some((log: ExecutionLog) =>
+      const queryData = query.state.data as any;
+      const hasRunningLogs = queryData?.data?.logs?.some((log: ExecutionLog) =>
         log.message.includes('running') || log.message.includes('processing')
       );
       return hasRunningLogs ? 3000 : false;

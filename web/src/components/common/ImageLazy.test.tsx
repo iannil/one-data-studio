@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 import { ImageLazy, ResponsiveImage, ProgressiveImage, useImagePreload, compressImage } from './ImageLazy';
 
@@ -35,7 +35,7 @@ describe('ImageLazy Component', () => {
   it('should render with src', () => {
     render(<ImageLazy src="https://example.com/image.jpg" alt="Test image" />);
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute('alt', 'Test image');
   });
@@ -44,7 +44,8 @@ describe('ImageLazy Component', () => {
     render(<ImageLazy src="https://example.com/image.jpg" />);
 
     // Loading indicator should be present before image loads
-    expect(screen.getByRole('img')).toHaveStyle({ opacity: '0' });
+    const img = document.querySelector('img');
+    expect(img).toHaveStyle({ opacity: '0' });
   });
 
   it('should handle image load event', async () => {
@@ -57,8 +58,8 @@ describe('ImageLazy Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
-    fireEvent.load(img);
+    const img = document.querySelector('img');
+    fireEvent.load(img!);
 
     expect(onLoad).toHaveBeenCalled();
   });
@@ -73,8 +74,8 @@ describe('ImageLazy Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
-    fireEvent.error(img);
+    const img = document.querySelector('img');
+    fireEvent.error(img!);
 
     expect(onError).toHaveBeenCalled();
   });
@@ -89,8 +90,8 @@ describe('ImageLazy Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
-    fireEvent.error(img);
+    const img = document.querySelector('img');
+    fireEvent.error(img!);
 
     expect(img).toHaveAttribute('src', fallbackSrc);
   });
@@ -117,7 +118,7 @@ describe('ImageLazy Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveStyle({ objectFit: 'contain' });
   });
 
@@ -141,14 +142,14 @@ describe('ImageLazy Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveAttribute('loading', 'eager');
   });
 
   it('should use lazy loading by default', () => {
     render(<ImageLazy src="https://example.com/image.jpg" />);
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveAttribute('loading', 'lazy');
   });
 
@@ -178,7 +179,7 @@ describe('ResponsiveImage Component', () => {
   it('should select 2x image for devicePixelRatio of 2', () => {
     render(
       <ResponsiveImage
-        srcSet={{
+        responsiveSrcSet={{
           default: 'image.jpg',
           '1x': 'image-1x.jpg',
           '2x': 'image-2x.jpg',
@@ -188,7 +189,7 @@ describe('ResponsiveImage Component', () => {
       />
     );
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveAttribute('src', 'image-2x.jpg');
   });
 
@@ -197,14 +198,14 @@ describe('ResponsiveImage Component', () => {
 
     render(
       <ResponsiveImage
-        srcSet={{
+        responsiveSrcSet={{
           default: 'image.jpg',
         }}
         lazy={false}
       />
     );
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveAttribute('src', 'image.jpg');
   });
 });
@@ -213,13 +214,13 @@ describe('ProgressiveImage Component', () => {
   it('should start with preview image', () => {
     render(
       <ProgressiveImage
-        preview="preview.jpg"
+        previewSrc="preview.jpg"
         full="full.jpg"
         lazy={false}
       />
     );
 
-    const img = screen.getByRole('img');
+    const img = document.querySelector('img');
     expect(img).toHaveAttribute('src', 'preview.jpg');
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowExecutePage from './WorkflowExecutePage';
 import bisheng from '@/services/bisheng';
@@ -34,21 +34,7 @@ vi.mock('@/components/WorkflowLogViewer', () => ({
   ),
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
-const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{component}</BrowserRouter>
-    </QueryClientProvider>
-  );
-};
 
 const mockWorkflow = {
   workflow_id: 'wf-001',
@@ -90,7 +76,7 @@ const mockExecutions = [
 describe('WorkflowExecutePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.getWorkflow).mockResolvedValue({
       code: 0,
@@ -109,7 +95,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该正确渲染执行页面', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('测试工作流')).toBeInTheDocument();
@@ -117,7 +103,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该显示工作流详情', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('用于测试的工作流')).toBeInTheDocument();
@@ -125,7 +111,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该显示返回按钮', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /返回/i })).toBeInTheDocument();
@@ -133,7 +119,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该显示执行历史标签', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText(/执行历史/)).toBeInTheDocument();
@@ -141,7 +127,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该显示执行日志标签', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('执行日志')).toBeInTheDocument();
@@ -149,7 +135,7 @@ describe('WorkflowExecutePage', () => {
   });
 
   it('应该显示输入配置标签', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('输入配置')).toBeInTheDocument();
@@ -160,7 +146,7 @@ describe('WorkflowExecutePage', () => {
 describe('WorkflowExecutePage 执行历史', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.getWorkflow).mockResolvedValue({
       code: 0,
@@ -174,7 +160,7 @@ describe('WorkflowExecutePage 执行历史', () => {
   });
 
   it('应该显示执行记录', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('exec-001')).toBeInTheDocument();
@@ -183,7 +169,7 @@ describe('WorkflowExecutePage 执行历史', () => {
   });
 
   it('应该显示执行状态', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('已完成')).toBeInTheDocument();
@@ -193,7 +179,7 @@ describe('WorkflowExecutePage 执行历史', () => {
   });
 
   it('应该显示停止按钮（运行中的执行）', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       const stopButtons = screen.getAllByRole('button', { name: /停止/i });
@@ -202,7 +188,7 @@ describe('WorkflowExecutePage 执行历史', () => {
   });
 
   it('应该显示查看日志按钮', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       const logButtons = screen.getAllByRole('button', { name: /查看日志/i });
@@ -214,7 +200,7 @@ describe('WorkflowExecutePage 执行历史', () => {
 describe('WorkflowExecutePage 启动工作流', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.getWorkflow).mockResolvedValue({
       code: 0,
@@ -234,7 +220,7 @@ describe('WorkflowExecutePage 启动工作流', () => {
 
   it('应该能够切换到输入配置标签', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('输入配置')).toBeInTheDocument();
@@ -249,7 +235,7 @@ describe('WorkflowExecutePage 启动工作流', () => {
 
   it('应该显示输入文本框', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('输入配置')).toBeInTheDocument();
@@ -266,7 +252,7 @@ describe('WorkflowExecutePage 启动工作流', () => {
 describe('WorkflowExecutePage 空状态', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.getWorkflow).mockResolvedValue({
       code: 0,
@@ -280,7 +266,7 @@ describe('WorkflowExecutePage 空状态', () => {
   });
 
   it('应该显示无执行记录提示', async () => {
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     await waitFor(() => {
       expect(screen.getByText('暂无执行记录')).toBeInTheDocument();
@@ -291,7 +277,7 @@ describe('WorkflowExecutePage 空状态', () => {
 describe('WorkflowExecutePage 状态提示', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.getWorkflow).mockResolvedValue({
       code: 0,
@@ -315,7 +301,7 @@ describe('WorkflowExecutePage 状态提示', () => {
     });
 
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowExecutePage />);
+    render(<WorkflowExecutePage />);
 
     // 点击执行记录查看详情
     await waitFor(() => {

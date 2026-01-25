@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   Select,
-  InputNumber,
   message,
   Drawer,
   Descriptions,
@@ -28,7 +27,6 @@ import {
   TeamOutlined,
   UserAddOutlined,
   SyncOutlined,
-  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -48,13 +46,6 @@ const fetchGroups = async (params: {
 
   const response = await fetch(`/api/v1/groups?${searchParams.toString()}`);
   if (!response.ok) throw new Error('Failed to fetch groups');
-  const data = await response.json();
-  return data.data;
-};
-
-const fetchGroupDetail = async (groupId: string) => {
-  const response = await fetch(`/api/v1/groups/${groupId}?include_members=true`);
-  if (!response.ok) throw new Error('Failed to fetch group detail');
   const data = await response.json();
   return data.data;
 };
@@ -105,14 +96,6 @@ const addGroupMembers = async (groupId: string, userIds: string[]) => {
   if (!response.ok) throw new Error('Failed to add members');
   const data = await response.json();
   return data.data;
-};
-
-const removeGroupMember = async (groupId: string, userId: string) => {
-  const response = await fetch(`/api/v1/groups/${groupId}/members/${userId}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to remove member');
-  return true;
 };
 
 interface UserGroup {
@@ -344,8 +327,8 @@ function GroupsPage() {
     });
   };
 
-  const handleMemberChange = (newTargetKeys: string[]) => {
-    setTargetKeys(newTargetKeys);
+  const handleMemberChange = (newTargetKeys: React.Key[]) => {
+    setTargetKeys(newTargetKeys as string[]);
   };
 
   const handleMemberSave = () => {
@@ -524,7 +507,7 @@ function GroupsPage() {
             }))}
             targetKeys={targetKeys}
             onChange={handleMemberChange}
-            render={(item) => item.title}
+            render={(item) => item.title ?? ''}
             titles={['所有用户', '组成员']}
             listStyle={{ width: 280, height: 350 }}
             showSearch

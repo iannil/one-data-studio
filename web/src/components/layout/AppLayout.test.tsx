@@ -4,39 +4,47 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock react-router-dom
-vi.mock('react-router-dom', () => ({
-  Outlet: () => <div data-testid="outlet">Outlet Content</div>,
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/dashboard' }),
-}));
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    Outlet: () => <div data-testid="outlet">Outlet Content</div>,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({ pathname: '/dashboard' }),
+  };
+});
 
 // Mock Ant Design components
-vi.mock('antd', () => ({
-  Layout: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="layout">{children}</div>
-  ),
-  Menu: ({ items, onClick }: { items: any[]; onClick: any }) => (
-    <div data-testid="menu">
-      {items?.map((item: any, index: number) => (
-        <div
-          key={index}
-          data-testid={`menu-item-${item.key}`}
-          onClick={() => onClick({ key: item.key })}
-        >
-          {item.label}
-        </div>
-      ))}
-    </div>
-  ),
-  Avatar: () => <div data-testid="avatar" />,
-  Dropdown: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown">{children}</div>
-  ),
-}));
+vi.mock('antd', async () => {
+  const actual = await vi.importActual<typeof import('antd')>('antd');
+  return {
+    ...actual,
+    Layout: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="layout">{children}</div>
+    ),
+    Menu: ({ items, onClick }: { items: any[]; onClick: any }) => (
+      <div data-testid="menu">
+        {items?.map((item: any, index: number) => (
+          <div
+            key={index}
+            data-testid={`menu-item-${item.key}`}
+            onClick={() => onClick({ key: item.key })}
+          >
+            {item.label}
+          </div>
+        ))}
+      </div>
+    ),
+    Avatar: () => <div data-testid="avatar" />,
+    Dropdown: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="dropdown">{children}</div>
+    ),
+  };
+});
 
 describe('AppLayout', () => {
   describe('Layout structure', () => {

@@ -576,7 +576,7 @@ export async function stopETLTask(taskId: string): Promise<ApiResponse<void>> {
  * 获取 ETL 任务日志
  */
 export async function getETLTaskLogs(taskId: string, executionId?: string, limit = 100): Promise<ApiResponse<{ logs: ETLExecutionLog[] }>> {
-  return apiClient.get(`/api/v1/etl/tasks/${taskId}/logs`, { params: { execution_id, limit } });
+  return apiClient.get(`/api/v1/etl/tasks/${taskId}/logs`, { params: { execution_id: executionId, limit } });
 }
 
 // ============= 数据质量类型 =============
@@ -2408,6 +2408,7 @@ export interface UpdateMetricRequest {
   source_table?: string;
   source_column?: string;
   dimensions?: string[];
+  aggregation?: string;
   filters?: Record<string, unknown>;
   tags?: string[];
   owner?: string;

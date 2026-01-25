@@ -6,7 +6,7 @@
  * 基于 React Flow 实现可拖拽流程图编辑器
  */
 
-import React, { useCallback, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, forwardRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -234,7 +234,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
 
   // 删除节点
   const onNodesDelete = useCallback(
-    (deletedNodes: Node[]) => {
+    (_deletedNodes: Node[]) => {
       // 节点删除后的处理逻辑
     },
     []
@@ -242,7 +242,7 @@ const FlowCanvas = forwardRef<FlowCanvasRef, FlowCanvasProps>(function FlowCanva
 
   // 删除边
   const onEdgesDelete = useCallback(
-    (deletedEdges: Edge[]) => {
+    (_deletedEdges: Edge[]) => {
       // 边删除后的处理逻辑
     },
     []
@@ -323,5 +323,8 @@ function FlowCanvasWithProvider({ canvasRef, ...props }: FlowCanvasWithProviderP
 
 export default FlowCanvasWithProvider;
 
-// 导出类型
-export type { Node, Edge, Connection, FlowCanvasRef };
+// Re-export types from reactflow for convenience
+export type { Node, Edge, Connection } from 'reactflow';
+
+// Export component types
+export type { FlowCanvasProps };

@@ -23,9 +23,7 @@ import {
   Radio,
 } from 'antd';
 import {
-  CheckCircleOutlined,
   WarningOutlined,
-  CloseCircleOutlined,
   BellOutlined,
   SettingOutlined,
   ReloadOutlined,
@@ -33,7 +31,6 @@ import {
   DashboardOutlined,
   ThunderboltOutlined,
   DatabaseOutlined,
-  ClockCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -42,8 +39,6 @@ import cube from '@/services/cube';
 import type {
   MonitoringAlertRule,
   AlertNotification,
-  Dashboard,
-  SystemMetrics,
   MetricPeriod,
   AlertSeverity,
 } from '@/services/cube';
@@ -60,26 +55,25 @@ const severityColors: Record<AlertSeverity, string> = {
 
 function MonitoringPage() {
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<MetricPeriod>('1h');
+  const [, setPeriod] = useState<MetricPeriod>('1h');
   const [activeTab, setActiveTab] = useState('overview');
 
   // Modal states
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
   const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
-  const [selectedRule, setSelectedRule] = useState<MonitoringAlertRule | null>(null);
 
   const [ruleForm] = Form.useForm();
   const [dashboardForm] = Form.useForm();
 
   // 获取指标概览
-  const { data: overviewData, isLoading: isLoadingOverview } = useQuery({
+  const { data: overviewData } = useQuery({
     queryKey: ['metricsOverview'],
     queryFn: cube.getMetricsOverview,
     refetchInterval: 30000,
   });
 
   // 获取系统指标
-  const { data: systemMetricsData, isLoading: isLoadingSystemMetrics } = useQuery({
+  const { data: systemMetricsData } = useQuery({
     queryKey: ['systemMetrics'],
     queryFn: cube.getSystemMetrics,
     refetchInterval: 5000,
@@ -99,17 +93,10 @@ function MonitoringPage() {
   });
 
   // 获取仪表板列表
-  const { data: dashboardsData, isLoading: isLoadingDashboards } = useQuery({
+  const { data: dashboardsData } = useQuery({
     queryKey: ['dashboards'],
     queryFn: () => cube.getDashboards(),
     enabled: activeTab === 'dashboards',
-  });
-
-  // 获取 GPU 资源
-  const { data: gpuResourcesData } = useQuery({
-    queryKey: ['gpuResources'],
-    queryFn: cube.getGPUResources,
-    refetchInterval: 10000,
   });
 
   // 获取训练任务列表
@@ -324,42 +311,6 @@ function MonitoringPage() {
     },
   ];
 
-  // 仪表板列表
-  const dashboardColumns = [
-    {
-      title: '仪表板名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '面板数量',
-      key: 'panel_count',
-      width: 100,
-      render: (_: unknown, record: Dashboard) => record.panels?.length || 0,
-    },
-    {
-      title: '刷新间隔',
-      dataIndex: 'refresh_interval',
-      key: 'refresh_interval',
-      width: 120,
-      render: (interval?: number) => (interval ? `${interval}秒` : '-'),
-    },
-    {
-      title: '公开',
-      dataIndex: 'is_public',
-      key: 'is_public',
-      width: 80,
-      render: (isPublic: boolean) => (isPublic ? <Tag>是</Tag> : <Tag>否</Tag>),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 160,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-    },
-  ];
-
   // 模拟历史指标数据
   const generateMockMetrics = (baseValue: number, variance: number) => {
     const now = Date.now();
@@ -447,7 +398,7 @@ function MonitoringPage() {
                           }}
                         />
                         {(overviewData?.data?.critical_alerts || 0) > 0 && (
-                          <Badge count={`${overviewData.data.critical_alerts} 严重`} style={{ backgroundColor: '#ff4d4f', marginTop: 8 }} />
+                          <Badge count={`${overviewData?.data?.critical_alerts} 严重`} style={{ backgroundColor: '#ff4d4f', marginTop: 8 }} />
                         )}
                       </Card>
                     </Col>
@@ -740,7 +691,7 @@ function MonitoringPage() {
                       {
                         title: '操作',
                         key: 'actions',
-                        render: (_: unknown, record: any) => (
+                        render: (_: unknown, _record: unknown) => (
                           <Button type="link" onClick={() => {}}>
                             查看监控
                           </Button>

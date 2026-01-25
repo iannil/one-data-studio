@@ -7,7 +7,6 @@ import {
   Space,
   Input,
   Select,
-  message,
   Drawer,
   Descriptions,
   Tabs,
@@ -20,13 +19,12 @@ import {
 import {
   SearchOutlined,
   NodeIndexOutlined,
-  EyeOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import alldata from '@/services/alldata';
-import type { LineageGraph as LineageGraphType, LineageNode, ImpactAnalysis, ColumnLineage } from '@/services/alldata';
+import type { LineageNode } from '@/services/alldata';
 import LineageGraphComponent from '@/components/LineageGraph';
 
 const { Option } = Select;
@@ -48,7 +46,7 @@ function LineagePage() {
   });
 
   // 影响分析
-  const { data: impactData, isLoading: isLoadingImpact } = useQuery({
+  const { data: impactData } = useQuery({
     queryKey: ['impactAnalysis', impactTable],
     queryFn: () => alldata.getImpactAnalysis(impactTable),
     enabled: !!impactTable && activeTab === 'impact',
@@ -63,7 +61,7 @@ function LineagePage() {
 
   // 字段级血缘
   const [columnLineageParams, setColumnLineageParams] = useState<{ table: string; column: string } | null>(null);
-  const { data: columnLineageData, isLoading: isLoadingColumnLineage } = useQuery({
+  const { data: columnLineageData } = useQuery({
     queryKey: ['columnLineage', columnLineageParams?.table, columnLineageParams?.column],
     queryFn: () => alldata.getColumnLineage(columnLineageParams!.table, columnLineageParams!.column),
     enabled: !!columnLineageParams && activeTab === 'column',

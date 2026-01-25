@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ChatPage from './ChatPage';
 import * as bisheng from '@/services/bisheng';
@@ -26,21 +26,7 @@ vi.mock('@/services/cube', () => ({
   },
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
-const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{component}</BrowserRouter>
-    </QueryClientProvider>
-  );
-};
 
 describe('ChatPage', () => {
   beforeEach(() => {
@@ -71,11 +57,11 @@ describe('ChatPage', () => {
   });
 
   afterEach(() => {
-    queryClient.clear();
+    
   });
 
   it('应该正确渲染聊天页面', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     // 验证主要 UI 元素
     await waitFor(() => {
@@ -86,7 +72,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示空会话状态', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('暂无历史会话')).toBeInTheDocument();
@@ -114,7 +100,7 @@ describe('ChatPage', () => {
       },
     });
 
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('测试会话 1')).toBeInTheDocument();
@@ -123,7 +109,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示新对话提示', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('开始新的对话')).toBeInTheDocument();
@@ -131,7 +117,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示模型选择器', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('模型')).toBeInTheDocument();
@@ -139,7 +125,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示温度滑块', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/温度:/)).toBeInTheDocument();
@@ -147,7 +133,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示最大 Tokens 滑块', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/最大 Tokens:/)).toBeInTheDocument();
@@ -155,7 +141,7 @@ describe('ChatPage', () => {
   });
 
   it('应该有发送按钮', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /发送/i })).toBeInTheDocument();
@@ -163,7 +149,7 @@ describe('ChatPage', () => {
   });
 
   it('应该有新建会话按钮', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       // 新建会话按钮是一个 icon button
@@ -173,7 +159,7 @@ describe('ChatPage', () => {
   });
 
   it('应该在发送空消息时显示警告', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       const sendButton = screen.getByRole('button', { name: /发送/i });
@@ -210,7 +196,7 @@ describe('ChatPage', () => {
       },
     });
 
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('测试会话')).toBeInTheDocument();
@@ -225,7 +211,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示使用统计', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText('使用统计')).toBeInTheDocument();
@@ -263,7 +249,7 @@ describe('ChatPage 消息发送', () => {
   it('应该在输入消息后启用发送', async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/输入消息/i)).toBeInTheDocument();
@@ -306,7 +292,7 @@ describe('ChatPage 会话管理', () => {
   });
 
   it('应该显示会话消息数', async () => {
-    renderWithProviders(<ChatPage />);
+    render(<ChatPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/5 条消息/)).toBeInTheDocument();

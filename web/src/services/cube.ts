@@ -214,9 +214,9 @@ export interface ExperimentArtifact {
   created_at: string;
 }
 
-export interface ExperimentDetail extends Experiment {
-  metrics: ExperimentMetric[];
-  artifacts: ExperimentArtifact[];
+export interface ExperimentDetail extends Omit<Experiment, 'metrics' | 'artifacts'> {
+  metrics: ExperimentMetric[] | Record<string, number>;
+  artifacts: ExperimentArtifact[] | string[];
   logs?: string;
 }
 
@@ -529,6 +529,7 @@ export async function streamChatCompletion(
     let usage: ChatCompletionUsage | undefined;
 
     try {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;

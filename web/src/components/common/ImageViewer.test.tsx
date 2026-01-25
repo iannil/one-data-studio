@@ -4,46 +4,50 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock antd components
-vi.mock('antd', () => ({
-  Modal: ({ open, onCancel, children, title, footer }: any) => (
-    open ? (
-      <div data-testid="modal" role="dialog">
-        <div data-testid="modal-title">{title}</div>
-        <div data-testid="modal-content">{children}</div>
-        <button data-testid="modal-close" onClick={onCancel}>Close</button>
-      </div>
-    ) : null
-  ),
-  Image: ({ src, alt }: any) => <img src={src} alt={alt} />,
-  Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-  Button: ({ children, onClick, disabled, icon }: any) => (
-    <button onClick={onClick} disabled={disabled} data-testid="button">
-      {icon}
-      {children}
-    </button>
-  ),
-  Spin: ({ tip }: any) => <div data-testid="spin">{tip}</div>,
-  Tooltip: ({ children, title }: any) => (
-    <div data-testid="tooltip" title={title}>{children}</div>
-  ),
-  Typography: {
-    Text: ({ children, type }: any) => <span data-testid={`text-${type || 'default'}`}>{children}</span>,
-  },
-  Slider: ({ value, onChange, min, max }: any) => (
-    <input
-      type="range"
-      data-testid="slider"
-      value={value}
-      min={min}
-      max={max}
-      onChange={(e) => onChange?.(Number(e.target.value))}
-    />
-  ),
-}));
+vi.mock('antd', async () => {
+  const actual = await vi.importActual<typeof import('antd')>('antd');
+  return {
+    ...actual,
+    Modal: ({ open, onCancel, children, title, footer }: any) => (
+      open ? (
+        <div data-testid="modal" role="dialog">
+          <div data-testid="modal-title">{title}</div>
+          <div data-testid="modal-content">{children}</div>
+          <button data-testid="modal-close" onClick={onCancel}>Close</button>
+        </div>
+      ) : null
+    ),
+    Image: ({ src, alt }: any) => <img src={src} alt={alt} />,
+    Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+    Button: ({ children, onClick, disabled, icon }: any) => (
+      <button onClick={onClick} disabled={disabled} data-testid="button">
+        {icon}
+        {children}
+      </button>
+    ),
+    Spin: ({ tip }: any) => <div data-testid="spin">{tip}</div>,
+    Tooltip: ({ children, title }: any) => (
+      <div data-testid="tooltip" title={title}>{children}</div>
+    ),
+    Typography: {
+      Text: ({ children, type }: any) => <span data-testid={`text-${type || 'default'}`}>{children}</span>,
+    },
+    Slider: ({ value, onChange, min, max }: any) => (
+      <input
+        type="range"
+        data-testid="slider"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange?.(Number(e.target.value))}
+      />
+    ),
+  };
+});
 
 import ImageViewer from './ImageViewer';
 
@@ -84,9 +88,9 @@ describe('ImageViewer Component', () => {
   });
 
   it('should display the image', () => {
-    render(<ImageViewer {...defaultProps} />);
+    const { container } = render(<ImageViewer {...defaultProps} />);
 
-    const img = screen.getByRole('img');
+    const img = container.querySelector('img');
     expect(img).toHaveAttribute('src', defaultProps.imageUrl);
   });
 
@@ -113,10 +117,10 @@ describe('ImageViewer Component', () => {
   });
 
   it('should handle image load', () => {
-    render(<ImageViewer {...defaultProps} />);
+    const { container } = render(<ImageViewer {...defaultProps} />);
 
-    const img = screen.getByRole('img');
-    fireEvent.load(img);
+    const img = container.querySelector('img');
+    fireEvent.load(img!);
 
     // After load, loading state should be false
     expect(screen.queryByTestId('spin')).not.toBeInTheDocument();

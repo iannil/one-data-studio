@@ -125,7 +125,7 @@ function UsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [departmentFilter] = useState<string>('');
   const [searchText, setSearchText] = useState<string>('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -337,12 +337,6 @@ function UsersPage() {
     },
   ];
 
-  const roles = [
-    { value: 'admin', label: '管理员' },
-    { value: 'data_engineer', label: '数据工程师' },
-    { value: 'ai_developer', label: 'AI 开发者' },
-    { value: 'user', label: '普通用户' },
-  ];
 
   const handleCreate = () => {
     form.validateFields().then((values) => {

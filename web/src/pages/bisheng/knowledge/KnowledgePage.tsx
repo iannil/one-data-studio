@@ -15,7 +15,6 @@ import {
   Drawer,
   Descriptions,
   Upload,
-  Progress,
   Row,
   Col,
   Statistic,
@@ -40,7 +39,6 @@ import type { UploadFile } from 'antd';
 import bisheng from '@/services/bisheng';
 import type {
   KnowledgeBase,
-  CreateKnowledgeBaseRequest,
   KnowledgeDocument,
   RetrievalTestResult,
 } from '@/services/bisheng';

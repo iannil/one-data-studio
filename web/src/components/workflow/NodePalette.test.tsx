@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock reactflow
@@ -15,9 +15,17 @@ vi.mock('reactflow', () => ({
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     addNodes: mockAddNodes,
-    viewport: { width: 800, height: 600, x: 0, y: 0 },
-    project: (pos: any) => pos,
+    getNodes: vi.fn(() => []),
+    getEdges: vi.fn(() => []),
+    setNodes: vi.fn(),
+    setEdges: vi.fn(),
+    deleteElements: vi.fn(),
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+    setViewport: vi.fn(),
+    project: vi.fn((pos: any) => pos),
+    screenToFlowPosition: vi.fn((pos: any) => pos),
   }),
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 import NodePalette, { nodeTypes } from './NodePalette';
@@ -127,8 +135,8 @@ describe('NodePalette Component', () => {
 });
 
 describe('nodeTypes export', () => {
-  it('should export 9 node types', () => {
-    expect(nodeTypes).toHaveLength(9);
+  it('should export 10 node types', () => {
+    expect(nodeTypes).toHaveLength(10);
   });
 
   it('should have correct structure for each node type', () => {

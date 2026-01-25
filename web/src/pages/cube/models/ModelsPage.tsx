@@ -19,7 +19,6 @@ import {
   PlusOutlined,
   DeleteOutlined,
   EyeOutlined,
-  EditOutlined,
   RocketOutlined,
   TagsOutlined,
 } from '@ant-design/icons';

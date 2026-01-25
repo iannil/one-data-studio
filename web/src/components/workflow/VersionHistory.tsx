@@ -5,45 +5,38 @@
  * Displays workflow version history with diff comparison and rollback capabilities.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Box,
-  Paper,
+  Card,
   Typography,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  IconButton,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip,
+  Modal,
+  Tag,
   Tooltip,
-  Divider,
-  CircularProgress,
+  Spin,
   Alert,
   Tabs,
-  Tab,
-  Stack,
   Badge,
-} from '@mui/material';
+  Space,
+  message,
+} from 'antd';
 import {
-  History as HistoryIcon,
-  Restore as RestoreIcon,
-  Compare as CompareIcon,
-  Add as AddIcon,
-  Remove as RemoveIcon,
-  Edit as EditIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  Code as CodeIcon,
-  ContentCopy as CopyIcon,
-} from '@mui/icons-material';
+  HistoryOutlined,
+  RollbackOutlined,
+  DiffOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  EditOutlined,
+  UserOutlined,
+  ClockCircleOutlined,
+  CodeOutlined,
+  CopyOutlined,
+} from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+
+const { Text, Title } = Typography;
+const { TabPane } = Tabs;
 
 // Types
 interface WorkflowVersion {
@@ -92,7 +85,6 @@ interface VersionHistoryProps {
   workflowId: string;
   currentVersion?: number;
   onRollback?: (version: number) => void;
-  onVersionSelect?: (version: WorkflowVersion) => void;
 }
 
 // API functions (to be connected to actual API)
@@ -146,7 +138,7 @@ const api = {
 
 // Helper components
 const ChangeTypeBadge: React.FC<{ type: string }> = ({ type }) => {
-  const colors: Record<string, 'success' | 'error' | 'warning' | 'default'> = {
+  const colors: Record<string, string> = {
     added: 'success',
     removed: 'error',
     modified: 'warning',
@@ -154,19 +146,15 @@ const ChangeTypeBadge: React.FC<{ type: string }> = ({ type }) => {
   };
 
   const icons: Record<string, React.ReactNode> = {
-    added: <AddIcon fontSize="small" />,
-    removed: <RemoveIcon fontSize="small" />,
-    modified: <EditIcon fontSize="small" />,
+    added: <PlusOutlined />,
+    removed: <MinusOutlined />,
+    modified: <EditOutlined />,
   };
 
   return (
-    <Chip
-      size="small"
-      icon={icons[type] as React.ReactElement}
-      label={type}
-      color={colors[type] || 'default'}
-      sx={{ textTransform: 'capitalize' }}
-    />
+    <Tag icon={icons[type]} color={colors[type] || 'default'}>
+      {type}
+    </Tag>
   );
 };
 
@@ -196,7 +184,6 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
   workflowId,
   currentVersion,
   onRollback,
-  onVersionSelect,
 }) => {
   const { t } = useTranslation();
   const [versions, setVersions] = useState<WorkflowVersion[]>([]);
@@ -206,7 +193,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
   const [diffDialogOpen, setDiffDialogOpen] = useState(false);
   const [diff, setDiff] = useState<WorkflowDiff | null>(null);
   const [textDiff, setTextDiff] = useState<string>('');
-  const [diffTab, setDiffTab] = useState(0);
+  const [diffTab, setDiffTab] = useState('nodes');
   const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
   const [rollbackTarget, setRollbackTarget] = useState<number | null>(null);
   const [rollbackLoading, setRollbackLoading] = useState(false);
@@ -273,8 +260,10 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
       setVersions((prev) => [newVersion, ...prev]);
       setRollbackDialogOpen(false);
       onRollback?.(rollbackTarget);
+      message.success(t('workflow.rollbackSuccess', 'Rollback successful'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rollback');
+      message.error(t('workflow.rollbackFailed', 'Rollback failed'));
     } finally {
       setRollbackLoading(false);
       setRollbackTarget(null);
@@ -284,191 +273,172 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
   // Copy hash to clipboard
   const handleCopyHash = async (hash: string) => {
     await navigator.clipboard.writeText(hash);
+    message.success(t('workflow.hashCopied', 'Hash copied'));
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
+        <Spin size="large" />
+      </div>
     );
   }
 
   return (
-    <Paper elevation={0} sx={{ p: 2 }}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-        <Typography variant="h6" display="flex" alignItems="center" gap={1}>
-          <HistoryIcon />
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Title level={5} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <HistoryOutlined />
           {t('workflow.versionHistory', 'Version History')}
-        </Typography>
+        </Title>
 
         {selectedVersions.length === 2 && (
           <Button
-            variant="contained"
-            startIcon={<CompareIcon />}
+            type="primary"
+            icon={<DiffOutlined />}
             onClick={handleCompare}
             size="small"
           >
             {t('workflow.compare', 'Compare')} v{selectedVersions[0]} ↔ v{selectedVersions[1]}
           </Button>
         )}
-      </Box>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+        <Alert
+          type="error"
+          message={error}
+          closable
+          onClose={() => setError(null)}
+          style={{ marginBottom: 16 }}
+        />
       )}
 
-      <List>
-        {versions.map((version, index) => (
-          <React.Fragment key={version.id}>
-            <ListItem
-              sx={{
-                bgcolor: selectedVersions.includes(version.version_number)
-                  ? 'action.selected'
-                  : currentVersion === version.version_number
-                  ? 'action.hover'
-                  : 'transparent',
-                borderRadius: 1,
-                cursor: 'pointer',
-              }}
-              onClick={() => handleVersionSelect(version.version_number)}
-            >
-              <ListItemIcon>
-                <Badge
-                  badgeContent={currentVersion === version.version_number ? '✓' : null}
-                  color="primary"
-                >
-                  <Chip
-                    label={`v${version.version_number}`}
-                    size="small"
-                    color={currentVersion === version.version_number ? 'primary' : 'default'}
+      <List
+        dataSource={versions}
+        renderItem={(version) => (
+          <List.Item
+            style={{
+              backgroundColor: selectedVersions.includes(version.version_number)
+                ? '#e6f7ff'
+                : currentVersion === version.version_number
+                ? '#f6ffed'
+                : 'transparent',
+              borderRadius: 4,
+              cursor: 'pointer',
+              padding: '12px 16px',
+            }}
+            onClick={() => handleVersionSelect(version.version_number)}
+            actions={[
+              currentVersion !== version.version_number && (
+                <Tooltip key="rollback" title={t('workflow.rollback', 'Rollback to this version')}>
+                  <Button
+                    type="text"
+                    icon={<RollbackOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRollbackTarget(version.version_number);
+                      setRollbackDialogOpen(true);
+                    }}
                   />
+                </Tooltip>
+              ),
+            ].filter(Boolean)}
+          >
+            <List.Item.Meta
+              avatar={
+                <Badge count={currentVersion === version.version_number ? '✓' : null}>
+                  <Tag color={currentVersion === version.version_number ? 'blue' : 'default'}>
+                    v{version.version_number}
+                  </Tag>
                 </Badge>
-              </ListItemIcon>
-
-              <ListItemText
-                primary={
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2">
-                      {version.comment || `Version ${version.version_number}`}
-                    </Typography>
-                    <Tooltip title={t('workflow.copyHash', 'Copy hash')}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyHash(version.content_hash);
-                        }}
-                      >
-                        <CopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Typography variant="caption" color="text.secondary">
-                      {version.content_hash}
-                    </Typography>
-                  </Stack>
-                }
-                secondary={
-                  <Stack direction="row" spacing={2} mt={0.5}>
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      <PersonIcon fontSize="small" color="action" />
-                      <Typography variant="caption">{version.created_by}</Typography>
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      <ScheduleIcon fontSize="small" color="action" />
-                      <Tooltip title={formatDate(version.created_at)}>
-                        <Typography variant="caption">
-                          {formatRelativeTime(version.created_at)}
-                        </Typography>
-                      </Tooltip>
-                    </Box>
-                  </Stack>
-                }
-              />
-
-              <ListItemSecondaryAction>
-                {currentVersion !== version.version_number && (
-                  <Tooltip title={t('workflow.rollback', 'Rollback to this version')}>
-                    <IconButton
-                      edge="end"
+              }
+              title={
+                <Space>
+                  <Text>{version.comment || `Version ${version.version_number}`}</Text>
+                  <Tooltip title={t('workflow.copyHash', 'Copy hash')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CopyOutlined />}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setRollbackTarget(version.version_number);
-                        setRollbackDialogOpen(true);
+                        handleCopyHash(version.content_hash);
                       }}
-                    >
-                      <RestoreIcon />
-                    </IconButton>
+                    />
                   </Tooltip>
-                )}
-              </ListItemSecondaryAction>
-            </ListItem>
-            {index < versions.length - 1 && <Divider component="li" />}
-          </React.Fragment>
-        ))}
-      </List>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {version.content_hash.substring(0, 8)}
+                  </Text>
+                </Space>
+              }
+              description={
+                <Space>
+                  <Space size={4}>
+                    <UserOutlined style={{ color: '#999' }} />
+                    <Text type="secondary">{version.created_by}</Text>
+                  </Space>
+                  <Space size={4}>
+                    <ClockCircleOutlined style={{ color: '#999' }} />
+                    <Tooltip title={formatDate(version.created_at)}>
+                      <Text type="secondary">{formatRelativeTime(version.created_at)}</Text>
+                    </Tooltip>
+                  </Space>
+                </Space>
+              }
+            />
+          </List.Item>
+        )}
+      />
 
       {versions.length === 0 && (
-        <Typography color="text.secondary" textAlign="center" py={4}>
+        <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: 32 }}>
           {t('workflow.noVersions', 'No version history available')}
-        </Typography>
+        </Text>
       )}
 
       {/* Diff Dialog */}
-      <Dialog
+      <Modal
+        title={`${t('workflow.versionComparison', 'Version Comparison')}: v${selectedVersions[0]} → v${selectedVersions[1]}`}
         open={diffDialogOpen}
-        onClose={() => setDiffDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
+        onCancel={() => setDiffDialogOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setDiffDialogOpen(false)}>
+            {t('common.close', 'Close')}
+          </Button>,
+        ]}
+        width={800}
       >
-        <DialogTitle>
-          {t('workflow.versionComparison', 'Version Comparison')}: v{selectedVersions[0]} → v
-          {selectedVersions[1]}
-        </DialogTitle>
-        <DialogContent>
-          {diff && (
-            <>
-              <Alert severity={diff.has_changes ? 'info' : 'success'} sx={{ mb: 2 }}>
-                {diff.summary}
-              </Alert>
+        {diff && (
+          <>
+            <Alert
+              type={diff.has_changes ? 'info' : 'success'}
+              message={diff.summary}
+              style={{ marginBottom: 16 }}
+            />
 
-              <Tabs value={diffTab} onChange={(_, v) => setDiffTab(v)} sx={{ mb: 2 }}>
-                <Tab
-                  label={
-                    <Badge badgeContent={diff.node_changes.length} color="primary">
-                      {t('workflow.nodeChanges', 'Node Changes')}
-                    </Badge>
-                  }
-                />
-                <Tab
-                  label={
-                    <Badge badgeContent={diff.edge_changes.length} color="primary">
-                      {t('workflow.edgeChanges', 'Edge Changes')}
-                    </Badge>
-                  }
-                />
-                <Tab
-                  icon={<CodeIcon />}
-                  label={t('workflow.rawDiff', 'Raw Diff')}
-                />
-              </Tabs>
-
-              {diffTab === 0 && (
-                <List dense>
-                  {diff.node_changes.map((change, i) => (
-                    <ListItem key={i}>
-                      <ListItemIcon>
-                        <ChangeTypeBadge type={change.change_type} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`${change.node_type} (${change.node_id})`}
-                        secondary={
+            <Tabs activeKey={diffTab} onChange={setDiffTab}>
+              <TabPane
+                tab={
+                  <Badge count={diff.node_changes.length}>
+                    {t('workflow.nodeChanges', 'Node Changes')}
+                  </Badge>
+                }
+                key="nodes"
+              >
+                <List
+                  size="small"
+                  dataSource={diff.node_changes}
+                  renderItem={(change, i) => (
+                    <List.Item key={i}>
+                      <List.Item.Meta
+                        avatar={<ChangeTypeBadge type={change.change_type} />}
+                        title={`${change.node_type} (${change.node_id})`}
+                        description={
                           change.field_changes.length > 0 && (
-                            <Stack spacing={0.5} mt={1}>
+                            <div style={{ marginTop: 8 }}>
                               {change.field_changes.map((fc, j) => (
-                                <Typography key={j} variant="caption" component="div">
+                                <div key={j} style={{ fontSize: 12 }}>
                                   <strong>{fc.field}:</strong>{' '}
                                   <span style={{ color: 'red' }}>
                                     {JSON.stringify(fc.old_value)}
@@ -477,100 +447,103 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                                   <span style={{ color: 'green' }}>
                                     {JSON.stringify(fc.new_value)}
                                   </span>
-                                </Typography>
+                                </div>
                               ))}
-                            </Stack>
+                            </div>
                           )
                         }
                       />
-                    </ListItem>
-                  ))}
-                  {diff.node_changes.length === 0 && (
-                    <Typography color="text.secondary" textAlign="center" py={2}>
-                      {t('workflow.noNodeChanges', 'No node changes')}
-                    </Typography>
+                    </List.Item>
                   )}
-                </List>
-              )}
+                  locale={{
+                    emptyText: t('workflow.noNodeChanges', 'No node changes'),
+                  }}
+                />
+              </TabPane>
 
-              {diffTab === 1 && (
-                <List dense>
-                  {diff.edge_changes.map((change, i) => (
-                    <ListItem key={i}>
-                      <ListItemIcon>
-                        <ChangeTypeBadge type={change.change_type} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`${change.source_id} → ${change.target_id}`}
+              <TabPane
+                tab={
+                  <Badge count={diff.edge_changes.length}>
+                    {t('workflow.edgeChanges', 'Edge Changes')}
+                  </Badge>
+                }
+                key="edges"
+              >
+                <List
+                  size="small"
+                  dataSource={diff.edge_changes}
+                  renderItem={(change, i) => (
+                    <List.Item key={i}>
+                      <List.Item.Meta
+                        avatar={<ChangeTypeBadge type={change.change_type} />}
+                        title={`${change.source_id} → ${change.target_id}`}
                       />
-                    </ListItem>
-                  ))}
-                  {diff.edge_changes.length === 0 && (
-                    <Typography color="text.secondary" textAlign="center" py={2}>
-                      {t('workflow.noEdgeChanges', 'No edge changes')}
-                    </Typography>
+                    </List.Item>
                   )}
-                </List>
-              )}
+                  locale={{
+                    emptyText: t('workflow.noEdgeChanges', 'No edge changes'),
+                  }}
+                />
+              </TabPane>
 
-              {diffTab === 2 && (
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    bgcolor: 'grey.900',
-                    color: 'grey.100',
+              <TabPane
+                tab={
+                  <Space>
+                    <CodeOutlined />
+                    {t('workflow.rawDiff', 'Raw Diff')}
+                  </Space>
+                }
+                key="raw"
+              >
+                <pre
+                  style={{
+                    padding: 16,
+                    backgroundColor: '#1a1a1a',
+                    color: '#e0e0e0',
                     fontFamily: 'monospace',
-                    fontSize: '12px',
+                    fontSize: 12,
                     whiteSpace: 'pre-wrap',
                     overflow: 'auto',
                     maxHeight: 400,
+                    borderRadius: 4,
                   }}
                 >
                   {textDiff || 'No differences'}
-                </Paper>
-              )}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDiffDialogOpen(false)}>
-            {t('common.close', 'Close')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                </pre>
+              </TabPane>
+            </Tabs>
+          </>
+        )}
+      </Modal>
 
       {/* Rollback Confirmation Dialog */}
-      <Dialog
+      <Modal
+        title={t('workflow.confirmRollback', 'Confirm Rollback')}
         open={rollbackDialogOpen}
-        onClose={() => setRollbackDialogOpen(false)}
-      >
-        <DialogTitle>{t('workflow.confirmRollback', 'Confirm Rollback')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t(
-              'workflow.rollbackWarning',
-              'Are you sure you want to rollback to version {{version}}? This will create a new version with the content from version {{version}}.',
-              { version: rollbackTarget }
-            )}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRollbackDialogOpen(false)} disabled={rollbackLoading}>
+        onCancel={() => setRollbackDialogOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRollbackDialogOpen(false)} disabled={rollbackLoading}>
             {t('common.cancel', 'Cancel')}
-          </Button>
+          </Button>,
           <Button
+            key="rollback"
+            type="primary"
             onClick={handleRollback}
-            color="primary"
-            variant="contained"
-            disabled={rollbackLoading}
-            startIcon={rollbackLoading ? <CircularProgress size={16} /> : <RestoreIcon />}
+            loading={rollbackLoading}
+            icon={<RollbackOutlined />}
           >
             {t('workflow.rollback', 'Rollback')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
+          </Button>,
+        ]}
+      >
+        <Text>
+          {t(
+            'workflow.rollbackWarning',
+            `Are you sure you want to rollback to version ${rollbackTarget}? This will create a new version with the content from version ${rollbackTarget}.`
+          )}
+        </Text>
+      </Modal>
+    </Card>
   );
 };
 

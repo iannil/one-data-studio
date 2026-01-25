@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Modal, Image, Space, Button, Spin, Tooltip, Typography, Slider } from 'antd';
+import { Modal, Space, Button, Spin, Tooltip, Typography, Slider } from 'antd';
 import {
   ZoomInOutlined,
   ZoomOutOutlined,

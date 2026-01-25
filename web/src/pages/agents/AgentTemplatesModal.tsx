@@ -10,8 +10,8 @@ import {
   message,
   Tag,
 } from 'antd';
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { PlusOutlined } from '@ant-design/icons';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import bisheng, { type AgentTemplate, type CreateAgentTemplateRequest } from '@/services/bisheng';
 
 const { TextArea } = Input;

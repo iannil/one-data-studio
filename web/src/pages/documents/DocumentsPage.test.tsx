@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DocumentsPage from './DocumentsPage';
 import * as bisheng from '@/services/bisheng';
@@ -17,77 +17,66 @@ vi.mock('@/services/bisheng', () => ({
   },
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
-const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{component}</BrowserRouter>
-    </QueryClientProvider>
-  );
-};
 
 const mockDocuments = [
   {
-    document_id: 'doc-001',
-    name: '产品手册.pdf',
-    file_type: 'pdf',
-    file_size: 1024000,
-    status: 'processed',
+    doc_id: 'doc-001',
+    file_name: '产品手册.pdf',
+    title: '产品手册',
+    collection_name: 'default',
     chunk_count: 50,
+    content: '这是产品手册的内容...',
+    metadata: '{}',
+    created_by: 'user1',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
   },
   {
-    document_id: 'doc-002',
-    name: '用户指南.docx',
-    file_type: 'docx',
-    file_size: 512000,
-    status: 'processing',
-    chunk_count: 0,
+    doc_id: 'doc-002',
+    file_name: '用户指南.docx',
+    title: '用户指南',
+    collection_name: 'default',
+    chunk_count: 30,
+    content: '这是用户指南的内容...',
+    metadata: '{}',
+    created_by: 'user2',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
   },
   {
-    document_id: 'doc-003',
-    name: '常见问题.txt',
-    file_type: 'txt',
-    file_size: 10240,
-    status: 'failed',
-    error_message: '解析失败',
-    chunk_count: 0,
+    doc_id: 'doc-003',
+    file_name: '常见问题.txt',
+    title: '常见问题',
+    collection_name: 'faq',
+    chunk_count: 10,
+    content: '这是常见问题的内容...',
+    metadata: '{}',
+    created_by: 'user1',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
   },
 ];
 
 describe('DocumentsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: mockDocuments, total: 3 },
+      data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
   });
 
   it('应该正确渲染文档页面', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/文档/i)).toBeInTheDocument();
+      // "文档" 可能出现多次，使用更具体的查询
+      expect(screen.getByText('文档管理')).toBeInTheDocument();
     });
   });
 
   it('应该显示文档列表', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -96,16 +85,17 @@ describe('DocumentsPage', () => {
     });
   });
 
-  it('应该显示文档状态', async () => {
-    renderWithProviders(<DocumentsPage />);
+  it('应该显示文档集合标签', async () => {
+    render(<DocumentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/处理完成/i) || screen.getByText(/已处理/i)).toBeTruthy();
+      // collection_name 可能出现多次，使用 getAllByText
+      expect(screen.getAllByText('default').length).toBeGreaterThan(0);
     });
   });
 
   it('应该显示上传按钮', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传/i })).toBeInTheDocument();
@@ -113,7 +103,7 @@ describe('DocumentsPage', () => {
   });
 
   it('应该显示文件大小', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -126,11 +116,11 @@ describe('DocumentsPage', () => {
 describe('DocumentsPage 文档操作', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: mockDocuments, total: 3 },
+      data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
   });
 
@@ -140,7 +130,7 @@ describe('DocumentsPage 文档操作', () => {
       message: 'success',
     });
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -155,7 +145,7 @@ describe('DocumentsPage 文档操作', () => {
       message: 'success',
     });
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('常见问题.txt')).toBeInTheDocument();
@@ -176,7 +166,7 @@ describe('DocumentsPage 文档操作', () => {
       },
     });
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -187,11 +177,11 @@ describe('DocumentsPage 文档操作', () => {
 describe('DocumentsPage 文件上传', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: [], total: 0 },
+      data: { documents: [], collections: [], total_collections: 0 },
     });
   });
 
@@ -201,7 +191,7 @@ describe('DocumentsPage 文件上传', () => {
       data: { document_id: 'doc-new', name: '新文档.pdf' },
     });
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传/i })).toBeInTheDocument();
@@ -209,7 +199,7 @@ describe('DocumentsPage 文件上传', () => {
   });
 
   it('应该验证文件类型', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传/i })).toBeInTheDocument();
@@ -219,7 +209,7 @@ describe('DocumentsPage 文件上传', () => {
   });
 
   it('应该验证文件大小', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传/i })).toBeInTheDocument();
@@ -232,24 +222,26 @@ describe('DocumentsPage 文件上传', () => {
 describe('DocumentsPage 搜索和筛选', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: mockDocuments, total: 3 },
+      data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
   });
 
-  it('应该显示搜索框', async () => {
-    renderWithProviders(<DocumentsPage />);
+  it('应该显示集合筛选器', async () => {
+    render(<DocumentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/搜索/i)).toBeInTheDocument();
+      // 组件使用 Select 进行集合筛选，而不是搜索框
+      const selects = document.querySelectorAll('.ant-select');
+      expect(selects.length).toBeGreaterThan(0);
     });
   });
 
   it('应该能够按状态筛选', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -259,7 +251,7 @@ describe('DocumentsPage 搜索和筛选', () => {
   });
 
   it('应该能够按文件类型筛选', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('产品手册.pdf')).toBeInTheDocument();
@@ -272,16 +264,16 @@ describe('DocumentsPage 搜索和筛选', () => {
 describe('DocumentsPage 空状态', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: [], total: 0 },
+      data: { documents: [], collections: [], total_collections: 0 },
     });
   });
 
   it('应该显示空状态提示', async () => {
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       // 应该显示空状态或引导上传
@@ -293,29 +285,29 @@ describe('DocumentsPage 空状态', () => {
 describe('DocumentsPage 错误处理', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
   });
 
   it('应该显示加载失败提示', async () => {
     vi.mocked(bisheng.default.getDocuments).mockRejectedValue(new Error('加载失败'));
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
-    // 错误状态应该处理
+    // 错误状态应该处理 - 验证页面仍然渲染
     await waitFor(() => {
-      expect(screen.getByText(/文档/i)).toBeInTheDocument();
+      expect(screen.getByText('文档管理')).toBeInTheDocument();
     });
   });
 
   it('应该显示上传失败提示', async () => {
     vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
       code: 0,
-      data: { documents: [], total: 0 },
+      data: { documents: [], collections: [], total_collections: 0 },
     });
 
     vi.mocked(bisheng.default.uploadDocument).mockRejectedValue(new Error('上传失败'));
 
-    renderWithProviders(<DocumentsPage />);
+    render(<DocumentsPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传/i })).toBeInTheDocument();

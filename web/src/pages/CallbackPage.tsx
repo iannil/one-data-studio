@@ -8,10 +8,10 @@
  * - 重定向到原页面
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Result, Spin, Alert } from 'antd';
-import { handleCallback, isAuthenticated } from '../services/auth';
+import { Result, Spin } from 'antd';
+import { handleCallback } from '../services/auth';
 
 function CallbackPage() {
   const navigate = useNavigate();

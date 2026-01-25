@@ -8,10 +8,27 @@
 .PHONY: web-build web-install web-logs web-forward web-dev
 .PHONY: phase2 phase2-all
 .PHONY: init-db test-e2e
+# 开发环境运维脚本
+.PHONY: dev-start dev-stop dev-status dev-logs dev-db dev-clean dev-reset dev-shell dev-check
+.PHONY: dev up down
 
 # 默认目标
 help:
 	@echo "ONE-DATA-STUDIO 部署命令:"
+	@echo ""
+	@echo "开发环境（推荐）:"
+	@echo "  make dev              - 启动开发环境（等同于 dev-start）"
+	@echo "  make up               - 启动开发环境（别名）"
+	@echo "  make down             - 停止开发环境（别名）"
+	@echo "  make dev-start        - 启动开发环境服务"
+	@echo "  make dev-stop         - 停止开发环境服务"
+	@echo "  make dev-status       - 查看服务状态"
+	@echo "  make dev-logs         - 查看服务日志"
+	@echo "  make dev-db           - 数据库操作"
+	@echo "  make dev-clean        - 清理临时文件和资源"
+	@echo "  make dev-reset        - 重置开发环境"
+	@echo "  make dev-shell        - 进入容器 Shell"
+	@echo "  make dev-check        - 健康检查"
 	@echo ""
 	@echo "环境准备:"
 	@echo "  make kind-cluster     - 创建 Kind 本地 K8s 集群"
@@ -304,3 +321,48 @@ phase2-all: install phase2
 
 # 重新部署
 redeploy: clean install
+
+# ============================================
+# 开发环境运维脚本
+# ============================================
+
+# 启动开发环境
+dev-start:
+	@bash scripts/dev/dev-start.sh $(ARGS)
+
+# 停止开发环境
+dev-stop:
+	@bash scripts/dev/dev-stop.sh $(ARGS)
+
+# 查看服务状态
+dev-status:
+	@bash scripts/dev/dev-status.sh $(ARGS)
+
+# 查看日志
+dev-logs:
+	@bash scripts/dev/dev-logs.sh $(ARGS)
+
+# 数据库操作
+dev-db:
+	@bash scripts/dev/dev-db.sh $(ARGS)
+
+# 清理操作
+dev-clean:
+	@bash scripts/dev/dev-clean.sh $(ARGS)
+
+# 重置环境
+dev-reset:
+	@bash scripts/dev/dev-reset.sh $(ARGS)
+
+# 进入容器
+dev-shell:
+	@bash scripts/dev/dev-shell.sh $(ARGS)
+
+# 健康检查
+dev-check:
+	@bash scripts/dev/dev-check.sh $(ARGS)
+
+# 快捷别名
+dev: dev-start
+up: dev-start
+down: dev-stop

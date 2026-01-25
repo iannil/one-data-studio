@@ -2,7 +2,6 @@
  * 输出节点组件
  */
 
-import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UpOutlined } from '@ant-design/icons';
 

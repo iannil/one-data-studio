@@ -25,7 +25,6 @@ import {
   StopOutlined,
   DeleteOutlined,
   EyeOutlined,
-  PlayCircleOutlined,
   ThunderboltOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';

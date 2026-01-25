@@ -12,30 +12,18 @@ import {
   message,
   Drawer,
   Tag,
-  Tree,
   Divider,
   Alert,
-  Spin,
   Table,
   Tabs,
   Descriptions,
   Progress,
-  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
-  SaveOutlined,
   PlayCircleOutlined,
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
   FolderOpenOutlined,
-  FileTextOutlined,
-  NodeIndexOutlined,
-  ApartmentOutlined,
-  SettingOutlined,
   ClockCircleOutlined,
-  CheckCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -43,7 +31,6 @@ import dayjs from 'dayjs';
 import cube from '@/services/cube';
 import type {
   Pipeline,
-  PipelineTemplate,
   CreatePipelineRequest,
   PipelineExecution,
   PipelineNode,
@@ -106,31 +93,6 @@ function PipelinesPage() {
     },
     onError: () => {
       message.error('Pipeline 创建失败');
-    },
-  });
-
-  const executeMutation = useMutation({
-    mutationFn: ({ pipelineId, variables }: { pipelineId: string; variables?: Record<string, unknown> }) =>
-      cube.executePipeline(pipelineId, variables),
-    onSuccess: () => {
-      message.success('Pipeline 执行已启动');
-      setIsExecutionDrawerOpen(true);
-      queryClient.invalidateQueries({ queryKey: ['pipeline-executions'] });
-    },
-    onError: () => {
-      message.error('Pipeline 执行失败');
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: cube.deletePipeline,
-    onSuccess: () => {
-      message.success('Pipeline 删除成功');
-      setIsDetailDrawerOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-    },
-    onError: () => {
-      message.error('Pipeline 删除失败');
     },
   });
 

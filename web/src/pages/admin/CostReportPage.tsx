@@ -4,7 +4,7 @@
  * Rewritten with Ant Design components
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Card,
   Table,
@@ -14,13 +14,11 @@ import {
   Select,
   Row,
   Col,
-  Statistic,
   Spin,
   Alert,
   Tabs,
   Typography,
   Progress,
-  DatePicker,
 } from 'antd';
 import {
   DollarOutlined,
@@ -37,7 +35,6 @@ import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 
 // Types
 interface CostSummary {

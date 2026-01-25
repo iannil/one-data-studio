@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock reactflow
@@ -99,7 +99,7 @@ describe('FlowCanvas', () => {
       const selectedNodes = [{ id: '1' }];
       const event = new KeyboardEvent('keydown', { key: 'Delete' });
 
-      let deletePressed = event.key === 'Delete';
+      const deletePressed = event.key === 'Delete';
 
       expect(deletePressed).toBe(true);
     });

@@ -5,9 +5,9 @@
  * 用于配置选中节点的属性
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Node } from 'reactflow';
-import { Form, Input, InputNumber, Select, Slider, Switch, Button, Space, Tag } from 'antd';
+import { Form, Input, InputNumber, Select, Slider, Switch, Button } from 'antd';
 
 const { TextArea } = Input;
 const { Option } = Select;

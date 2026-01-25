@@ -10,11 +10,11 @@ import {
   Drawer,
   Tag,
   Statistic,
-  Row,
-  Col,
   Tooltip,
   Popconfirm,
   Splitter,
+  Modal,
+  Form,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -35,14 +35,12 @@ import { vscodeDarkInit } from '@uiw/codemirror-theme-vscode';
 import dayjs from 'dayjs';
 import cube from '@/services/cube';
 import type {
-  SqlDatabaseConnection,
   QueryResult,
   QueryHistoryItem,
   SavedQuery,
 } from '@/services/cube';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 function SqlLabPage() {
   const queryClient = useQueryClient();
@@ -420,7 +418,7 @@ function SqlLabPage() {
       </div>
 
       <Splitter style={{ flex: 1 }}>
-        <Splitter.Panel min="20%" defaultSize="25%" maxSize="40%">
+        <Splitter.Panel size="25%" min="20%" max="40%">
           <Card
             title="数据表"
             size="small"

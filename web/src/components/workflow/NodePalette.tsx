@@ -142,14 +142,14 @@ export default function NodePalette({ onNodeAdd }: NodePaletteProps) {
       }
 
       // 默认行为：在画布中心添加节点
-      const { viewport, project } = reactFlowInstance;
-      const centerX = (viewport.width || 800) / 2 - viewport.x;
-      const centerY = (viewport.height || 600) / 2 - viewport.y;
+      const viewport = reactFlowInstance.getViewport();
+      const centerX = 400 - viewport.x;
+      const centerY = 300 - viewport.y;
 
       const newNode = {
         id: `${nodeType}-${Date.now()}`,
         type: nodeType,
-        position: project({ x: centerX, y: centerY }),
+        position: reactFlowInstance.screenToFlowPosition({ x: centerX, y: centerY }),
         data: {
           label: nodeTypes.find((t) => t.type === nodeType)?.label || nodeType,
           config,

@@ -15,7 +15,6 @@ import {
   Statistic,
   Empty,
   Spin,
-  Alert,
   Checkbox,
 } from 'antd';
 import {
@@ -33,13 +32,13 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import alldata, { type TableInfo } from '@/services/alldata';
+import alldata from '@/services/alldata';
 import { text2Sql } from '@/services/bisheng';
 import type { Text2SqlResponse } from '@/services/bisheng';
 import { logError } from '@/services/logger';
 
 const { TextArea } = Input;
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 interface QueryHistory {

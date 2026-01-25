@@ -38,10 +38,9 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleStatistics, type ScheduleRetryConfig } from '@/services/bisheng';
+import bisheng, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleRetryConfig } from '@/services/bisheng';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 // 获取调度类型标签
 const getScheduleTypeTag = (type: WorkflowSchedule['schedule_type']) => {

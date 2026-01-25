@@ -15,6 +15,7 @@ import {
   Alert,
   Input,
   Modal,
+  message,
 } from 'antd';
 import {
   DownloadOutlined,
@@ -263,7 +264,7 @@ function AuditPage() {
           <Card>
             <Statistic
               title="失败操作"
-              value={stats?.total_actions - Math.round((stats?.success_rate || 0) / 100 * stats?.total_actions) || 0}
+              value={(stats?.total_actions ?? 0) - Math.round((stats?.success_rate ?? 0) / 100 * (stats?.total_actions ?? 0))}
               valueStyle={{ color: '#cf1322' }}
               prefix={<CloseCircleOutlined />}
             />

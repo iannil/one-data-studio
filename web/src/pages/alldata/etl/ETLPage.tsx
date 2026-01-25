@@ -23,7 +23,6 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   DeleteOutlined,
-  EditOutlined,
   EyeOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -48,7 +47,6 @@ function ETLPage() {
   const [typeFilter, setTypeFilter] = useState<string>('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ETLTask | null>(null);
@@ -85,21 +83,6 @@ function ETLPage() {
     },
     onError: () => {
       message.error('ETL 任务创建失败');
-    },
-  });
-
-  // 更新 ETL 任务
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof alldata.updateETLTask>[1] }) =>
-      alldata.updateETLTask(id, data),
-    onSuccess: () => {
-      message.success('ETL 任务更新成功');
-      setIsEditModalOpen(false);
-      form.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['etl-tasks'] });
-    },
-    onError: () => {
-      message.error('ETL 任务更新失败');
     },
   });
 

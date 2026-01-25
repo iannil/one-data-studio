@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock fetch
@@ -79,8 +79,8 @@ describe('VersionHistory Component', () => {
   it('should render loading state initially', () => {
     render(<VersionHistory workflowId="wf-123" />);
 
-    // MUI CircularProgress should be rendered during loading
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Ant Design Spin component should be rendered during loading
+    expect(document.querySelector('.ant-spin')).toBeInTheDocument();
   });
 
   it('should render version history after loading', async () => {
@@ -134,9 +134,9 @@ describe('VersionHistory Component', () => {
       expect(screen.getByText('v2')).toBeInTheDocument();
     });
 
-    // Current version should have primary color chip
-    const v2Chip = screen.getByText('v2');
-    expect(v2Chip.closest('.MuiChip-colorPrimary')).toBeInTheDocument();
+    // Current version should have blue color tag (Ant Design Tag)
+    const v2Tag = screen.getByText('v2').closest('.ant-tag');
+    expect(v2Tag).toHaveClass('ant-tag-blue');
   });
 
   it('should fetch version history on mount', async () => {
@@ -153,7 +153,7 @@ describe('VersionHistory Component', () => {
     render(<VersionHistory workflowId="wf-123" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 

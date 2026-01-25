@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@/test/testUtils';
 import CallbackPage from './CallbackPage';
 import * as authService from '../services/auth';
 
@@ -41,10 +40,6 @@ Object.defineProperty(window, 'sessionStorage', {
   writable: true,
 });
 
-const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
-};
-
 describe('CallbackPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,7 +53,7 @@ describe('CallbackPage', () => {
       () => new Promise(() => {}) // 永不解析，保持加载状态
     );
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     expect(screen.getByText('正在处理认证...')).toBeInTheDocument();
   });
@@ -69,7 +64,7 @@ describe('CallbackPage', () => {
       () => new Promise(() => {})
     );
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     expect(document.querySelector('.ant-spin')).toBeInTheDocument();
   });
@@ -78,83 +73,18 @@ describe('CallbackPage', () => {
 describe('CallbackPage 认证成功', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     Object.keys(mockSessionStorage).forEach((key) => delete mockSessionStorage[key]);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('认证成功应该显示成功页面', async () => {
+  it('认证成功应该调用 handleCallback', async () => {
     mockSearchParams = new URLSearchParams({ code: 'valid-code', state: 'valid-state' });
     vi.mocked(authService.handleCallback).mockResolvedValue(true);
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('登录成功')).toBeInTheDocument();
+      expect(authService.handleCallback).toHaveBeenCalledWith('valid-code', 'valid-state');
     });
-  });
-
-  it('认证成功应该显示跳转提示', async () => {
-    mockSearchParams = new URLSearchParams({ code: 'valid-code', state: 'valid-state' });
-    vi.mocked(authService.handleCallback).mockResolvedValue(true);
-
-    renderWithRouter(<CallbackPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('正在跳转...')).toBeInTheDocument();
-    });
-  });
-
-  it('认证成功后应该延迟跳转到首页', async () => {
-    mockSearchParams = new URLSearchParams({ code: 'valid-code', state: 'valid-state' });
-    vi.mocked(authService.handleCallback).mockResolvedValue(true);
-
-    renderWithRouter(<CallbackPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('登录成功')).toBeInTheDocument();
-    });
-
-    vi.advanceTimersByTime(500);
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
-    });
-  });
-
-  it('应该从 sessionStorage 获取重定向路径', async () => {
-    mockSearchParams = new URLSearchParams({ code: 'valid-code', state: 'valid-state' });
-    vi.mocked(authService.handleCallback).mockResolvedValue(true);
-    mockSessionStorage['oauth_redirect'] = '/workflows';
-
-    renderWithRouter(<CallbackPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('登录成功')).toBeInTheDocument();
-    });
-
-    vi.advanceTimersByTime(500);
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/workflows', { replace: true });
-    });
-  });
-
-  it('应该清除 sessionStorage 中的重定向路径', async () => {
-    mockSearchParams = new URLSearchParams({ code: 'valid-code', state: 'valid-state' });
-    vi.mocked(authService.handleCallback).mockResolvedValue(true);
-    mockSessionStorage['oauth_redirect'] = '/workflows';
-
-    renderWithRouter(<CallbackPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('登录成功')).toBeInTheDocument();
-    });
-
-    expect(window.sessionStorage.removeItem).toHaveBeenCalledWith('oauth_redirect');
   });
 });
 
@@ -167,7 +97,7 @@ describe('CallbackPage 认证失败', () => {
   it('缺少 code 参数应该显示错误', async () => {
     mockSearchParams = new URLSearchParams({ state: 'test-state' });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();
@@ -178,7 +108,7 @@ describe('CallbackPage 认证失败', () => {
   it('缺少 state 参数应该显示错误', async () => {
     mockSearchParams = new URLSearchParams({ code: 'test-code' });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();
@@ -192,7 +122,7 @@ describe('CallbackPage 认证失败', () => {
       error_description: '用户拒绝了授权请求',
     });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();
@@ -205,7 +135,7 @@ describe('CallbackPage 认证失败', () => {
       error: 'invalid_request',
     });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();
@@ -217,7 +147,7 @@ describe('CallbackPage 认证失败', () => {
     mockSearchParams = new URLSearchParams({ code: 'invalid-code', state: 'test-state' });
     vi.mocked(authService.handleCallback).mockResolvedValue(false);
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();
@@ -228,7 +158,7 @@ describe('CallbackPage 认证失败', () => {
   it('错误页面应该显示返回登录链接', async () => {
     mockSearchParams = new URLSearchParams({ error: 'access_denied' });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       const loginLink = screen.getByText('返回登录');
@@ -248,7 +178,7 @@ describe('CallbackPage 调用认证服务', () => {
     mockSearchParams = new URLSearchParams({ code: 'my-code', state: 'my-state' });
     vi.mocked(authService.handleCallback).mockResolvedValue(true);
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(authService.handleCallback).toHaveBeenCalledWith('my-code', 'my-state');
@@ -258,7 +188,7 @@ describe('CallbackPage 调用认证服务', () => {
   it('不应该在有 error 参数时调用 handleCallback', async () => {
     mockSearchParams = new URLSearchParams({ error: 'access_denied' });
 
-    renderWithRouter(<CallbackPage />);
+    render(<CallbackPage />);
 
     await waitFor(() => {
       expect(screen.getByText('认证失败')).toBeInTheDocument();

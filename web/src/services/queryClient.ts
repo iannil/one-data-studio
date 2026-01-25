@@ -11,7 +11,7 @@
  * 4. 错误恢复 - 自动重试和错误边界
  */
 
-import { QueryClient, MutationCache, QueryCache, Query } from '@tanstack/react-query';
+import { QueryClient, MutationCache, QueryCache } from '@tanstack/react-query';
 import { message } from 'antd';
 import { logError } from './logger';
 
@@ -79,8 +79,9 @@ export const CacheTime = {
 
 /**
  * 按查询类型配置的缓存策略
+ * 注：该配置用于后续扩展，目前通过默认配置生效
  */
-const CacheStrategies: Record<string, { staleTime: number; gcTime: number }> = {
+export const CacheStrategies: Record<string, { staleTime: number; gcTime: number }> = {
   // 实时数据 - 需要频繁更新
   'bisheng.executions': { staleTime: CacheTime.REALTIME, gcTime: CacheTime.SHORT },
 
@@ -100,37 +101,6 @@ const CacheStrategies: Record<string, { staleTime: number; gcTime: number }> = {
   'auth.permissions': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
   'bisheng.tools': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
 };
-
-/**
- * 根据查询键获取缓存策略
- */
-function getCacheStrategyForKey(queryKey: readonly unknown[]): { staleTime: number; gcTime: number } {
-  if (!queryKey || queryKey.length === 0) {
-    return { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG };
-  }
-
-  const prefix = queryKey.slice(0, 2).join('.');
-
-  // 精确匹配策略
-  if (CacheStrategies[prefix]) {
-    return CacheStrategies[prefix];
-  }
-
-  // 按顶层分类匹配
-  const topLevel = queryKey[0] as string;
-  switch (topLevel) {
-    case 'cube':
-      return { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE };
-    case 'auth':
-      return { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE };
-    case 'alldata':
-      return { staleTime: CacheTime.LONG, gcTime: CacheTime.STATIC };
-    case 'bisheng':
-      return { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG };
-    default:
-      return { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG };
-  }
-}
 
 /**
  * 创建查询缓存实例
@@ -160,7 +130,7 @@ function createQueryCache() {
  * Mutation 到 Query 的失效映射
  * 定义 mutation 成功后应该失效的相关查询
  */
-const MutationInvalidationMap: Record<string, readonly unknown[][]> = {
+const MutationInvalidationMap: Record<string, (readonly unknown[])[]> = {
   // 数据集操作 -> 失效数据集列表
   'dataset.create': [QueryKeys.datasets()],
   'dataset.update': [QueryKeys.datasets()],

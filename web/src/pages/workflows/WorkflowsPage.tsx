@@ -25,7 +25,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import bisheng from '@/services/bisheng';
-import type { Workflow, CreateWorkflowRequest } from '@/services/bisheng';
+import type { Workflow } from '@/services/bisheng';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -62,7 +62,7 @@ function WorkflowsPage() {
 
   // 启动工作流
   const startMutation = useMutation({
-    mutationFn: bisheng.startWorkflow,
+    mutationFn: (workflowId: string) => bisheng.startWorkflow(workflowId),
     onSuccess: () => {
       message.success('工作流已启动');
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -74,7 +74,7 @@ function WorkflowsPage() {
 
   // 停止工作流
   const stopMutation = useMutation({
-    mutationFn: bisheng.stopWorkflow,
+    mutationFn: (workflowId: string) => bisheng.stopWorkflow(workflowId, { execution_id: '' }),
     onSuccess: () => {
       message.success('工作流已停止');
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -304,7 +304,7 @@ function WorkflowsPage() {
             <Popconfirm
               key="stop"
               title="确定要停止这个工作流吗？"
-              onConfirm={() => stopMutation.mutate(selectedWorkflow?.workflow_id!)}
+              onConfirm={() => selectedWorkflow?.workflow_id && stopMutation.mutate(selectedWorkflow.workflow_id)}
               okText="确定"
               cancelText="取消"
             >
@@ -316,7 +316,7 @@ function WorkflowsPage() {
             <Popconfirm
               key="start"
               title="确定要启动这个工作流吗？"
-              onConfirm={() => startMutation.mutate(selectedWorkflow?.workflow_id!)}
+              onConfirm={() => selectedWorkflow?.workflow_id && startMutation.mutate(selectedWorkflow.workflow_id)}
               okText="确定"
               cancelText="取消"
             >
@@ -328,7 +328,7 @@ function WorkflowsPage() {
           <Popconfirm
             key="delete"
             title="确定要删除这个工作流吗？"
-            onConfirm={() => deleteMutation.mutate(selectedWorkflow?.workflow_id!)}
+            onConfirm={() => selectedWorkflow?.workflow_id && deleteMutation.mutate(selectedWorkflow.workflow_id)}
             okText="确定"
             cancelText="取消"
           >

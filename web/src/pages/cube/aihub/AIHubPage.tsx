@@ -14,7 +14,6 @@ import {
   Drawer,
   Progress,
   message,
-  Table,
   Spin,
   InputNumber,
   Tooltip,

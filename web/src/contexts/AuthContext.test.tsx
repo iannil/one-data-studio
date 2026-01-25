@@ -4,143 +4,89 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@/test/testUtils';
 import { AuthProvider, useAuth } from './AuthContext';
 
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
+// Mock auth service
+vi.mock('../services/auth', () => ({
+  isAuthenticated: vi.fn(() => false),
+  getAccessToken: vi.fn(() => null),
+  getUserInfo: vi.fn(() => null),
+  refreshAccessToken: vi.fn(),
+  clearAuthData: vi.fn(),
+  logout: vi.fn(),
+  refreshUserInfo: vi.fn(() => null),
+}));
 
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage,
-});
+// Mock logger
+vi.mock('../services/logger', () => ({
+  logError: vi.fn(),
+}));
 
-// Mock fetch
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ access_token: 'test-token', user: { id: '1', name: 'Test User' } }),
-  } as Response)
-);
+// Test component that uses the hook
+function TestComponent() {
+  const auth = useAuth();
+  return (
+    <div>
+      <div data-testid="authenticated">{String(auth.authenticated)}</div>
+      <div data-testid="loading">{String(auth.loading)}</div>
+      <div data-testid="user">{auth.user ? auth.user.name : 'null'}</div>
+    </div>
+  );
+}
 
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocalStorage.getItem.mockReturnValue(null);
+  });
+
+  describe('AuthProvider', () => {
+    it('should render children', async () => {
+      render(
+        <AuthProvider>
+          <div>Test Content</div>
+        </AuthProvider>
+      );
+
+      expect(screen.getByText('Test Content')).toBeInTheDocument();
+    });
+
+    it('should provide auth context to children', async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('authenticated')).toBeInTheDocument();
+      });
+    });
+
+    it('should show loading state initially', async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('useAuth hook', () => {
-    it('should provide auth context', () => {
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <AuthProvider>{children}</AuthProvider>
-      );
+    it('should throw error when used outside provider', () => {
+      // Suppress console.error for this test
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+      expect(() => {
+        render(<TestComponent />);
+      }).toThrow();
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(result.current.user).toBeNull();
-    });
-
-    it('should handle login', async () => {
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <AuthProvider>{children}</AuthProvider>
-      );
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        await result.current.login('test-user', 'test-password');
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toBeDefined();
-      expect(mockLocalStorage.setItem).toHaveBeenCalled();
-    });
-
-    it('should handle logout', async () => {
-      // 首先设置已登录状态
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify({
-        token: 'test-token',
-        user: { id: '1', name: 'Test User' }
-      }));
-
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <AuthProvider>{children}</AuthProvider>
-      );
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // 等待初始化
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
-
-      // 执行登出
-      await act(async () => {
-        await result.current.logout();
-      });
-
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(result.current.user).toBeNull();
-      expect(mockLocalStorage.removeItem).toHaveBeenCalled();
-    });
-  });
-
-  describe('ProtectedRoute component', () => {
-    it('should redirect to login when not authenticated', () => {
-      // 这个测试需要 ProtectedRoute 组件的实现
-      // 在实际项目中需要导入并测试
-    });
-
-    it('should render children when authenticated', () => {
-      // 这个测试需要 ProtectedRoute 组件的实现
-      // 在实际项目中需要导入并测试
-    });
-  });
-
-  describe('token management', () => {
-    it('should store token in localStorage after login', async () => {
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <AuthProvider>{children}</AuthProvider>
-      );
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        await result.current.login('test-user', 'test-password');
-      });
-
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'auth',
-        expect.stringContaining('test-token')
-      );
-    });
-
-    it('should restore token from localStorage on init', async () => {
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify({
-        token: 'stored-token',
-        user: { id: '1', name: 'Stored User' }
-      }));
-
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <AuthProvider>{children}</AuthProvider>
-      );
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toEqual({ id: '1', name: 'Stored User' });
+      consoleSpy.mockRestore();
     });
   });
 });

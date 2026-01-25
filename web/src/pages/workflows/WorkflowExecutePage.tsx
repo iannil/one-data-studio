@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -37,7 +37,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import bisheng, { type WorkflowExecution, type ExecutionLog, type HumanTask } from '@/services/bisheng';
+import bisheng, { type WorkflowExecution, type HumanTask } from '@/services/bisheng';
 import WorkflowLogViewer from '@/components/WorkflowLogViewer';
 // import './WorkflowsPage.less';
 
@@ -88,9 +88,10 @@ function WorkflowExecutePage() {
     queryKey: ['workflowExecutions', workflowId],
     queryFn: () => bisheng.getWorkflowExecutions(workflowId!),
     enabled: !!workflowId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // 如果有运行中的执行，每2秒轮询一次
-      const hasRunning = data?.data?.executions?.some(
+      const queryData = query.state.data as any;
+      const hasRunning = queryData?.data?.executions?.some(
         (e: WorkflowExecution) => e.status === 'running' || e.status === 'pending' || e.status === 'waiting_human'
       );
       return hasRunning ? 2000 : false;
@@ -102,9 +103,10 @@ function WorkflowExecutePage() {
     queryKey: ['executionLogs', executionId],
     queryFn: () => bisheng.getExecutionLogs(executionId!),
     enabled: !!executionId && activeTab === 'logs',
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // 如果执行仍在运行，每2秒轮询日志
-      const currentExecution = executionsData?.data?.executions?.find(
+      const queryData = query.state.data as any;
+      const currentExecution = queryData?.data?.executions?.find(
         (e: WorkflowExecution) => e.id === executionId
       );
       return currentExecution?.status === 'running' || currentExecution?.status === 'waiting_human' ? 2000 : false;
@@ -114,7 +116,7 @@ function WorkflowExecutePage() {
   // 获取待处理的人工任务
   const { data: pendingTasksData, refetch: refetchPendingTasks } = useQuery({
     queryKey: ['pendingHumanTasks', workflowId],
-    queryFn: () => bisheng.getPendingHumanTasks({ workflow_id: workflowId }),
+    queryFn: () => bisheng.getPendingHumanTasks({ execution_id: workflowId }),
     enabled: !!workflowId && activeTab === 'human-tasks',
   });
 
@@ -134,6 +136,7 @@ function WorkflowExecutePage() {
       input_data?: Record<string, unknown>;
     }) =>
       bisheng.submitHumanTask(data.taskId, {
+        approved: data.action === 'approve',
         action: data.action,
         comment: data.comment,
         input_data: data.input_data,
@@ -209,7 +212,7 @@ function WorkflowExecutePage() {
     try {
       const formValues = humanTaskForm.getFieldsValue();
       submitHumanTaskMutation.mutate({
-        taskId: currentHumanTask.human_task_id,
+        taskId: currentHumanTask.human_task_id ?? '',
         action,
         comment: humanTaskComment || undefined,
         input_data: { ...humanTaskInputData, ...formValues },
@@ -273,14 +276,15 @@ function WorkflowExecutePage() {
     );
   };
 
-  const getStatusTag = (status: WorkflowExecution['status']) => {
-    const statusConfig = {
+  const getStatusTag = (status: string) => {
+    const statusConfig: Record<string, { color: string; icon: React.ReactNode; text: string }> = {
       pending: { color: 'orange', icon: <ClockCircleOutlined />, text: '等待中' },
       running: { color: 'blue', icon: <ReloadOutlined spin />, text: '运行中' },
       completed: { color: 'green', icon: <CheckCircleOutlined />, text: '已完成' },
       failed: { color: 'red', icon: <CloseCircleOutlined />, text: '失败' },
       stopped: { color: 'default', icon: <CloseCircleOutlined />, text: '已停止' },
       waiting_human: { color: 'purple', icon: <UserOutlined />, text: '等待人工审批' },
+      error: { color: 'red', icon: <CloseCircleOutlined />, text: '错误' },
     };
     const config = statusConfig[status] || { color: 'default', icon: null, text: status };
     return (
@@ -290,12 +294,13 @@ function WorkflowExecutePage() {
     );
   };
 
-  const getHumanTaskStatusTag = (status: HumanTask['status']) => {
-    const statusConfig = {
+  const getHumanTaskStatusTag = (status: string) => {
+    const statusConfig: Record<string, { color: string; text: string }> = {
       pending: { color: 'orange', text: '待处理' },
       approved: { color: 'green', text: '已通过' },
       rejected: { color: 'red', text: '已拒绝' },
       timed_out: { color: 'default', text: '已超时' },
+      timeout: { color: 'default', text: '已超时' },
       cancelled: { color: 'default', text: '已取消' },
     };
     const config = statusConfig[status] || { color: 'default', text: status };
@@ -303,7 +308,7 @@ function WorkflowExecutePage() {
   };
 
   const getApprovalTypeTag = (type: string) => {
-    const typeConfig = {
+    const typeConfig: Record<string, { color: string; text: string }> = {
       single: { color: 'blue', text: '单人审批' },
       multi: { color: 'purple', text: '多人审批' },
       any: { color: 'cyan', text: '任意一人' },
@@ -519,7 +524,7 @@ function WorkflowExecutePage() {
                       </a>
                     </td>
                     <td>{getStatusTag(execution.status)}</td>
-                    <td>{formatDuration(execution.duration_ms)}</td>
+                    <td>{formatDuration(execution.duration_ms ?? 0)}</td>
                     <td>{execution.started_at ? dayjs(execution.started_at).format('MM-DD HH:mm:ss') : '-'}</td>
                     <td>{execution.completed_at ? dayjs(execution.completed_at).format('MM-DD HH:mm:ss') : '-'}</td>
                     <td>
@@ -640,7 +645,7 @@ function WorkflowExecutePage() {
                     <tr key={task.human_task_id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '12px 8px' }}>{task.human_task_id}</td>
                       <td style={{ padding: '12px 8px' }}>{task.task_name}</td>
-                      <td style={{ padding: '12px 8px' }}>{getApprovalTypeTag(task.approval_type)}</td>
+                      <td style={{ padding: '12px 8px' }}>{getApprovalTypeTag(task.approval_type ?? '')}</td>
                       <td style={{ padding: '12px 8px' }}>
                         <Space size={4} wrap>
                           {task.assignees?.slice(0, 2).map((a) => (
@@ -648,7 +653,7 @@ function WorkflowExecutePage() {
                               {a}
                             </Tag>
                           ))}
-                          {task.assignees?.length > 2 && <Tag style={{ margin: 0 }}>+{task.assignees.length - 2}</Tag>}
+                          {(task.assignees?.length ?? 0) > 2 && <Tag style={{ margin: 0 }}>+{(task.assignees?.length ?? 0) - 2}</Tag>}
                         </Space>
                       </td>
                       <td style={{ padding: '12px 8px' }}>{getHumanTaskStatusTag(task.status)}</td>
@@ -804,7 +809,7 @@ function WorkflowExecutePage() {
         {currentExecution && currentExecution.status === 'completed' && (
           <Alert
             message="工作流执行完成"
-            description={`耗时: ${formatDuration(currentExecution.duration_ms)}`}
+            description={`耗时: ${formatDuration(currentExecution.duration_ms ?? 0)}`}
             type="success"
             showIcon
             closable
@@ -843,7 +848,7 @@ function WorkflowExecutePage() {
             <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
               <Descriptions.Item label="任务 ID">{currentHumanTask.human_task_id}</Descriptions.Item>
               <Descriptions.Item label="审批类型">
-                {getApprovalTypeTag(currentHumanTask.approval_type)}
+                {getApprovalTypeTag(currentHumanTask.approval_type ?? '')}
               </Descriptions.Item>
               <Descriptions.Item label="状态">
                 {getHumanTaskStatusTag(currentHumanTask.status)}
@@ -884,7 +889,7 @@ function WorkflowExecutePage() {
 
             {currentHumanTask.form_schema && (
               <Card size="small" title="表单填写" style={{ marginBottom: 16 }}>
-                {renderFormSchema(currentHumanTask.form_schema)}
+                {renderFormSchema(currentHumanTask.form_schema as any)}
               </Card>
             )}
 

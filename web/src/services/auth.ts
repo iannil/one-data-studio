@@ -10,7 +10,6 @@
  * - 自动 Token 刷新
  */
 
-import { apiClient } from './api';
 import { logError } from './logger';
 
 // ============= 类型定义 =============
@@ -235,39 +234,6 @@ export function refreshUserInfo(): UserInfo | null {
 }
 
 // ============= 认证流程 =============
-
-/**
- * 生成 PKCE code verifier 和 challenge
- */
-function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
-  // 生成随机 code_verifier
-  const codeVerifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  // 存储 code_verifier
-  sessionStorage.setItem('pkce_code_verifier', codeVerifier);
-
-  // 生成 code_challenge (SHA256)
-  async function generateChallenge(codeVerifier: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(codeVerifier);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return btoa(String.fromCharCode(...new Uint8Array(hash)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-  }
-
-  // 注意：由于是同步函数，这里简化处理
-  // 实际使用时应该使用 async 版本
-  const challenge = btoa(codeVerifier.substring(0, 43))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  return { codeVerifier, codeChallenge: challenge };
-}
 
 /**
  * 构建 Keycloak 登录 URL

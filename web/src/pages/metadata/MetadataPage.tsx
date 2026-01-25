@@ -21,7 +21,6 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { DataNode } from 'antd/es/tree';
 import alldata from '@/services/alldata';
-import type { ColumnInfo } from '@/services/alldata';
 
 const { Search } = Input;
 const { TextArea } = Input;
@@ -42,7 +41,7 @@ function MetadataPage() {
   });
 
   // 获取表列表
-  const { data: tablesData, isLoading: isLoadingTables } = useQuery({
+  const { data: tablesData } = useQuery({
     queryKey: ['tables', selectedDatabase],
     queryFn: () => alldata.getTables(selectedDatabase),
     enabled: !!selectedDatabase,
@@ -295,7 +294,7 @@ function MetadataPage() {
                     <Table
                       size="small"
                       dataSource={tableDetail.data.sample_data}
-                      rowKey={(r, i) => `sample-${i}`}
+                      rowKey={(_r, i) => `sample-${i}`}
                       pagination={false}
                       columns={tableDetail.data.columns.map((col) => ({
                         title: col.name,

@@ -27,7 +27,6 @@ import {
   DeleteOutlined,
   EyeOutlined,
   ExpandOutlined,
-  CompressOutlined,
   CloudServerOutlined,
   LineChartOutlined,
 } from '@ant-design/icons';

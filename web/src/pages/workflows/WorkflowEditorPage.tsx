@@ -27,7 +27,6 @@ import {
 import {
   SaveOutlined,
   PlayCircleOutlined,
-  StopOutlined,
   UndoOutlined,
   RedoOutlined,
   ZoomInOutlined,
@@ -48,9 +47,9 @@ import * as bishengService from '../../services/bisheng';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface WorkflowDefinition {
-  version: string;
-  nodes: any[];
-  edges: any[];
+  version?: string;
+  nodes: unknown[];
+  edges: unknown[];
 }
 
 // 历史记录项
@@ -208,8 +207,8 @@ function WorkflowEditorPage() {
               definition = wf.definition;
             }
 
-            const loadedNodes = definition.nodes || [];
-            const loadedEdges = definition.edges || [];
+            const loadedNodes = (definition.nodes || []) as Node[];
+            const loadedEdges = (definition.edges || []) as Edge[];
 
             setNodes(loadedNodes);
             setEdges(loadedEdges);
@@ -256,7 +255,7 @@ function WorkflowEditorPage() {
           name: workflowName || '未命名工作流',
           description: workflowDescription,
           type: 'custom',
-          definition: JSON.stringify(definition),
+          definition,
         });
         if (response.code === 0) {
           message.success('工作流创建成功');
@@ -265,12 +264,12 @@ function WorkflowEditorPage() {
         }
       } else {
         // 更新现有工作流
-        const response = await bishengService.updateWorkflow(workflowId, {
+        const response = await bishengService.updateWorkflow(workflowId ?? '', {
           name: workflowName || '未命名工作流',
           description: workflowDescription,
           type: 'custom',
-          definition: JSON.stringify(definition),
-        });
+          definition,
+        } as any);
         if (response.code === 0) {
           message.success('工作流更新成功');
           setHasChanges(false);
@@ -291,7 +290,7 @@ function WorkflowEditorPage() {
     }
 
     try {
-      const response = await bishengService.startWorkflow(workflowId, {
+      const response = await bishengService.startWorkflow(workflowId ?? '', {
         inputs: { query: '测试查询' },
       });
       if (response.code === 0) {

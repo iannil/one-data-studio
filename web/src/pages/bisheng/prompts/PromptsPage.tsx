@@ -22,12 +22,11 @@ import {
   EyeOutlined,
   PlayCircleOutlined,
   CopyOutlined,
-  BgColorsOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import bisheng from '@/services/bisheng';
-import type { PromptTemplate, CreatePromptTemplateRequest } from '@/services/bisheng';
+import type { PromptTemplate } from '@/services/bisheng';
 
 const { Option } = Select;
 const { TextArea } = Input;

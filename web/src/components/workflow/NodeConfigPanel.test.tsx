@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@/test/testUtils';
 
 describe('NodeConfigPanel', () => {
   describe('Node configuration', () => {

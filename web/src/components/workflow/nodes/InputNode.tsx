@@ -2,7 +2,6 @@
  * 输入节点组件
  */
 
-import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { DownOutlined } from '@ant-design/icons';
 

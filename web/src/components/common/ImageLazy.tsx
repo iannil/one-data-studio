@@ -164,9 +164,9 @@ export const ImageLazy: React.FC<ImageLazyProps> = ({
 /**
  * 响应式图片组件（支持多种分辨率）
  */
-interface ResponsiveImageProps extends Omit<ImageLazyProps, 'src'> {
+interface ResponsiveImageProps extends Omit<ImageLazyProps, 'src' | 'srcSet'> {
   /** 不同分辨率的图片源 */
-  srcSet: {
+  responsiveSrcSet: {
     /** 默认图片 */
     default: string;
     /** 1x 分辨率 */
@@ -179,17 +179,17 @@ interface ResponsiveImageProps extends Omit<ImageLazyProps, 'src'> {
 }
 
 export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
-  srcSet,
+  responsiveSrcSet,
   ...restProps
 }) => {
   const devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
 
   // 根据设备像素比选择图片
   const getSrcForDPR = (): string => {
-    if (devicePixelRatio >= 3 && srcSet['3x']) return srcSet['3x'];
-    if (devicePixelRatio >= 2 && srcSet['2x']) return srcSet['2x'];
-    if (devicePixelRatio >= 1 && srcSet['1x']) return srcSet['1x'];
-    return srcSet.default;
+    if (devicePixelRatio >= 3 && responsiveSrcSet['3x']) return responsiveSrcSet['3x'];
+    if (devicePixelRatio >= 2 && responsiveSrcSet['2x']) return responsiveSrcSet['2x'];
+    if (devicePixelRatio >= 1 && responsiveSrcSet['1x']) return responsiveSrcSet['1x'];
+    return responsiveSrcSet.default;
   };
 
   return <ImageLazy src={getSrcForDPR()} {...restProps} />;
@@ -199,19 +199,19 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
  * 渐进式图片加载组件
  * 先加载低质量图片，再加载高质量图片
  */
-interface ProgressiveImageProps extends Omit<ImageLazyProps, 'src' | 'placeholder'> {
+interface ProgressiveImageProps extends Omit<ImageLazyProps, 'src' | 'placeholder' | 'preview'> {
   /** 低质量图片（占位） */
-  preview: string;
+  previewSrc: string;
   /** 高质量图片 */
   full: string;
 }
 
 export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
-  preview,
+  previewSrc,
   full,
   ...restProps
 }) => {
-  const [src, setSrc] = useState(preview);
+  const [src, setSrc] = useState(previewSrc);
 
   useEffect(() => {
     const img = new Image();

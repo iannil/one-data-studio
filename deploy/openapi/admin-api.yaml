@@ -1,0 +1,1403 @@
+openapi: 3.0.3
+info:
+  title: ONE-DATA-STUDIO Admin API
+  description: |
+    管理平台服务 API
+
+    ## 功能概述
+
+    - 用户管理 (CRUD)
+    - 角色和权限管理
+    - 用户组管理
+    - 审计日志
+    - 系统设置
+    - 通知渠道管理
+    - 成本统计
+    - 平台统计概览
+
+    ## 认证方式
+
+    API 使用 Bearer Token 认证。请在请求头中包含:
+    ```
+    Authorization: Bearer your-access-token
+    ```
+  version: 1.0.0
+  contact:
+    name: ONE-DATA-STUDIO Team
+    email: support@one-data.example.com
+
+servers:
+  - url: http://localhost:8003
+    description: 开发环境
+  - url: https://api.example.com/admin
+    description: 生产环境
+
+tags:
+  - name: Health
+    description: 健康检查
+  - name: Users
+    description: 用户管理
+  - name: Roles
+    description: 角色管理
+  - name: Permissions
+    description: 权限管理
+  - name: Groups
+    description: 用户组管理
+  - name: Audit
+    description: 审计日志
+  - name: Settings
+    description: 系统设置
+  - name: Notifications
+    description: 通知管理
+  - name: Cost
+    description: 成本统计
+  - name: Stats
+    description: 平台统计
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: 健康检查
+      operationId: health
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ==================== 用户管理 ====================
+  /api/v1/users:
+    get:
+      tags: [Users]
+      summary: 获取用户列表
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, deleted]
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+
+    post:
+      tags: [Users]
+      summary: 创建用户
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: 请求参数错误
+        '409':
+          description: 用户名或邮箱已存在
+
+  /api/v1/users/{user_id}:
+    get:
+      tags: [Users]
+      summary: 获取用户详情
+      operationId: getUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: 用户不存在
+
+    put:
+      tags: [Users]
+      summary: 更新用户
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          description: 用户不存在
+
+    delete:
+      tags: [Users]
+      summary: 删除用户
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 用户不存在
+
+  /api/v1/users/{user_id}/reset-password:
+    post:
+      tags: [Users]
+      summary: 重置用户密码
+      operationId: resetUserPassword
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password:
+                  type: string
+                  description: 新密码，不提供则自动生成
+      responses:
+        '200':
+          description: 重置成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      new_password:
+                        type: string
+                        description: 自动生成的密码（仅当未提供时返回）
+
+  /api/v1/users/{user_id}/toggle-status:
+    post:
+      tags: [Users]
+      summary: 启用/禁用用户
+      operationId: toggleUserStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 切换成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+
+  # ==================== 角色管理 ====================
+  /api/v1/roles:
+    get:
+      tags: [Roles]
+      summary: 获取角色列表
+      operationId: listRoles
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: include_system
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+
+    post:
+      tags: [Roles]
+      summary: 创建角色
+      operationId: createRole
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: 创建成功
+        '409':
+          description: 角色名称已存在
+
+  /api/v1/roles/{role_id}:
+    get:
+      tags: [Roles]
+      summary: 获取角色详情
+      operationId: getRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+
+    put:
+      tags: [Roles]
+      summary: 更新角色
+      operationId: updateRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: 更新成功
+        '400':
+          description: 系统角色不可修改
+
+    delete:
+      tags: [Roles]
+      summary: 删除角色
+      operationId: deleteRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+        '400':
+          description: 系统角色不可删除或角色已分配给用户
+
+  # ==================== 权限管理 ====================
+  /api/v1/permissions:
+    get:
+      tags: [Permissions]
+      summary: 获取权限列表
+      operationId: listPermissions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionListResponse'
+
+  # ==================== 用户组管理 ====================
+  /api/v1/groups:
+    get:
+      tags: [Groups]
+      summary: 获取用户组列表
+      operationId: listGroups
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupListResponse'
+
+    post:
+      tags: [Groups]
+      summary: 创建用户组
+      operationId: createGroup
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: 创建成功
+        '409':
+          description: 用户组名称已存在
+
+  /api/v1/groups/{group_id}:
+    get:
+      tags: [Groups]
+      summary: 获取用户组详情
+      operationId: getGroup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: include_members
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+
+    put:
+      tags: [Groups]
+      summary: 更新用户组
+      operationId: updateGroup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags: [Groups]
+      summary: 删除用户组
+      operationId: deleteGroup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+        '400':
+          description: 用户组还有成员，无法删除
+
+  /api/v1/groups/{group_id}/members:
+    post:
+      tags: [Groups]
+      summary: 添加用户组成员
+      operationId: addGroupMembers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_ids]
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: 添加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      added_count:
+                        type: integer
+
+  /api/v1/groups/{group_id}/members/{user_id}:
+    delete:
+      tags: [Groups]
+      summary: 移除用户组成员
+      operationId: removeGroupMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 移除成功
+
+  # ==================== 审计日志 ====================
+  /api/v1/audit/logs:
+    get:
+      tags: [Audit]
+      summary: 获取审计日志列表
+      operationId: listAuditLogs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: resource_type
+          in: query
+          schema:
+            type: string
+        - name: resource_id
+          in: query
+          schema:
+            type: string
+        - name: success
+          in: query
+          schema:
+            type: boolean
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+
+  /api/v1/audit/logs/{audit_id}:
+    get:
+      tags: [Audit]
+      summary: 获取审计日志详情
+      operationId: getAuditLog
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: audit_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+
+  /api/v1/audit/export:
+    post:
+      tags: [Audit]
+      summary: 导出审计日志
+      operationId: exportAuditLogs
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+                format:
+                  type: string
+                  enum: [csv, json, excel]
+                  default: csv
+      responses:
+        '200':
+          description: 导出任务已创建
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      export_id:
+                        type: string
+                      download_url:
+                        type: string
+
+  /api/v1/admin/audit-logs/statistics:
+    get:
+      tags: [Audit]
+      summary: 获取审计日志统计
+      operationId: getAuditStatistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditStatisticsResponse'
+
+  # ==================== 系统设置 ====================
+  /api/v1/settings:
+    get:
+      tags: [Settings]
+      summary: 获取系统设置
+      operationId: getSystemSettings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettingsResponse'
+
+    put:
+      tags: [Settings]
+      summary: 更新系统设置
+      operationId: updateSystemSettings
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: 更新成功
+
+  /api/v1/settings/test-email:
+    post:
+      tags: [Settings]
+      summary: 测试邮件发送
+      operationId: testEmail
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: 发送成功
+
+  # ==================== 通知渠道 ====================
+  /api/v1/notification-channels:
+    get:
+      tags: [Notifications]
+      summary: 获取通知渠道列表
+      operationId: listNotificationChannels
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationChannelListResponse'
+
+    post:
+      tags: [Notifications]
+      summary: 创建通知渠道
+      operationId: createNotificationChannel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationChannelRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  # ==================== 成本统计 ====================
+  /api/v1/cost/summary:
+    get:
+      tags: [Cost]
+      summary: 获取成本概览
+      operationId: getCostSummary
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummaryResponse'
+
+  /api/v1/cost/usage:
+    get:
+      tags: [Cost]
+      summary: 获取用量明细
+      operationId: getCostUsage
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+
+  /api/v1/cost/trends:
+    get:
+      tags: [Cost]
+      summary: 获取成本趋势
+      operationId: getCostTrends
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 平台统计 ====================
+  /api/v1/stats/overview:
+    get:
+      tags: [Stats]
+      summary: 获取平台统计概览
+      operationId: getStatsOverview
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsOverviewResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: admin-api
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+
+    UserListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            total:
+              type: integer
+            page:
+              type: integer
+            page_size:
+              type: integer
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        display_name:
+          type: string
+        phone:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, deleted]
+        created_at:
+          type: string
+          format: date-time
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+
+    UserResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/User'
+
+    CreateUserRequest:
+      type: object
+      required: [username, email]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        display_name:
+          type: string
+        phone:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        role_ids:
+          type: array
+          items:
+            type: string
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        phone:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        avatar_url:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        role_ids:
+          type: array
+          items:
+            type: string
+
+    RoleListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            roles:
+              type: array
+              items:
+                $ref: '#/components/schemas/Role'
+            total:
+              type: integer
+
+    Role:
+      type: object
+      properties:
+        role_id:
+          type: string
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        role_type:
+          type: string
+          enum: [system, custom]
+        is_system:
+          type: boolean
+        priority:
+          type: integer
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+
+    RoleResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          $ref: '#/components/schemas/Role'
+
+    CreateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        parent_role_id:
+          type: string
+        permission_ids:
+          type: array
+          items:
+            type: string
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        is_active:
+          type: boolean
+        permission_ids:
+          type: array
+          items:
+            type: string
+
+    PermissionListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            permissions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Permission'
+
+    Permission:
+      type: object
+      properties:
+        permission_id:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+        resource:
+          type: string
+        operation:
+          type: string
+        category:
+          type: string
+        is_system:
+          type: boolean
+
+    GroupListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            groups:
+              type: array
+              items:
+                $ref: '#/components/schemas/Group'
+            total:
+              type: integer
+
+    Group:
+      type: object
+      properties:
+        group_id:
+          type: string
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        group_type:
+          type: string
+        member_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    GroupResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          $ref: '#/components/schemas/Group'
+
+    CreateGroupRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        group_type:
+          type: string
+          default: custom
+        parent_group_id:
+          type: string
+
+    UpdateGroupRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        description:
+          type: string
+        group_type:
+          type: string
+        parent_group_id:
+          type: string
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            logs:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLog'
+            total:
+              type: integer
+
+    AuditLog:
+      type: object
+      properties:
+        audit_id:
+          type: string
+        action:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: string
+        resource_name:
+          type: string
+        user_id:
+          type: string
+        username:
+          type: string
+        user_ip:
+          type: string
+        success:
+          type: boolean
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AuditLogResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          $ref: '#/components/schemas/AuditLog'
+
+    AuditStatisticsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            total_actions:
+              type: integer
+            success_rate:
+              type: number
+            action_distribution:
+              type: object
+            resource_distribution:
+              type: object
+            top_users:
+              type: array
+              items:
+                type: object
+            daily_stats:
+              type: array
+              items:
+                type: object
+
+    SystemSettingsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            site_name:
+              type: string
+            site_description:
+              type: string
+            timezone:
+              type: string
+            language:
+              type: string
+            email_enabled:
+              type: boolean
+            storage_type:
+              type: string
+            password_min_length:
+              type: integer
+            session_timeout_minutes:
+              type: integer
+            max_login_attempts:
+              type: integer
+            features_enabled:
+              type: object
+
+    NotificationChannelListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            channels:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationChannel'
+
+    NotificationChannel:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        name:
+          type: string
+        channel_type:
+          type: string
+          enum: [email, webhook, slack, dingtalk, wechat]
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateNotificationChannelRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [email, webhook, slack, dingtalk, wechat]
+        enabled:
+          type: boolean
+          default: true
+        config:
+          type: object
+
+    CostSummaryResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            total_cost:
+              type: number
+            compute_cost:
+              type: number
+            storage_cost:
+              type: number
+            network_cost:
+              type: number
+            api_cost:
+              type: number
+            period:
+              type: string
+            trend:
+              type: string
+
+    StatsOverviewResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        data:
+          type: object
+          properties:
+            users:
+              type: object
+              properties:
+                total:
+                  type: integer
+                active:
+                  type: integer
+            datasets:
+              type: object
+              properties:
+                total:
+                  type: integer
+                recent:
+                  type: integer
+            models:
+              type: object
+              properties:
+                total:
+                  type: integer
+                deployed:
+                  type: integer
+            workflows:
+              type: object
+              properties:
+                total:
+                  type: integer
+                running:
+                  type: integer
+            api_calls:
+              type: object
+              properties:
+                today:
+                  type: integer
+                total:
+                  type: integer
+            storage:
+              type: object
+              properties:
+                used_gb:
+                  type: number
+                total_gb:
+                  type: number

@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: ONE-DATA-STUDIO OpenAI Proxy API
+  description: |
+    OpenAI 兼容代理服务 API
+
+    ## 功能概述
+
+    - OpenAI 兼容的 Chat Completions API
+    - 流式输出支持 (SSE)
+    - Prompt 模板管理
+    - 使用统计
+
+    ## 认证方式
+
+    API 使用 Bearer Token 认证。请在请求头中包含:
+    ```
+    Authorization: Bearer your-access-token
+    ```
+
+    ## OpenAI 兼容性
+
+    本 API 完全兼容 OpenAI API 格式，支持以下端点：
+    - `/v1/models` - 获取可用模型列表
+    - `/v1/chat/completions` - 聊天补全
+
+  version: 1.0.0
+  contact:
+    name: ONE-DATA-STUDIO Team
+    email: support@one-data.example.com
+
+servers:
+  - url: http://localhost:8000
+    description: 开发环境
+  - url: https://api.example.com/openai
+    description: 生产环境
+
+tags:
+  - name: Health
+    description: 健康检查
+  - name: OpenAI Compatible
+    description: OpenAI 兼容接口
+  - name: Templates
+    description: Prompt 模板管理
+  - name: Stats
+    description: 使用统计
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: 健康检查
+      operationId: health
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ==================== OpenAI 兼容接口 ====================
+  /v1/models:
+    get:
+      tags: [OpenAI Compatible]
+      summary: 获取可用模型列表
+      description: 返回 OpenAI 兼容格式的模型列表
+      operationId: listModels
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+        '503':
+          description: LLM 服务未配置
+
+  /v1/chat/completions:
+    post:
+      tags: [OpenAI Compatible]
+      summary: 聊天补全
+      description: |
+        OpenAI 兼容的聊天补全接口。
+
+        支持以下特性：
+        - 流式输出 (stream=true)
+        - Prompt 模板 (prompt_template)
+        - 温度控制 (temperature)
+        - 最大 Token 数 (max_tokens)
+      operationId: chatCompletions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: 成功（非流式）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+        '200_stream':
+          description: 成功（流式）
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionChunk'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: LLM 服务未配置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== Prompt 模板管理 ====================
+  /api/v1/templates:
+    get:
+      tags: [Templates]
+      summary: 获取 Prompt 模板列表
+      operationId: listTemplates
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateListResponse'
+
+    post:
+      tags: [Templates]
+      summary: 创建 Prompt 模板
+      operationId: createTemplate
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          description: 请求参数错误
+
+  /api/v1/templates/{template_name}:
+    get:
+      tags: [Templates]
+      summary: 获取 Prompt 模板内容
+      operationId: getTemplate
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: template_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '404':
+          description: 模板不存在
+
+  # ==================== 使用统计 ====================
+  /api/v1/stats:
+    get:
+      tags: [Stats]
+      summary: 获取使用统计
+      operationId: getStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: openai-proxy
+        version:
+          type: string
+          example: 1.0.0
+        openai_configured:
+          type: boolean
+          description: OpenAI API 是否已配置
+        base_url:
+          type: string
+          description: OpenAI API 基础 URL
+
+    ModelListResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+          example: gpt-4o-mini
+        object:
+          type: string
+          example: model
+        created:
+          type: integer
+          example: 1234567890
+        owned_by:
+          type: string
+          example: openai
+
+    ChatCompletionRequest:
+      type: object
+      required: [messages]
+      properties:
+        model:
+          type: string
+          default: gpt-4o-mini
+          description: 模型名称
+          example: gpt-4o-mini
+        messages:
+          type: array
+          description: 消息列表
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        stream:
+          type: boolean
+          default: false
+          description: 是否启用流式输出
+        temperature:
+          type: number
+          default: 0.7
+          minimum: 0
+          maximum: 2
+          description: 温度参数，控制随机性
+        max_tokens:
+          type: integer
+          default: 2000
+          description: 最大生成 Token 数
+        prompt_template:
+          type: string
+          description: 使用的 Prompt 模板名称
+          example: rag
+        context:
+          type: object
+          description: 模板变量上下文
+          additionalProperties: true
+          example:
+            question: "什么是机器学习？"
+            context: "机器学习是人工智能的一个分支..."
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+          description: 消息角色
+        content:
+          type: string
+          description: 消息内容
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: chatcmpl-abc123
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+          example: 1234567890
+        model:
+          type: string
+          example: gpt-4o-mini
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                enum: [stop, length, content_filter]
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+
+    ChatCompletionChunk:
+      type: object
+      description: 流式响应的数据块 (SSE 格式)
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: chat.completion.chunk
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              delta:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+
+    TemplateListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            templates:
+              type: array
+              items:
+                type: string
+              example: ["default", "rag", "sql", "chat"]
+
+    TemplateResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            name:
+              type: string
+              example: rag
+            template:
+              type: string
+              example: "你是一个基于检索增强生成（RAG）的智能助手..."
+
+    CreateTemplateRequest:
+      type: object
+      required: [name, template]
+      properties:
+        name:
+          type: string
+          description: 模板名称
+          example: custom_template
+        template:
+          type: string
+          description: 模板内容，可包含变量占位符 {variable}
+          example: "你是一个{role}，请{task}。"
+
+    StatsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            total_requests:
+              type: integer
+              description: 总请求数
+              example: 12580
+            total_tokens:
+              type: integer
+              description: 总消耗 Token 数
+              example: 1250000
+            models:
+              type: array
+              description: 使用的模型列表
+              items:
+                type: string
+              example: ["gpt-4o-mini", "gpt-4o"]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              description: 错误消息
+            type:
+              type: string
+              description: 错误类型
+              enum: [authentication_error, invalid_request_error, service_unavailable]
+            code:
+              type: string
+              description: 错误代码
+              enum: [unauthorized, invalid_token, llm_not_configured]

@@ -34,15 +34,16 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 添加请求 ID
-    config.headers = config.headers || {};
-    config.headers['X-Request-ID'] = generateRequestId();
+    if (config.headers) {
+      config.headers['X-Request-ID'] = generateRequestId();
 
-    // SECURITY: Add CSRF token for state-changing requests
-    // Token is stored in a non-HttpOnly cookie that JavaScript can read
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() || '')) {
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        config.headers['X-CSRF-Token'] = csrfToken;
+      // SECURITY: Add CSRF token for state-changing requests
+      // Token is stored in a non-HttpOnly cookie that JavaScript can read
+      if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method?.toUpperCase() || '')) {
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+          config.headers['X-CSRF-Token'] = csrfToken;
+        }
       }
     }
 
@@ -134,15 +135,12 @@ function getErrorMessage(status: number): string {
 }
 
 // 通用请求方法
-export async function request<T = any>(
+export async function request<T = unknown>(
   config: AxiosRequestConfig
 ): Promise<ApiResponse<T>> {
-  try {
-    const response = await apiClient.request<ApiResponse<T>>(config);
-    return response as ApiResponse<T>;
-  } catch (error) {
-    throw error;
-  }
+  // The response interceptor already extracts response.data, so apiClient returns ApiResponse<T> directly
+  const response = await apiClient.request<ApiResponse<T>>(config);
+  return response as unknown as ApiResponse<T>;
 }
 
 // 导出 axios 实例供特定服务使用

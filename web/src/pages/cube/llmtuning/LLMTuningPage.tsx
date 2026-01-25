@@ -25,11 +25,8 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   EyeOutlined,
-  DeleteOutlined,
-  EditOutlined,
   DownloadOutlined,
   RocketOutlined,
-  CheckCircleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,7 +35,6 @@ import cube from '@/services/cube';
 import type { LLMFineTuningJob, CreateFineTuningJobRequest, FineTuningDataset } from '@/services/cube';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 function LLMTuningPage() {
   const queryClient = useQueryClient();
@@ -101,18 +97,6 @@ function LLMTuningPage() {
     },
     onError: () => {
       message.error('停止微调任务失败');
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: cube.deleteFineTuningJob,
-    onSuccess: () => {
-      message.success('微调任务删除成功');
-      setIsDetailDrawerOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['llm-tuning-jobs'] });
-    },
-    onError: () => {
-      message.error('微调任务删除失败');
     },
   });
 

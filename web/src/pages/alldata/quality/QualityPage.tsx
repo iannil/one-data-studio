@@ -44,9 +44,7 @@ import type {
   QualityTask,
   QualityReport,
   QualityAlert,
-  QualityCheckResult,
   QualityDimension,
-  AlertConfig,
 } from '@/services/alldata';
 
 const { Option } = Select;
@@ -90,12 +88,14 @@ function QualityPage() {
   const [isAlertConfigModalOpen, setIsAlertConfigModalOpen] = useState(false);
   const [isReportDetailOpen, setIsReportDetailOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<QualityRule | null>(null);
-  const [selectedTask, setSelectedTask] = useState<QualityTask | null>(null);
   const [selectedReport, setSelectedReport] = useState<QualityReport | null>(null);
 
   const [ruleForm] = Form.useForm();
   const [taskForm] = Form.useForm();
   const [alertConfigForm] = Form.useForm();
+
+  // Watch rule_type field for conditional form rendering
+  const watchedRuleType = Form.useWatch('rule_type', ruleForm);
 
   // 质量规则列表
   const { data: rulesData, isLoading: isLoadingRules } = useQuery({
@@ -567,8 +567,6 @@ function QualityPage() {
   ];
 
   const renderRuleConfigForm = () => {
-    const ruleType = Form.useWatch('rule_type', ruleForm);
-
     return (
       <>
         <Form.Item label="规则名称" name="name" rules={[{ required: true, message: '请输入规则名称' }]}>
@@ -623,7 +621,7 @@ function QualityPage() {
           </Radio.Group>
         </Form.Item>
 
-        {ruleType === 'range_check' && (
+        {watchedRuleType === 'range_check' && (
           <>
             <Form.Item label="最小值" name={['config', 'min_value']}>
               <InputNumber style={{ width: '100%' }} placeholder="最小值" />
@@ -634,25 +632,25 @@ function QualityPage() {
           </>
         )}
 
-        {ruleType === 'regex_check' && (
+        {watchedRuleType === 'regex_check' && (
           <Form.Item label="正则表达式" name={['config', 'regex_pattern']}>
             <Input placeholder="例如: ^[a-zA-Z0-9]+$" />
           </Form.Item>
         )}
 
-        {ruleType === 'enum_check' && (
+        {watchedRuleType === 'enum_check' && (
           <Form.Item label="允许的值" name={['config', 'allowed_values']}>
             <Select mode="tags" placeholder="输入允许的值" />
           </Form.Item>
         )}
 
-        {ruleType === 'custom_sql' && (
+        {watchedRuleType === 'custom_sql' && (
           <Form.Item label="自定义 SQL" name={['config', 'custom_sql']}>
             <TextArea rows={4} placeholder="SELECT COUNT(*) FROM {table} WHERE {condition}" />
           </Form.Item>
         )}
 
-        {ruleType === 'null_check' && (
+        {watchedRuleType === 'null_check' && (
           <Form.Item
             label="阈值 (%)"
             name={['config', 'threshold_percentage']}
@@ -662,7 +660,7 @@ function QualityPage() {
           </Form.Item>
         )}
 
-        {ruleType === 'foreign_key_check' && (
+        {watchedRuleType === 'foreign_key_check' && (
           <>
             <Form.Item label="关联表" name={['config', 'reference_table']}>
               <Input placeholder="例如: users" />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Card,
   Table,
@@ -10,8 +10,6 @@ import {
   Input,
   Select,
   message,
-  Drawer,
-  Descriptions,
   Checkbox,
   Divider,
   Row,
@@ -25,16 +23,13 @@ import {
   EditOutlined,
   DeleteOutlined,
   SafetyCertificateOutlined,
-  UserOutlined,
   SyncOutlined,
   LockOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import admin from '../../services/admin';
-
 const { Option } = Select;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 // Types
 interface Permission {
@@ -111,7 +106,6 @@ function RolesPage() {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
@@ -163,7 +157,6 @@ function RolesPage() {
     mutationFn: deleteRole,
     onSuccess: () => {
       message.success('角色删除成功');
-      setIsDetailDrawerOpen(false);
       setSelectedRole(null);
       queryClient.invalidateQueries({ queryKey: ['roles'] });
     },
@@ -272,7 +265,7 @@ function RolesPage() {
       dataIndex: 'role_type',
       key: 'role_type',
       width: 100,
-      render: (type: string, record: Role) => (
+      render: (_type: string, record: Role) => (
         <Tag color={record.is_system ? 'blue' : 'default'}>
           {record.is_system ? '系统' : '自定义'}
         </Tag>

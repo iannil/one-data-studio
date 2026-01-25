@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowEditorPage from './WorkflowEditorPage';
 import * as bishengService from '../../services/bisheng';
@@ -59,30 +59,16 @@ vi.mock('@/components/common/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: any) => <>{children}</>,
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
-const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{component}</BrowserRouter>
-    </QueryClientProvider>
-  );
-};
 
 describe('WorkflowEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
   });
 
   it('应该正确渲染工作流编辑器', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('flow-canvas')).toBeInTheDocument();
@@ -90,7 +76,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示工具栏按钮', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /撤销/i })).toBeInTheDocument();
@@ -101,7 +87,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示默认节点', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/节点数: 2/)).toBeInTheDocument();
@@ -109,7 +95,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示节点面板', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('node-palette')).toBeInTheDocument();
@@ -117,7 +103,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示配置面板', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('node-config-panel')).toBeInTheDocument();
@@ -125,7 +111,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示视图菜单按钮', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /视图/i })).toBeInTheDocument();
@@ -133,7 +119,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示验证按钮', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /验证/i })).toBeInTheDocument();
@@ -141,7 +127,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示导入导出按钮', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /导出/i })).toBeInTheDocument();
@@ -150,7 +136,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('应该显示清空按钮', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /清空/i })).toBeInTheDocument();
@@ -158,7 +144,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('撤销按钮初始应该禁用', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       const undoButton = screen.getByRole('button', { name: /撤销/i });
@@ -167,7 +153,7 @@ describe('WorkflowEditorPage', () => {
   });
 
   it('重做按钮初始应该禁用', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       const redoButton = screen.getByRole('button', { name: /重做/i });
@@ -179,11 +165,11 @@ describe('WorkflowEditorPage', () => {
 describe('WorkflowEditorPage 新建模式', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
   });
 
   it('运行按钮应该禁用（新建模式）', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       const runButton = screen.getByRole('button', { name: /运行/i });
@@ -192,7 +178,7 @@ describe('WorkflowEditorPage 新建模式', () => {
   });
 
   it('应该显示未命名工作流', async () => {
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/未命名工作流/)).toBeInTheDocument();
@@ -203,12 +189,12 @@ describe('WorkflowEditorPage 新建模式', () => {
 describe('WorkflowEditorPage 节点操作', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
   });
 
   it('应该能够添加节点', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByText('添加 LLM 节点')).toBeInTheDocument();
@@ -223,7 +209,7 @@ describe('WorkflowEditorPage 节点操作', () => {
 
   it('应该能够切换配置面板显示', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /隐藏配置/i })).toBeInTheDocument();
@@ -240,7 +226,7 @@ describe('WorkflowEditorPage 节点操作', () => {
 describe('WorkflowEditorPage 保存功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
+    
 
     vi.mocked(bishengService.createWorkflow).mockResolvedValue({
       code: 0,
@@ -250,7 +236,7 @@ describe('WorkflowEditorPage 保存功能', () => {
 
   it('应该能够保存工作流', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkflowEditorPage />);
+    render(<WorkflowEditorPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /保存/i })).toBeInTheDocument();

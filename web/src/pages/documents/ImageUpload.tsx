@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Button, message, Progress, Card, Space, Typography, Alert } from 'antd';
+import React, { useState, useCallback } from 'react';
+import { Upload, Button, message, Card, Space, Typography, Alert } from 'antd';
 import {
   InboxOutlined,
   FileImageOutlined,
@@ -8,11 +8,11 @@ import {
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload';
-import ImageViewer from '../common/ImageViewer';
+import ImageViewer from '@/components/common/ImageViewer';
 import { logError } from '@/services/logger';
 
 const { Dragger } = Upload;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface ImageUploadProps {
   onUploadComplete?: (files: UploadedImage[]) => void;

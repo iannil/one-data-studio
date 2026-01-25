@@ -27,6 +27,12 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock window.scrollTo
+Object.defineProperty(window, 'scrollTo', {
+  writable: true,
+  value: vi.fn(),
+});
+
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
@@ -45,6 +51,9 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
+
+// Mock Element.scrollIntoView (JSDOM doesn't implement this)
+Element.prototype.scrollIntoView = vi.fn();
 
 // Mock fetch API
 global.fetch = vi.fn();
@@ -91,7 +100,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock Ant Design message
+// Mock Ant Design message and other commonly mocked parts
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
   return {
@@ -103,5 +112,79 @@ vi.mock('antd', async () => {
       info: vi.fn(),
       loading: vi.fn(),
     },
+    notification: {
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+      open: vi.fn(),
+      destroy: vi.fn(),
+    },
   };
 });
+
+// Mock antd locale
+vi.mock('antd/locale/zh_CN', () => ({
+  default: {},
+}));
+
+// Mock React Flow
+vi.mock('reactflow', async () => {
+  const actual = await vi.importActual<typeof import('reactflow')>('reactflow');
+  return {
+    ...actual,
+    useReactFlow: () => ({
+      getNodes: vi.fn(() => []),
+      getEdges: vi.fn(() => []),
+      setNodes: vi.fn(),
+      setEdges: vi.fn(),
+      addNodes: vi.fn(),
+      addEdges: vi.fn(),
+      deleteElements: vi.fn(),
+      fitView: vi.fn(),
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+      getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+      setViewport: vi.fn(),
+      project: vi.fn((pos) => pos),
+      screenToFlowPosition: vi.fn((pos) => pos),
+    }),
+    ReactFlowProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: {
+      language: 'zh',
+      changeLanguage: vi.fn(),
+    },
+  }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
+  initReactI18next: {
+    type: '3rdParty',
+    init: vi.fn(),
+  },
+}));
+
+// Mock services
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn(() => Promise.resolve({ data: {} })),
+    post: vi.fn(() => Promise.resolve({ data: {} })),
+    put: vi.fn(() => Promise.resolve({ data: {} })),
+    delete: vi.fn(() => Promise.resolve({ data: {} })),
+    request: vi.fn(() => Promise.resolve({ data: {} })),
+  },
+  apiClient: {
+    get: vi.fn(() => Promise.resolve({ data: {} })),
+    post: vi.fn(() => Promise.resolve({ data: {} })),
+    put: vi.fn(() => Promise.resolve({ data: {} })),
+    delete: vi.fn(() => Promise.resolve({ data: {} })),
+    request: vi.fn(() => Promise.resolve({ data: {} })),
+  },
+  ApiResponse: {},
+}));
+

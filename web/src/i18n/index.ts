@@ -78,7 +78,7 @@ i18n
 
     // 缺失键处理
     saveMissing: process.env.NODE_ENV === 'development',
-    missingKeyHandler: (lngs, ns, key) => {
+    missingKeyHandler: (_lngs, ns, key) => {
       if (process.env.NODE_ENV === 'development') {
         console.warn(`Missing translation key: ${ns}:${key}`);
       }

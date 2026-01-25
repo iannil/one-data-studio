@@ -39,7 +39,8 @@ export function useApiQuery<T>(
   return useQuery({
     queryKey,
     queryFn: async () => {
-      return await apiClient.get<ApiResponse<T>>(url);
+      // apiClient response interceptor already extracts response.data
+      return await apiClient.get<ApiResponse<T>>(url) as unknown as ApiResponse<T>;
     },
     staleTime: CacheTime.MEDIUM,
     ...options,
@@ -54,16 +55,13 @@ export function useApiMutation<TData, TVariables = unknown>(
   method: 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   options?: UseMutationOptions<ApiResponse<TData>, Error, TVariables>
 ) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (variables: TVariables) => {
-      const response = await apiClient.request<ApiResponse<TData>>({
+      return await apiClient.request<ApiResponse<TData>>({
         url,
         method,
         data: variables,
-      });
-      return response;
+      }) as unknown as ApiResponse<TData>;
     },
     ...options,
   });
@@ -83,7 +81,7 @@ export function useApiPost<TData, TVariables = unknown>(
 
   return useMutation({
     mutationFn: async (variables: TVariables) => {
-      return await apiClient.post<ApiResponse<TData>>(url, variables);
+      return await apiClient.post<ApiResponse<TData>>(url, variables) as unknown as ApiResponse<TData>;
     },
     onSuccess: (data, variables, context) => {
       if (options?.successMessage) {
@@ -94,7 +92,9 @@ export function useApiPost<TData, TVariables = unknown>(
           queryClient.invalidateQueries({ queryKey: key });
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        (options.onSuccess as (data: ApiResponse<TData>, variables: TVariables, context: unknown) => void)(data, variables, context);
+      }
     },
     ...options,
   });
@@ -115,7 +115,7 @@ export function useApiPut<TData, TVariables = unknown>(
   return useMutation({
     mutationFn: async (variables: TVariables) => {
       const finalUrl = typeof url === 'function' ? url(variables) : url;
-      return await apiClient.put<ApiResponse<TData>>(finalUrl, variables);
+      return await apiClient.put<ApiResponse<TData>>(finalUrl, variables) as unknown as ApiResponse<TData>;
     },
     onSuccess: (data, variables, context) => {
       if (options?.successMessage) {
@@ -126,7 +126,9 @@ export function useApiPut<TData, TVariables = unknown>(
           queryClient.invalidateQueries({ queryKey: key });
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        (options.onSuccess as (data: ApiResponse<TData>, variables: TVariables, context: unknown) => void)(data, variables, context);
+      }
     },
     ...options,
   });
@@ -147,7 +149,7 @@ export function useApiDelete<TData = unknown, TVariables = unknown>(
   return useMutation({
     mutationFn: async (variables: TVariables) => {
       const finalUrl = typeof url === 'function' ? url(variables) : url;
-      return await apiClient.delete<ApiResponse<TData>>(finalUrl);
+      return await apiClient.delete<ApiResponse<TData>>(finalUrl) as unknown as ApiResponse<TData>;
     },
     onSuccess: (data, variables, context) => {
       if (options?.successMessage) {
@@ -158,7 +160,9 @@ export function useApiDelete<TData = unknown, TVariables = unknown>(
           queryClient.invalidateQueries({ queryKey: key });
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        (options.onSuccess as (data: ApiResponse<TData>, variables: TVariables, context: unknown) => void)(data, variables, context);
+      }
     },
     ...options,
   });
@@ -442,7 +446,7 @@ export function useUpdateAgentTemplate() {
         data
       );
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_) => {
       message.success('Agent 模板更新成功');
       queryClient.invalidateQueries({ queryKey: QueryKeys.agentTemplates() });
     },

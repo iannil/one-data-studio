@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   Select,
-  InputNumber,
   message,
   Tabs,
   Popconfirm,
@@ -22,7 +21,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   AppstoreOutlined,
   FolderOutlined,
@@ -38,8 +36,6 @@ import type {
   FeatureGroup,
   FeatureSet,
   FeatureService,
-  CreateFeatureRequest,
-  CreateFeatureGroupRequest,
 } from '@/services/alldata';
 
 const { Option } = Select;
@@ -73,9 +69,6 @@ function FeaturesPage() {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isFeatureDetailOpen, setIsFeatureDetailOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<FeatureGroup | null>(null);
-  const [selectedSet, setSelectedSet] = useState<FeatureSet | null>(null);
-  const [selectedService, setSelectedService] = useState<FeatureService | null>(null);
 
   const [featureForm] = Form.useForm();
   const [groupForm] = Form.useForm();
@@ -124,17 +117,6 @@ function FeaturesPage() {
       message.success('特征创建成功');
       setIsFeatureModalOpen(false);
       featureForm.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['features'] });
-    },
-  });
-
-  const updateFeatureMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof alldata.updateFeature>[1] }) =>
-      alldata.updateFeature(id, data),
-    onSuccess: () => {
-      message.success('特征更新成功');
-      setIsFeatureDetailOpen(false);
-      setSelectedFeature(null);
       queryClient.invalidateQueries({ queryKey: ['features'] });
     },
   });
@@ -321,10 +303,8 @@ function FeaturesPage() {
       title: '组名称',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: FeatureGroup) => (
-        <a onClick={() => { setSelectedGroup(record); }}>
-          {name}
-        </a>
+      render: (name: string) => (
+        <span>{name}</span>
       ),
     },
     {

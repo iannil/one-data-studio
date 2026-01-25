@@ -45,8 +45,8 @@ describe('API Client', () => {
 
   describe('Request configuration', () => {
     it('should have default timeout', () => {
-      const mockAxios = require('axios').create();
-      expect(mockAxios).toBeDefined();
+      // The apiClient is created with axios.create() which is mocked
+      expect(apiClient).toBeDefined();
     });
 
     it('should have default headers', () => {

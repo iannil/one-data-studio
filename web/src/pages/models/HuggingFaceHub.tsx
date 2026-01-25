@@ -33,7 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 import ReactMarkdown from 'react-markdown';
 import api from '../../services/api';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Search } = Input;
 
 interface ModelInfo {
@@ -94,7 +94,7 @@ const libraryOptions = [
 ];
 
 function HuggingFaceHub() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [activeTab, setActiveTab] = useState('models');
   const [loading, setLoading] = useState(false);
   const [models, setModels] = useState<ModelInfo[]>([]);

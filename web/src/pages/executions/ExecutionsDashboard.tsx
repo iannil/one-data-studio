@@ -8,7 +8,6 @@ import {
   Select,
   Input,
   Tooltip,
-  message,
   Statistic,
   Row,
   Col,
@@ -46,8 +45,9 @@ const getStatusConfig = (status: WorkflowExecution['status']) => {
     completed: { color: 'success', text: '已完成', icon: <CheckCircleOutlined /> },
     failed: { color: 'error', text: '失败', icon: <CloseCircleOutlined /> },
     stopped: { color: 'default', text: '已停止', icon: <StopOutlined /> },
+    waiting_human: { color: 'warning', text: '等待人工', icon: <ClockCircleOutlined /> },
   };
-  return config[status] || { color: 'default', text: status, icon: null };
+  return config[status];
 };
 
 // 格式化持续时间
@@ -478,7 +478,7 @@ function ExecutionsDashboard() {
                 </pre>
               </div>
             )}
-            {selectedExecution.outputs && (
+            {selectedExecution.outputs !== undefined && selectedExecution.outputs !== null && (
               <div style={{ marginTop: '16px' }}>
                 <strong>输出结果：</strong>
                 <pre

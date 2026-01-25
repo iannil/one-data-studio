@@ -17,7 +17,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  SearchOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
@@ -36,7 +35,7 @@ function DatasetsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [searchText, setSearchText] = useState('');
+  const [, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -45,7 +44,7 @@ function DatasetsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [, setUploadModalOpen] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -62,7 +61,7 @@ function DatasetsPage() {
   });
 
   // 获取数据集详情
-  const { data: datasetDetail, isLoading: isLoadingDetail } = useQuery({
+  const { data: datasetDetail } = useQuery({
     queryKey: ['dataset', id],
     queryFn: () => alldata.getDataset(id!),
     enabled: !!id,
@@ -231,10 +230,12 @@ function DatasetsPage() {
 
   const handleUpdate = () => {
     form.validateFields().then((values) => {
-      updateMutation.mutate({
-        id: selectedDataset?.dataset_id!,
-        data: values,
-      });
+      if (selectedDataset?.dataset_id) {
+        updateMutation.mutate({
+          id: selectedDataset.dataset_id,
+          data: values,
+        });
+      }
     });
   };
 

@@ -15,7 +15,8 @@ import {
   Drawer,
   Alert,
 } from 'antd';
-import type { RowSelection } from 'antd/es/table';
+import type { UploadProps } from 'antd';
+import type { TableProps } from 'antd/es/table';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -30,7 +31,6 @@ import bisheng, { type IndexedDocument } from '@/services/bisheng';
 
 const { Dragger } = Upload;
 const { Option } = Select;
-const { TextArea } = Input;
 
 // 批量删除响应类型
 interface BatchDeleteResponse {
@@ -115,7 +115,8 @@ function DocumentsPage() {
     }
 
     const formData = new FormData();
-    formData.append('file', fileList[0].originFileObj);
+    const uploadFile = fileList[0].originFileObj;
+    if (uploadFile) formData.append('file', uploadFile);
     if (values.title) {
       formData.append('title', values.title);
     }
@@ -147,7 +148,7 @@ function DocumentsPage() {
     batchDeleteMutation.mutate(selectedRowKeys as string[]);
   };
 
-  const rowSelection: RowSelection<IndexedDocument> = {
+  const rowSelection: TableProps<IndexedDocument>['rowSelection'] = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys) => {
       setSelectedRowKeys(newSelectedRowKeys);

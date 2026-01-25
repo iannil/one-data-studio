@@ -4,23 +4,27 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock antd Card
-vi.mock('antd', () => ({
-  Card: ({ children, title, extra, bordered, style }: any) => (
-    <div
-      data-testid="card"
-      data-bordered={bordered}
-      style={style}
-    >
-      {title && <div data-testid="card-title">{title}</div>}
-      {extra && <div data-testid="card-extra">{extra}</div>}
-      <div data-testid="card-content">{children}</div>
-    </div>
-  ),
-}));
+vi.mock('antd', async () => {
+  const actual = await vi.importActual<typeof import('antd')>('antd');
+  return {
+    ...actual,
+    Card: ({ children, title, extra, bordered, style }: any) => (
+      <div
+        data-testid="card"
+        data-bordered={bordered}
+        style={style}
+      >
+        {title && <div data-testid="card-title">{title}</div>}
+        {extra && <div data-testid="card-extra">{extra}</div>}
+        <div data-testid="card-content">{children}</div>
+      </div>
+    ),
+  };
+});
 
 import PageWrapper from './PageWrapper';
 

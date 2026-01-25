@@ -20,14 +20,13 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   DeleteOutlined,
-  EditOutlined,
   LaptopOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import cube from '@/services/cube';
-import type { Notebook, NotebookImage, CreateNotebookRequest } from '@/services/cube';
+import type { Notebook, NotebookImage } from '@/services/cube';
 
 const { Option } = Select;
 const { TextArea } = Input;

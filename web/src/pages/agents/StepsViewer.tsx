@@ -86,7 +86,7 @@ function StepsViewer({ steps, loading }: StepsViewerProps) {
               >
                 {step.content}
               </div>
-              {step.tool_output && (
+              {step.tool_output != null && (
                 <div
                   style={{
                     marginTop: '8px',
@@ -108,7 +108,7 @@ function StepsViewer({ steps, loading }: StepsViewerProps) {
                   >
                     {typeof step.tool_output === 'string'
                       ? step.tool_output
-                      : JSON.stringify(step.tool_output, null, 2)}
+                      : JSON.stringify(step.tool_output as Record<string, unknown>, null, 2)}
                   </pre>
                 </div>
               )}

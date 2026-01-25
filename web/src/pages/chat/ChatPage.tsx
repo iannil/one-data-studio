@@ -13,7 +13,6 @@ import {
   Avatar,
   Dropdown,
   Modal,
-  Popconfirm,
 } from 'antd';
 import {
   SendOutlined,
@@ -36,8 +35,9 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 const { TextArea } = Input;
 const { Option } = Select;
 
-interface Message extends ChatMessage {
+interface Message extends Omit<ChatMessage, 'created_at'> {
   id: string;
+  created_at?: string;
 }
 
 interface SessionItem extends Conversation {
@@ -87,7 +87,7 @@ function ChatPage() {
   // 获取 Prompt 模板
   const { data: templatesData } = useQuery({
     queryKey: ['templates'],
-    queryFn: bisheng.getPromptTemplates,
+    queryFn: () => bisheng.getPromptTemplates(),
   });
 
   // 加载会话列表
@@ -275,8 +275,8 @@ function ChatPage() {
       setSystemPrompt('你是一个智能助手，请用中文回答问题。');
       return;
     }
-    const templates = templatesData?.data?.templates || [];
-    const template = templates.find((t) => t.template_id === templateId);
+    const templates = (templatesData as any)?.data?.templates || [];
+    const template = templates.find((t: { template_id: string }) => t.template_id === templateId);
     if (template) {
       setSystemPrompt(template.content || template.template || '你是一个智能助手，请用中文回答问题。');
       message.success(`已应用模板: ${template.name}`);
@@ -659,7 +659,7 @@ function ChatPage() {
             />
           </div>
 
-          {templatesData?.data?.templates && templatesData.data.templates.length > 0 && (
+          {(templatesData as any)?.data?.templates && (templatesData as any).data.templates.length > 0 && (
             <>
               <Divider style={{ margin: '8px 0' }} />
               <div>
@@ -671,7 +671,7 @@ function ChatPage() {
                   value={selectedTemplateId}
                   onChange={handleTemplateSelect}
                 >
-                  {templatesData.data.templates.map((t) => (
+                  {(templatesData as any).data.templates.map((t: any) => (
                     <Option key={t.template_id} value={t.template_id}>
                       {t.name}
                     </Option>

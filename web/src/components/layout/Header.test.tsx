@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/test/testUtils';
 import '@testing-library/jest-dom';
 
 // Mock react-i18next
@@ -118,8 +118,8 @@ describe('Header Component', () => {
     const onToggle = vi.fn();
     render(<Header collapsed={false} onToggle={onToggle} />);
 
-    const toggleButton = screen.getByTestId('button-text');
-    fireEvent.click(toggleButton);
+    const toggleButtons = screen.getAllByTestId('button-text');
+    fireEvent.click(toggleButtons[0]);
 
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
