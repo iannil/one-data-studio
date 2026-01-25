@@ -26,6 +26,7 @@ TIMEOUT=120
 DETACH=true
 VERBOSE=false
 SPECIFIC_SERVICES=""
+SEED_DATA=false           # 是否导入种子数据
 
 # ==================== 解析参数 ====================
 
@@ -37,6 +38,7 @@ show_start_help() {
   -a, --apps        仅启动应用服务（bisheng-api, alldata-api, cube-api, openai-proxy, web）
   -m, --monitoring  包含监控服务（prometheus, grafana, jaeger）
   -b, --build       强制重新构建镜像
+  -s, --seed        启动后导入种子数据（初始化数据）
   -t, --timeout N   等待服务就绪的超时时间（默认: 120秒）
   -f, --foreground  前台运行（不使用 -d）
   -v, --verbose     显示详细输出
@@ -46,6 +48,7 @@ show_start_help() {
   dev-start.sh -a           # 仅启动应用服务
   dev-start.sh -m           # 包含监控栈
   dev-start.sh --build      # 强制重建镜像
+  dev-start.sh --seed       # 启动并导入种子数据
   dev-start.sh mysql redis  # 启动指定服务
   dev-start.sh b a          # 使用别名（bisheng, alldata）"
 }
@@ -66,6 +69,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -b|--build)
             FORCE_BUILD=true
+            shift
+            ;;
+        -s|--seed)
+            SEED_DATA=true
             shift
             ;;
         -t|--timeout)
@@ -324,6 +331,33 @@ print_access_info() {
     echo ""
 }
 
+# ==================== 种子数据导入 ====================
+
+import_seed_data() {
+    # 检查是否需要导入种子数据
+    if [ "$SEED_DATA" = true ] || [ "${SEED_DATA}" = "true" ]; then
+        log_step "导入种子数据..."
+
+        # 检查 seed.py 脚本是否存在
+        local seed_script="$PROJECT_ROOT/scripts/seed.py"
+        if [ ! -f "$seed_script" ]; then
+            log_error "种子数据脚本不存在: $seed_script"
+            return 1
+        fi
+
+        # 等待数据库服务就绪
+        log_info "等待数据库服务就绪..."
+        sleep 5
+
+        # 执行种子数据导入
+        if python3 "$seed_script"; then
+            log_success "种子数据导入完成"
+        else
+            log_warn "种子数据导入失败，可手动执行: python3 scripts/seed.py"
+        fi
+    fi
+}
+
 # ==================== 主函数 ====================
 
 main() {
@@ -336,6 +370,10 @@ main() {
     # 显示访问信息（仅在后台模式）
     if [ "$DETACH" = true ]; then
         print_access_info
+
+        # 导入种子数据（如果需要）
+        import_seed_data
+
         log_success "开发环境已启动"
     fi
 }

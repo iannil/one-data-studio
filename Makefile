@@ -11,6 +11,8 @@
 # 开发环境运维脚本
 .PHONY: dev-start dev-stop dev-status dev-logs dev-db dev-clean dev-reset dev-shell dev-check
 .PHONY: dev up down
+# 种子数据
+.PHONY: seed seed-dry-run seed-force dev-seed
 
 # 默认目标
 help:
@@ -64,6 +66,10 @@ help:
 	@echo ""
 	@echo "数据库初始化:"
 	@echo "  make init-db          - 运行数据库初始化 Job"
+	@echo "  make seed             - 导入种子数据（初始化数据）"
+	@echo "  make seed-dry-run     - 预览种子数据导入（不实际写入）"
+	@echo "  make seed-force       - 强制导入种子数据（覆盖已有）"
+	@echo "  make dev-seed         - 启动开发环境并导入种子数据"
 	@echo ""
 	@echo "端口转发:"
 	@echo "  make forward          - 启动端口转发（后台）"
@@ -366,3 +372,27 @@ dev-check:
 dev: dev-start
 up: dev-start
 down: dev-stop
+
+# ============================================
+# 种子数据（初始化数据）
+# ============================================
+
+# 导入种子数据
+seed:
+	@echo "==> 导入种子数据..."
+	@python3 scripts/seed.py
+
+# 预览种子数据导入
+seed-dry-run:
+	@echo "==> 预览种子数据导入（不实际写入）..."
+	@python3 scripts/seed.py --dry-run
+
+# 强制导入种子数据（覆盖已有）
+seed-force:
+	@echo "==> 强制导入种子数据..."
+	@python3 scripts/seed.py --force
+
+# 启动开发环境并导入种子数据
+dev-seed:
+	@echo "==> 启动开发环境并导入种子数据..."
+	@bash scripts/dev/dev-start.sh --seed

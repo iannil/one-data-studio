@@ -349,13 +349,13 @@ function QualityPage() {
       dataIndex: 'tables',
       key: 'tables',
       width: 100,
-      render: (tables: string[]) => tables.length,
+      render: (tables: string[]) => tables?.length ?? 0,
     },
     {
       title: '规则数量',
       key: 'rules',
       width: 100,
-      render: (_: unknown, record: QualityTask) => record.rules.length,
+      render: (_: unknown, record: QualityTask) => record.rules?.length ?? 0,
     },
     {
       title: '告警',
@@ -383,7 +383,7 @@ function QualityPage() {
             <Button
               type="text"
               icon={<PlayCircleOutlined />}
-              onClick={() => runCheckMutation.mutate(record.rules)}
+              onClick={() => runCheckMutation.mutate(record.rules ?? [])}
             />
           )}
           <Popconfirm
@@ -692,7 +692,7 @@ function QualityPage() {
           <Card>
             <Statistic
               title="活跃任务"
-              value={tasksData?.data?.tasks.filter((t) => t.status === 'running').length || 0}
+              value={tasksData?.data?.tasks?.filter((t) => t.status === 'running').length ?? 0}
               prefix={<PlayCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -702,7 +702,7 @@ function QualityPage() {
           <Card>
             <Statistic
               title="活跃告警"
-              value={alertsData?.data?.alerts.filter((a) => a.status === 'active').length || 0}
+              value={alertsData?.data?.alerts?.filter((a) => a.status === 'active').length ?? 0}
               prefix={<WarningOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
             />
@@ -964,7 +964,7 @@ function QualityPage() {
             <Select
               mode="multiple"
               placeholder="选择要应用的规则"
-              options={rulesData?.data?.rules.map((r) => ({ label: r.name, value: r.rule_id }))}
+              options={rulesData?.data?.rules?.map((r) => ({ label: r.name, value: r.rule_id })) ?? []}
             />
           </Form.Item>
           <Form.Item

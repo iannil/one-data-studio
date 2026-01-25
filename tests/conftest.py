@@ -54,6 +54,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: 单元测试")
     config.addinivalue_line("markers", "integration: 集成测试")
     config.addinivalue_line("markers", "slow: 慢速测试")
+    config.addinivalue_line("markers", "e2e: 端到端测试")
+    config.addinivalue_line("markers", "benchmark: 性能基准测试")
     config.addinivalue_line("markers", "requires_db: 需要数据库")
     config.addinivalue_line("markers", "requires_milvus: 需要 Milvus")
     config.addinivalue_line("markers", "requires_minio: 需要 MinIO")
@@ -65,6 +67,7 @@ def pytest_collection_modifyitems(config, items):
     skip_db = pytest.mark.skip(reason="跳过需要数据库的测试 (使用 --with-db 跳过)")
     skip_milvus = pytest.mark.skip(reason="跳过需要 Milvus 的测试 (使用 --with-milvus 跳过)")
     skip_minio = pytest.mark.skip(reason="跳过需要 MinIO 的测试 (使用 --with-minio 跳过)")
+    skip_benchmark = pytest.mark.skip(reason="跳过性能基准测试 (使用 --benchmark 运行)")
 
     if not config.getoption("--runslow", default=False):
         for item in items:
@@ -85,6 +88,11 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "requires_minio" in item.keywords:
                 item.add_marker(skip_minio)
+
+    if not config.getoption("--benchmark", default=False):
+        for item in items:
+            if "benchmark" in item.keywords:
+                item.add_marker(skip_benchmark)
 
 
 def pytest_addoption(parser):
@@ -112,6 +120,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="运行需要 MinIO 的测试"
+    )
+    parser.addoption(
+        "--benchmark",
+        action="store_true",
+        default=False,
+        help="运行性能基准测试"
     )
 
 

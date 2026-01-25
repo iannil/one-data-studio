@@ -29,7 +29,7 @@ class DataSource(Base):
     last_error = Column(Text, comment='最后错误信息')
 
     # 元数据
-    metadata = Column(JSON, comment='数据源元数据（版本、表数量等）')
+    source_metadata = Column(JSON, comment='数据源元数据（版本、表数量等）')
     tags = Column(JSON, comment='标签列表')
 
     # 审计字段
@@ -47,7 +47,7 @@ class DataSource(Base):
             "status": self.status,
             "last_connected": self.last_connected.isoformat() if self.last_connected else None,
             "last_error": self.last_error,
-            "metadata": self.metadata or {},
+            "metadata": self.source_metadata or {},
             "tags": self.tags or [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

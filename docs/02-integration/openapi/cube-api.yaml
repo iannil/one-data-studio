@@ -1,0 +1,1823 @@
+openapi: 3.0.3
+info:
+  title: Cube API - MLOps 平台服务
+  description: |
+    ONE-DATA-STUDIO Cube API 提供完整的 MLOps 能力：
+    - 模型管理与版本控制
+    - 训练任务管理
+    - 模型部署与服务
+    - 实验管理
+    - 流水线编排
+    - 资源池管理
+    - 监控与告警
+    - LLM 微调
+    - SQL Lab
+    - AI Hub 模型市场
+  version: 1.0.0
+  contact:
+    name: ONE-DATA-STUDIO Team
+    email: support@one-data-studio.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8083/api/v1
+    description: 本地开发环境
+  - url: https://cube-api.one-data-studio.io/api/v1
+    description: 生产环境
+
+tags:
+  - name: Health
+    description: 健康检查接口
+  - name: Models
+    description: 模型管理
+  - name: Model Versions
+    description: 模型版本管理
+  - name: Deployments
+    description: 模型部署管理
+  - name: Predictions
+    description: 模型预测
+  - name: Training Jobs
+    description: 训练任务管理
+  - name: Experiments
+    description: 实验管理
+  - name: Pipelines
+    description: 流水线管理
+  - name: Resources
+    description: 资源池管理
+  - name: Monitoring
+    description: 监控与告警
+  - name: LLM Tuning
+    description: LLM 微调
+  - name: SQL Lab
+    description: SQL 交互式查询
+  - name: AI Hub
+    description: AI 模型市场
+  - name: Hugging Face
+    description: Hugging Face Hub 集成
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: 健康检查
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 服务健康
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ==================== 模型管理 ====================
+  /models:
+    get:
+      tags:
+        - Models
+      summary: 列出所有模型
+      operationId: listModels
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: 模型类型过滤
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [created, ready, serving, archived]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+
+    post:
+      tags:
+        - Models
+      summary: 创建模型
+      operationId: createModel
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModelRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /models/{modelId}:
+    get:
+      tags:
+        - Models
+      summary: 获取模型详情
+      operationId: getModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+        - name: include_versions
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Models
+      summary: 更新模型
+      operationId: updateModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelResponse'
+
+    delete:
+      tags:
+        - Models
+      summary: 删除模型
+      operationId: deleteModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '200':
+          description: 删除成功
+        '400':
+          description: 模型有活跃部署，无法删除
+
+  # ==================== 模型版本 ====================
+  /models/{modelId}/versions:
+    get:
+      tags:
+        - Model Versions
+      summary: 列出模型版本
+      operationId: listModelVersions
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelVersionListResponse'
+
+    post:
+      tags:
+        - Model Versions
+      summary: 创建模型版本
+      operationId: createModelVersion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModelVersionRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  # ==================== 部署管理 ====================
+  /deployments:
+    get:
+      tags:
+        - Deployments
+      summary: 列出所有部署
+      operationId: listDeployments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, stopped, failed]
+        - name: model_id
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentListResponse'
+
+  /models/{modelId}/deploy:
+    post:
+      tags:
+        - Deployments
+      summary: 部署模型
+      operationId: deployModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeployModelRequest'
+      responses:
+        '201':
+          description: 部署成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+
+  /deployments/{deploymentId}:
+    delete:
+      tags:
+        - Deployments
+      summary: 取消部署
+      operationId: undeployModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DeploymentIdParam'
+      responses:
+        '200':
+          description: 取消成功
+
+  # ==================== 预测接口 ====================
+  /predict/{deploymentId}:
+    post:
+      tags:
+        - Predictions
+      summary: 单条预测
+      operationId: predict
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DeploymentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictRequest'
+      responses:
+        '200':
+          description: 预测成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictResponse'
+
+  /batch-predictions:
+    post:
+      tags:
+        - Predictions
+      summary: 创建批量预测任务
+      operationId: createBatchPrediction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBatchPredictionRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /batch-predictions/{jobId}:
+    get:
+      tags:
+        - Predictions
+      summary: 获取批量预测任务状态
+      operationId: getBatchPrediction
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 训练任务 ====================
+  /training-jobs:
+    get:
+      tags:
+        - Training Jobs
+      summary: 列出训练任务
+      operationId: listTrainingJobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+        - name: model_id
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingJobListResponse'
+
+    post:
+      tags:
+        - Training Jobs
+      summary: 创建训练任务
+      operationId: createTrainingJob
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrainingJobRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /training-jobs/{jobId}:
+    get:
+      tags:
+        - Training Jobs
+      summary: 获取训练任务详情
+      operationId: getTrainingJob
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /training-jobs/{jobId}/cancel:
+    post:
+      tags:
+        - Training Jobs
+      summary: 取消训练任务
+      operationId: cancelTrainingJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取消成功
+
+  # ==================== 实验管理 ====================
+  /experiments:
+    get:
+      tags:
+        - Experiments
+      summary: 列出实验
+      operationId: listExperiments
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - Experiments
+      summary: 创建实验
+      operationId: createExperiment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExperimentRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /experiments/{experimentId}:
+    get:
+      tags:
+        - Experiments
+      summary: 获取实验详情
+      operationId: getExperiment
+      parameters:
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+    put:
+      tags:
+        - Experiments
+      summary: 更新实验
+      operationId: updateExperiment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExperimentRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags:
+        - Experiments
+      summary: 删除实验
+      operationId: deleteExperiment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  /experiments/compare:
+    get:
+      tags:
+        - Experiments
+      summary: 比较实验
+      operationId: compareExperiments
+      parameters:
+        - name: experiment_ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 逗号分隔的实验 ID
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 流水线管理 ====================
+  /pipelines:
+    get:
+      tags:
+        - Pipelines
+      summary: 列出流水线
+      operationId: listPipelines
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - Pipelines
+      summary: 创建流水线
+      operationId: createPipeline
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePipelineRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /pipelines/{pipelineId}:
+    get:
+      tags:
+        - Pipelines
+      summary: 获取流水线详情
+      operationId: getPipeline
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+    put:
+      tags:
+        - Pipelines
+      summary: 更新流水线
+      operationId: updatePipeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags:
+        - Pipelines
+      summary: 删除流水线
+      operationId: deletePipeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  /pipelines/{pipelineId}/execute:
+    post:
+      tags:
+        - Pipelines
+      summary: 执行流水线
+      operationId: executePipeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: object
+      responses:
+        '202':
+          description: 执行已接受
+
+  /pipelines/{pipelineId}/executions:
+    get:
+      tags:
+        - Pipelines
+      summary: 列出流水线执行记录
+      operationId: listPipelineExecutions
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /pipeline-templates:
+    get:
+      tags:
+        - Pipelines
+      summary: 列出流水线模板
+      operationId: listPipelineTemplates
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 资源管理 ====================
+  /resources/overview:
+    get:
+      tags:
+        - Resources
+      summary: 获取资源概览
+      operationId: getResourceOverview
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceOverviewResponse'
+
+  /resources/gpu:
+    get:
+      tags:
+        - Resources
+      summary: 列出 GPU 设备
+      operationId: listGPUDevices
+      responses:
+        '200':
+          description: 成功
+
+  /resources/pools:
+    get:
+      tags:
+        - Resources
+      summary: 列出资源池
+      operationId: listResourcePools
+      responses:
+        '200':
+          description: 成功
+
+  /resources/usage:
+    get:
+      tags:
+        - Resources
+      summary: 获取资源使用情况
+      operationId: getResourceUsage
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 监控 ====================
+  /monitoring/overview:
+    get:
+      tags:
+        - Monitoring
+      summary: 获取监控概览
+      operationId: getMonitoringOverview
+      responses:
+        '200':
+          description: 成功
+
+  /monitoring/summary:
+    get:
+      tags:
+        - Monitoring
+      summary: 获取监控汇总
+      operationId: getMonitoringSummary
+      responses:
+        '200':
+          description: 成功
+
+  /monitoring/tasks:
+    get:
+      tags:
+        - Monitoring
+      summary: 列出监控任务
+      operationId: listMonitoringTasks
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [training, pipeline, serving]
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /monitoring/alerts:
+    get:
+      tags:
+        - Monitoring
+      summary: 列出告警
+      operationId: listAlerts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [firing, resolved, acknowledged]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [info, warning, critical]
+      responses:
+        '200':
+          description: 成功
+
+  /monitoring/alerts/{alertId}:
+    get:
+      tags:
+        - Monitoring
+      summary: 获取告警详情
+      operationId: getAlert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /monitoring/alerts/{alertId}/acknowledge:
+    post:
+      tags:
+        - Monitoring
+      summary: 确认告警
+      operationId: acknowledgeAlert
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 确认成功
+
+  /monitoring/alerts/{alertId}/resolve:
+    post:
+      tags:
+        - Monitoring
+      summary: 解决告警
+      operationId: resolveAlert
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 解决成功
+
+  /monitoring/dashboards:
+    get:
+      tags:
+        - Monitoring
+      summary: 列出仪表盘
+      operationId: listDashboards
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - Monitoring
+      summary: 创建仪表盘
+      operationId: createDashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 创建成功
+
+  /monitoring/alert-rules:
+    get:
+      tags:
+        - Monitoring
+      summary: 列出告警规则
+      operationId: listAlertRules
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - Monitoring
+      summary: 创建告警规则
+      operationId: createAlertRule
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 创建成功
+
+  # ==================== LLM 微调 ====================
+  /llm-tuning/tasks:
+    get:
+      tags:
+        - LLM Tuning
+      summary: 列出 LLM 微调任务
+      operationId: listLLMTuningTasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - LLM Tuning
+      summary: 创建 LLM 微调任务
+      operationId: createLLMTuningTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLLMTuningTaskRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /llm-tuning/tasks/{taskId}:
+    get:
+      tags:
+        - LLM Tuning
+      summary: 获取 LLM 微调任务详情
+      operationId: getLLMTuningTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /llm-tuning/tasks/{taskId}/start:
+    post:
+      tags:
+        - LLM Tuning
+      summary: 启动 LLM 微调任务
+      operationId: startLLMTuningTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 启动成功
+
+  /llm-tuning/tasks/{taskId}/stop:
+    post:
+      tags:
+        - LLM Tuning
+      summary: 停止 LLM 微调任务
+      operationId: stopLLMTuningTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 停止成功
+
+  /llm-tuning/methods:
+    get:
+      tags:
+        - LLM Tuning
+      summary: 列出支持的微调方法
+      operationId: listLLMTuningMethods
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== SQL Lab ====================
+  /sql-lab/execute:
+    post:
+      tags:
+        - SQL Lab
+      summary: 执行 SQL 查询
+      operationId: executeSql
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteSqlRequest'
+      responses:
+        '200':
+          description: 执行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SqlQueryResponse'
+
+  /sql-lab/history:
+    get:
+      tags:
+        - SQL Lab
+      summary: 获取查询历史
+      operationId: getSqlHistory
+      responses:
+        '200':
+          description: 成功
+
+  /sql-lab/saved-queries:
+    get:
+      tags:
+        - SQL Lab
+      summary: 列出保存的查询
+      operationId: listSavedQueries
+      responses:
+        '200':
+          description: 成功
+
+    post:
+      tags:
+        - SQL Lab
+      summary: 保存查询
+      operationId: saveQuery
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: 保存成功
+
+  /sql-lab/databases:
+    get:
+      tags:
+        - SQL Lab
+      summary: 列出可用数据库
+      operationId: listDatabases
+      responses:
+        '200':
+          description: 成功
+
+  /sql-lab/databases/{database}/tables:
+    get:
+      tags:
+        - SQL Lab
+      summary: 列出数据库表
+      operationId: listDatabaseTables
+      parameters:
+        - name: database
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== AI Hub ====================
+  /aihub/models:
+    get:
+      tags:
+        - AI Hub
+      summary: 搜索 AI Hub 模型
+      operationId: searchAIHubModels
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: task
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+
+  /aihub/models/{modelId}:
+    get:
+      tags:
+        - AI Hub
+      summary: 获取 AI Hub 模型详情
+      operationId: getAIHubModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /aihub/models/{modelId}/import:
+    post:
+      tags:
+        - AI Hub
+      summary: 导入 AI Hub 模型
+      operationId: importAIHubModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: 导入成功
+
+  /aihub/categories:
+    get:
+      tags:
+        - AI Hub
+      summary: 列出 AI Hub 分类
+      operationId: listAIHubCategories
+      responses:
+        '200':
+          description: 成功
+
+  /aihub/trending:
+    get:
+      tags:
+        - AI Hub
+      summary: 获取热门模型
+      operationId: getTrendingModels
+      responses:
+        '200':
+          description: 成功
+
+  /aihub/featured:
+    get:
+      tags:
+        - AI Hub
+      summary: 获取精选模型
+      operationId: getFeaturedModels
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== Hugging Face ====================
+  /huggingface/models:
+    get:
+      tags:
+        - Hugging Face
+      summary: 搜索 Hugging Face 模型
+      operationId: searchHFModels
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: Pipeline 类型过滤
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+
+  /huggingface/models/{modelId}:
+    get:
+      tags:
+        - Hugging Face
+      summary: 获取 HF 模型详情
+      operationId: getHFModel
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /huggingface/models/{modelId}/import:
+    post:
+      tags:
+        - Hugging Face
+      summary: 导入 HF 模型
+      operationId: importHFModel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: 导入成功
+
+  /huggingface/pipeline-tags:
+    get:
+      tags:
+        - Hugging Face
+      summary: 获取 Pipeline 标签列表
+      operationId: getHFPipelineTags
+      responses:
+        '200':
+          description: 成功
+
+  /huggingface/datasets:
+    get:
+      tags:
+        - Hugging Face
+      summary: 搜索 HF 数据集
+      operationId: searchHFDatasets
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    ModelIdParam:
+      name: modelId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 模型 ID
+
+    DeploymentIdParam:
+      name: deploymentId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 部署 ID
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: 未授权
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 状态码，0 表示成功
+        message:
+          type: string
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            code:
+              example: 40001
+            message:
+              example: 请求参数错误
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: cube-api
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+
+    Model:
+      type: object
+      properties:
+        model_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        model_type:
+          type: string
+          enum: [text-generation, text-classification, text2text-generation, embedding, image-classification]
+        framework:
+          type: string
+          enum: [transformers, pytorch, tensorflow, onnx]
+        source:
+          type: string
+          enum: [local, huggingface, aihub]
+        status:
+          type: string
+          enum: [created, ready, serving, archived]
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateModelRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        model_type:
+          type: string
+          default: text-generation
+        framework:
+          type: string
+          default: transformers
+        source:
+          type: string
+          default: local
+        tags:
+          type: array
+          items:
+            type: string
+        config:
+          type: object
+
+    UpdateModelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        config:
+          type: object
+
+    ModelResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Model'
+
+    ModelListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                models:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Model'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+
+    ModelVersion:
+      type: object
+      properties:
+        version_id:
+          type: string
+        model_id:
+          type: string
+        version:
+          type: string
+        storage_path:
+          type: string
+        file_size:
+          type: integer
+        checksum:
+          type: string
+        status:
+          type: string
+        metrics:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    CreateModelVersionRequest:
+      type: object
+      properties:
+        version:
+          type: string
+          default: "1.0.0"
+        storage_path:
+          type: string
+        file_size:
+          type: integer
+        checksum:
+          type: string
+        metrics:
+          type: object
+
+    ModelVersionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                versions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ModelVersion'
+
+    Deployment:
+      type: object
+      properties:
+        deployment_id:
+          type: string
+        model_id:
+          type: string
+        version_id:
+          type: string
+        replicas:
+          type: integer
+        gpu_count:
+          type: integer
+        memory_limit:
+          type: string
+        cpu_limit:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, stopped, failed]
+        endpoint:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    DeployModelRequest:
+      type: object
+      properties:
+        version_id:
+          type: string
+        replicas:
+          type: integer
+          default: 1
+        gpu_count:
+          type: integer
+          default: 0
+        memory_limit:
+          type: string
+          default: "4Gi"
+        cpu_limit:
+          type: string
+          default: "2"
+        config:
+          type: object
+
+    DeploymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Deployment'
+
+    DeploymentListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                deployments:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Deployment'
+                total:
+                  type: integer
+
+    PredictRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          oneOf:
+            - type: string
+            - type: object
+        parameters:
+          type: object
+
+    PredictResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties: true
+
+    CreateBatchPredictionRequest:
+      type: object
+      required:
+        - model_id
+        - input_path
+      properties:
+        name:
+          type: string
+        model_id:
+          type: string
+        deployment_id:
+          type: string
+        input_path:
+          type: string
+        output_path:
+          type: string
+        input_format:
+          type: string
+          default: jsonl
+        output_format:
+          type: string
+          default: jsonl
+        batch_size:
+          type: integer
+          default: 32
+
+    TrainingJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+        job_name:
+          type: string
+        model_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress:
+          type: number
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    CreateTrainingJobRequest:
+      type: object
+      required:
+        - name
+        - model_id
+      properties:
+        name:
+          type: string
+        model_id:
+          type: string
+        dataset_id:
+          type: string
+        dataset_path:
+          type: string
+        framework:
+          type: string
+        base_model:
+          type: string
+        hyperparameters:
+          type: object
+          properties:
+            learning_rate:
+              type: number
+            batch_size:
+              type: integer
+            epochs:
+              type: integer
+        resources:
+          type: object
+          properties:
+            gpu_count:
+              type: integer
+            memory:
+              type: string
+
+    TrainingJobListResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                training_jobs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrainingJob'
+                total:
+                  type: integer
+
+    CreateExperimentRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        project:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    UpdateExperimentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    CreatePipelineRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        definition:
+          type: object
+        schedule:
+          type: object
+
+    ResourceOverviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                cpu:
+                  type: object
+                  properties:
+                    total:
+                      type: number
+                    used:
+                      type: number
+                    available:
+                      type: number
+                memory:
+                  type: object
+                  properties:
+                    total:
+                      type: string
+                    used:
+                      type: string
+                    available:
+                      type: string
+                gpu:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    used:
+                      type: integer
+                    available:
+                      type: integer
+
+    CreateLLMTuningTaskRequest:
+      type: object
+      required:
+        - name
+        - base_model
+        - dataset_path
+      properties:
+        name:
+          type: string
+        base_model:
+          type: string
+        dataset_path:
+          type: string
+        method:
+          type: string
+          enum: [lora, qlora, full, peft]
+          default: lora
+        hyperparameters:
+          type: object
+
+    ExecuteSqlRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+        database:
+          type: string
+        timeout:
+          type: integer
+          default: 30
+        limit:
+          type: integer
+          default: 1000
+
+    SqlQueryResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                query_id:
+                  type: string
+                sql:
+                  type: string
+                columns:
+                  type: array
+                  items:
+                    type: string
+                rows:
+                  type: array
+                  items:
+                    type: array
+                row_count:
+                  type: integer
+                duration_ms:
+                  type: number
+
+security:
+  - bearerAuth: []
