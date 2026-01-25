@@ -52,7 +52,7 @@ services:
       - one-data-network
 
   minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z  # Pinned version for reproducibility
+    image: minio/minio:latest  # Using latest for development
     container_name: one-data-minio
     environment:
       # SECURITY: MinIO credentials MUST be set via environment variables
@@ -246,9 +246,11 @@ services:
       context: ../../web
       dockerfile: Dockerfile
       args:
+        VITE_AUTH_MODE: keycloak
         VITE_KEYCLOAK_URL: http://localhost:8080
         VITE_KEYCLOAK_REALM: one-data-studio
         VITE_KEYCLOAK_CLIENT_ID: web-frontend
+        VITE_ENABLE_MOCK_LOGIN: false
     container_name: one-data-web
     environment:
       VITE_API_BASE_URL: http://localhost:8000

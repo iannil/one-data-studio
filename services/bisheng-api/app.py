@@ -296,6 +296,80 @@ def health():
     return jsonify(health_status), 200 if all_healthy else 503
 
 
+@app.route("/api/v1/stats/overview", methods=["GET"])
+def stats_overview():
+    """获取平台统计概览（用于仪表盘）"""
+    db = get_db_session()
+    try:
+        from sqlalchemy import text, func
+
+        # 统计用户数
+        try:
+            user_count = db.query(func.count()).select_from(User).scalar() or 0
+        except Exception:
+            user_count = 0
+
+        # 统计工作流数
+        try:
+            workflow_count = db.query(func.count()).select_from(Workflow).scalar() or 0
+        except Exception:
+            workflow_count = 0
+
+        # 统议会话数
+        try:
+            conversation_count = db.query(func.count()).select_from(Conversation).scalar() or 0
+        except Exception:
+            conversation_count = 0
+
+        stats = {
+            "code": 0,
+            "message": "success",
+            "data": {
+                "users": {
+                    "total": user_count,
+                    "active": user_count  # 简化处理
+                },
+                "datasets": {
+                    "total": 0,
+                    "recent": 0
+                },
+                "models": {
+                    "total": 0,
+                    "deployed": 0
+                },
+                "workflows": {
+                    "total": workflow_count,
+                    "running": 0
+                },
+                "experiments": {
+                    "total": 0,
+                    "completed": 0
+                },
+                "api_calls": {
+                    "today": 0,
+                    "total": 0
+                },
+                "storage": {
+                    "used_gb": 0,
+                    "total_gb": 100
+                },
+                "compute": {
+                    "gpu_hours_today": 0,
+                    "cpu_hours_today": 0
+                }
+            }
+        }
+        return jsonify(stats), 200
+    except Exception as e:
+        logger.error(f"Error getting stats overview: {e}")
+        return jsonify({
+            "code": 50000,
+            "message": f"Internal error: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
 @app.route("/api/v1/chat", methods=["POST"])
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)

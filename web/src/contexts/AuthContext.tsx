@@ -63,7 +63,22 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
     const accessToken = getAccessToken();
     const userInfo = getUserInfo();
 
-    console.log('[AuthContext] checkAuth - isAuth:', isAuth, 'accessToken:', accessToken ? 'exists' : 'null');
+    // 详细日志
+    console.log('[AuthContext] checkAuth called');
+    console.log('[AuthContext] - isAuthenticated():', isAuth);
+    console.log('[AuthContext] - getAccessToken():', accessToken ? 'exists' : 'null');
+    console.log('[AuthContext] - getUserInfo():', userInfo ? 'exists' : 'null');
+
+    // 检查 sessionStorage 中的值
+    const tokenExpiresAt = sessionStorage.getItem('token_expires_at');
+    const storedToken = sessionStorage.getItem('access_token');
+    console.log('[AuthContext] - sessionStorage token_expires_at:', tokenExpiresAt);
+    console.log('[AuthContext] - sessionStorage access_token:', storedToken ? 'exists' : 'null');
+    if (tokenExpiresAt) {
+      const now = Date.now();
+      const expires = parseInt(tokenExpiresAt, 10);
+      console.log('[AuthContext] - Time check: now=' + now + ', expires=' + expires + ', diff=' + (expires - now));
+    }
 
     if (isAuth && accessToken) {
       // Token 未过期
@@ -84,7 +99,7 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
       return true;
     }
 
-    // Token 不存在或已过期，不尝试刷新（刷新由用户主动触发）
+    // Token 不存在或已过期
     console.log('[AuthContext] Token invalid or missing, setting authenticated=false');
     setAuthenticated(false);
     setToken(null);
@@ -145,14 +160,15 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
       return;
     }
     checkAuth();
-  }, [checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时运行一次
 
   // 自动刷新 Token
   useEffect(() => {
     if (!autoRefresh || !authenticated) return;
 
     const interval = setInterval(async () => {
-      // 检查是否即将过期（提前 5 分钟）
+      // 检查是否即将过期（提前 30 秒刷新，避免 token 过期）
       const token = getAccessToken();
       if (token) {
         try {
@@ -160,17 +176,19 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
           const expiresAt = payload.exp * 1000;
           const now = Date.now();
 
-          if (expiresAt - now < 5 * 60 * 1000) {
+          // 提前 30 秒刷新
+          if (expiresAt - now < 30 * 1000) {
+            console.log('[AuthContext] Token expiring soon, refreshing...');
             await refresh();
           }
         } catch (e) {
           logError('Token check failed', 'AuthContext', e);
         }
       }
-    }, refreshInterval / 2); // 更频繁地检查
+    }, Math.min(refreshInterval / 2, 30000)); // 最多 30 秒检查一次
 
     return () => clearInterval(interval);
-  }, [authenticated, autoRefresh, refreshInterval, refresh]);
+  }, [authenticated, autoRefresh, refresh]);
 
   // 值
   const value: AuthContextValue = {

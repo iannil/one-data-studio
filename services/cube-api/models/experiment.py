@@ -154,7 +154,7 @@ class ExperimentArtifact(Base):
     checksum = Column(String(64))
 
     # 元数据
-    metadata = Column(JSON)
+    artifact_metadata = Column(JSON)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -168,6 +168,6 @@ class ExperimentArtifact(Base):
             "storage_path": self.storage_path,
             "file_size": self.file_size,
             "checksum": self.checksum,
-            "metadata": self.metadata,
+            "metadata": self.artifact_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

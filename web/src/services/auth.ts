@@ -46,13 +46,13 @@ export interface AuthState {
 
 // ============= Keycloak 配置 =============
 
-// 在生产环境使用代理路径，开发环境直接访问
+// 优先使用环境变量配置的 Keycloak URL
 const getKeycloakUrl = () => {
-  // 如果设置了 VITE_KEYCLOAK_URL 并且是开发模式，直接使用
-  if (import.meta.env.DEV && import.meta.env.VITE_KEYCLOAK_URL) {
+  // 如果设置了 VITE_KEYCLOAK_URL，直接使用（开发和生产环境）
+  if (import.meta.env.VITE_KEYCLOAK_URL) {
     return import.meta.env.VITE_KEYCLOAK_URL;
   }
-  // 生产环境使用 nginx 代理
+  // 默认使用 nginx 代理
   return window.location.origin + '/auth';
 };
 
@@ -62,12 +62,13 @@ const KEYCLOAK_CONFIG: KeycloakConfig = {
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'web-frontend',
 };
 
-// 本地存储键（仅用于非敏感数据）
-// Token 现在存储在 HttpOnly Cookie 中，不再使用 localStorage
+// 本地存储键
+// 存储 access_token 到 sessionStorage，用于 SSO 登录
 const STORAGE_KEYS = {
   USER_INFO: 'user_info',
   TOKEN_EXPIRES_AT: 'token_expires_at',
-  // DEPRECATED: access_token 和 refresh_token 现在由后端通过 HttpOnly Cookie 管理
+  ACCESS_TOKEN: 'access_token',
+  REFRESH_TOKEN: 'refresh_token',
 };
 
 // ============= Cookie 工具函数 =============
@@ -96,27 +97,29 @@ export function getCsrfToken(): string | null {
 // ============= Token 管理 =============
 
 /**
- * 存储用户信息（非敏感数据）
- * Token 现在通过 HttpOnly Cookie 存储
+ * 存储 Token 和用户信息
+ * 将 Token 存储到 sessionStorage 中，用于 API 请求的 Authorization header
  */
 export function storeTokens(tokens: AuthTokens): void {
   const expiresAt = Date.now() + tokens.expires_in * 1000;
   sessionStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
-
-  // 注意：Token 现在由服务器通过 Set-Cookie 头设置为 HttpOnly Cookie
-  // 前端不再直接存储 access_token 和 refresh_token
+  // 存储 access_token 用于 API 请求
+  sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
+  // 如果有 refresh_token，也存储
+  if (tokens.refresh_token) {
+    sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
+  }
 }
 
 /**
- * 获取访问 Token 状态
- * 由于使用 HttpOnly Cookie，前端无法读取实际 Token
- * 返回 'httponly' 表示 Token 存在于 Cookie 中
+ * 获取访问 Token
+ * 从 sessionStorage 中返回存储的 access_token
  */
 export function getAccessToken(): string | null {
   // 检查 Token 是否未过期
   const expiresAt = sessionStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
   if (expiresAt && Date.now() < parseInt(expiresAt, 10)) {
-    return 'httponly'; // 表示 Token 存在但无法读取（HttpOnly）
+    return sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   }
   return null;
 }
@@ -137,8 +140,8 @@ export function getRefreshToken(): string | null {
 export function isTokenExpired(): boolean {
   const expiresAt = sessionStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
   if (!expiresAt) return true;
-  // 提前 5 分钟判断为过期
-  return Date.now() > parseInt(expiresAt, 10) - 5 * 60 * 1000;
+  // 检查是否真正过期（不提前判断，避免短有效期 token 立即失效）
+  return Date.now() > parseInt(expiresAt, 10);
 }
 
 /**
@@ -147,6 +150,8 @@ export function isTokenExpired(): boolean {
 export function clearAuthData(): void {
   sessionStorage.removeItem(STORAGE_KEYS.USER_INFO);
   sessionStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+  sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   // localStorage 中的历史数据也清理
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
@@ -347,37 +352,35 @@ export async function handleCallback(code: string, state: string): Promise<boole
 /**
  * 刷新 Token
  *
- * 调用后端刷新端点，后端会从 HttpOnly Cookie 中读取 refresh_token。
- * 这比直接发送 refresh_token 更安全，因为 refresh_token 不会暴露给 JavaScript。
+ * 调用后端刷新端点，或使用 Keycloak 直接刷新
  */
 export async function refreshAccessToken(): Promise<boolean> {
   try {
-    // 调用后端刷新端点
-    // 后端会自动从 HttpOnly Cookie 中读取 refresh_token
+    // 优先尝试使用后端刷新端点
     const response = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // 重要：包含 Cookie
-      body: JSON.stringify({}), // 空 body，refresh_token 从 Cookie 读取
+      credentials: 'include',
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {
-      logError(`Token refresh failed: ${response.status}`, 'Auth');
-      return false;
+      // 如果后端刷新失败，尝试直接使用 Keycloak 刷新
+      return await refreshWithKeycloak();
     }
 
     const result = await response.json();
 
     if (result.code === 0 && result.data) {
-      // 更新本地状态（过期时间）
-      // 注意：Token 本身由服务器通过 Set-Cookie 头更新
+      // 更新本地状态
       const expiresAt = Date.now() + (result.data.expires_in || 3600) * 1000;
       sessionStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
 
-      // 更新用户信息（如果返回了新的 token）
+      // 更新 access_token（如果返回了新的 token）
       if (result.data.access_token) {
+        sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, result.data.access_token);
         const userInfo = parseJwtToken(result.data.access_token);
         if (userInfo) {
           storeUserInfo(userInfo);
@@ -387,11 +390,54 @@ export async function refreshAccessToken(): Promise<boolean> {
       return true;
     }
 
-    return false;
+    // 后端返回错误，尝试 Keycloak 刷新
+    return await refreshWithKeycloak();
   } catch (e) {
     logError('Token refresh failed', 'Auth', e);
-    // 注意：刷新失败不应该清除认证数据，因为原有 token 可能仍然有效
-    // clearAuthData(); // 移除此调用
+    // 尝试直接使用 Keycloak 刷新
+    return await refreshWithKeycloak();
+  }
+}
+
+/**
+ * 使用 Keycloak 直接刷新 Token
+ */
+async function refreshWithKeycloak(): Promise<boolean> {
+  try {
+    const refreshToken = sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) {
+      return false;
+    }
+
+    const tokenEndpoint = `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/token`;
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: KEYCLOAK_CONFIG.clientId,
+      }),
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const tokens: AuthTokens = await response.json();
+    storeTokens(tokens);
+
+    // 更新用户信息
+    const userInfo = parseJwtToken(tokens.access_token);
+    if (userInfo) {
+      storeUserInfo(userInfo);
+    }
+
+    return true;
+  } catch (e) {
+    logError('Keycloak token refresh failed', 'Auth', e);
     return false;
   }
 }

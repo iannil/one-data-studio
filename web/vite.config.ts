@@ -64,6 +64,43 @@ export default defineConfig({
         target: 'http://localhost:8003',
         changeOrigin: true,
       },
+      // Admin API (user/group/role/audit/stats management)
+      '/api/v1/stats': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/users': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/roles': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/permissions': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/groups': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/admin': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/audit': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/cost': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
+      '/api/v1/settings': {
+        target: 'http://localhost:8003',
+        changeOrigin: true,
+      },
       // Cube Studio API (model management)
       '/api/v1/models': {
         target: 'http://localhost:8002',
