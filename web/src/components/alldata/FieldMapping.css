@@ -1,0 +1,114 @@
+/**
+ * AI 字段映射组件样式
+ */
+
+.field-mapping {
+  width: 100%;
+}
+
+.table-selector {
+  margin-bottom: 8px;
+}
+
+.table-selector .selector-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.field-code {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #1677ff;
+}
+
+.mapping-row-selected {
+  background: #f0f5ff;
+}
+
+.mapping-row-selected:hover td {
+  background: #e6f0ff !important;
+}
+
+.sql-preview {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 映射类型标签颜色 */
+.field-mapping .ant-tag.success {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.field-mapping .ant-tag.processing {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1677ff;
+}
+
+.field-mapping .ant-tag.warning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #faad14;
+}
+
+.field-mapping .ant-tag.purple {
+  background: #f9f0ff;
+  border-color: #d3adf7;
+  color: #722ed1;
+}
+
+/* 表选择器动画 */
+.table-selector .ant-select {
+  transition: all 0.3s;
+}
+
+.table-selector .ant-select:hover {
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
+}
+
+/* 置信度进度条 */
+.field-mapping .ant-progress-small .ant-progress-inner {
+  height: 6px;
+}
+
+/* 质量得分徽章 */
+.field-mapping .ant-badge-count {
+  min-width: 40px;
+  height: 20px;
+  line-height: 20px;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+  .field-mapping .ant-col {
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .field-mapping .ant-descriptions-small .ant-descriptions-item-label {
+    width: 80px;
+  }
+
+  .sql-preview {
+    font-size: 11px;
+    padding: 12px;
+  }
+}

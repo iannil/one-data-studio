@@ -1,0 +1,80 @@
+{
+  "name": "通用报告模板",
+  "description": "用于提取报告的关键指标",
+  "type": "report",
+  "category": "business",
+  "supported_formats": ["pdf", "word"],
+  "fields": [
+    {
+      "name": "报告标题",
+      "key": "report_title",
+      "required": true,
+      "keywords": ["报告", "总结", "分析"]
+    },
+    {
+      "name": "报告日期",
+      "key": "report_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      }
+    },
+    {
+      "name": "报告期",
+      "key": "report_period",
+      "required": false,
+      "keywords": ["报告期", "统计期", "期间", "周期"]
+    },
+    {
+      "name": "报告类型",
+      "key": "report_type",
+      "required": false
+    },
+    {
+      "name": "编制单位",
+      "key": "author",
+      "required": false
+    },
+    {
+      "name": "核心指标1",
+      "key": "key_metric_1",
+      "required": false
+    },
+    {
+      "name": "核心指标2",
+      "key": "key_metric_2",
+      "required": false
+    },
+    {
+      "name": "核心指标3",
+      "key": "key_metric_3",
+      "required": false
+    },
+    {
+      "name": "同比变化",
+      "key": "yoy_change",
+      "required": false
+    },
+    {
+      "name": "环比变化",
+      "key": "mom_change",
+      "required": false
+    },
+    {
+      "name": "主要结论",
+      "key": "main_conclusion",
+      "required": false
+    }
+  ],
+  "tables": [
+    {
+      "name": "数据指标表",
+      "key": "metrics",
+      "required": false,
+      "header_keywords": ["指标", "数值", "单位", "同比", "环比"]
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD"
+  }
+}

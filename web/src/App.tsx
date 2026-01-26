@@ -18,6 +18,7 @@ const WorkflowsPage = lazy(() => import('./pages/workflows/WorkflowsPage'));
 const WorkflowExecutePage = lazy(() => import('./pages/workflows/WorkflowExecutePage'));
 const WorkflowEditorPage = lazy(() => import('./pages/workflows/WorkflowEditorPage'));
 const MetadataPage = lazy(() => import('./pages/metadata/MetadataPage'));
+const MetadataGraphPage = lazy(() => import('./pages/metadata/MetadataGraphPage'));
 const SchedulesPage = lazy(() => import('./pages/schedules/SchedulesPage'));
 const AgentsPage = lazy(() => import('./pages/agents/AgentsPage'));
 const Text2SQLPage = lazy(() => import('./pages/text2sql/Text2SQLPage'));
@@ -76,11 +77,23 @@ const UserProfilesPage = lazy(() => import('./pages/admin/UserProfilesPage'));
 const UserSegmentsPage = lazy(() => import('./pages/admin/UserSegmentsPage'));
 const ApiTesterPage = lazy(() => import('./pages/admin/ApiTester'));
 
+// Admin Behavior Pages
+const BehaviorDashboardPage = lazy(() => import('./pages/admin/behavior/BehaviorDashboard'));
+const AuditLogPage = lazy(() => import('./pages/admin/behavior/AuditLogPage'));
+const ProfileViewPage = lazy(() => import('./pages/admin/behavior/ProfileView'));
+
 // Portal Pages
+const PortalDashboardPage = lazy(() => import('./pages/portal/DashboardPage'));
 const PortalNotificationsPage = lazy(() => import('./pages/portal/NotificationsPage'));
 const TodosPage = lazy(() => import('./pages/portal/TodosPage'));
 const AnnouncementsPage = lazy(() => import('./pages/portal/AnnouncementsPage'));
 const ProfilePage = lazy(() => import('./pages/portal/ProfilePage'));
+
+// Scheduler Pages
+const SmartSchedulerPage = lazy(() => import('./pages/scheduler/SmartSchedulerPage'));
+
+// Metadata Pages
+const MetadataVersionDiffPage = lazy(() => import('./pages/metadata/VersionDiffPage'));
 
 // 懒加载组件的包装器，显示加载状态
 function LazyWrapper({ children }: { children: React.ReactNode }) {
@@ -121,6 +134,8 @@ function AppRoutes() {
         <Route path="workflows/:workflowId/edit" element={<LazyWrapper><WorkflowEditorPage /></LazyWrapper>} />
         <Route path="workflows/:workflowId/executions" element={<LazyWrapper><WorkflowExecutePage /></LazyWrapper>} />
         <Route path="metadata" element={<LazyWrapper><MetadataPage /></LazyWrapper>} />
+        <Route path="metadata/graph" element={<LazyWrapper><MetadataGraphPage /></LazyWrapper>} />
+        <Route path="metadata/version-diff" element={<LazyWrapper><MetadataVersionDiffPage /></LazyWrapper>} />
         <Route path="schedules" element={<LazyWrapper><SchedulesPage /></LazyWrapper>} />
         <Route path="agents" element={<LazyWrapper><AgentsPage /></LazyWrapper>} />
         <Route path="text2sql" element={<LazyWrapper><Text2SQLPage /></LazyWrapper>} />
@@ -179,12 +194,19 @@ function AppRoutes() {
         <Route path="admin/user-profiles" element={<LazyWrapper><UserProfilesPage /></LazyWrapper>} />
         <Route path="admin/user-segments" element={<LazyWrapper><UserSegmentsPage /></LazyWrapper>} />
         <Route path="admin/api-tester" element={<LazyWrapper><ApiTesterPage /></LazyWrapper>} />
+        <Route path="admin/behavior" element={<LazyWrapper><BehaviorDashboardPage /></LazyWrapper>} />
+        <Route path="admin/behavior/audit-log" element={<LazyWrapper><AuditLogPage /></LazyWrapper>} />
+        <Route path="admin/behavior/profile-view" element={<LazyWrapper><ProfileViewPage /></LazyWrapper>} />
 
         {/* Portal Routes */}
+        <Route path="portal/dashboard" element={<LazyWrapper><PortalDashboardPage /></LazyWrapper>} />
         <Route path="portal/notifications" element={<LazyWrapper><PortalNotificationsPage /></LazyWrapper>} />
         <Route path="portal/todos" element={<LazyWrapper><TodosPage /></LazyWrapper>} />
         <Route path="portal/announcements" element={<LazyWrapper><AnnouncementsPage /></LazyWrapper>} />
         <Route path="portal/profile" element={<LazyWrapper><ProfilePage /></LazyWrapper>} />
+
+        {/* Scheduler Routes */}
+        <Route path="scheduler/smart" element={<LazyWrapper><SmartSchedulerPage /></LazyWrapper>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

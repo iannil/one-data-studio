@@ -30,11 +30,13 @@ import {
   HeatMapOutlined,
   ReloadOutlined,
   PlusOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import alldata from '@/services/alldata';
 import type { DataAsset } from '@/services/alldata';
+import { AssetAISearch } from '@/components/alldata/AssetAISearch';
 
 const { Option } = Select;
 
@@ -359,6 +361,23 @@ function AssetsPage() {
                       size="small"
                     />
                   </Card>
+                ),
+              },
+              {
+                key: 'ai-search',
+                label: (
+                  <Space>
+                    <RobotOutlined />
+                    <span>AI 智能搜索</span>
+                  </Space>
+                ),
+                children: (
+                  <AssetAISearch
+                    onResultSelect={(asset) => {
+                      setSelectedAsset(asset);
+                      setIsProfileDrawerOpen(true);
+                    }}
+                  />
                 ),
               },
               {

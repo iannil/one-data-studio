@@ -1,0 +1,279 @@
+/**
+ * 数据服务接口管理组件样式
+ */
+
+.data-service-manager {
+  width: 100%;
+}
+
+/* 端点代码样式 */
+.endpoint-code {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #1677ff;
+}
+
+/* Key 代码样式 */
+.key-code {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  background: #fffbe6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #d48806;
+}
+
+/* API Secret 显示 */
+.api-key-secret {
+  display: block;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  padding: 12px;
+  border-radius: 4px;
+  word-break: break-all;
+  color: #cf1322;
+  margin: 8px 0;
+}
+
+/* 服务状态标签 */
+.data-service-manager .ant-tag.draft {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #595959;
+}
+
+.data-service-manager .ant-tag.success {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.data-service-manager .ant-tag.warning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #faad14;
+}
+
+/* 服务卡片 */
+.service-card {
+  border-left: 4px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.service-card.rest {
+  border-left-color: #1677ff;
+}
+
+.service-card.graphql {
+  border-left-color: #722ed1;
+}
+
+.service-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 统计卡片 */
+.stat-card {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.stat-card .ant-statistic-title {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.stat-card .ant-statistic-content {
+  color: #fff;
+}
+
+/* API Key 卡片 */
+.apikey-card {
+  position: relative;
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+}
+
+.apikey-card .key-display {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 8px 0;
+  word-break: break-all;
+}
+
+.apikey-card .copy-hint {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: #1677ff;
+  cursor: pointer;
+}
+
+/* 调用记录状态指示 */
+.call-record-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.call-record-item:hover {
+  border-color: #1677ff;
+  box-shadow: 0 2px 6px rgba(22, 119, 255, 0.15);
+}
+
+.call-record-item.status-2xx {
+  border-left: 3px solid #52c41a;
+}
+
+.call-record-item.status-4xx {
+  border-left: 3px solid #faad14;
+}
+
+.call-record-item.status-5xx {
+  border-left: 3px solid #ff4d4f;
+}
+
+/* 延迟显示 */
+.latency-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.latency-indicator.fast {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.latency-indicator.medium {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.latency-indicator.slow {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+/* 成功率进度条 */
+.success-rate-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.success-rate-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4d4f 0%, #faad14 50%, #52c41a 100%);
+  transition: width 0.5s ease;
+}
+
+/* 方法标签 */
+.method-tag {
+  font-weight: bold;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.method-tag.GET {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1677ff;
+}
+
+.method-tag.POST {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.method-tag.PUT {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+.method-tag.DELETE {
+  background: #fff1f0;
+  border-color: #ffa39e;
+  color: #ff4d4f;
+}
+
+/* 服务详情 */
+.service-details {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.service-details .ant-descriptions-item-label {
+  font-weight: 500;
+}
+
+/* 文档示例 */
+.api-doc-example {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.api-doc-example .request-line {
+  color: #61afef;
+}
+
+.api-doc-example .method {
+  color: #98c379;
+  font-weight: bold;
+}
+
+.api-doc-example .endpoint {
+  color: #e5c07b;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .data-service-manager .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .api-key-secret {
+    font-size: 11px;
+    padding: 8px;
+  }
+
+  .endpoint-code,
+  .key-code {
+    font-size: 11px;
+    padding: 1px 4px;
+  }
+
+  .data-service-manager .ant-descriptions-small .ant-descriptions-item-label {
+    width: 80px;
+  }
+}

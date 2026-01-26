@@ -1,0 +1,233 @@
+/**
+ * 元数据图谱可视化组件样式
+ */
+
+.metadata-graph-container {
+  width: 100%;
+}
+
+.graph-controls {
+  margin-bottom: 12px;
+}
+
+.graph-controls .ant-card-body {
+  padding: 8px 12px;
+}
+
+.graph-stats .ant-card-body {
+  padding: 12px;
+}
+
+.graph-stats .ant-statistic-title {
+  font-size: 12px;
+}
+
+.metadata-graph-wrapper {
+  position: relative;
+}
+
+.metadata-graph-canvas {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fafafa;
+  min-height: 400px;
+}
+
+/* 节点类型样式 */
+.cy-node.database {
+  background-color: #ff4d4f !important;
+}
+
+.cy-node.table {
+  background-color: #1890ff !important;
+}
+
+.cy-node.column {
+  background-color: #52c41a !important;
+}
+
+.cy-node.lineage {
+  background-color: #722ed1 !important;
+}
+
+/* 节点状态 */
+.cy-node.faded {
+  opacity: 0.2 !important;
+}
+
+.cy-node.highlighted {
+  border-width: 3px !important;
+  border-color: #ffd700 !important;
+}
+
+/* 边样式 */
+.cy-edge.hierarchy {
+  line-style: solid !important;
+  line-color: #ddd !important;
+}
+
+.cy-edge.lineage {
+  line-style: dashed !important;
+  line-color: #999 !important;
+}
+
+/* 图例 */
+.graph-legend {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.graph-legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+/* 工具栏 */
+.graph-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+/* 详情面板 */
+.graph-node-details {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+.graph-detail-item {
+  margin-bottom: 12px;
+}
+
+.graph-detail-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.graph-detail-value {
+  font-size: 14px;
+  color: #333;
+}
+
+/* 加载状态 */
+.graph-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+}
+
+/* 小图样式 */
+.mini-graph {
+  width: 100%;
+  height: 200px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+/* 节点卡片 */
+.node-card {
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.node-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.node-card-title {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.node-card-type {
+  font-size: 12px;
+}
+
+.node-card-body {
+  font-size: 12px;
+  color: #666;
+}
+
+.node-card-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 过滤器 */
+.graph-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 搜索结果高亮 */
+.search-highlight {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .graph-controls {
+    flex-wrap: wrap;
+  }
+
+  .graph-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .graph-legend {
+    flex-wrap: wrap;
+  }
+}

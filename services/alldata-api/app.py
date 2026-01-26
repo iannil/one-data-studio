@@ -137,6 +137,19 @@ try:
 except ImportError:
     MINIO_ENABLED = False
 
+# 导入元数据图谱构建服务
+try:
+    from services.metadata_graph_builder import MetadataGraphBuilder
+    GRAPH_BUILDER = MetadataGraphBuilder()
+    GRAPH_ENABLED = True
+except ImportError:
+    GRAPH_ENABLED = False
+    GRAPH_BUILDER = None
+    import logging
+    logging.getLogger(__name__).warning(
+        "Metadata graph builder not available. Graph visualization features disabled."
+    )
+
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 # 请求大小限制 - 防止 DoS 攻击
@@ -496,6 +509,254 @@ def list_columns(database, table):
             "message": "success",
             "data": {"columns": result}
         })
+    finally:
+        db.close()
+
+
+# ============================================
+# 元数据图谱可视化 API
+# ============================================
+
+@app.route("/api/v1/metadata/graph", methods=["GET"])
+@require_jwt(optional=True)
+def get_metadata_graph():
+    """
+    获取完整的元数据图谱
+
+    返回数据库、表、列的层次结构以及它们之间的关系
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    tenant_id = request.args.get("tenant_id", "default")
+    node_types_str = request.args.get("node_types", None)
+    include_lineage = request.args.get("include_lineage", "true").lower() == "true"
+
+    node_type_list = None
+    if node_types_str:
+        node_type_list = [t.strip() for t in node_types_str.split(",")]
+
+    db = get_db_session()
+    try:
+        graph_data = GRAPH_BUILDER.build_full_graph(
+            db, tenant_id, node_type_list, include_lineage
+        )
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": graph_data
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to build metadata graph: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to build graph: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/graph/lineage/<table_name>", methods=["GET"])
+@require_jwt(optional=True)
+def get_table_lineage_graph(table_name):
+    """
+    获取单个表的数据血缘图谱
+
+    返回该表的上游依赖和下游被依赖
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    tenant_id = request.args.get("tenant_id", "default")
+    depth = int(request.args.get("depth", 3))
+
+    db = get_db_session()
+    try:
+        lineage_data = GRAPH_BUILDER.build_table_lineage_graph(
+            db, tenant_id, table_name, depth
+        )
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": lineage_data
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to build table lineage graph: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to build lineage graph: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/graph/columns/<table_name>", methods=["GET"])
+@require_jwt(optional=True)
+def get_column_relation_graph(table_name):
+    """
+    获取表的列关系图
+
+    返回表内列之间的关系（外键、关联等）
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    tenant_id = request.args.get("tenant_id", "default")
+
+    db = get_db_session()
+    try:
+        column_data = GRAPH_BUILDER.build_column_relation_graph(
+            db, tenant_id, table_name
+        )
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": column_data
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to build column relation graph: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to build column graph: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/graph/search", methods=["GET"])
+@require_jwt(optional=True)
+def search_metadata_nodes():
+    """
+    搜索元数据节点
+
+    支持按名称、描述搜索数据库、表、列
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    query = request.args.get("query")
+    if not query:
+        return jsonify({
+            "code": 40001,
+            "message": "query parameter is required"
+        }), 400
+
+    tenant_id = request.args.get("tenant_id", "default")
+    node_types_str = request.args.get("node_types", None)
+
+    node_type_list = None
+    if node_types_str:
+        node_type_list = [t.strip() for t in node_types_str.split(",")]
+
+    db = get_db_session()
+    try:
+        results = GRAPH_BUILDER.search_nodes(
+            db, tenant_id, query, node_type_list
+        )
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "query": query,
+                "total": len(results),
+                "nodes": results
+            }
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to search metadata nodes: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Search failed: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/graph/statistics", methods=["GET"])
+@require_jwt(optional=True)
+def get_graph_statistics():
+    """
+    获取元数据统计信息
+
+    返回数据库、表、列的数量统计
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    tenant_id = request.args.get("tenant_id", "default")
+
+    db = get_db_session()
+    try:
+        stats = GRAPH_BUILDER.build_statistics_graph(db, tenant_id)
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to get graph statistics: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to get statistics: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/graph/neighbors/<node_type>/<node_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_node_neighbors(node_type, node_id):
+    """
+    获取节点的邻居
+
+    返回指定节点的直接关联节点
+    """
+    if not GRAPH_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Graph visualization service not available",
+        }), 503
+
+    tenant_id = request.args.get("tenant_id", "default")
+    depth = int(request.args.get("depth", 1))
+
+    db = get_db_session()
+    try:
+        neighbors = GRAPH_BUILDER.get_node_neighbors(
+            db, tenant_id, node_id, node_type, depth
+        )
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": neighbors
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to get node neighbors: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to get neighbors: {str(e)}"
+        }), 500
     finally:
         db.close()
 
@@ -7390,11 +7651,11 @@ def recommend_cleaning_rules():
 
     基于数据质量问题自动推荐清洗规则
     """
-    db = next(get_db())
-    data = request.json
+    db = get_db_session()
+    data = request.json or {}
 
     try:
-        from src.ai_cleaning_advisor import get_ai_cleaning_advisor, CleaningAdvisor
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
 
         advisor = get_ai_cleaning_advisor()
 
@@ -7402,16 +7663,16 @@ def recommend_cleaning_rules():
         table_id = data.get("table_id")
         quality_alerts = data.get("quality_alerts", [])
 
+        # 如果提供了表名，分析表的质量问题
         if table_id and not quality_alerts:
-            # 从数据库获取该表的质量告警
-            alerts = db.query(QualityAlert).filter(
-                QualityAlert.table_name == table_id,
-                QualityAlert.status == "open"
-            ).limit(50).all()
-            quality_alerts = [a.to_dict() for a in alerts]
-
-        # 分析质量问题并推荐清洗规则
-        recommendations = advisor.analyze_quality_issues(quality_alerts)
+            recommendations = advisor.analyze_table_quality_issues(
+                db=db,
+                table_name=table_id,
+                database_name=data.get("database_name")
+            )
+        else:
+            # 基于告警生成建议
+            recommendations = advisor.analyze_quality_alerts(quality_alerts)
 
         # 可选：生成 Kettle 步骤配置
         include_kettle = data.get("include_kettle_steps", False)
@@ -7435,6 +7696,131 @@ def recommend_cleaning_rules():
         return jsonify({"code": 50000, "message": str(e)}), 500
     finally:
         db.close()
+
+
+@app.route("/api/v1/quality/analyze-table", methods=["POST"])
+@require_jwt()
+def analyze_table_quality():
+    """
+    AI 分析表的数据质量问题
+
+    自动检测并推荐清洗规则
+    """
+    db = get_db_session()
+    data = request.json or {}
+
+    try:
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
+
+        advisor = get_ai_cleaning_advisor()
+
+        table_name = data.get("table_name")
+        if not table_name:
+            return jsonify({"code": 40001, "message": "table_name 不能为空"}), 400
+
+        database_name = data.get("database_name")
+
+        recommendations = advisor.analyze_table_quality_issues(
+            db=db,
+            table_name=table_name,
+            database_name=database_name
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "table_name": table_name,
+                "database_name": database_name,
+                "issues_found": len(recommendations),
+                "recommendations": [r.to_dict() for r in recommendations],
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 清洗服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 表质量分析失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/recommend-column-rules", methods=["POST"])
+@require_jwt()
+def recommend_column_rules():
+    """
+    为单个列推荐清洗规则
+
+    基于列信息和样本数据推荐规则
+    """
+    data = request.json or {}
+
+    try:
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
+
+        advisor = get_ai_cleaning_advisor()
+
+        column_info = data.get("column_info")
+        if not column_info:
+            return jsonify({"code": 40001, "message": "column_info 不能为空"}), 400
+
+        recommendations = advisor.recommend_rules_for_column(column_info)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "column_name": column_info.get("name"),
+                "recommendations": [r.to_dict() for r in recommendations],
+                "total_count": len(recommendations),
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 清洗服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 列规则推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/quality/rule-templates", methods=["GET"])
+@require_jwt()
+def get_rule_templates():
+    """
+    获取可用的清洗规则模板
+
+    返回预定义的规则模板供用户选择
+    """
+    try:
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
+
+        advisor = get_ai_cleaning_advisor()
+
+        templates = []
+        for category, rules in advisor._rule_templates.items():
+            for rule in rules:
+                templates.append({
+                    "category": category,
+                    "rule_type": rule["rule_type"],
+                    "name": rule["rule_name"],
+                    "expression": rule["rule_expression"],
+                    "severity": rule["severity"],
+                    "config_template": rule["config_template"],
+                })
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "templates": templates,
+                "total": len(templates),
+                "categories": list(advisor._rule_templates.keys()),
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 清洗服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取规则模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
 
 
 @app.route("/api/v1/data/impute-missing", methods=["POST"])
@@ -7738,6 +8124,3916 @@ def get_similar_assets(asset_id):
         return jsonify({"code": 50001, "message": f"语义检索服务不可用: {e}"}), 500
     except Exception as e:
         logger.error(f"获取相似资产失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== AI 资产检索增强 API ====================
+
+@app.route("/api/v1/assets/ai/search", methods=["POST"])
+@require_jwt()
+def ai_search_assets():
+    """
+    AI 自然语言搜索资产
+
+    支持自然语言查询，例如：
+    - "用户订单相关的表"
+    - "包含手机号的数据"
+    - "最近更新的客户表"
+    """
+    data = request.json or {}
+
+    try:
+        from services.ai_asset_search import get_ai_asset_search_service
+
+        service = get_ai_asset_search_service()
+
+        query = data.get("query")
+        if not query:
+            return jsonify({"code": 40001, "message": "query 不能为空"}), 400
+
+        limit = data.get("limit", 20)
+        filters = data.get("filters")
+
+        db = get_db_session()
+        try:
+            results = service.natural_search(
+                db=db,
+                tenant_id=data.get("tenant_id", "default"),
+                query=query,
+                limit=limit,
+                filters=filters
+            )
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": results
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 搜索失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/ai/semantic-search", methods=["POST"])
+@require_jwt()
+def ai_semantic_search_assets():
+    """
+    AI 语义搜索资产（基于向量相似度）
+    """
+    data = request.json or {}
+
+    try:
+        from services.ai_asset_search import get_ai_asset_search_service
+
+        service = get_ai_asset_search_service()
+
+        query = data.get("query")
+        if not query:
+            return jsonify({"code": 40001, "message": "query 不能为空"}), 400
+
+        limit = data.get("limit", 20)
+        filters = data.get("filters")
+
+        db = get_db_session()
+        try:
+            results = service.semantic_search(
+                db=db,
+                tenant_id=data.get("tenant_id", "default"),
+                query=query,
+                limit=limit,
+                filters=filters
+            )
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": results
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 语义搜索失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/ai/recommend/<asset_id>", methods=["GET"])
+@require_jwt()
+def ai_recommend_assets(asset_id):
+    """
+    AI 推荐相关资产
+    """
+    try:
+        from services.ai_asset_search import get_ai_asset_search_service
+
+        service = get_ai_asset_search_service()
+
+        limit = request.args.get("limit", 10, type=int)
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            results = service.recommend_assets(
+                db=db,
+                tenant_id=tenant_id,
+                asset_id=asset_id,
+                limit=limit
+            )
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": results
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/ai/trending", methods=["GET"])
+@require_jwt()
+def ai_get_trending_assets():
+    """
+    获取热门资产
+    """
+    try:
+        from services.ai_asset_search import get_ai_asset_search_service
+
+        service = get_ai_asset_search_service()
+
+        days = request.args.get("days", 7, type=int)
+        limit = request.args.get("limit", 10, type=int)
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            results = service.get_trending_assets(
+                db=db,
+                tenant_id=tenant_id,
+                days=days,
+                limit=limit
+            )
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": results
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取热门资产失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/ai/autocomplete", methods=["GET"])
+@require_jwt()
+def ai_autocomplete_assets():
+    """
+    搜索补全建议
+    """
+    try:
+        from services.ai_asset_search import get_ai_asset_search_service
+
+        service = get_ai_asset_search_service()
+
+        prefix = request.args.get("prefix")
+        if not prefix:
+            return jsonify({"code": 40001, "message": "prefix 不能为空"}), 400
+
+        limit = request.args.get("limit", 10, type=int)
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            results = service.autocomplete(
+                db=db,
+                tenant_id=tenant_id,
+                prefix=prefix,
+                limit=limit
+            )
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": results
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"补全建议失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== AI 字段映射 API ====================
+
+@app.route("/api/v1/mapping/suggest", methods=["POST"])
+@require_jwt()
+def suggest_field_mappings():
+    """
+    智能推荐字段映射
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        source_table = data.get("source_table")
+        target_table = data.get("target_table")
+        source_database = data.get("source_database")
+        target_database = data.get("target_database")
+        options = data.get("options", {})
+
+        if not source_table or not target_table:
+            return jsonify({"code": 40001, "message": "source_table 和 target_table 不能为空"}), 400
+
+        db = get_db_session()
+        try:
+            result = service.suggest_field_mappings(
+                db=db,
+                source_table=source_table,
+                source_database=source_database,
+                target_table=target_table,
+                target_database=target_database,
+                options=options
+            )
+
+            if "error" in result:
+                return jsonify({"code": 40002, "message": result["error"]}), 400
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"字段映射服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"字段映射推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/mapping/type-conversions", methods=["POST"])
+@require_jwt()
+def suggest_type_conversions():
+    """
+    推荐数据类型转换策略
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        mappings = data.get("mappings", [])
+        source_schema = data.get("source_schema", [])
+        target_schema = data.get("target_schema", [])
+
+        if not mappings:
+            return jsonify({"code": 40001, "message": "mappings 不能为空"}), 400
+
+        result = service.suggest_data_type_conversions(
+            mappings=mappings,
+            source_schema=source_schema,
+            target_schema=target_schema
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"类型转换推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/mapping/generate-sql", methods=["POST"])
+@require_jwt()
+def generate_transformation_sql():
+    """
+    生成字段转换 SQL
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        mappings = data.get("mappings", [])
+        source_table = data.get("source_table")
+        target_table = data.get("target_table", "target_table")
+
+        if not mappings or not source_table:
+            return jsonify({"code": 40001, "message": "mappings 和 source_table 不能为空"}), 400
+
+        result = service.generate_transformation_sql(
+            mappings=mappings,
+            source_table=source_table,
+            target_table=target_table
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"SQL 生成失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/mapping/detect-conflicts", methods=["POST"])
+@require_jwt()
+def detect_mapping_conflicts():
+    """
+    检测映射冲突
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        mappings = data.get("mappings", [])
+        target_schema = data.get("target_schema", [])
+
+        if not mappings:
+            return jsonify({"code": 40001, "message": "mappings 不能为空"}), 400
+
+        conflicts = service.detect_mapping_conflicts(
+            mappings=mappings,
+            target_schema=target_schema
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "conflicts": conflicts,
+                "conflict_count": len(conflicts)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"冲突检测失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/mapping/derived-fields", methods=["POST"])
+@require_jwt()
+def suggest_derived_fields():
+    """
+    推荐派生字段映射
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        source_columns = data.get("source_columns", [])
+        target_columns = data.get("target_columns", [])
+        context = data.get("context", {})
+
+        if not source_columns or not target_columns:
+            return jsonify({"code": 40001, "message": "source_columns 和 target_columns 不能为空"}), 400
+
+        suggestions = service.suggest_derived_fields(
+            source_columns=source_columns,
+            target_columns=target_columns,
+            context=context
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "suggestions": [s.to_dict() for s in suggestions],
+                "count": len(suggestions)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"派生字段推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/mapping/tables/<database_name>", methods=["GET"])
+@require_jwt()
+def list_tables_for_mapping(database_name: str):
+    """
+    获取指定数据库的表列表（用于映射选择）
+    """
+    try:
+        db = get_db_session()
+        try:
+            from models.metadata import MetadataTable
+
+            tables = db.query(MetadataTable).filter(
+                MetadataTable.database_name == database_name
+            ).order_by(MetadataTable.table_name).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "tables": [
+                        {
+                            "table_name": t.table_name,
+                            "database_name": t.database_name,
+                            "table_comment": t.table_comment,
+                            "column_count": t.column_count or 0
+                        }
+                        for t in tables
+                    ],
+                    "total": len(tables)
+                }
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取表列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 智能预警推送 API ====================
+
+@app.route("/api/v1/alerts/detect-anomalies", methods=["POST"])
+@require_jwt()
+def detect_anomalies():
+    """
+    执行异常检测
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json
+        detection_types = data.get("detection_types")
+        time_window_hours = data.get("time_window_hours", 24)
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            result = service.detect_anomalies(
+                db=db,
+                tenant_id=tenant_id,
+                detection_types=detection_types,
+                time_window_hours=time_window_hours,
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"异常检测失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/rules", methods=["GET"])
+@require_jwt()
+def list_alert_rules():
+    """
+    列出预警规则
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        tenant_id = request.args.get("tenant_id", "default")
+        rule_type = request.args.get("rule_type")
+        enabled_only = request.args.get("enabled_only", "false").lower() == "true"
+
+        result = service.list_alert_rules(
+            db=get_db_session(),
+            tenant_id=tenant_id,
+            rule_type=rule_type,
+            enabled_only=enabled_only,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/rules", methods=["POST"])
+@require_jwt()
+def create_alert_rule():
+    """
+    创建预警规则
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json
+        tenant_id = request.args.get("tenant_id", "default")
+        user_id = g.user.get("user_id", "system")
+
+        result = service.create_alert_rule(
+            db=get_db_session(),
+            rule=data,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"创建预警规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_alert_rule(rule_id: str):
+    """
+    更新预警规则
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        updates = request.json
+
+        result = service.update_alert_rule(
+            db=get_db_session(),
+            rule_id=rule_id,
+            updates=updates,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"更新预警规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_alert_rule(rule_id: str):
+    """
+    删除预警规则
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        success = service.delete_alert_rule(
+            db=get_db_session(),
+            rule_id=rule_id,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": success}
+        })
+
+    except Exception as e:
+        logger.error(f"删除预警规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/channels", methods=["GET"])
+@require_jwt()
+def get_alert_channels():
+    """
+    获取预警通道列表
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        include_disabled = request.args.get("include_disabled", "false").lower() == "true"
+
+        channels = service.get_channels(include_disabled=include_disabled)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "channels": channels,
+                "total": len(channels),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警通道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/channels", methods=["POST"])
+@require_jwt()
+def add_alert_channel():
+    """
+    添加预警通道
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json
+        channel_type = data.get("channel_type")
+        name = data.get("name")
+        config = data.get("config", {})
+
+        result = service.add_channel(channel_type, name, config)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"添加预警通道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/channels/<channel_type>", methods=["PUT"])
+@require_jwt()
+def update_alert_channel(channel_type: str):
+    """
+    更新预警通道配置
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        updates = request.json
+
+        result = service.update_channel(channel_type, updates)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"更新预警通道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/channels/<channel_type>", methods=["DELETE"])
+@require_jwt()
+def remove_alert_channel(channel_type: str):
+    """
+    删除预警通道
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        success = service.remove_channel(channel_type)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"removed": success}
+        })
+
+    except Exception as e:
+        logger.error(f"删除预警通道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/channels/<channel_type>/test", methods=["POST"])
+@require_jwt()
+def test_alert_channel(channel_type: str):
+    """
+    测试预警通道
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json or {}
+        test_message = data.get("message")
+
+        result = service.test_channel(channel_type, test_message)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"测试预警通道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/send", methods=["POST"])
+@require_jwt()
+def send_alert():
+    """
+    发送预警通知
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json
+        alert = data.get("alert", {})
+        channels = data.get("channels", ["email"])
+        recipients = data.get("recipients")
+
+        result = service.send_alert(
+            db=get_db_session(),
+            alert=alert,
+            channels=channels,
+            recipients=recipients,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"发送预警失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/history", methods=["GET"])
+@require_jwt()
+def get_alert_history():
+    """
+    获取预警历史
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        tenant_id = request.args.get("tenant_id", "default")
+        limit = request.args.get("limit", 100, type=int)
+        offset = request.args.get("offset", 0, type=int)
+        severity = request.args.get("severity")
+
+        result = service.get_alert_history(
+            db=get_db_session(),
+            tenant_id=tenant_id,
+            limit=limit,
+            offset=offset,
+            severity=severity,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警历史失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/statistics", methods=["GET"])
+@require_jwt()
+def get_alert_statistics():
+    """
+    获取预警统计数据
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        tenant_id = request.args.get("tenant_id", "default")
+        days = request.args.get("days", 30, type=int)
+
+        result = service.get_alert_statistics(
+            db=get_db_session(),
+            tenant_id=tenant_id,
+            days=days,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/subscriptions", methods=["GET"])
+@require_jwt()
+def get_alert_subscriptions():
+    """
+    获取用户预警订阅列表
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        user_id = g.user.get("user_id", "system")
+
+        result = service.get_user_subscriptions(
+            db=get_db_session(),
+            user_id=user_id,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警订阅失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/subscriptions", methods=["POST"])
+@require_jwt()
+def create_alert_subscription():
+    """
+    创建预警订阅
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        data = request.json
+        user_id = g.user.get("user_id", "system")
+
+        result = service.create_subscription(
+            db=get_db_session(),
+            user_id=user_id,
+            subscription=data,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"创建预警订阅失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/subscriptions/<subscription_id>", methods=["PUT"])
+@require_jwt()
+def update_alert_subscription(subscription_id: str):
+    """
+    更新预警订阅
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        updates = request.json
+
+        result = service.update_subscription(
+            db=get_db_session(),
+            subscription_id=subscription_id,
+            updates=updates,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"更新预警订阅失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/subscriptions/<subscription_id>", methods=["DELETE"])
+@require_jwt()
+def delete_alert_subscription(subscription_id: str):
+    """
+    删除预警订阅
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        success = service.delete_subscription(
+            db=get_db_session(),
+            subscription_id=subscription_id,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": success}
+        })
+
+    except Exception as e:
+        logger.error(f"删除预警订阅失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/alerts/available-types", methods=["GET"])
+@require_jwt()
+def get_available_alert_types():
+    """
+    获取可订阅的预警类型
+    """
+    try:
+        from services.smart_alert_service import get_smart_alert_service
+
+        service = get_smart_alert_service()
+
+        types = service.get_available_alert_types()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "types": types,
+                "total": len(types),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取预警类型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 增强型统一 SSO API ====================
+
+@app.route("/api/v1/sso/providers", methods=["GET"])
+def list_sso_providers():
+    """
+    列出所有 SSO 提供商
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        include_disabled = request.args.get("include_disabled", "false").lower() == "true"
+
+        providers = service.list_providers(include_disabled=include_disabled)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "providers": providers,
+                "total": len(providers),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取 SSO 提供商失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/providers/<provider_id>", methods=["GET"])
+def get_sso_provider(provider_id: str):
+    """
+    获取指定 SSO 提供商配置
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        provider = service.get_provider(provider_id)
+
+        if not provider:
+            return jsonify({"code": 40004, "message": "提供商不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": provider
+        })
+
+    except Exception as e:
+        logger.error(f"获取 SSO 提供商失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/providers", methods=["POST"])
+@require_jwt()
+def add_sso_provider():
+    """
+    添加新的 SSO 提供商
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+
+        provider = service.add_provider(data)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": provider
+        })
+
+    except Exception as e:
+        logger.error(f"添加 SSO 提供商失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/providers/<provider_id>", methods=["PUT"])
+@require_jwt()
+def update_sso_provider(provider_id: str):
+    """
+    更新 SSO 提供商配置
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        updates = request.json
+
+        provider = service.update_provider(provider_id, updates)
+
+        if not provider:
+            return jsonify({"code": 40004, "message": "提供商不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": provider
+        })
+
+    except Exception as e:
+        logger.error(f"更新 SSO 提供商失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/providers/<provider_id>", methods=["DELETE"])
+@require_jwt()
+def delete_sso_provider(provider_id: str):
+    """
+    删除 SSO 提供商
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        success = service.delete_provider(provider_id)
+
+        if not success:
+            return jsonify({"code": 40004, "message": "提供商不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除 SSO 提供商失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/sms/send", methods=["POST"])
+def send_sms_verification():
+    """
+    发送短信验证码
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+        phone = data.get("phone")
+        purpose = data.get("purpose", "login")
+
+        if not phone:
+            return jsonify({"code": 40001, "message": "phone 不能为空"}), 400
+
+        result = service.send_sms_code(phone, purpose)
+
+        if result["success"]:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        else:
+            return jsonify({"code": 40002, "message": result["message"]}), 400
+
+    except Exception as e:
+        logger.error(f"发送短信验证码失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/sms/verify", methods=["POST"])
+def verify_sms_code():
+    """
+    验证短信验证码并登录
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+        phone = data.get("phone")
+        code = data.get("code")
+        purpose = data.get("purpose", "login")
+
+        if not phone or not code:
+            return jsonify({"code": 40001, "message": "phone 和 code 不能为空"}), 400
+
+        result = service.verify_sms_code(phone, code, purpose)
+
+        if result["success"]:
+            # 验证成功，创建会话
+            session = service.create_session(
+                user_id=f"sms_{phone}",
+                provider="sms",
+                login_method="sms",
+            )
+            return jsonify({
+                "code": 0,
+                "message": "登录成功",
+                "data": session
+            })
+        else:
+            return jsonify({"code": 40002, "message": result["message"]}), 400
+
+    except Exception as e:
+        logger.error(f"验证短信验证码失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/qrcode/create", methods=["POST"])
+def create_qrcode_session():
+    """
+    创建扫码登录会话
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        result = service.create_qrcode_session()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"创建二维码会话失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/qrcode/status/<session_id>", methods=["GET"])
+def get_qrcode_status(session_id: str):
+    """
+    获取二维码状态
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        result = service.get_qrcode_status(session_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取二维码状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/qrcode/scan", methods=["POST"])
+@require_jwt()
+def scan_qrcode():
+    """
+    扫描二维码（移动端调用）
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+        session_id = data.get("session_id")
+        user_id = g.user.get("user_id", "")
+
+        if not session_id:
+            return jsonify({"code": 40001, "message": "session_id 不能为空"}), 400
+
+        result = service.scan_qrcode(session_id, user_id)
+
+        if result["success"]:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        else:
+            return jsonify({"code": 40002, "message": result["message"]}), 400
+
+    except Exception as e:
+        logger.error(f"扫码失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/qrcode/confirm", methods=["POST"])
+@require_jwt()
+def confirm_qrcode_login():
+    """
+    确认扫码登录（移动端调用）
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+        session_id = data.get("session_id")
+
+        if not session_id:
+            return jsonify({"code": 40001, "message": "session_id 不能为空"}), 400
+
+        result = service.confirm_qrcode_login(session_id)
+
+        if result["success"]:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        else:
+            return jsonify({"code": 40002, "message": result["message"]}), 400
+
+    except Exception as e:
+        logger.error(f"确认扫码登录失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/qrcode/cancel/<session_id>", methods=["POST"])
+def cancel_qrcode_login(session_id: str):
+    """
+    取消扫码登录
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        service.cancel_qrcode_login(session_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"cancelled": True}
+        })
+
+    except Exception as e:
+        logger.error(f"取消扫码登录失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/oauth/url", methods=["GET"])
+def get_oauth_url():
+    """
+    获取 OAuth 授权 URL
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        provider_id = request.args.get("provider_id")
+        redirect_uri = request.args.get("redirect_uri", "")
+        state = request.args.get("state", "")
+
+        if not provider_id:
+            return jsonify({"code": 40001, "message": "provider_id 不能为空"}), 400
+
+        result = service.get_oauth_url(provider_id, redirect_uri, state)
+
+        if result["success"]:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        else:
+            return jsonify({"code": 40002, "message": result["message"]}), 400
+
+    except Exception as e:
+        logger.error(f"获取授权 URL 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/oauth/callback", methods=["POST"])
+def handle_oauth_callback():
+    """
+    处理 OAuth 回调
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json
+        provider_id = data.get("provider_id")
+        code = data.get("code")
+        state = data.get("state", "")
+
+        if not provider_id or not code:
+            return jsonify({"code": 40001, "message": "provider_id 和 code 不能为空"}), 400
+
+        result = service.handle_oauth_callback(provider_id, code, state)
+
+        if result["success"]:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        else:
+            return jsonify({"code": 40002, "message": result.get("message", "认证失败")}), 400
+
+    except Exception as e:
+        logger.error(f"处理 OAuth 回调失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/sessions/<session_id>", methods=["GET"])
+def get_session_info(session_id: str):
+    """
+    获取会话信息
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        session = service.get_session(session_id)
+
+        if not session:
+            return jsonify({"code": 40004, "message": "会话不存在或已过期"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": session
+        })
+
+    except Exception as e:
+        logger.error(f"获取会话信息失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/sessions/user/<user_id>", methods=["GET"])
+@require_jwt()
+def list_user_sessions(user_id: str):
+    """
+    列出用户的所有活跃会话
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        sessions = service.list_user_sessions(user_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "sessions": sessions,
+                "total": len(sessions),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取用户会话列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sso/logout", methods=["POST"])
+def sso_logout():
+    """
+    SSO 登出
+
+    支持:
+    - 单设备登出
+    - 全局登出（所有设备）
+    """
+    try:
+        from services.enhanced_sso_service import get_enhanced_sso_service
+
+        service = get_enhanced_sso_service()
+
+        data = request.json or {}
+        session_id = data.get("session_id") or g.user.get("session_id", "")
+        global_logout = data.get("global_logout", False)
+
+        if not session_id:
+            return jsonify({"code": 40001, "message": "session_id 不能为空"}), 400
+
+        result = service.logout(session_id, global_logout)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"登出失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 数据服务接口管理 API ====================
+
+@app.route("/api/v1/data-services", methods=["GET"])
+@require_jwt()
+def list_data_services():
+    """
+    列出数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        status = request.args.get("status")
+        service_type = request.args.get("service_type")
+        source_type = request.args.get("source_type")
+        tags = request.args.getlist("tags")
+        created_by = request.args.get("created_by")
+        limit = request.args.get("limit", 100, type=int)
+        offset = request.args.get("offset", 0, type=int)
+
+        result = manager.list_services(
+            status=status,
+            service_type=service_type,
+            source_type=source_type,
+            tags=tags if tags else None,
+            created_by=created_by,
+            limit=limit,
+            offset=offset,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取数据服务列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services", methods=["POST"])
+@require_jwt()
+def create_data_service():
+    """
+    创建数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        data = request.json
+        user_id = g.user.get("user_id", "system")
+
+        result = manager.create_service(
+            name=data.get("name"),
+            description=data.get("description", ""),
+            service_type=data.get("service_type", "rest"),
+            source_type=data.get("source_type", "table"),
+            source_config=data.get("source_config", {}),
+            endpoint=data.get("endpoint", ""),
+            method=data.get("method", "GET"),
+            created_by=user_id,
+            tags=data.get("tags"),
+            rate_limit=data.get("rate_limit"),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"创建数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["GET"])
+@require_jwt()
+def get_data_service(service_id: str):
+    """
+    获取数据服务详情
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        result = manager.get_service(service_id)
+
+        if not result:
+            return jsonify({"code": 40004, "message": "服务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["PUT"])
+@require_jwt()
+def update_data_service(service_id: str):
+    """
+    更新数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        updates = request.json
+
+        result = manager.update_service(service_id, updates)
+
+        if not result:
+            return jsonify({"code": 40004, "message": "服务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"更新数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/<service_id>", methods=["DELETE"])
+@require_jwt()
+def delete_data_service(service_id: str):
+    """
+    删除数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        success = manager.delete_service(service_id)
+
+        if not success:
+            return jsonify({"code": 40004, "message": "服务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/<service_id>/publish", methods=["POST"])
+@require_jwt()
+def publish_data_service(service_id: str):
+    """
+    发布数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        result = manager.publish_service(service_id)
+
+        if not result:
+            return jsonify({"code": 40004, "message": "服务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"发布数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/<service_id>/test", methods=["POST"])
+@require_jwt()
+def test_data_service(service_id: str):
+    """
+    测试数据服务
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        params = request.json or {}
+
+        result = manager.test_service(service_id, params)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"测试数据服务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== API Key 管理 ====================
+
+@app.route("/api/v1/data-services/api-keys", methods=["GET"])
+@require_jwt()
+def list_api_keys():
+    """
+    列出 API Keys
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        user_id = g.user.get("user_id", "")
+        include_expired = request.args.get("include_expired", "false").lower() == "true"
+        include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+
+        result = manager.list_api_keys(
+            user_id=user_id,
+            include_expired=include_expired,
+            include_inactive=include_inactive,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取 API Keys 列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/api-keys", methods=["POST"])
+@require_jwt()
+def create_api_key():
+    """
+    创建 API Key
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        data = request.json
+        user_id = g.user.get("user_id", "system")
+
+        result = manager.create_api_key(
+            name=data.get("name", "API Key"),
+            user_id=user_id,
+            scopes=data.get("scopes", ["read"]),
+            expires_days=data.get("expires_days"),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"创建 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/api-keys/<key_id>", methods=["DELETE"])
+@require_jwt()
+def delete_api_key(key_id: str):
+    """
+    删除 API Key
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        success = manager.delete_api_key(key_id)
+
+        if not success:
+            return jsonify({"code": 40004, "message": "API Key 不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/api-keys/<key_id>/deactivate", methods=["POST"])
+@require_jwt()
+def deactivate_api_key(key_id: str):
+    """
+    停用 API Key
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        success = manager.deactivate_api_key(key_id)
+
+        if not success:
+            return jsonify({"code": 40004, "message": "API Key 不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deactivated": True}
+        })
+
+    except Exception as e:
+        logger.error(f"停用 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== API 调用记录 ====================
+
+@app.route("/api/v1/data-services/call-records", methods=["GET"])
+@require_jwt()
+def get_api_call_records():
+    """
+    获取 API 调用记录
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        service_id = request.args.get("service_id")
+        api_key_id = request.args.get("api_key_id")
+        status_code = request.args.get("status_code", type=int)
+        limit = request.args.get("limit", 100, type=int)
+        offset = request.args.get("offset", 0, type=int)
+
+        result = manager.get_call_records(
+            service_id=service_id,
+            api_key_id=api_key_id,
+            status_code=status_code,
+            limit=limit,
+            offset=offset,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取调用记录失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 统计分析 ====================
+
+@app.route("/api/v1/data-services/<service_id>/statistics", methods=["GET"])
+@require_jwt()
+def get_service_statistics(service_id: str):
+    """
+    获取服务调用统计
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        time_window_hours = request.args.get("time_window_hours", 24, type=int)
+
+        result = manager.get_service_statistics(
+            service_id=service_id,
+            time_window_hours=time_window_hours,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取服务统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data-services/statistics/overall", methods=["GET"])
+@require_jwt()
+def get_overall_statistics():
+    """
+    获取整体统计
+    """
+    try:
+        from services.data_service_manager import get_data_service_manager
+
+        manager = get_data_service_manager()
+
+        time_window_hours = request.args.get("time_window_hours", 24, type=int)
+
+        result = manager.get_overall_statistics(
+            time_window_hours=time_window_hours,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"获取整体统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 统一门户 Portal API ====================
+
+@app.route("/api/v1/portal/dashboard", methods=["GET"])
+@require_jwt()
+def get_portal_dashboard():
+    """
+    获取门户仪表盘数据
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            result = service.get_dashboard_data(db, user_id, tenant_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取仪表盘数据失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/quick-links", methods=["GET"])
+@require_jwt()
+def get_quick_links():
+    """
+    获取快捷入口列表
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        categories = request.args.getlist("categories")
+
+        db = get_db_session()
+        try:
+            result = service.get_quick_links(db, user_id, categories)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取快捷入口失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/notifications", methods=["GET"])
+@require_jwt()
+def get_portal_notifications():
+    """
+    获取门户通知列表
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        unread_only = request.args.get("unread_only", "false").lower() == "true"
+        limit = request.args.get("limit", 20, type=int)
+
+        db = get_db_session()
+        try:
+            result = service.get_notifications(db, user_id, unread_only, limit)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取通知列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>/read", methods=["POST"])
+@require_jwt()
+def mark_notification_read():
+    """
+    标记通知为已读
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        notification_id = request.view_args.get("notification_id", "")
+        user_id = g.user.get("user_id", "")
+
+        db = get_db_session()
+        try:
+            success = service.mark_notification_read(db, notification_id, user_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {"read": success}
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"标记通知已读失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/notifications/read-all", methods=["POST"])
+@require_jwt()
+def mark_all_notifications_read():
+    """
+    标记所有通知为已读
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+
+        db = get_db_session()
+        try:
+            count = service.mark_all_notifications_read(db, user_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {"count": count}
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"标记全部已读失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>", methods=["DELETE"])
+@require_jwt()
+def delete_portal_notification():
+    """
+    删除通知
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        notification_id = request.view_args.get("notification_id", "")
+        user_id = g.user.get("user_id", "")
+
+        db = get_db_session()
+        try:
+            success = service.delete_notification(db, notification_id, user_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {"deleted": success}
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"删除通知失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/todos", methods=["GET"])
+@require_jwt()
+def get_portal_todos():
+    """
+    获取待办事项列表
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        status = request.args.get("status", "pending")
+        source = request.args.get("source")
+        limit = request.args.get("limit", 20, type=int)
+
+        db = get_db_session()
+        try:
+            result = service.get_todos(db, user_id, status, source, limit)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取待办事项失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/todos/<todo_id>/complete", methods=["POST"])
+@require_jwt()
+def complete_portal_todo():
+    """
+    完成待办事项
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        todo_id = request.view_args.get("todo_id", "")
+        user_id = g.user.get("user_id", "")
+
+        db = get_db_session()
+        try:
+            success = service.complete_todo(db, todo_id, user_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {"completed": success}
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"完成待办事项失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/layout", methods=["GET"])
+@require_jwt()
+def get_user_portal_layout():
+    """
+    获取用户门户布局配置
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+
+        db = get_db_session()
+        try:
+            result = service.get_user_layout(db, user_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取用户布局失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/layout", methods=["PUT"])
+@require_jwt()
+def update_user_portal_layout():
+    """
+    更新用户门户布局
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        layout = request.json
+
+        db = get_db_session()
+        try:
+            result = service.update_user_layout(db, user_id, layout)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"更新用户布局失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/search", methods=["GET"])
+@require_jwt()
+def portal_global_search():
+    """
+    全局搜索
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        user_id = g.user.get("user_id", "")
+        query = request.args.get("query", "")
+        categories = request.args.getlist("categories")
+        limit = request.args.get("limit", 20, type=int)
+
+        if not query:
+            return jsonify({"code": 40001, "message": "query 不能为空"}), 400
+
+        db = get_db_session()
+        try:
+            result = service.global_search(db, user_id, query, categories, limit)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"全局搜索失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/portal/system-status", methods=["GET"])
+@require_jwt()
+def get_system_status():
+    """
+    获取系统状态
+    """
+    try:
+        from services.portal_service import get_portal_service
+
+        service = get_portal_service()
+
+        tenant_id = request.args.get("tenant_id", "default")
+
+        db = get_db_session()
+        try:
+            result = service.get_system_status(db, tenant_id)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"获取系统状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 统一通知管理 API ====================
+
+@app.route("/api/v1/notifications/channels", methods=["GET"])
+@require_jwt()
+def get_notification_channels():
+    """
+    获取已注册的通知渠道列表
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        channels = service.list_channels()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "channels": channels,
+                "total": len(channels)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知渠道失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/templates", methods=["GET"])
+@require_jwt()
+def get_notification_templates():
+    """
+    获取通知模板列表
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        templates = service.list_templates()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "templates": [
+                    {
+                        "template_id": t.template_id,
+                        "name": t.name,
+                        "description": t.description,
+                        "type": t.type,
+                        "supported_channels": t.supported_channels,
+                        "variables": t.variables,
+                        "enabled": t.enabled,
+                    }
+                    for t in templates
+                ],
+                "total": len(templates)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/templates/<template_id>", methods=["GET"])
+@require_jwt()
+def get_notification_template(template_id: str):
+    """
+    获取通知模板详情
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        template = service.get_template(template_id)
+        if not template:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "template_id": template.template_id,
+                "name": template.name,
+                "description": template.description,
+                "subject_template": template.subject_template,
+                "body_template": template.body_template,
+                "type": template.type,
+                "supported_channels": template.supported_channels,
+                "variables": template.variables,
+                "enabled": template.enabled,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知模板详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/templates", methods=["POST"])
+@require_jwt()
+def create_notification_template():
+    """
+    创建通知模板
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        template = service.create_template(
+            template_id=data.get("template_id") or f"tpl_{secrets.token_hex(8)}",
+            name=data.get("name"),
+            description=data.get("description", ""),
+            subject_template=data.get("subject_template"),
+            body_template=data.get("body_template"),
+            type=data.get("type", "info"),
+            supported_channels=data.get("supported_channels", ["inapp"]),
+            variables=data.get("variables", []),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"template_id": template.template_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建通知模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/templates/<template_id>", methods=["PUT"])
+@require_jwt()
+def update_notification_template(template_id: str):
+    """
+    更新通知模板
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        template = service.update_template(template_id, **data)
+        if not template:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"template_id": template.template_id}
+        })
+
+    except Exception as e:
+        logger.error(f"更新通知模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/templates/<template_id>", methods=["DELETE"])
+@require_jwt()
+def delete_notification_template(template_id: str):
+    """
+    删除通知模板
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        success = service.delete_template(template_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除通知模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules", methods=["GET"])
+@require_jwt()
+def get_notification_rules():
+    """
+    获取通知规则列表
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        rules = service.list_rules()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": [
+                    {
+                        "rule_id": r.rule_id,
+                        "name": r.name,
+                        "description": r.description,
+                        "event_type": r.event_type,
+                        "conditions": r.conditions,
+                        "template_id": r.template_id,
+                        "channels": r.channels,
+                        "recipients": r.recipients,
+                        "enabled": r.enabled,
+                        "throttle_minutes": r.throttle_minutes,
+                    }
+                    for r in rules
+                ],
+                "total": len(rules)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules/<rule_id>", methods=["GET"])
+@require_jwt()
+def get_notification_rule(rule_id: str):
+    """
+    获取通知规则详情
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        rule = service.get_rule(rule_id)
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rule_id": rule.rule_id,
+                "name": rule.name,
+                "description": rule.description,
+                "event_type": rule.event_type,
+                "conditions": rule.conditions,
+                "template_id": rule.template_id,
+                "channels": rule.channels,
+                "recipients": rule.recipients,
+                "enabled": rule.enabled,
+                "throttle_minutes": rule.throttle_minutes,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知规则详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules", methods=["POST"])
+@require_jwt()
+def create_notification_rule():
+    """
+    创建通知规则
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        rule = service.create_rule(
+            rule_id=data.get("rule_id") or f"rule_{secrets.token_hex(8)}",
+            name=data.get("name"),
+            description=data.get("description", ""),
+            event_type=data.get("event_type"),
+            conditions=data.get("conditions", {}),
+            template_id=data.get("template_id"),
+            channels=data.get("channels", ["inapp"]),
+            recipients=data.get("recipients", []),
+            throttle_minutes=data.get("throttle_minutes", 60),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"rule_id": rule.rule_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_notification_rule(rule_id: str):
+    """
+    更新通知规则
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        rule = service.update_rule(rule_id, **data)
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"rule_id": rule.rule_id}
+        })
+
+    except Exception as e:
+        logger.error(f"更新通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_notification_rule(rule_id: str):
+    """
+    删除通知规则
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        success = service.delete_rule(rule_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules/<rule_id>/enable", methods=["POST"])
+@require_jwt()
+def enable_notification_rule(rule_id: str):
+    """
+    启用通知规则
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        success = service.enable_rule(rule_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"enabled": True}
+        })
+
+    except Exception as e:
+        logger.error(f"启用通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/rules/<rule_id>/disable", methods=["POST"])
+@require_jwt()
+def disable_notification_rule(rule_id: str):
+    """
+    禁用通知规则
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        success = service.disable_rule(rule_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"enabled": False}
+        })
+
+    except Exception as e:
+        logger.error(f"禁用通知规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/send", methods=["POST"])
+@require_jwt()
+def send_notification():
+    """
+    发送通知
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        # 如果提供了 template_id，使用模板发送
+        if data.get("template_id"):
+            message_ids = service.send_by_template(
+                template_id=data["template_id"],
+                variables=data.get("variables", {}),
+                recipients=data.get("recipients", []),
+                channels=data.get("channels", ["inapp"]),
+                action_url=data.get("action_url"),
+            )
+        else:
+            # 直接发送
+            message_ids = service.send(
+                recipients=data.get("recipients", []),
+                subject=data.get("subject", ""),
+                body=data.get("body", ""),
+                channels=data.get("channels", ["inapp"]),
+                title=data.get("title"),
+                type=data.get("type", "info"),
+                priority=data.get("priority", "normal"),
+                action_url=data.get("action_url"),
+                data=data.get("data"),
+            )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "message_ids": message_ids,
+                "sent_count": len(message_ids)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"发送通知失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/trigger", methods=["POST"])
+@require_jwt()
+def trigger_notification_event():
+    """
+    触发通知事件
+    """
+    data = request.json
+
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        message_ids = service.trigger_event(
+            event_type=data.get("event_type"),
+            event_data=data.get("event_data", {}),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "message_ids": message_ids,
+                "sent_count": len(message_ids)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"触发通知事件失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/history", methods=["GET"])
+@require_jwt()
+def get_notification_history():
+    """
+    获取通知历史
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        recipient = request.args.get("recipient")
+        channel = request.args.get("channel")
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 100))
+
+        history = service.get_history(
+            recipient=recipient,
+            channel=channel,
+            status=status,
+            limit=limit,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "history": [
+                    {
+                        "history_id": h.history_id,
+                        "message_id": h.message_id,
+                        "recipient": h.recipient,
+                        "channel": h.channel,
+                        "status": h.status,
+                        "error_message": h.error_message,
+                        "sent_at": h.sent_at.isoformat() if h.sent_at else None,
+                        "retry_count": h.retry_count,
+                    }
+                    for h in history
+                ],
+                "total": len(history)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知历史失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/notifications/statistics", methods=["GET"])
+@require_jwt()
+def get_notification_statistics():
+    """
+    获取通知统计
+    """
+    try:
+        from services.notification_service import get_notification_service
+
+        service = get_notification_service()
+
+        days = int(request.args.get("days", 30))
+        stats = service.get_statistics(days)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        })
+
+    except Exception as e:
+        logger.error(f"获取通知统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 统一内容管理 API ====================
+
+@app.route("/api/v1/content/articles", methods=["GET"])
+@require_jwt()
+def get_content_articles():
+    """
+    获取内容文章列表
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        content_type = request.args.get("content_type")
+        status = request.args.get("status")
+        category_id = request.args.get("category_id")
+        tag_id = request.args.get("tag_id")
+        author_id = request.args.get("author_id")
+        featured = request.args.get("featured")
+        keyword = request.args.get("keyword")
+        limit = int(request.args.get("limit", 20))
+        offset = int(request.args.get("offset", 0))
+
+        articles, total = service.list_articles(
+            content_type=content_type,
+            status=status,
+            category_id=category_id,
+            tag_id=tag_id,
+            author_id=author_id,
+            featured=featured == "true" if featured else None,
+            keyword=keyword,
+            limit=limit,
+            offset=offset,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "articles": [a.to_dict() for a in articles],
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取文章列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>", methods=["GET"])
+def get_content_article(content_id: str):
+    """
+    获取文章详情
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        # 增加阅读数
+        service.increment_view_count(content_id)
+
+        article = service.get_article(content_id)
+        if not article:
+            return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": article.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取文章详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles", methods=["POST"])
+@require_jwt()
+def create_content_article():
+    """
+    创建文章
+    """
+    data = request.json
+
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        article = service.create_article(
+            title=data.get("title"),
+            content=data.get("content"),
+            content_type=data.get("content_type", "article"),
+            author_id=data.get("author_id", ""),
+            author_name=data.get("author_name", ""),
+            summary=data.get("summary", ""),
+            category_id=data.get("category_id"),
+            tags=data.get("tags", []),
+            cover_image=data.get("cover_image", ""),
+            featured=data.get("featured", False),
+            allow_comment=data.get("allow_comment", True),
+            status=data.get("status", "draft"),
+            metadata=data.get("metadata", {}),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"content_id": article.content_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建文章失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>", methods=["PUT"])
+@require_jwt()
+def update_content_article(content_id: str):
+    """
+    更新文章
+    """
+    data = request.json
+
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        article = service.update_article(content_id, **data)
+        if not article:
+            return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"content_id": article.content_id}
+        })
+
+    except Exception as e:
+        logger.error(f"更新文章失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>", methods=["DELETE"])
+@require_jwt()
+def delete_content_article(content_id: str):
+    """
+    删除文章
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        success = service.delete_article(content_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除文章失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>/publish", methods=["POST"])
+@require_jwt()
+def publish_content_article(content_id: str):
+    """
+    发布文章
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        article = service.publish_article(content_id)
+        if not article:
+            return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": article.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"发布文章失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>/like", methods=["POST"])
+@require_jwt()
+def like_content_article(content_id: str):
+    """
+    点赞文章
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+        user_id = request.headers.get("X-User-Id", "anonymous")
+
+        success = service.toggle_like(content_id, user_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"liked": True}
+        })
+
+    except Exception as e:
+        logger.error(f"点赞文章失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/categories", methods=["GET"])
+def get_content_categories():
+    """
+    获取内容分类列表
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        enabled_only = request.args.get("enabled_only", "false") == "true"
+        categories = service.list_categories(enabled_only=enabled_only)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "categories": [
+                    {
+                        "category_id": c.category_id,
+                        "name": c.name,
+                        "description": c.description,
+                        "parent_id": c.parent_id,
+                        "icon": c.icon,
+                        "sort_order": c.sort_order,
+                        "enabled": c.enabled,
+                    }
+                    for c in categories
+                ],
+                "total": len(categories)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取分类列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/categories", methods=["POST"])
+@require_jwt()
+def create_content_category():
+    """
+    创建分类
+    """
+    data = request.json
+
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        category = service.create_category(
+            name=data.get("name"),
+            description=data.get("description", ""),
+            parent_id=data.get("parent_id"),
+            icon=data.get("icon", ""),
+            sort_order=data.get("sort_order", 0),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"category_id": category.category_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建分类失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/tags", methods=["GET"])
+def get_content_tags():
+    """
+    获取内容标签列表
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        tags = service.list_tags()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tags": [
+                    {
+                        "tag_id": t.tag_id,
+                        "name": t.name,
+                        "color": t.color,
+                        "usage_count": t.usage_count,
+                    }
+                    for t in tags
+                ],
+                "total": len(tags)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取标签列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/tags", methods=["POST"])
+@require_jwt()
+def create_content_tag():
+    """
+    创建标签
+    """
+    data = request.json
+
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        tag = service.create_tag(
+            name=data.get("name"),
+            color=data.get("color", "#1890ff"),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"tag_id": tag.tag_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建标签失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/articles/<content_id>/comments", methods=["GET"])
+def get_content_comments(content_id: str):
+    """
+    获取文章评论列表
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        status = request.args.get("status", "approved")
+        limit = int(request.args.get("limit", 50))
+
+        comments = service.list_comments(
+            content_id=content_id,
+            status=status,
+            limit=limit,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "comments": [c.to_dict() for c in comments],
+                "total": len(comments)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取评论列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/comments", methods=["POST"])
+@require_jwt()
+def create_content_comment():
+    """
+    创建评论
+    """
+    data = request.json
+
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        comment = service.create_comment(
+            content_id=data.get("content_id"),
+            user_id=data.get("user_id", ""),
+            user_name=data.get("user_name", ""),
+            content=data.get("content", ""),
+            parent_id=data.get("parent_id"),
+            user_avatar=data.get("user_avatar", ""),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"comment_id": comment.comment_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建评论失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/comments/<comment_id>/approve", methods=["POST"])
+@require_jwt()
+def approve_content_comment(comment_id: str):
+    """
+    审核通过评论
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        success = service.approve_comment(comment_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "评论不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"approved": True}
+        })
+
+    except Exception as e:
+        logger.error(f"审核评论失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/comments/<comment_id>", methods=["DELETE"])
+@require_jwt()
+def delete_content_comment(comment_id: str):
+    """
+    删除评论
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        success = service.delete_comment(comment_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "评论不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除评论失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/search", methods=["GET"])
+def search_content():
+    """
+    全文搜索内容
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        query = request.args.get("q", "")
+        content_type = request.args.get("content_type")
+        limit = int(request.args.get("limit", 20))
+
+        if not query:
+            return jsonify({"code": 40001, "message": "搜索关键词不能为空"}), 400
+
+        articles = service.search(
+            query=query,
+            content_type=content_type,
+            limit=limit,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": [a.to_dict() for a in articles],
+                "total": len(articles)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"搜索内容失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/content/statistics", methods=["GET"])
+@require_jwt()
+def get_content_statistics():
+    """
+    获取内容统计
+    """
+    try:
+        from services.content_service import get_content_service
+
+        service = get_content_service()
+
+        stats = service.get_statistics()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        })
+
+    except Exception as e:
+        logger.error(f"获取内容统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 元数据版本对比 API ====================
+
+@app.route("/api/v1/metadata/snapshots", methods=["GET"])
+@require_jwt()
+def get_metadata_snapshots():
+    """
+    获取元数据快照列表
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        database = request.args.get("database")
+        limit = int(request.args.get("limit", 50))
+
+        snapshots = service.list_snapshots(database=database, limit=limit)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "snapshots": [s.to_dict() for s in snapshots],
+                "total": len(snapshots)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取快照列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots/<snapshot_id>", methods=["GET"])
+@require_jwt()
+def get_metadata_snapshot(snapshot_id: str):
+    """
+    获取元数据快照详情
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        snapshot = service.get_snapshot(snapshot_id)
+        if not snapshot:
+            return jsonify({"code": 40401, "message": "快照不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": snapshot.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取快照详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots", methods=["POST"])
+@require_jwt()
+def create_metadata_snapshot():
+    """
+    创建元数据快照
+    """
+    data = request.json
+
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        # 简化处理，实际应该从数据库读取当前元数据
+        snapshot = service.create_snapshot(
+            version=data.get("version"),
+            database=data.get("database", "default"),
+            tables={},  # 实际应从数据库读取
+            created_by=data.get("created_by", "user"),
+            description=data.get("description", ""),
+            tags=data.get("tags", []),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"snapshot_id": snapshot.snapshot_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建快照失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots/<snapshot_id>", methods=["DELETE"])
+@require_jwt()
+def delete_metadata_snapshot(snapshot_id: str):
+    """
+    删除元数据快照
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        success = service.delete_snapshot(snapshot_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "快照不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除快照失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/compare", methods=["POST"])
+@require_jwt()
+def compare_metadata_snapshots():
+    """
+    对比两个元数据快照
+    """
+    data = request.json
+
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        from_snapshot_id = data.get("from_snapshot_id")
+        to_snapshot_id = data.get("to_snapshot_id")
+
+        if not from_snapshot_id or not to_snapshot_id:
+            return jsonify({"code": 40001, "message": "from_snapshot_id 和 to_snapshot_id 不能为空"}), 400
+
+        diff = service.compare_snapshots(from_snapshot_id, to_snapshot_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": diff
+        })
+
+    except ValueError as e:
+        return jsonify({"code": 40401, "message": str(e)}), 404
+    except Exception as e:
+        logger.error(f"对比快照失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/compare/<from_id>/<to_id>/sql", methods=["GET"])
+@require_jwt()
+def get_migration_sql(from_id: str, to_id: str):
+    """
+    获取迁移 SQL
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        sql_statements = service.generate_migration_sql(from_id, to_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "sql_statements": sql_statements,
+                "summary": f"共 {len(sql_statements)} 个表需要迁移"
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"生成迁移 SQL 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/history", methods=["GET"])
+@require_jwt()
+def get_metadata_version_history():
+    """
+    获取元数据版本历史
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        database = request.args.get("database")
+        table_name = request.args.get("table_name")
+        limit = int(request.args.get("limit", 20))
+
+        history = service.get_version_history(
+            database=database,
+            table_name=table_name,
+            limit=limit,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "history": history,
+                "total": len(history)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取版本历史失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 智能任务调度 API ====================
+
+@app.route("/api/v1/scheduler/tasks", methods=["GET"])
+@require_jwt()
+def get_scheduled_tasks():
+    """
+    获取调度任务列表
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        status = request.args.get("status")
+        priority = request.args.get("priority")
+        task_type = request.args.get("task_type")
+        limit = int(request.args.get("limit", 100))
+
+        tasks = service.list_tasks(
+            status=TaskStatus(status) if status else None,
+            priority=TaskPriority(priority) if priority else None,
+            task_type=task_type,
+            limit=limit,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "tasks": [t.to_dict() for t in tasks],
+                "total": len(tasks)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取任务列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/tasks/<task_id>", methods=["GET"])
+@require_jwt()
+def get_scheduled_task(task_id: str):
+    """
+    获取调度任务详情
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task = service.get_task(task_id)
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取任务详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/tasks", methods=["POST"])
+@require_jwt()
+def create_scheduled_task():
+    """
+    创建调度任务
+    """
+    data = request.json
+
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task = service.create_task(
+            name=data.get("name"),
+            task_type=data.get("task_type", "etl"),
+            priority=TaskPriority(data.get("priority", "normal")),
+            description=data.get("description", ""),
+            dependencies=data.get("dependencies", []),
+            resource_requirement=data.get("resource_requirement", {}),
+            estimated_duration_ms=data.get("estimated_duration_ms", 60000),
+            deadline=datetime.fromisoformat(data["deadline"]) if data.get("deadline") else None,
+            created_by=data.get("created_by", "user"),
+            tags=data.get("tags", []),
+            metadata=data.get("metadata", {}),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"task_id": task.task_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/tasks/<task_id>", methods=["PUT"])
+@require_jwt()
+def update_scheduled_task(task_id: str):
+    """
+    更新调度任务
+    """
+    data = request.json
+
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task = service.update_task(task_id, **data)
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"task_id": task.task_id}
+        })
+
+    except Exception as e:
+        logger.error(f"更新任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/tasks/<task_id>", methods=["DELETE"])
+@require_jwt()
+def delete_scheduled_task(task_id: str):
+    """
+    删除调度任务
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        success = service.delete_task(task_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/optimize", methods=["POST"])
+@require_jwt()
+def optimize_schedule():
+    """
+    优化调度顺序
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        result = service.optimize_schedule()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"优化调度失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/resource-demand", methods=["GET"])
+@require_jwt()
+def get_resource_demand():
+    """
+    获取资源需求预测
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        window_minutes = int(request.args.get("window_minutes", 60))
+        demand = service.predict_resource_demand(window_minutes)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": demand
+        })
+
+    except Exception as e:
+        logger.error(f"获取资源需求失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/statistics", methods=["GET"])
+@require_jwt()
+def get_scheduler_statistics():
+    """
+    获取调度统计
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        stats = service.get_statistics()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        })
+
+    except Exception as e:
+        logger.error(f"获取调度统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/next-task", methods=["POST"])
+@require_jwt()
+def get_next_task():
+    """
+    获取下一个可执行任务
+    """
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task = service.get_next_task()
+        if not task:
+            return jsonify({
+                "code": 0,
+                "message": "No pending tasks",
+                "data": None
+            })
+
+        # 开始执行任务
+        service.start_task(task.task_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取下一个任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/scheduler/tasks/<task_id>/complete", methods=["POST"])
+@require_jwt()
+def complete_scheduled_task(task_id: str):
+    """
+    完成任务
+    """
+    data = request.json
+
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task = service.complete_task(
+            task_id=task_id,
+            success=data.get("success", True),
+            error_message=data.get("error_message", ""),
+            execution_time_ms=data.get("execution_time_ms"),
+        )
+
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"完成任务失败: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 

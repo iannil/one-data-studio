@@ -1,0 +1,115 @@
+/**
+ * 智能任务调度样式
+ */
+
+.smart-scheduler {
+  width: 100%;
+}
+
+/* 任务列表 */
+.smart-scheduler .ant-table-cell {
+  vertical-align: top;
+}
+
+/* 资源进度条 */
+.smart-scheduler .ant-progress {
+  margin-top: 8px;
+}
+
+.smart-scheduler .ant-progress-line {
+  margin-bottom: 0;
+}
+
+/* 统计卡片 */
+.smart-scheduler .ant-statistic {
+  margin-bottom: 8;
+}
+
+.smart-scheduler .ant-statistic-title {
+  font-size: 14px;
+}
+
+.smart-scheduler .ant-statistic-content {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* 状态标签 */
+.smart-scheduler .ant-tag {
+  margin: 2px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .smart-scheduler .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .smart-scheduler .ant-table {
+    font-size: 12px;
+  }
+
+  .smart-scheduler .ant-btn {
+    font-size: 12px;
+  }
+
+  .smart-scheduler .ant-space {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+/* 加载状态 */
+.smart-scheduler .ant-skeleton {
+  padding: 16px;
+}
+
+/* 动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.smart-scheduler .loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 任务卡片 */
+.smart-scheduler .task-card {
+  border-left: 4px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.smart-scheduler .task-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.smart-scheduler .task-card.priority-critical {
+  border-left-color: #ff4d4f;
+}
+
+.smart-scheduler .task-card.priority-high {
+  border-left-color: #faad14;
+}
+
+.smart-scheduler .task-card.priority-normal {
+  border-left-color: #1677ff;
+}
+
+.smart-scheduler .task-card.priority-low {
+  border-left-color: #8c8c8c;
+}
+
+/* 资源推荐 */
+.smart-scheduler .resource-recommendation {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 12px 0;
+}

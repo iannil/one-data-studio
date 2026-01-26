@@ -1,0 +1,143 @@
+/**
+ * 元数据版本对比样式
+ */
+
+.metadata-version-diff {
+  width: 100%;
+}
+
+/* 表差异卡片 */
+.table-diffs-card .ant-card-body {
+  padding: 16px;
+}
+
+.table-diff-card {
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.table-diff-card .ant-card-body {
+  padding: 12px;
+}
+
+/* 差异区域 */
+.diff-section {
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.diff-section.added {
+  background: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.diff-section.removed {
+  background: #fff1f0;
+  border-left: 3px solid #ff4d4f;
+}
+
+.diff-section.modified {
+  background: #e6f7ff;
+  border-left: 3px solid #1677ff;
+}
+
+.diff-section.unchanged {
+  background: #fafafa;
+}
+
+/* 列变更项 */
+.column-change-item {
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.column-name {
+  margin-bottom: 8px;
+}
+
+.column-changes {
+  padding-left: 16px;
+}
+
+.field-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.field-change .ant-typography {
+  margin: 0;
+}
+
+/* SQL 预览 */
+.sql-preview {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.sql-block {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.sql-block code {
+  color: inherit;
+}
+
+/* 历史时间轴 */
+.history-timeline-item {
+  width: 100%;
+  border: 1px solid #f0f0f0;
+}
+
+/* 对比概览 */
+.comparison-result .ant-statistic-title {
+  font-size: 14px;
+}
+
+.comparison-result .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .metadata-version-diff .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .field-change {
+    flex-wrap: wrap;
+  }
+
+  .sql-block {
+    font-size: 11px;
+  }
+}
+
+/* 选择框 */
+.metadata-version-diff input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* 标签样式 */
+.metadata-version-diff .ant-tag {
+  margin: 2px;
+}
+
+/* 加载状态 */
+.metadata-version-diff .ant-skeleton {
+  padding: 16px;
+}

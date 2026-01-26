@@ -40,6 +40,12 @@ import {
   ToolOutlined,
   BellOutlined,
   ScanOutlined,
+  DashboardOutlined,
+  DiffOutlined,
+  CalendarOutlined,
+  UserOutlined,
+  CheckCircleOutlined,
+  NotificationOutlined,
 } from '@ant-design/icons';
 
 const menuItems = [
@@ -69,7 +75,12 @@ const menuItems = [
       {
         key: '/metadata',
         icon: <TableOutlined />,
-        label: '元数据',
+        label: '元数据管理',
+      },
+      {
+        key: '/metadata/version-diff',
+        icon: <DiffOutlined />,
+        label: '版本对比',
       },
       {
         key: '/alldata/features',
@@ -303,8 +314,13 @@ const menuItems = [
       },
       {
         key: '/schedules',
+        icon: <CalendarOutlined />,
+        label: '工作流调度',
+      },
+      {
+        key: '/scheduler/smart',
         icon: <ClockCircleOutlined />,
-        label: '调度管理',
+        label: '智能任务调度',
       },
       {
         key: '/executions',
@@ -337,8 +353,53 @@ const menuItems = [
       },
       {
         key: '/admin/notifications',
-        icon: <BellOutlined />,
+        icon: <NotificationOutlined />,
         label: '通知管理',
+      },
+      {
+        key: '/admin/content',
+        icon: <FileTextOutlined />,
+        label: '内容管理',
+      },
+      {
+        key: '/admin/roles',
+        icon: <SafetyOutlined />,
+        label: '角色管理',
+      },
+      {
+        key: '/admin/behavior',
+        icon: <RadarChartOutlined />,
+        label: '行为概览',
+      },
+      {
+        key: '/admin/behavior/audit-log',
+        icon: <AntAuditOutlined />,
+        label: '行为审计',
+      },
+      {
+        key: '/admin/behavior/profile-view',
+        icon: <UserOutlined />,
+        label: '画像视图',
+      },
+      {
+        key: '/admin/user-profiles',
+        icon: <UserOutlined />,
+        label: '用户画像',
+      },
+      {
+        key: '/admin/user-segments',
+        icon: <TeamOutlined />,
+        label: '用户分群',
+      },
+      {
+        key: '/admin/cost-report',
+        icon: <FundOutlined />,
+        label: '成本报告',
+      },
+      {
+        key: '/admin/api-tester',
+        icon: <ApiOutlined />,
+        label: 'API 测试',
       },
       {
         key: '/admin/settings',
@@ -349,6 +410,40 @@ const menuItems = [
         key: '/admin/audit',
         icon: <AntAuditOutlined />,
         label: '审计日志',
+      },
+    ],
+  },
+
+  // 统一门户
+  {
+    key: 'portal',
+    icon: <DashboardOutlined />,
+    label: '统一门户',
+    children: [
+      {
+        key: '/portal/dashboard',
+        icon: <HomeOutlined />,
+        label: '工作台',
+      },
+      {
+        key: '/portal/notifications',
+        icon: <BellOutlined />,
+        label: '消息通知',
+      },
+      {
+        key: '/portal/todos',
+        icon: <CheckCircleOutlined />,
+        label: '待办事项',
+      },
+      {
+        key: '/portal/announcements',
+        icon: <BellOutlined />,
+        label: '公告管理',
+      },
+      {
+        key: '/portal/profile',
+        icon: <UserOutlined />,
+        label: '个人中心',
       },
     ],
   },
@@ -368,7 +463,8 @@ function Sidebar({ collapsed }: SidebarProps) {
     // 数据管理
     if (pathname.startsWith('/alldata/datasources')) return '/alldata/datasources';
     if (pathname === '/datasets') return '/datasets';
-    if (pathname === '/metadata') return '/metadata';
+    if (pathname === '/metadata' || pathname.startsWith('/metadata/graph')) return '/metadata';
+    if (pathname.startsWith('/metadata/version')) return '/metadata/version-diff';
     if (pathname.startsWith('/alldata/features')) return '/alldata/features';
     if (pathname.startsWith('/alldata/standards')) return '/alldata/standards';
     if (pathname.startsWith('/alldata/assets')) return '/alldata/assets';
@@ -379,12 +475,15 @@ function Sidebar({ collapsed }: SidebarProps) {
     // 数据开发
     if (pathname.startsWith('/alldata/etl')) return '/alldata/etl';
     if (pathname.startsWith('/alldata/kettle')) return '/alldata/kettle';
+    if (pathname.startsWith('/alldata/kettle-generator')) return '/alldata/kettle-generator';
+    if (pathname.startsWith('/alldata/ocr')) return '/alldata/ocr';
     if (pathname.startsWith('/alldata/quality')) return '/alldata/quality';
     if (pathname.startsWith('/alldata/lineage')) return '/alldata/lineage';
     if (pathname.startsWith('/alldata/offline')) return '/alldata/offline';
     if (pathname.startsWith('/alldata/streaming-ide')) return '/alldata/streaming-ide';
     if (pathname.startsWith('/alldata/streaming')) return '/alldata/streaming';
     if (pathname.startsWith('/cube/notebooks')) return '/cube/notebooks';
+    if (pathname.startsWith('/cube/sql-lab')) return '/cube/sql-lab';
 
     // 模型开发
     if (pathname.startsWith('/cube/experiments')) return '/cube/experiments';
@@ -413,7 +512,8 @@ function Sidebar({ collapsed }: SidebarProps) {
     // 运维中心
     if (pathname.startsWith('/alldata/monitoring')) return '/alldata/monitoring';
     if (pathname.startsWith('/alldata/alerts')) return '/alldata/alerts';
-    if (pathname === '/schedules') return '/schedules';
+    if (pathname === '/schedules' || pathname.startsWith('/schedules/')) return '/schedules';
+    if (pathname.startsWith('/scheduler/smart')) return '/scheduler/smart';
     if (pathname === '/executions') return '/executions';
     if (pathname === '/documents') return '/documents';
 
@@ -421,8 +521,22 @@ function Sidebar({ collapsed }: SidebarProps) {
     if (pathname.startsWith('/admin/users')) return '/admin/users';
     if (pathname.startsWith('/admin/groups')) return '/admin/groups';
     if (pathname.startsWith('/admin/notifications')) return '/admin/notifications';
+    if (pathname.startsWith('/admin/content')) return '/admin/content';
+    if (pathname.startsWith('/admin/roles')) return '/admin/roles';
+    if (pathname.startsWith('/admin/behavior')) return '/admin/behavior';
+    if (pathname.startsWith('/admin/user-profiles')) return '/admin/user-profiles';
+    if (pathname.startsWith('/admin/user-segments')) return '/admin/user-segments';
+    if (pathname.startsWith('/admin/cost-report')) return '/admin/cost-report';
+    if (pathname.startsWith('/admin/api-tester')) return '/admin/api-tester';
     if (pathname.startsWith('/admin/settings')) return '/admin/settings';
     if (pathname.startsWith('/admin/audit')) return '/admin/audit';
+
+    // 统一门户
+    if (pathname.startsWith('/portal/dashboard')) return '/portal/dashboard';
+    if (pathname.startsWith('/portal/notifications')) return '/portal/notifications';
+    if (pathname.startsWith('/portal/todos')) return '/portal/todos';
+    if (pathname.startsWith('/portal/announcements')) return '/portal/announcements';
+    if (pathname.startsWith('/portal/profile')) return '/portal/profile';
 
     return pathname;
   };
@@ -433,14 +547,16 @@ function Sidebar({ collapsed }: SidebarProps) {
 
     // 数据管理
     if (pathname.startsWith('/alldata/datasources') || pathname === '/datasets' ||
-        pathname === '/metadata' || pathname.startsWith('/alldata/features') ||
+        pathname.startsWith('/metadata') || pathname.startsWith('/alldata/features') ||
         pathname.startsWith('/alldata/standards') || pathname.startsWith('/alldata/assets') ||
-        pathname.startsWith('/alldata/services') || pathname.startsWith('/alldata/bi')) {
+        pathname.startsWith('/alldata/services') || pathname.startsWith('/alldata/bi') ||
+        pathname.startsWith('/alldata/metrics')) {
       keys.push('data');
     }
 
     // 数据开发
     if (pathname.startsWith('/alldata/etl') || pathname.startsWith('/alldata/kettle') ||
+        pathname.startsWith('/alldata/kettle-generator') || pathname.startsWith('/alldata/ocr') ||
         pathname.startsWith('/alldata/quality') ||
         pathname.startsWith('/alldata/lineage') || pathname.startsWith('/alldata/offline') ||
         pathname.startsWith('/alldata/streaming') || pathname.startsWith('/alldata/streaming-ide') ||
@@ -470,7 +586,7 @@ function Sidebar({ collapsed }: SidebarProps) {
 
     // 运维中心
     if (pathname.startsWith('/alldata/monitoring') || pathname.startsWith('/alldata/alerts') ||
-        pathname.startsWith('/schedules') ||
+        pathname.startsWith('/schedules') || pathname.startsWith('/scheduler/') ||
         pathname.startsWith('/executions') || pathname.startsWith('/documents')) {
       keys.push('ops');
     }
@@ -478,6 +594,11 @@ function Sidebar({ collapsed }: SidebarProps) {
     // 系统管理
     if (pathname.startsWith('/admin/')) {
       keys.push('admin');
+    }
+
+    // 统一门户
+    if (pathname.startsWith('/portal/')) {
+      keys.push('portal');
     }
 
     return keys;

@@ -1,0 +1,126 @@
+/**
+ * 统一通知管理样式
+ */
+
+.notification-center {
+  width: 100%;
+}
+
+/* 渠道卡片 */
+.channels-card .channel-card {
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.channels-card .channel-card.enabled {
+  border-color: #52c41a;
+}
+
+.channels-card .channel-card.disabled {
+  border-color: #d9d9d9;
+  opacity: 0.6;
+}
+
+.channel-icon {
+  font-size: 24px;
+  color: #1890ff;
+}
+
+.channel-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* 模板卡片 */
+.templates-card .ant-tag {
+  margin: 2px;
+}
+
+/* 规则卡片 */
+.rules-card .ant-tag {
+  margin: 2px;
+}
+
+/* 统计卡片 */
+.channel-stat-card {
+  background: #fafafa;
+}
+
+.channel-stat-card .ant-progress {
+  margin: 8px 0;
+}
+
+/* 表格操作按钮 */
+.notification-center .ant-btn-link {
+  padding: 0 4px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .notification-center .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .channel-card {
+    margin-bottom: 8px;
+  }
+
+  .notification-center .ant-table {
+    font-size: 12px;
+  }
+
+  .notification-center .ant-btn {
+    font-size: 12px;
+  }
+}
+
+/* 状态标签 */
+.notification-center .ant-tag.success {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.notification-center .ant-tag.error {
+  background: #fff1f0;
+  border-color: #ffa39e;
+  color: #ff4d4f;
+}
+
+.notification-center .ant-tag.warning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #faad14;
+}
+
+/* 模态框样式 */
+.notification-center .ant-modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* 表单项间距优化 */
+.notification-center .ant-form-item {
+  margin-bottom: 16px;
+}
+
+/* 开关样式 */
+.notification-center .ant-switch-checked {
+  background-color: #52c41a;
+}
+
+/* 统计数字样式 */
+.notification-center .ant-statistic-content-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 进度条样式 */
+.notification-center .ant-progress-bg {
+  transition: all 0.3s ease;
+}
+
+/* 加载状态 */
+.notification-center .ant-skeleton {
+  padding: 16px;
+}

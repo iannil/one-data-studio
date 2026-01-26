@@ -1,0 +1,276 @@
+/**
+ * 智能预警推送组件样式
+ */
+
+.smart-alerts {
+  width: 100%;
+}
+
+/* 预警状态指示器 */
+.alert-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.alert-status-indicator.critical {
+  background: #fff1f0;
+  color: #ff4d4f;
+  border: 1px solid #ffa39e;
+}
+
+.alert-status-indicator.warning {
+  background: #fffbe6;
+  color: #faad14;
+  border: 1px solid #ffe58f;
+}
+
+.alert-status-indicator.info {
+  background: #e6f7ff;
+  color: #1677ff;
+  border: 1px solid #91d5ff;
+}
+
+/* 预警卡片 */
+.alert-card {
+  border-left: 4px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.alert-card.severity-critical {
+  border-left-color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.alert-card.severity-error {
+  border-left-color: #ff4d4f;
+}
+
+.alert-card.severity-warning {
+  border-left-color: #faad14;
+  background: #fffbe6;
+}
+
+.alert-card.severity-info {
+  border-left-color: #1677ff;
+  background: #e6f7ff;
+}
+
+.alert-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateX(4px);
+}
+
+/* 通道卡片 */
+.channel-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.channel-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #1677ff 0%, #52c41a 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.channel-card.enabled::before {
+  opacity: 1;
+}
+
+.channel-card.disabled {
+  opacity: 0.6;
+}
+
+/* 异常检测结果 */
+.anomaly-result-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.anomaly-result-item:hover {
+  border-color: #1677ff;
+  box-shadow: 0 2px 6px rgba(22, 119, 255, 0.15);
+}
+
+.anomaly-result-item.critical {
+  border-left: 3px solid #ff4d4f;
+}
+
+.anomaly-result-item.warning {
+  border-left: 3px solid #faad14;
+}
+
+/* 置信度条 */
+.confidence-bar {
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1677ff 0%, #52c41a 100%);
+  transition: width 0.5s ease;
+}
+
+/* 预警统计卡片 */
+.stat-card {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-card.critical {
+  border-top: 4px solid #ff4d4f;
+}
+
+.stat-card.warning {
+  border-top: 4px solid #faad14;
+}
+
+.stat-card.info {
+  border-top: 4px solid #1677ff;
+}
+
+/* 订阅标签 */
+.subscription-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  margin: 2px;
+}
+
+.subscription-tag.active {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1677ff;
+}
+
+/* 规则表格行 */
+.smart-alerts .ant-table-row {
+  cursor: pointer;
+}
+
+.smart-alerts .ant-table-row:hover {
+  background: #f5f5f5;
+}
+
+/* 时间线样式 */
+.alert-timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.alert-timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f0f0f0;
+}
+
+.alert-timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.alert-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -23px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #d9d9d9;
+}
+
+.alert-timeline-item.critical::before {
+  border-color: #ff4d4f;
+  background: #ff4d4f;
+}
+
+.alert-timeline-item.warning::before {
+  border-color: #faad14;
+  background: #faad14;
+}
+
+.alert-timeline-item.info::before {
+  border-color: #1677ff;
+  background: #1677ff;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .smart-alerts .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .smart-alerts .ant-descriptions-small .ant-descriptions-item-label {
+    width: 80px;
+  }
+
+  .channel-card {
+    margin-bottom: 12px;
+  }
+}
+
+/* 动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.alert-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.alert-slide-in {
+  animation: slideIn 0.3s ease-out;
+}

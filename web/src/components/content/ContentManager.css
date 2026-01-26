@@ -1,0 +1,107 @@
+/**
+ * 统一内容管理样式
+ */
+
+.content-manager {
+  width: 100%;
+}
+
+/* 文章卡片 */
+.content-articles-card .ant-table-cell {
+  vertical-align: top;
+}
+
+/* 分类项 */
+.category-item {
+  transition: all 0.2s;
+}
+
+.category-item:hover {
+  background: #f5f5f5;
+}
+
+/* 标签样式 */
+.content-manager .ant-tag {
+  margin: 2px;
+}
+
+/* 操作按钮 */
+.content-manager .ant-btn-link {
+  padding: 0 4px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .content-manager .ant-col {
+    margin-bottom: 12px;
+  }
+
+  .content-manager .ant-table {
+    font-size: 12px;
+  }
+
+  .content-manager .ant-btn {
+    font-size: 12px;
+  }
+}
+
+/* 统计卡片 */
+.content-manager .ant-statistic-title {
+  font-size: 14px;
+}
+
+.content-manager .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 加载状态 */
+.content-manager .ant-skeleton {
+  padding: 16px;
+}
+
+/* 表单样式 */
+.content-manager .ant-form-item {
+  margin-bottom: 16px;
+}
+
+/* 搜索框 */
+.content-manager .search-box {
+  margin-bottom: 16px;
+}
+
+/* 文章列表项 */
+.article-list-item {
+  padding: 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.article-list-item:hover {
+  background: #f5f5f5;
+}
+
+/* 状态标签颜色 */
+.content-manager .ant-tag.success {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.content-manager .ant-tag.processing {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1677ff;
+}
+
+.content-manager .ant-tag.default {
+  background: #fafafa;
+  border-color: #d9d9d9;
+  color: #8c8c8c;
+}
+
+.content-manager .ant-tag.warning {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #faad14;
+}

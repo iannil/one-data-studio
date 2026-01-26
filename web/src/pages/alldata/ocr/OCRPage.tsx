@@ -1,185 +1,244 @@
-import React, { useState, useCallback } from 'react';
+/**
+ * OCR文档识别页面
+ * 支持非结构化文档（PDF、Word、Excel、图片、扫描件）的智能识别
+ * 集成新的OCR服务API
+ */
+
+import React, { useState, useEffect } from 'react';
 import {
   Card,
-  Upload,
   Button,
-  Tabs,
+  Upload,
+  Select,
   Table,
-  Space,
-  message,
-  Spin,
-  Typography,
   Tag,
   Progress,
+  Space,
+  Modal,
   Descriptions,
-  Alert,
-  Select,
-  Divider,
+  message,
+  Tabs,
+  Tooltip,
+  Badge,
+  Statistic,
   Row,
   Col,
-  Statistic,
   Empty,
+  Spin,
+  Typography,
+  Alert
 } from 'antd';
 import {
   UploadOutlined,
-  FileImageOutlined,
-  FilePdfOutlined,
-  FileWordOutlined,
   FileTextOutlined,
-  ScanOutlined,
-  TableOutlined,
-  DownloadOutlined,
-  CopyOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined,
+  LoadingOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  ReloadOutlined,
+  ScanOutlined,
+  FilePdfOutlined,
+  FileImageOutlined,
+  FileWordOutlined,
+  TableOutlined,
+  CopyOutlined
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
-import {
-  extractDocument,
-  ocrImage,
-  extractStructuredData,
-  getOCRStatus,
-  DocumentExtractionData,
-  OCRServiceStatus,
-  StructuredExtractionResult,
-} from '../../../services/alldata';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const { Title, Text, Paragraph } = Typography;
+import { ocrApi } from '@/services/ocr';
+
 const { TabPane } = Tabs;
+const { Option } = Select;
 const { Dragger } = Upload;
+const { Text } = Typography;
 
-const OCRPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('document');
-  const [loading, setLoading] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState<OCRServiceStatus | null>(null);
-  const [extractionResult, setExtractionResult] = useState<DocumentExtractionData | null>(null);
-  const [structuredResult, setStructuredResult] = useState<StructuredExtractionResult | null>(null);
-  const [ocrText, setOcrText] = useState<string>('');
-  const [ocrConfidence, setOcrConfidence] = useState<number>(0);
+interface OCRTask {
+  id: string;
+  document_name: string;
+  document_type: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  created_at: string;
+  result_summary?: {
+    pages_processed: number;
+    tables_found: number;
+    text_length: number;
+    fields_extracted: number;
+    validation_issues: number;
+  };
+  error_message?: string;
+}
+
+interface ExtractionResult {
+  task_id: string;
+  structured_data: Record<string, any>;
+  raw_text?: string;
+  tables: Array<{
+    id: string;
+    table_index: number;
+    page_number: number;
+    headers: string[];
+    rows: string[][];
+    confidence: number;
+  }>;
+  confidence_score: number;
+  validation_issues: Array<{
+    field: string;
+    error: string;
+    severity: 'error' | 'warning';
+  }>;
+}
+
+const STATUS_CONFIG = {
+  pending: { text: '待处理', color: 'default', icon: null },
+  processing: { text: '处理中', color: 'processing', icon: <LoadingOutlined /> },
+  completed: { text: '已完成', color: 'success', icon: <CheckCircleOutlined /> },
+  failed: { text: '失败', color: 'error', icon: null }
+};
+
+const DOCUMENT_TYPES = [
+  { value: 'invoice', label: '增值税发票' },
+  { value: 'contract', label: '合同' },
+  { value: 'report', label: '报告' },
+  { value: 'table', label: '表格' },
+  { value: 'general', label: '通用文档' }
+];
+
+export const OCRPage: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [structuredType, setStructuredType] = useState<'invoice' | 'id_card' | 'contract'>('invoice');
+  const [extractionType, setExtractionType] = useState<string>('general');
+  const [templateId, setTemplateId] = useState<string | undefined>();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
-  // 加载服务状态
-  const loadServiceStatus = useCallback(async () => {
-    try {
-      const response = await getOCRStatus();
-      if (response.code === 0) {
-        setServiceStatus(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load OCR status:', error);
+  const queryClient = useQueryClient();
+
+  // 获取任务列表
+  const { data: tasksData, isLoading } = useQuery({
+    queryKey: ['ocr-tasks', statusFilter],
+    queryFn: () => ocrApi.getTasks({ status: statusFilter }),
+    refetchInterval: (data) => {
+      // 有处理中的任务时，每3秒刷新一次
+      const hasProcessing = data?.tasks?.some(
+        (t: OCRTask) => t.status === 'processing' || t.status === 'pending'
+      );
+      return hasProcessing ? 3000 : false;
     }
-  }, []);
+  });
 
-  React.useEffect(() => {
-    loadServiceStatus();
-  }, [loadServiceStatus]);
+  // 获取模板列表
+  const { data: templatesData } = useQuery({
+    queryKey: ['ocr-templates'],
+    queryFn: () => ocrApi.getTemplates({ is_active: true })
+  });
 
-  // 文档提取
-  const handleDocumentExtract = async (file: File) => {
-    setLoading(true);
-    try {
-      const response = await extractDocument({
-        file,
-        extract_tables: true,
-        extract_images: false,
-        ocr_images: true,
+  // 获取任务结果
+  const { data: resultData, isLoading: resultLoading } = useQuery({
+    queryKey: ['ocr-result', selectedTaskId],
+    queryFn: () => ocrApi.getTaskResult(selectedTaskId!),
+    enabled: !!selectedTaskId && resultModalVisible
+  });
+
+  // 上传处理
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return await ocrApi.createTask(formData, {
+        extraction_type: extractionType,
+        template_id: templateId
       });
-      if (response.code === 0) {
-        setExtractionResult(response.data);
-        message.success('文档内容提取成功');
-      } else {
-        message.error(response.message || '提取失败');
-      }
-    } catch (error) {
-      message.error('文档提取失败');
-      console.error(error);
-    } finally {
-      setLoading(false);
+    },
+    onSuccess: () => {
+      message.success('文档上传成功，正在识别...');
+      setFileList([]);
+      setActiveTab('tasks');
+      queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] });
+    },
+    onError: (error: any) => {
+      message.error(`上传失败: ${error.message || '未知错误'}`);
     }
-  };
+  });
 
-  // 图片 OCR
-  const handleImageOCR = async (file: File) => {
-    setLoading(true);
-    try {
-      const response = await ocrImage({ file });
-      if (response.code === 0) {
-        setOcrText(response.data.text);
-        setOcrConfidence(response.data.average_confidence);
-        message.success('OCR 识别成功');
-      } else {
-        message.error(response.message || 'OCR 失败');
-      }
-    } catch (error) {
-      message.error('OCR 识别失败');
-      console.error(error);
-    } finally {
-      setLoading(false);
+  // 删除任务
+  const deleteMutation = useMutation({
+    mutationFn: (taskId: string) => ocrApi.deleteTask(taskId),
+    onSuccess: () => {
+      message.success('任务已删除');
+      queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] });
     }
-  };
+  });
 
-  // 结构化数据提取
-  const handleStructuredExtract = async (file: File) => {
-    setLoading(true);
-    try {
-      const response = await extractStructuredData({
-        file,
-        data_type: structuredType,
-      });
-      if (response.code === 0) {
-        setStructuredResult(response.data);
-        message.success('结构化数据提取成功');
-      } else {
-        message.error(response.message || '提取失败');
-      }
-    } catch (error) {
-      message.error('结构化数据提取失败');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 上传配置
   const uploadProps: UploadProps = {
+    name: 'file',
+    multiple: false,
+    fileList: fileList,
+    accept: '.pdf,.jpg,.jpeg,.png,.bmp,.docx,.doc,.xlsx,.xls,.tiff,.webp',
     beforeUpload: (file) => {
-      setFileList([file]);
+      const isValidType = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/bmp',
+        'image/tiff',
+        'image/webp',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ].includes(file.type);
+
+      if (!isValidType) {
+        message.error('只支持PDF、图片、Word、Excel格式的文件');
+        return Upload.LIST_IGNORE;
+      }
+
+      const isLt20M = file.size / 1024 / 1024 < 20;
+      if (!isLt20M) {
+        message.error('文件大小不能超过20MB');
+        return Upload.LIST_IGNORE;
+      }
+
       return false;
     },
-    fileList,
+    onChange: (info) => {
+      setFileList(info.fileList);
+    },
     onRemove: () => {
       setFileList([]);
-      setExtractionResult(null);
-      setOcrText('');
-      setStructuredResult(null);
-    },
-    maxCount: 1,
+    }
   };
 
-  // 处理提取
-  const handleExtract = () => {
+  const handleUpload = () => {
     if (fileList.length === 0) {
-      message.warning('请先上传文件');
+      message.warning('请先选择文件');
       return;
     }
-    const file = fileList[0] as unknown as File;
-    if (activeTab === 'document') {
-      handleDocumentExtract(file);
-    } else if (activeTab === 'image') {
-      handleImageOCR(file);
-    } else if (activeTab === 'structured') {
-      handleStructuredExtract(file);
-    }
+    uploadMutation.mutate(fileList[0].originFileObj as File);
   };
 
-  // 复制文本
+  const handleViewResult = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setResultModalVisible(true);
+  };
+
+  const handleDelete = (taskId: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '删除后任务及所有相关数据将被清除，无法恢复。',
+      onOk: () => deleteMutation.mutate(taskId)
+    });
+  };
+
   const handleCopyText = (text: string) => {
     navigator.clipboard.writeText(text);
     message.success('已复制到剪贴板');
   };
 
-  // 下载结果
   const handleDownload = (content: string, filename: string) => {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -192,316 +251,437 @@ const OCRPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // 获取文件图标
+  // 任务列表表格列
+  const columns = [
+    {
+      title: '文档名称',
+      dataIndex: 'document_name',
+      key: 'document_name',
+      width: 200,
+      ellipsis: true,
+      render: (text: string) => (
+        <Space>
+          {getFileIcon(text)}
+          <Tooltip title={text}>
+            <span>{text}</span>
+          </Tooltip>
+        </Space>
+      )
+    },
+    {
+      title: '文档类型',
+      dataIndex: 'document_type',
+      key: 'document_type',
+      width: 100,
+      render: (type: string) => {
+        const typeMap: Record<string, { label: string; color: string }> = {
+          pdf: { label: 'PDF', color: 'red' },
+          image: { label: '图片', color: 'blue' },
+          word: { label: 'Word', color: 'geekblue' },
+          excel: { label: 'Excel', color: 'green' },
+          scanned_pdf: { label: '扫描PDF', color: 'orange' }
+        };
+        const config = typeMap[type] || { label: type, color: 'default' };
+        return <Tag color={config.color}>{config.label}</Tag>;
+      }
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 120,
+      render: (status: string, record: OCRTask) => {
+        const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+        return (
+          <Space>
+            {config.icon}
+            <Tag color={config.color}>{config.text}</Tag>
+            {status === 'processing' && (
+              <Progress
+                percent={Math.round(record.progress)}
+                size="small"
+                style={{ width: 60 }}
+              />
+            )}
+          </Space>
+        );
+      }
+    },
+    {
+      title: '识别结果',
+      key: 'result',
+      width: 150,
+      render: (_: any, record: OCRTask) => {
+        if (record.status !== 'completed' || !record.result_summary) {
+          return '-';
+        }
+        return (
+          <Space size="small">
+            <Tooltip title="处理页数">
+              <Tag>{record.result_summary.pages_processed}页</Tag>
+            </Tooltip>
+            <Tooltip title="发现表格">
+              <Tag>{record.result_summary.tables_found}表</Tag>
+            </Tooltip>
+            <Tooltip title="提取字段">
+              <Tag>{record.result_summary.fields_extracted}字段</Tag>
+            </Tooltip>
+          </Space>
+        );
+      }
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 180
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 150,
+      fixed: 'right' as const,
+      render: (_: any, record: OCRTask) => (
+        <Space size="small">
+          {record.status === 'completed' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewResult(record.id)}
+            >
+              查看
+            </Button>
+          )}
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record.id)}
+          >
+            删除
+          </Button>
+        </Space>
+      )
+    }
+  ];
+
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return <FilePdfOutlined style={{ fontSize: 48, color: '#ff4d4f' }} />;
+    if (ext === 'pdf') return <FilePdfOutlined style={{ color: '#ff4d4f' }} />;
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext || ''))
-      return <FileImageOutlined style={{ fontSize: 48, color: '#1890ff' }} />;
+      return <FileImageOutlined style={{ color: '#1890ff' }} />;
     if (['doc', 'docx'].includes(ext || ''))
-      return <FileWordOutlined style={{ fontSize: 48, color: '#2f54eb' }} />;
-    return <FileTextOutlined style={{ fontSize: 48, color: '#52c41a' }} />;
+      return <FileWordOutlined style={{ color: '#2f54eb' }} />;
+    if (['xls', 'xlsx'].includes(ext || ''))
+      return <TableOutlined style={{ color: '#52c41a' }} />;
+    return <FileTextOutlined style={{ color: '#8c8c8c' }} />;
   };
 
-  // 渲染表格数据
-  const renderTables = () => {
-    if (!extractionResult?.tables?.length) return null;
-
-    return (
-      <div style={{ marginTop: 16 }}>
-        <Title level={5}>
-          <TableOutlined /> 提取的表格 ({extractionResult.tables.length})
-        </Title>
-        {extractionResult.tables.map((table, index) => (
-          <Card key={index} size="small" title={`表格 ${index + 1} (第 ${table.page} 页)`} style={{ marginBottom: 16 }}>
-            <Table
-              dataSource={table.data.map((row, rowIndex) => ({
-                key: rowIndex,
-                ...row.reduce((acc, cell, cellIndex) => ({ ...acc, [`col${cellIndex}`]: cell }), {}),
-              }))}
-              columns={table.data[0]?.map((_, colIndex) => ({
-                title: `列 ${colIndex + 1}`,
-                dataIndex: `col${colIndex}`,
-                key: `col${colIndex}`,
-              })) || []}
-              size="small"
-              pagination={false}
-              scroll={{ x: true }}
-            />
-            <div style={{ marginTop: 8 }}>
-              <Button
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={() => handleCopyText(table.markdown)}
-              >
-                复制为 Markdown
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
-  // 渲染结构化数据
-  const renderStructuredData = () => {
-    if (!structuredResult?.structured_data) return null;
-
-    const data = structuredResult.structured_data;
-    const items = Object.entries(data).map(([key, value]) => ({
-      key,
-      label: key,
-      children: typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value),
-    }));
-
-    return (
-      <Descriptions
-        bordered
-        column={2}
-        size="small"
-        items={items}
-      />
-    );
+  // 统计数据
+  const stats = {
+    total: tasksData?.total || 0,
+    pending: tasksData?.tasks?.filter((t: OCRTask) => t.status === 'pending').length || 0,
+    processing: tasksData?.tasks?.filter((t: OCRTask) => t.status === 'processing').length || 0,
+    completed: tasksData?.tasks?.filter((t: OCRTask) => t.status === 'completed').length || 0,
+    failed: tasksData?.tasks?.filter((t: OCRTask) => t.status === 'failed').length || 0
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={4}>
-        <ScanOutlined /> 非结构化文档 OCR
-      </Title>
-      <Paragraph type="secondary">
-        支持 PDF、图片、Word 等文档的文字识别和内容提取
-      </Paragraph>
+    <div className="ocr-page">
+      <Card
+        title={
+          <Space>
+            <ScanOutlined />
+            <span>OCR文档识别</span>
+          </Space>
+        }
+        extra={
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] })}
+          >
+            刷新
+          </Button>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        支持PDF、图片、Word、Excel等格式的智能识别
+      </Card>
 
-      {/* 服务状态 */}
-      {serviceStatus && (
-        <Alert
-          message={
-            <Space>
-              <CheckCircleOutlined style={{ color: serviceStatus.enabled ? '#52c41a' : '#ff4d4f' }} />
-              <Text>
-                OCR 服务状态: {serviceStatus.enabled ? '可用' : '不可用'}
-              </Text>
-              <Text type="secondary">
-                可用引擎: {Object.entries(serviceStatus.available_engines)
-                  .filter(([, v]) => v)
-                  .map(([k]) => k)
-                  .join(', ') || '无'}
-              </Text>
-            </Space>
-          }
-          type={serviceStatus.enabled ? 'success' : 'warning'}
-          showIcon={false}
-          style={{ marginBottom: 16 }}
-        />
-      )}
+      <div className="page-content">
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
+            <Card>
+              <Statistic title="总任务数" value={stats.total} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="处理中"
+                value={stats.processing}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="已完成"
+                value={stats.completed}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="失败"
+                value={stats.failed}
+                valueStyle={{ color: '#ff4d4f' }}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      <Row gutter={24}>
-        {/* 左侧：上传和操作 */}
-        <Col span={10}>
-          <Card>
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="文档提取" key="document">
-                <Paragraph type="secondary">
-                  支持 PDF、Word、文本文件，提取文字内容和表格
-                </Paragraph>
-              </TabPane>
-              <TabPane tab="图片 OCR" key="image">
-                <Paragraph type="secondary">
-                  识别图片中的文字，支持中英文
-                </Paragraph>
-              </TabPane>
-              <TabPane tab="结构化提取" key="structured">
-                <Paragraph type="secondary">
-                  从发票、身份证、合同等文档提取结构化信息
-                </Paragraph>
-                <Select
-                  value={structuredType}
-                  onChange={setStructuredType}
-                  style={{ width: '100%', marginBottom: 16 }}
-                  options={[
-                    { value: 'invoice', label: '发票信息提取' },
-                    { value: 'id_card', label: '身份证信息提取' },
-                    { value: 'contract', label: '合同关键信息提取' },
-                  ]}
-                />
-              </TabPane>
-            </Tabs>
-
-            <Dragger {...uploadProps} style={{ marginBottom: 16 }}>
-              <p className="ant-upload-drag-icon">
-                <UploadOutlined />
-              </p>
-              <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-              <p className="ant-upload-hint">
-                支持 PDF、图片（JPG/PNG/BMP）、Word（DOC/DOCX）、文本文件
-              </p>
-            </Dragger>
-
-            <Button
-              type="primary"
-              icon={<ScanOutlined />}
-              onClick={handleExtract}
-              loading={loading}
-              block
-            >
-              开始提取
-            </Button>
-          </Card>
-        </Col>
-
-        {/* 右侧：结果展示 */}
-        <Col span={14}>
-          <Card title="提取结果" style={{ minHeight: 500 }}>
-            <Spin spinning={loading}>
-              {/* 文档提取结果 */}
-              {activeTab === 'document' && extractionResult && (
-                <div>
-                  <Row gutter={16} style={{ marginBottom: 16 }}>
-                    <Col span={6}>
-                      <Statistic title="字符数" value={extractionResult.char_count} />
-                    </Col>
-                    <Col span={6}>
-                      <Statistic title="页数" value={extractionResult.page_count} />
-                    </Col>
-                    <Col span={6}>
-                      <Statistic title="表格数" value={extractionResult.tables?.length || 0} />
-                    </Col>
-                    <Col span={6}>
-                      <Statistic title="图片数" value={extractionResult.image_count} />
-                    </Col>
-                  </Row>
-
-                  <Divider orientation="left">提取的文本</Divider>
-                  <div style={{ maxHeight: 300, overflow: 'auto', marginBottom: 16 }}>
-                    <Paragraph>
-                      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {extractionResult.text || '无文本内容'}
-                      </pre>
-                    </Paragraph>
-                  </div>
-                  <Space>
-                    <Button
-                      icon={<CopyOutlined />}
-                      onClick={() => handleCopyText(extractionResult.text)}
-                    >
-                      复制文本
-                    </Button>
-                    <Button
-                      icon={<DownloadOutlined />}
-                      onClick={() => handleDownload(extractionResult.text, 'extracted_text.txt')}
-                    >
-                      下载文本
-                    </Button>
-                  </Space>
-
-                  {renderTables()}
-
-                  {extractionResult.errors?.length > 0 && (
-                    <Alert
-                      type="warning"
-                      message="提取过程中的警告"
-                      description={extractionResult.errors.join('\n')}
-                      style={{ marginTop: 16 }}
-                    />
+        <Card>
+          <Tabs activeKey={activeTab} onChange={setActiveTab}>
+            <TabPane
+              tab={
+                <span>
+                  上传文档
+                  {stats.pending + stats.processing > 0 && (
+                    <Badge count={stats.pending + stats.processing} style={{ marginLeft: 8 }} />
                   )}
-                </div>
-              )}
-
-              {/* 图片 OCR 结果 */}
-              {activeTab === 'image' && ocrText && (
-                <div>
-                  <Row gutter={16} style={{ marginBottom: 16 }}>
-                    <Col span={12}>
-                      <Statistic title="字符数" value={ocrText.length} />
-                    </Col>
-                    <Col span={12}>
-                      <div>
-                        <Text type="secondary">识别置信度</Text>
-                        <Progress
-                          percent={Math.round(ocrConfidence * 100)}
-                          status={ocrConfidence > 0.8 ? 'success' : ocrConfidence > 0.5 ? 'normal' : 'exception'}
-                        />
-                      </div>
-                    </Col>
-                  </Row>
-
-                  <Divider orientation="left">识别结果</Divider>
-                  <div style={{ maxHeight: 400, overflow: 'auto', marginBottom: 16 }}>
-                    <Paragraph>
-                      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {ocrText}
-                      </pre>
-                    </Paragraph>
-                  </div>
-                  <Space>
-                    <Button icon={<CopyOutlined />} onClick={() => handleCopyText(ocrText)}>
-                      复制文本
-                    </Button>
-                    <Button
-                      icon={<DownloadOutlined />}
-                      onClick={() => handleDownload(ocrText, 'ocr_result.txt')}
-                    >
-                      下载文本
-                    </Button>
-                  </Space>
-                </div>
-              )}
-
-              {/* 结构化提取结果 */}
-              {activeTab === 'structured' && structuredResult && (
-                <div>
-                  <Tag color="blue" style={{ marginBottom: 16 }}>
-                    {structuredResult.data_type === 'invoice' && '发票信息'}
-                    {structuredResult.data_type === 'id_card' && '身份证信息'}
-                    {structuredResult.data_type === 'contract' && '合同信息'}
-                  </Tag>
-
-                  <Divider orientation="left">提取的结构化数据</Divider>
-                  {renderStructuredData()}
-
-                  <Divider orientation="left">原始文本摘要</Divider>
-                  <Paragraph type="secondary" ellipsis={{ rows: 5, expandable: true }}>
-                    {structuredResult.raw_text}
-                  </Paragraph>
-
-                  <div style={{ marginTop: 16 }}>
-                    <Space>
-                      <Button
-                        icon={<CopyOutlined />}
-                        onClick={() =>
-                          handleCopyText(JSON.stringify(structuredResult.structured_data, null, 2))
-                        }
-                      >
-                        复制 JSON
-                      </Button>
-                      <Button
-                        icon={<DownloadOutlined />}
-                        onClick={() =>
-                          handleDownload(
-                            JSON.stringify(structuredResult.structured_data, null, 2),
-                            `${structuredResult.data_type}_data.json`
-                          )
-                        }
-                      >
-                        下载 JSON
-                      </Button>
-                    </Space>
-                  </div>
-                </div>
-              )}
-
-              {/* 空状态 */}
-              {!extractionResult && !ocrText && !structuredResult && (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description='上传文件并点击"开始提取"查看结果'
+                </span>
+              }
+              key="upload"
+            >
+              <Space direction="vertical" style={{ width: '100%' }} size="large">
+                <Alert
+                  message="智能文档识别"
+                  description="支持PDF文档识别（含扫描件OCR）、图片文字识别、Word文档解析、Excel表格提取、智能信息抽取（发票、合同、报告等）"
+                  type="info"
+                  showIcon
                 />
+
+                <Space>
+                  <Text strong>文档类型:</Text>
+                  <Select
+                    style={{ width: 200 }}
+                    value={extractionType}
+                    onChange={setExtractionType}
+                  >
+                    {DOCUMENT_TYPES.map(type => (
+                      <Option key={type.value} value={type.value}>
+                        {type.label}
+                      </Option>
+                    ))}
+                  </Select>
+                </Space>
+
+                {extractionType !== 'general' && templatesData?.length > 0 && (
+                  <Space>
+                    <Text strong>提取模板:</Text>
+                    <Select
+                      style={{ width: 300 }}
+                      placeholder="选择模板（可选）"
+                      value={templateId}
+                      onChange={setTemplateId}
+                      allowClear
+                    >
+                      {templatesData.map((template: any) => (
+                        <Option key={template.id} value={template.id}>
+                          {template.name} {template.category && <Tag size="small">{template.category}</Tag>}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Space>
+                )}
+
+                <Dragger {...uploadProps} style={{ padding: '40px' }}>
+                  <p className="ant-upload-drag-icon">
+                    <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                  </p>
+                  <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+                  <p className="ant-upload-hint">
+                    支持PDF、JPG、PNG、Word、Excel等格式，单个文件不超过20MB
+                  </p>
+                </Dragger>
+
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  size="large"
+                  loading={uploadMutation.isPending}
+                  onClick={handleUpload}
+                  disabled={fileList.length === 0}
+                >
+                  开始识别
+                </Button>
+              </Space>
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span>
+                  识别任务
+                  <Badge count={stats.pending + stats.processing} style={{ marginLeft: 8 }} />
+                </span>
+              }
+              key="tasks"
+            >
+              <Space style={{ marginBottom: 16 }}>
+                <Text strong>状态筛选:</Text>
+                <Select
+                  style={{ width: 120 }}
+                  placeholder="全部状态"
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  allowClear
+                >
+                  <Option value="pending">待处理</Option>
+                  <Option value="processing">处理中</Option>
+                  <Option value="completed">已完成</Option>
+                  <Option value="failed">失败</Option>
+                </Select>
+              </Space>
+
+              <Table
+                columns={columns}
+                dataSource={tasksData?.tasks || []}
+                rowKey="id"
+                loading={isLoading}
+                pagination={{
+                  total: tasksData?.total || 0,
+                  pageSize: 20,
+                  showSizeChanger: true,
+                  showTotal: (total) => `共 ${total} 条`
+                }}
+                scroll={{ x: 1200 }}
+              />
+            </TabPane>
+          </Tabs>
+        </Card>
+      </div>
+
+      {/* 结果详情弹窗 */}
+      <Modal
+        title="识别结果"
+        open={resultModalVisible}
+        onCancel={() => setResultModalVisible(false)}
+        width={900}
+        footer={[
+          <Button key="close" onClick={() => setResultModalVisible(false)}>
+            关闭
+          </Button>,
+          <Button
+            key="export"
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={() => {
+              if (resultData) {
+                handleDownload(
+                  JSON.stringify(resultData.structured_data, null, 2),
+                  `ocr_result_${selectedTaskId}.json`
+                );
+              }
+            }}
+          >
+            导出JSON
+          </Button>
+        ]}
+      >
+        {resultLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin size="large" />
+            <p style={{ marginTop: 16 }}>加载中...</p>
+          </div>
+        ) : resultData ? (
+          <Tabs defaultActiveKey="structured">
+            <TabPane tab="结构化数据" key="structured">
+              <Descriptions bordered size="small" column={1}>
+                {Object.entries(resultData.structured_data || {}).map(([key, value]) => (
+                  <Descriptions.Item key={key} label={key}>
+                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                  </Descriptions.Item>
+                ))}
+              </Descriptions>
+              {Object.keys(resultData.structured_data || {}).length === 0 && (
+                <Empty description="未提取到结构化数据" />
               )}
-            </Spin>
-          </Card>
-        </Col>
-      </Row>
+            </TabPane>
+
+            <TabPane tab={`表格 (${resultData.tables.length})`} key="tables">
+              {resultData.tables.map((table, index) => (
+                <div key={table.id} style={{ marginBottom: 24 }}>
+                  <Text strong>表格 #{index + 1} (第{table.page_number}页)</Text>
+                  <Table
+                    style={{ marginTop: 8 }}
+                    columns={table.headers.map((h, i) => ({
+                      title: h,
+                      dataIndex: i,
+                      key: i
+                    }))}
+                    dataSource={table.rows.map((row, i) => ({
+                      key: i,
+                      ...row
+                    }))}
+                    pagination={false}
+                    size="small"
+                    bordered
+                    scroll={{ x: true }}
+                  />
+                </div>
+              ))}
+              {resultData.tables.length === 0 && (
+                <Empty description="未识别到表格" />
+              )}
+            </TabPane>
+
+            <TabPane tab="原始文本" key="raw">
+              <div
+                style={{
+                  maxHeight: 400,
+                  overflow: 'auto',
+                  padding: 12,
+                  background: '#f5f5f5',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {resultData.raw_text || '无文本内容'}
+              </div>
+              {resultData.raw_text && (
+                <Button
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopyText(resultData.raw_text!)}
+                  style={{ marginTop: 8 }}
+                >
+                  复制文本
+                </Button>
+              )}
+            </TabPane>
+
+            {resultData.validation_issues.length > 0 && (
+              <TabPane tab={`验证问题 (${resultData.validation_issues.length})`} key="validation">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {resultData.validation_issues.map((issue, index) => (
+                    <Alert
+                      key={index}
+                      type={issue.severity === 'error' ? 'error' : 'warning'}
+                      message={issue.field}
+                      description={issue.error}
+                    />
+                  ))}
+                </Space>
+              </TabPane>
+            )}
+          </Tabs>
+        ) : null}
+      </Modal>
     </div>
   );
 };

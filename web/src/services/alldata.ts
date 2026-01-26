@@ -1224,15 +1224,6 @@ export async function getColumnLineage(tableName: string, columnName: string): P
 }
 
 /**
- * 获取影响分析
- */
-export async function getImpactAnalysis(tableName: string): Promise<ApiResponse<ImpactAnalysis>> {
-  return apiClient.get('/api/v1/lineage/impact', {
-    params: { table_name: tableName },
-  });
-}
-
-/**
  * 搜索血缘关系
  */
 export async function searchLineage(query: string, type?: 'table' | 'column'): Promise<ApiResponse<{
@@ -1699,6 +1690,334 @@ export interface AssetInventoryTask {
   end_time?: string;
   created_by: string;
   created_at: string;
+}
+
+// ============= AI 资产检索类型 =============
+
+export interface QueryIntent {
+  asset_types: string[];
+  keywords: string[];
+  data_level: string | null;
+  database: string | null;
+  time_filter: string | null;
+  sensitive: boolean;
+  original_query: string;
+}
+
+export interface AIAssetSearchResult {
+  asset: DataAsset;
+  relevance_score: number;
+  matched_fields: string[];
+}
+
+export interface AIAssetSearchResponse {
+  query: string;
+  intent: QueryIntent;
+  results: AIAssetSearchResult[];
+  total: number;
+}
+
+export interface AISemanticSearchResult {
+  asset: DataAsset;
+  similarity_score: number;
+}
+
+export interface AISemanticSearchResponse {
+  query: string;
+  results: AISemanticSearchResult[];
+  total: number;
+  search_type: 'semantic' | 'keyword';
+}
+
+export interface AIRecommendation {
+  asset: DataAsset;
+  reason: string;
+  reason_text: string;
+  score: number;
+}
+
+export interface AIRecommendResponse {
+  source_asset_id: string;
+  recommendations: AIRecommendation[];
+  total: number;
+}
+
+export interface TrendingAssetsResponse {
+  period_days: number;
+  assets: DataAsset[];
+  total: number;
+}
+
+export interface AutocompleteSuggestion {
+  type: 'asset' | 'table' | 'column';
+  text: string;
+  asset_id?: string;
+  asset_type?: string;
+  database?: string;
+  table?: string;
+  full_name?: string;
+}
+
+export interface AutocompleteResponse {
+  prefix: string;
+  suggestions: AutocompleteSuggestion[];
+  total: number;
+}
+
+// ============= AI 清洗规则类型 =============
+
+export interface CleaningRecommendation {
+  issue_type: string;
+  issue_description: string;
+  rule_type: string;
+  rule_name: string;
+  rule_config: {
+    target_column?: string;
+    target_table?: string;
+    target_database?: string;
+    threshold?: number;
+    action?: string;
+    severity?: string;
+    pattern?: string;
+    expression?: string;
+    [key: string]: any;
+  };
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  estimated_improvement: number;
+}
+
+export interface CleaningRecommendationResponse {
+  recommendations: CleaningRecommendation[];
+  total_count: number;
+  kettle_steps?: any[];
+}
+
+export interface RuleTemplate {
+  category: string;
+  rule_type: string;
+  name: string;
+  expression: string;
+  severity: string;
+  config_template: any;
+}
+
+export interface RuleTemplatesResponse {
+  templates: RuleTemplate[];
+  total: number;
+  categories: string[];
+}
+
+// ============= 字段映射类型 =============
+
+export interface FieldMappingSuggestion {
+  source_field: string;
+  target_field: string;
+  confidence: number;
+  mapping_type: 'exact' | 'fuzzy' | 'semantic' | 'inferred' | 'derived';
+  transformation: string;
+  data_type_conversion: {
+    source_type: string;
+    target_type: string;
+    conversion: string;
+    cost: number;
+    conversion_risk: 'low' | 'medium' | 'high' | 'critical';
+  };
+  quality_score: number;
+}
+
+export interface MappingSummary {
+  total_suggestions: number;
+  source_coverage: number;
+  target_coverage: number;
+  avg_confidence: number;
+  avg_quality: number;
+  mapping_types: Record<string, number>;
+}
+
+export interface FieldMappingResponse {
+  source_table: string;
+  target_table: string;
+  source_columns_count: number;
+  target_columns_count: number;
+  suggestions: FieldMappingSuggestion[];
+  summary: MappingSummary;
+  unmapped_source: string[];
+  unmapped_target: string[];
+}
+
+export interface MappingConflict {
+  type: 'multiple_sources' | 'type_incompatible' | 'length_exceeded';
+  severity: 'error' | 'warning';
+  message: string;
+  target_field?: string;
+  source_fields?: string[];
+  source_field?: string;
+  source_type?: string;
+  target_type?: string;
+  source_length?: number;
+  target_length?: number;
+}
+
+export interface MappingConflictResponse {
+  conflicts: MappingConflict[];
+  conflict_count: number;
+}
+
+export interface MappingTable {
+  table_name: string;
+  database_name: string;
+  table_comment: string;
+  column_count: number;
+}
+
+export interface MappingTablesResponse {
+  tables: MappingTable[];
+  total: number;
+}
+
+export interface SQLGenerationResponse {
+  select_sql: string;
+  mappings: any[];
+  conversion_count: number;
+  high_risk_count: number;
+}
+
+export interface DerivedFieldResponse {
+  suggestions: FieldMappingSuggestion[];
+  count: number;
+}
+
+// ============= 智能预警类型 =============
+
+export interface AnomalyDetectionResult {
+  anomaly_type: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  description: string;
+  affected_table: string;
+  affected_column?: string;
+  metric_value?: number;
+  threshold?: number;
+  confidence: number;
+  suggestions: string[];
+  detected_at: string;
+}
+
+export interface AnomalySummary {
+  by_severity: Record<string, number>;
+  by_type: Record<string, number>;
+  critical_tables: string[];
+}
+
+export interface AnomalyDetectionResponse {
+  detected_at: string;
+  total_anomalies: number;
+  anomalies: AnomalyDetectionResult[];
+  summary: AnomalySummary;
+}
+
+export interface AlertRule {
+  rule_id: string;
+  name: string;
+  description?: string;
+  rule_type: string;
+  config: Record<string, unknown>;
+  severity: string;
+  enabled: boolean;
+  channels: string[];
+  tenant_id?: string;
+  created_by?: string;
+  created_at?: string;
+}
+
+export interface AlertRulesResponse {
+  total: number;
+  rules: AlertRule[];
+}
+
+export interface AlertChannel {
+  channel_type: 'email' | 'sms' | 'webhook' | 'wechat' | 'dingtalk';
+  name: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  last_used?: string;
+}
+
+export interface AlertChannelsResponse {
+  channels: AlertChannel[];
+  total: number;
+}
+
+export interface AlertSendResult {
+  channel: string;
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface AlertSendResponse {
+  alert_id: string;
+  sent_at: string;
+  channels: string[];
+  results: AlertSendResult[];
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+}
+
+export interface AlertHistoryItem {
+  alert_id: string;
+  alert_type: string;
+  severity: string;
+  title: string;
+  description: string;
+  affected_table?: string;
+  channels_sent: string[];
+  status: string;
+  created_at: string;
+}
+
+export interface AlertHistoryResponse {
+  total: number;
+  history: AlertHistoryItem[];
+}
+
+export interface AlertStatistics {
+  period_days: number;
+  total_alerts: number;
+  by_severity: Record<string, number>;
+  by_type: Record<string, number>;
+  by_channel: Record<string, number>;
+  top_tables: Array<{ table: string; count: number }>;
+}
+
+export interface AlertSubscription {
+  subscription_id: string;
+  user_id: string;
+  alert_types: string[];
+  severity_filter: string[];
+  channels: string[];
+  filters: Record<string, unknown>;
+  enabled?: boolean;
+}
+
+export interface AlertSubscriptionsResponse {
+  user_id: string;
+  subscriptions: AlertSubscription[];
+  total: number;
+}
+
+export interface AlertType {
+  type: string;
+  name: string;
+  description: string;
+  available_filters: string[];
+}
+
+export interface AlertTypesResponse {
+  types: AlertType[];
+  total: number;
 }
 
 // ============= 数据服务类型 =============
@@ -2187,93 +2506,6 @@ export async function updateAssetTags(assetId: string, tags: string[]): Promise<
   return apiClient.put(`/api/v1/assets/${assetId}/tags`, { tags });
 }
 
-// ============= 数据服务 API =============
-
-/**
- * 获取服务列表
- */
-export async function getDataServices(params?: {
-  type?: string;
-  status?: string;
-  page?: number;
-  page_size?: number;
-}): Promise<ApiResponse<{ services: DataService[]; total: number }>> {
-  return apiClient.get('/api/v1/services', { params });
-}
-
-/**
- * 获取服务详情
- */
-export async function getDataService(serviceId: string): Promise<ApiResponse<DataService>> {
-  return apiClient.get(`/api/v1/services/${serviceId}`);
-}
-
-/**
- * 创建服务
- */
-export async function createDataService(data: CreateDataServiceRequest): Promise<ApiResponse<{ service_id: string; endpoint: string }>> {
-  return apiClient.post('/api/v1/services', data);
-}
-
-/**
- * 更新服务
- */
-export async function updateDataService(serviceId: string, data: Partial<CreateDataServiceRequest>): Promise<ApiResponse<DataService>> {
-  return apiClient.put(`/api/v1/services/${serviceId}`, data);
-}
-
-/**
- * 删除服务
- */
-export async function deleteDataService(serviceId: string): Promise<ApiResponse<void>> {
-  return apiClient.delete(`/api/v1/services/${serviceId}`);
-}
-
-/**
- * 发布服务
- */
-export async function publishDataService(serviceId: string): Promise<ApiResponse<{ endpoint: string }>> {
-  return apiClient.post(`/api/v1/services/${serviceId}/publish`);
-}
-
-/**
- * 下线服务
- */
-export async function unpublishDataService(serviceId: string): Promise<ApiResponse<void>> {
-  return apiClient.post(`/api/v1/services/${serviceId}/unpublish`);
-}
-
-/**
- * 获取服务 API 密钥
- */
-export async function getServiceApiKeys(serviceId: string): Promise<ApiResponse<{ api_keys: ApiKeyInfo[] }>> {
-  return apiClient.get(`/api/v1/services/${serviceId}/api-keys`);
-}
-
-/**
- * 创建 API 密钥
- */
-export async function createServiceApiKey(serviceId: string): Promise<ApiResponse<{ key_id: string; key: string }>> {
-  return apiClient.post(`/api/v1/services/${serviceId}/api-keys`);
-}
-
-/**
- * 删除 API 密钥
- */
-export async function deleteServiceApiKey(serviceId: string, keyId: string): Promise<ApiResponse<void>> {
-  return apiClient.delete(`/api/v1/services/${serviceId}/api-keys/${keyId}`);
-}
-
-/**
- * 获取服务统计
- */
-export async function getDataServiceStatistics(serviceId: string, params?: {
-  period_start?: string;
-  period_end?: string;
-}): Promise<ApiResponse<ServiceStatistics>> {
-  return apiClient.get(`/api/v1/services/${serviceId}/statistics`, { params });
-}
-
 // ============= BI 报表 API =============
 
 /**
@@ -2515,47 +2747,6 @@ export async function getMonitoringOverview(): Promise<ApiResponse<{
   avg_latency_ms: number;
 }>> {
   return apiClient.get('/api/v1/monitoring/overview');
-}
-
-/**
- * 获取告警规则列表
- */
-export async function getAlertRules(params?: {
-  enabled?: boolean;
-  severity?: string;
-}): Promise<ApiResponse<{ rules: AlertRule[] }>> {
-  return apiClient.get('/api/v1/monitoring/alert-rules', { params });
-}
-
-/**
- * 创建告警规则
- */
-export async function createAlertRule(data: {
-  name: string;
-  metric: string;
-  condition: 'greater_than' | 'less_than' | 'equal_to';
-  threshold: number;
-  severity: 'info' | 'warning' | 'error' | 'critical';
-  notification_channels: string[];
-}): Promise<ApiResponse<{ rule_id: string }>> {
-  return apiClient.post('/api/v1/monitoring/alert-rules', data);
-}
-
-/**
- * 更新告警规则
- */
-export async function updateAlertRule(ruleId: string, data: {
-  enabled?: boolean;
-  threshold?: number;
-}): Promise<ApiResponse<AlertRule>> {
-  return apiClient.put(`/api/v1/monitoring/alert-rules/${ruleId}`, data);
-}
-
-/**
- * 删除告警规则
- */
-export async function deleteAlertRule(ruleId: string): Promise<ApiResponse<void>> {
-  return apiClient.delete(`/api/v1/monitoring/alert-rules/${ruleId}`);
 }
 
 /**
@@ -3561,21 +3752,6 @@ export interface CleaningRecommendation {
 }
 
 /**
- * AI 清洗规则推荐
- */
-export async function recommendCleaningRules(params: {
-  table_id?: string;
-  quality_alerts?: unknown[];
-  include_kettle_steps?: boolean;
-}): Promise<ApiResponse<{
-  recommendations: CleaningRecommendation[];
-  total_count: number;
-  kettle_steps?: unknown[];
-}>> {
-  return apiClient.post('/api/v1/quality/recommend-cleaning', params);
-}
-
-/**
  * 缺失值填充分析结果
  */
 export interface MissingAnalysis {
@@ -3984,18 +4160,18 @@ export default {
   getAssetInventories,
   updateAssetTags,
 
-  // 数据服务
-  getDataServices,
-  getDataService,
-  createDataService,
-  updateDataService,
-  deleteDataService,
-  publishDataService,
-  unpublishDataService,
-  getServiceApiKeys,
-  createServiceApiKey,
-  deleteServiceApiKey,
-  getDataServiceStatistics,
+  // AI 资产检索
+  aiSearchAssets,
+  aiSemanticSearchAssets,
+  aiRecommendAssets,
+  getTrendingAssets,
+  getAssetAutocomplete,
+
+  // AI 清洗规则
+  analyzeTableQuality,
+  recommendCleaningRules,
+  recommendColumnRules,
+  getRuleTemplates,
 
   // BI 报表
   getReports,
@@ -4104,4 +4280,2060 @@ export default {
   getMetadataVersionDetail,
   compareMetadataVersions,
   rollbackMetadataVersion,
+
+  // 元数据图谱
+  getMetadataGraph,
+  getTableLineageGraph,
+  getColumnRelationGraph,
+  searchMetadataNodes,
+  getImpactAnalysis,
+  getGraphStatistics,
+  getNodeNeighbors,
+};
+
+// ============= 元数据图谱 API 类型定义 =============
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: 'database' | 'table' | 'column' | 'lineage';
+  database_name?: string;
+  table_name?: string;
+  column_name?: string;
+  data_type?: string;
+  description?: string;
+  is_center?: boolean;
+  properties?: any;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  label?: string;
+  type: string;
+  direction?: 'upstream' | 'downstream';
+  relation_type?: string;
+  properties?: any;
+}
+
+export interface MetadataGraphResponse {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  statistics?: {
+    total_nodes: number;
+    total_edges: number;
+    node_types?: Record<string, number>;
+  };
+}
+
+export interface TableLineageGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  center_table: string;
+  statistics?: {
+    upstream_count: number;
+    downstream_count: number;
+  };
+  error?: string;
+}
+
+export interface ColumnRelationGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  table_name: string;
+  error?: string;
+}
+
+export interface SearchNodesResponse {
+  query: string;
+  total: number;
+  nodes: GraphNode[];
+}
+
+export interface ImpactAnalysisResponse {
+  impacted_nodes: GraphNode[];
+  impacted_edges: GraphEdge[];
+  impact_count: number;
+  risk_levels?: Record<string, number>;
+}
+
+export interface GraphStatistics {
+  databases: number;
+  tables: number;
+  columns: number;
+  tables_per_database?: Array<{
+    database: string;
+    count: number;
+  }>;
+}
+
+// ============= 元数据图谱 API 方法 =============
+
+/**
+ * 获取完整元数据图谱
+ */
+export const getMetadataGraph = (params?: {
+  node_types?: string;
+  include_lineage?: boolean;
+}) => {
+  return apiClient.get<MetadataGraphResponse>('/api/v1/metadata/graph', { params });
+};
+
+/**
+ * 获取表的数据血缘图谱
+ */
+export const getTableLineageGraph = (tableName: string, params?: {
+  depth?: number;
+}) => {
+  return apiClient.get<TableLineageGraph>(`/api/v1/metadata/graph/lineage/${tableName}`, { params });
+};
+
+/**
+ * 获取表的列关系图
+ */
+export const getColumnRelationGraph = (tableName: string) => {
+  return apiClient.get<ColumnRelationGraph>(`/api/v1/metadata/graph/columns/${tableName}`);
+};
+
+/**
+ * 搜索元数据节点
+ */
+export const searchMetadataNodes = (query: string, params?: {
+  node_types?: string;
+}) => {
+  return apiClient.get<SearchNodesResponse>('/api/v1/metadata/graph/search', {
+    params: { query, ...params }
+  });
+};
+
+/**
+ * 获取影响分析
+ */
+export const getImpactAnalysis = (nodeType: string, nodeId: string) => {
+  return apiClient.get<ImpactAnalysisResponse>(`/api/v1/metadata/graph/impact/${nodeType}/${nodeId}`);
+};
+
+/**
+ * 获取图谱统计信息
+ */
+export const getGraphStatistics = () => {
+  return apiClient.get<GraphStatistics>('/api/v1/metadata/graph/statistics');
+};
+
+/**
+ * 获取节点的邻居
+ */
+export const getNodeNeighbors = (nodeType: string, nodeId: string, params?: {
+  depth?: number;
+}) => {
+  return apiClient.get<{ nodes: GraphNode[]; edges: GraphEdge[] }>(`/api/v1/metadata/graph/neighbors/${nodeType}/${nodeId}`, { params });
+};
+
+// ============= AI 资产检索增强 =============
+
+/**
+ * AI 自然语言搜索资产
+ */
+export const aiSearchAssets = (query: string, params?: {
+  limit?: number;
+  filters?: {
+    asset_type?: string;
+    category_id?: string;
+    data_level?: string;
+  };
+}) => {
+  return apiClient.post<AIAssetSearchResponse>('/api/v1/assets/ai/search', {
+    query,
+    limit: params?.limit || 20,
+    filters: params?.filters,
+  });
+};
+
+/**
+ * AI 语义搜索资产（基于向量相似度）
+ */
+export const aiSemanticSearchAssets = (query: string, params?: {
+  limit?: number;
+  filters?: {
+    asset_type?: string;
+    category_id?: string;
+    data_level?: string;
+  };
+}) => {
+  return apiClient.post<AISemanticSearchResponse>('/api/v1/assets/ai/semantic-search', {
+    query,
+    limit: params?.limit || 20,
+    filters: params?.filters,
+  });
+};
+
+/**
+ * AI 推荐相关资产
+ */
+export const aiRecommendAssets = (assetId: string, params?: {
+  limit?: number;
+}) => {
+  return apiClient.get<AIRecommendResponse>(`/api/v1/assets/ai/recommend/${assetId}`, {
+    params: { limit: params?.limit || 10 },
+  });
+};
+
+/**
+ * 获取热门资产
+ */
+export const getTrendingAssets = (params?: {
+  days?: number;
+  limit?: number;
+}) => {
+  return apiClient.get<TrendingAssetsResponse>('/api/v1/assets/ai/trending', {
+    params: { days: params?.days || 7, limit: params?.limit || 10 },
+  });
+};
+
+/**
+ * 搜索补全建议
+ */
+export const getAssetAutocomplete = (prefix: string, params?: {
+  limit?: number;
+}) => {
+  return apiClient.get<AutocompleteResponse>('/api/v1/assets/ai/autocomplete', {
+    params: { prefix, limit: params?.limit || 10 },
+  });
+};
+
+// ============= AI 清洗规则 API =============
+
+/**
+ * AI 分析表的数据质量问题
+ */
+export const analyzeTableQuality = (tableName: string, params?: {
+  database_name?: string;
+}) => {
+  return apiClient.post<{ recommendations: CleaningRecommendation[]; total_count: number }>(
+    '/api/v1/quality/analyze-table',
+    {
+      table_name: tableName,
+      database_name: params?.database_name,
+    }
+  );
+};
+
+/**
+ * AI 推荐清洗规则（基于告警）
+ */
+export const recommendCleaningRules = (params: {
+  table_id?: string;
+  quality_alerts?: any[];
+  include_kettle_steps?: boolean;
+}) => {
+  return apiClient.post<CleaningRecommendationResponse>('/api/v1/quality/recommend-cleaning', params);
+};
+
+/**
+ * 为单个列推荐清洗规则
+ */
+export const recommendColumnRules = (columnInfo: {
+  name: string;
+  type: string;
+  nullable?: boolean;
+  sample_values?: any[];
+}) => {
+  return apiClient.post<{ recommendations: CleaningRecommendation[]; total_count: number }>(
+    '/api/v1/quality/recommend-column-rules',
+    { column_info: columnInfo }
+  );
+};
+
+/**
+ * 获取清洗规则模板
+ */
+export const getRuleTemplates = () => {
+  return apiClient.get<RuleTemplatesResponse>('/api/v1/quality/rule-templates');
+};
+
+// ============= AI 字段映射 API =============
+
+/**
+ * 智能推荐字段映射
+ */
+export const suggestFieldMappings = (params: {
+  source_table: string;
+  target_table: string;
+  source_database?: string;
+  target_database?: string;
+  options?: Record<string, unknown>;
+}) => {
+  return apiClient.post<FieldMappingResponse>('/api/v1/mapping/suggest', params);
+};
+
+/**
+ * 推荐数据类型转换策略
+ */
+export const suggestTypeConversions = (params: {
+  mappings: FieldMappingSuggestion[];
+  source_schema: Array<{ name: string; type: string; length?: number }>;
+  target_schema: Array<{ name: string; type: string; length?: number }>;
+}) => {
+  return apiClient.post<FieldMappingSuggestion[]>('/api/v1/mapping/type-conversions', params);
+};
+
+/**
+ * 生成字段转换 SQL
+ */
+export const generateTransformationSQL = (params: {
+  mappings: FieldMappingSuggestion[];
+  source_table: string;
+  target_table?: string;
+}) => {
+  return apiClient.post<SQLGenerationResponse>('/api/v1/mapping/generate-sql', params);
+};
+
+/**
+ * 检测映射冲突
+ */
+export const detectMappingConflicts = (params: {
+  mappings: FieldMappingSuggestion[];
+  target_schema: Array<{ name: string; type: string; length?: number }>;
+}) => {
+  return apiClient.post<MappingConflictResponse>('/api/v1/mapping/detect-conflicts', params);
+};
+
+/**
+ * 推荐派生字段映射
+ */
+export const suggestDerivedFields = (params: {
+  source_columns: Array<{ name: string; type: string }>;
+  target_columns: Array<{ name: string; type: string }>;
+  context?: Record<string, unknown>;
+}) => {
+  return apiClient.post<DerivedFieldResponse>('/api/v1/mapping/derived-fields', params);
+};
+
+/**
+ * 获取指定数据库的表列表（用于映射选择）
+ */
+export const listTablesForMapping = (databaseName: string) => {
+  return apiClient.get<MappingTablesResponse>(`/api/v1/mapping/tables/${databaseName}`);
+};
+
+// ============= 智能预警 API =============
+
+/**
+ * 执行异常检测
+ */
+export const detectAnomalies = (params: {
+  detection_types?: string[];
+  time_window_hours?: number;
+}) => {
+  return apiClient.post<AnomalyDetectionResponse>('/api/v1/alerts/detect-anomalies', params);
+};
+
+/**
+ * 获取预警规则列表
+ */
+export const getAlertRules = (params?: {
+  rule_type?: string;
+  enabled_only?: boolean;
+}) => {
+  return apiClient.get<AlertRulesResponse>('/api/v1/alerts/rules', { params });
+};
+
+/**
+ * 创建预警规则
+ */
+export const createAlertRule = (rule: {
+  name: string;
+  description?: string;
+  rule_type: string;
+  config: Record<string, unknown>;
+  severity: string;
+  enabled?: boolean;
+  channels?: string[];
+}) => {
+  return apiClient.post<AlertRule>('/api/v1/alerts/rules', rule);
+};
+
+/**
+ * 更新预警规则
+ */
+export const updateAlertRule = (ruleId: string, updates: Partial<AlertRule>) => {
+  return apiClient.put<AlertRule>(`/api/v1/alerts/rules/${ruleId}`, updates);
+};
+
+/**
+ * 删除预警规则
+ */
+export const deleteAlertRule = (ruleId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/alerts/rules/${ruleId}`);
+};
+
+/**
+ * 获取预警通道列表
+ */
+export const getAlertChannels = (includeDisabled?: boolean) => {
+  return apiClient.get<AlertChannelsResponse>('/api/v1/alerts/channels', {
+    params: { include_disabled: includeDisabled },
+  });
+};
+
+/**
+ * 添加预警通道
+ */
+export const addAlertChannel = (channel: {
+  channel_type: string;
+  name: string;
+  config: Record<string, unknown>;
+}) => {
+  return apiClient.post<AlertChannel>('/api/v1/alerts/channels', channel);
+};
+
+/**
+ * 更新预警通道
+ */
+export const updateAlertChannel = (channelType: string, updates: {
+  enabled?: boolean;
+  config?: Record<string, unknown>;
+  name?: string;
+}) => {
+  return apiClient.put<AlertChannel>(`/api/v1/alerts/channels/${channelType}`, updates);
+};
+
+/**
+ * 删除预警通道
+ */
+export const removeAlertChannel = (channelType: string) => {
+  return apiClient.delete<{ removed: boolean }>(`/api/v1/alerts/channels/${channelType}`);
+};
+
+/**
+ * 测试预警通道
+ */
+export const testAlertChannel = (channelType: string, message?: string) => {
+  return apiClient.post<{ success: boolean; message: string }>(
+    `/api/v1/alerts/channels/${channelType}/test`,
+    { message }
+  );
+};
+
+/**
+ * 发送预警通知
+ */
+export const sendAlert = (params: {
+  alert: {
+    title: string;
+    description: string;
+    severity: string;
+    alert_type: string;
+  };
+  channels?: string[];
+  recipients?: string[];
+}) => {
+  return apiClient.post<AlertSendResponse>('/api/v1/alerts/send', params);
+};
+
+/**
+ * 获取预警历史
+ */
+export const getAlertHistory = (params?: {
+  limit?: number;
+  offset?: number;
+  severity?: string;
+}) => {
+  return apiClient.get<AlertHistoryResponse>('/api/v1/alerts/history', { params });
+};
+
+/**
+ * 获取预警统计数据
+ */
+export const getAlertStatistics = (days: number = 30) => {
+  return apiClient.get<AlertStatistics>('/api/v1/alerts/statistics', {
+    params: { days },
+  });
+};
+
+/**
+ * 获取用户预警订阅列表
+ */
+export const getAlertSubscriptions = () => {
+  return apiClient.get<AlertSubscriptionsResponse>('/api/v1/alerts/subscriptions');
+};
+
+/**
+ * 创建预警订阅
+ */
+export const createAlertSubscription = (subscription: {
+  alert_types: string[];
+  severity_filter: string[];
+  channels: string[];
+  filters?: Record<string, unknown>;
+}) => {
+  return apiClient.post<AlertSubscription>('/api/v1/alerts/subscriptions', subscription);
+};
+
+/**
+ * 更新预警订阅
+ */
+export const updateAlertSubscription = (subscriptionId: string, updates: Partial<AlertSubscription>) => {
+  return apiClient.put<AlertSubscription>(`/api/v1/alerts/subscriptions/${subscriptionId}`, updates);
+};
+
+/**
+ * 删除预警订阅
+ */
+export const deleteAlertSubscription = (subscriptionId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/alerts/subscriptions/${subscriptionId}`);
+};
+
+/**
+ * 获取可订阅的预警类型
+ */
+export const getAvailableAlertTypes = () => {
+  return apiClient.get<AlertTypesResponse>('/api/v1/alerts/available-types');
+};
+
+// ============= 增强型统一 SSO API =============
+
+export interface SSOProvider {
+  provider_id: string;
+  provider_type: 'oidc' | 'saml' | 'cas' | 'oauth2' | 'sms' | 'qrcode' | 'wechat' | 'dingtalk';
+  name: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  icon: string;
+  color: string;
+}
+
+export interface SSOProvidersResponse {
+  providers: SSOProvider[];
+  total: number;
+}
+
+export interface SMSVerificationResponse {
+  success: boolean;
+  message: string;
+  expires_in?: number;
+}
+
+export interface QRCodeSession {
+  session_id: string;
+  status: 'pending' | 'scanned' | 'confirmed' | 'expired' | 'cancelled';
+  qr_data: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface QRCodeCreateResponse {
+  session_id: string;
+  qr_data: string;
+  expires_at: string;
+}
+
+export interface OAuthURLResponse {
+  success: boolean;
+  auth_url?: string;
+  provider?: string;
+  message?: string;
+}
+
+export interface UserSession {
+  session_id: string;
+  user_id: string;
+  provider: string;
+  login_method: string;
+  created_at: string;
+  expires_at: string;
+  last_activity: string;
+  ip_address: string;
+}
+
+export interface UserSessionsResponse {
+  sessions: UserSession[];
+  total: number;
+}
+
+export interface SSOLogoutResponse {
+  success: boolean;
+  message: string;
+  global: boolean;
+}
+
+/**
+ * 列出所有 SSO 提供商
+ */
+export const listSSOProviders = (includeDisabled?: boolean) => {
+  return apiClient.get<SSOProvidersResponse>('/api/v1/sso/providers', {
+    params: { include_disabled: includeDisabled },
+  });
+};
+
+/**
+ * 获取指定 SSO 提供商配置
+ */
+export const getSSOProvider = (providerId: string) => {
+  return apiClient.get<SSOProvider>(`/api/v1/sso/providers/${providerId}`);
+};
+
+/**
+ * 添加新的 SSO 提供商
+ */
+export const addSSOProvider = (provider: {
+  provider_id?: string;
+  provider_type: string;
+  name: string;
+  enabled?: boolean;
+  config: Record<string, unknown>;
+  icon?: string;
+  color?: string;
+}) => {
+  return apiClient.post<SSOProvider>('/api/v1/sso/providers', provider);
+};
+
+/**
+ * 更新 SSO 提供商配置
+ */
+export const updateSSOProvider = (providerId: string, updates: Partial<SSOProvider>) => {
+  return apiClient.put<SSOProvider>(`/api/v1/sso/providers/${providerId}`, updates);
+};
+
+/**
+ * 删除 SSO 提供商
+ */
+export const deleteSSOProvider = (providerId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/sso/providers/${providerId}`);
+};
+
+/**
+ * 发送短信验证码
+ */
+export const sendSMSVerification = (phone: string, purpose: string = 'login') => {
+  return apiClient.post<SMSVerificationResponse>('/api/v1/sso/sms/send', { phone, purpose });
+};
+
+/**
+ * 验证短信验证码并登录
+ */
+export const verifySMSCode = (phone: string, code: string, purpose: string = 'login') => {
+  return apiClient.post<UserSession>('/api/v1/sso/sms/verify', { phone, code, purpose });
+};
+
+/**
+ * 创建扫码登录会话
+ */
+export const createQRCodeSession = () => {
+  return apiClient.post<QRCodeCreateResponse>('/api/v1/sso/qrcode/create', {});
+};
+
+/**
+ * 获取二维码状态
+ */
+export const getQRCodeStatus = (sessionId: string) => {
+  return apiClient.get<QRCodeSession>(`/api/v1/sso/qrcode/status/${sessionId}`);
+};
+
+/**
+ * 扫描二维码（移动端调用）
+ */
+export const scanQRCode = (sessionId: string) => {
+  return apiClient.post<{ success: boolean; message: string; status: string }>(
+    `/api/v1/sso/qrcode/scan`,
+    { session_id: sessionId }
+  );
+};
+
+/**
+ * 确认扫码登录（移动端调用）
+ */
+export const confirmQRCodeLogin = (sessionId: string) => {
+  return apiClient.post<{ success: boolean; message: string; session_id: string; user_id: string }>(
+    `/api/v1/sso/qrcode/confirm`,
+    { session_id: sessionId }
+  );
+};
+
+/**
+ * 取消扫码登录
+ */
+export const cancelQRCodeLogin = (sessionId: string) => {
+  return apiClient.post<{ cancelled: boolean }>(`/api/v1/sso/qrcode/cancel/${sessionId}`, {});
+};
+
+/**
+ * 获取 OAuth 授权 URL
+ */
+export const getOAuthURL = (providerId: string, redirectUri: string, state?: string) => {
+  return apiClient.get<OAuthURLResponse>('/api/v1/sso/oauth/url', {
+    params: { provider_id: providerId, redirect_uri: redirectUri, state },
+  });
+};
+
+/**
+ * 处理 OAuth 回调
+ */
+export const handleOAuthCallback = (providerId: string, code: string, state?: string) => {
+  return apiClient.post<{ success: boolean; user_id: string; session_id: string; provider: string }>(
+    '/api/v1/sso/oauth/callback',
+    { provider_id: providerId, code, state }
+  );
+};
+
+/**
+ * 获取会话信息
+ */
+export const getSessionInfo = (sessionId: string) => {
+  return apiClient.get<UserSession>(`/api/v1/sso/sessions/${sessionId}`);
+};
+
+/**
+ * 列出用户的所有活跃会话
+ */
+export const listUserSessions = (userId: string) => {
+  return apiClient.get<UserSessionsResponse>(`/api/v1/sso/sessions/user/${userId}`);
+};
+
+/**
+ * SSO 登出
+ */
+export const ssoLogout = (sessionId: string, globalLogout: boolean = false) => {
+  return apiClient.post<SSOLogoutResponse>('/api/v1/sso/logout', {
+    session_id: sessionId,
+    global_logout: globalLogout,
+  });
+};
+
+// ============= 数据服务接口管理 API =============
+
+export interface APIDataService {
+  service_id: string;
+  name: string;
+  description: string;
+  service_type: 'rest' | 'graphql';
+  source_type: 'table' | 'query' | 'dataset';
+  source_config: Record<string, unknown>;
+  endpoint: string;
+  method: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+  status: 'draft' | 'published' | 'archived';
+  version: number;
+  tags: string[];
+  rate_limit?: { requests_per_minute: number };
+}
+
+export interface DataServicesListResponse {
+  services: APIDataService[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface APIKeyInfo {
+  key_id: string;
+  name: string;
+  user_id: string;
+  scopes: string[];
+  created_at: string;
+  expires_at: string | null;
+  last_used: string | null;
+  is_active: boolean;
+}
+
+export interface APIKeysListResponse {
+  keys: APIKeyInfo[];
+  total: number;
+}
+
+export interface APICallRecord {
+  call_id: string;
+  service_id: string;
+  api_key_id: string;
+  method: string;
+  path: string;
+  status_code: number;
+  latency_ms: number;
+  request_size: number;
+  response_size: number;
+  error_message: string;
+  timestamp: string;
+  ip_address: string;
+}
+
+export interface APICallRecordsResponse {
+  records: APICallRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ServiceStatistics {
+  service_id: string;
+  time_window_hours: number;
+  total_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  success_rate: number;
+  avg_latency_ms: number;
+  p50_latency_ms: number;
+  p95_latency_ms: number;
+  p99_latency_ms: number;
+  qps: number;
+  total_bytes: number;
+}
+
+export interface OverallStatistics {
+  time_window_hours: number;
+  total_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  success_rate: number;
+  active_services: number;
+  active_keys: number;
+  top_services: Array<{ service_id: string; calls: number; errors: number }>;
+  status_codes: Record<number, number>;
+}
+
+/**
+ * 列出数据服务
+ */
+export const listDataServices = (params?: {
+  status?: string;
+  service_type?: string;
+  source_type?: string;
+  tags?: string[];
+  created_by?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  return apiClient.get<DataServicesListResponse>('/api/v1/data-services', { params });
+};
+
+/**
+ * 创建数据服务
+ */
+export const createDataService = (service: {
+  name: string;
+  description?: string;
+  service_type: 'rest' | 'graphql';
+  source_type: 'table' | 'query' | 'dataset';
+  source_config: Record<string, unknown>;
+  endpoint: string;
+  method?: string;
+  tags?: string[];
+  rate_limit?: { requests_per_minute: number };
+}) => {
+  return apiClient.post<APIDataService>('/api/v1/data-services', service);
+};
+
+/**
+ * 获取数据服务详情
+ */
+export const getDataService = (serviceId: string) => {
+  return apiClient.get<APIDataService>(`/api/v1/data-services/${serviceId}`);
+};
+
+/**
+ * 更新数据服务
+ */
+export const updateDataService = (serviceId: string, updates: Partial<APIDataService>) => {
+  return apiClient.put<APIDataService>(`/api/v1/data-services/${serviceId}`, updates);
+};
+
+/**
+ * 删除数据服务
+ */
+export const deleteDataService = (serviceId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/data-services/${serviceId}`);
+};
+
+/**
+ * 发布数据服务
+ */
+export const publishDataService = (serviceId: string) => {
+  return apiClient.post<APIDataService>(`/api/v1/data-services/${serviceId}/publish`, {});
+};
+
+/**
+ * 测试数据服务
+ */
+export const testDataService = (serviceId: string, params?: Record<string, unknown>) => {
+  return apiClient.post<{ success: boolean; message: string; test_result?: unknown }>(
+    `/api/v1/data-services/${serviceId}/test`,
+    params
+  );
+};
+
+/**
+ * 列出 API Keys
+ */
+export const listAPIKeys = (params?: {
+  include_expired?: boolean;
+  include_inactive?: boolean;
+}) => {
+  return apiClient.get<APIKeysListResponse>('/api/v1/data-services/api-keys', { params });
+};
+
+/**
+ * 创建 API Key
+ */
+export const createAPIKey = (key: {
+  name: string;
+  scopes?: string[];
+  expires_days?: number;
+}) => {
+  return apiClient.post<APIKeyInfo & { key_secret: string }>('/api/v1/data-services/api-keys', key);
+};
+
+/**
+ * 删除 API Key
+ */
+export const deleteAPIKey = (keyId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/data-services/api-keys/${keyId}`);
+};
+
+/**
+ * 停用 API Key
+ */
+export const deactivateAPIKey = (keyId: string) => {
+  return apiClient.post<{ deactivated: boolean }>(`/api/v1/data-services/api-keys/${keyId}/deactivate`, {});
+};
+
+/**
+ * 获取 API 调用记录
+ */
+export const getAPICallRecords = (params?: {
+  service_id?: string;
+  api_key_id?: string;
+  status_code?: number;
+  limit?: number;
+  offset?: number;
+}) => {
+  return apiClient.get<APICallRecordsResponse>('/api/v1/data-services/call-records', { params });
+};
+
+/**
+ * 获取服务调用统计
+ */
+export const getServiceStatistics = (serviceId: string, timeWindowHours: number = 24) => {
+  return apiClient.get<ServiceStatistics>(`/api/v1/data-services/${serviceId}/statistics`, {
+    params: { time_window_hours: timeWindowHours },
+  });
+};
+
+/**
+ * 获取整体统计
+ */
+export const getOverallStatistics = (timeWindowHours: number = 24) => {
+  return apiClient.get<OverallStatistics>('/api/v1/data-services/statistics/overall', {
+    params: { time_window_hours: timeWindowHours },
+  });
+};
+
+// ============= 统一门户 Portal API =============
+
+export interface DashboardWidget {
+  widget_id: string;
+  widget_type: 'statistic' | 'chart' | 'list' | 'alert' | 'task';
+  title: string;
+  icon: string;
+  size: 'small' | 'medium' | 'large' | 'full';
+  position: { x: number; y: number; w: number; h: number };
+  config: Record<string, unknown>;
+  data_source?: string;
+  enabled: boolean;
+}
+
+export interface WidgetDataValue {
+  value?: number | string;
+  trend?: number;
+  trend_direction?: 'up' | 'down' | 'stable';
+  total?: number;
+  critical?: number;
+  warning?: number;
+  labels?: string[];
+  series?: Array<{ name: string; data: number[] }>;
+}
+
+export interface PortalDashboardResponse {
+  user_id: string;
+  tenant_id: string;
+  widgets: DashboardWidget[];
+  widgets_data: Record<string, WidgetDataValue | Array<Record<string, unknown>>>;
+  last_updated: string;
+}
+
+export interface QuickLink {
+  link_id: string;
+  title: string;
+  description: string;
+  url: string;
+  icon: string;
+  category: string;
+  badge_count: number;
+  new_window: boolean;
+}
+
+export interface QuickLinksResponse {
+  links: QuickLink[];
+  categories: string[];
+}
+
+export interface PortalNotification {
+  notification_id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  content: string;
+  source: string;
+  action_url?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  expires_at: string | null;
+  created_at: string;
+  read: boolean;
+}
+
+export interface PortalNotificationsResponse {
+  notifications: PortalNotification[];
+  total: number;
+  unread_count: number;
+}
+
+export interface TodoItem {
+  todo_id: string;
+  title: string;
+  description: string;
+  source: string;
+  priority: 'urgent' | 'high' | 'normal' | 'low';
+  due_date: string | null;
+  action_url?: string;
+  created_at: string;
+  completed: boolean;
+  completed_at: string | null;
+}
+
+export interface TodosResponse {
+  todos: TodoItem[];
+  total: number;
+  pending_count: number;
+}
+
+export interface UserLayout {
+  user_id: string;
+  layout_version: string;
+  theme: string;
+  widgets: DashboardWidget[];
+  custom_links: QuickLink[];
+  hide_defaults: boolean;
+}
+
+export interface SearchResult {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  category: string;
+  url: string;
+  icon: string;
+  highlight?: string;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  results: SearchResult[];
+  total: number;
+}
+
+export interface SystemStatus {
+  id: string;
+  name: string;
+  status: 'healthy' | 'degraded' | 'down';
+  uptime_percent: number;
+  last_check: string;
+}
+
+export interface SystemStatusResponse {
+  systems: SystemStatus[];
+  overall_status: 'healthy' | 'degraded' | 'down';
+}
+
+/**
+ * 获取门户仪表盘数据
+ */
+export const getPortalDashboard = () => {
+  return apiClient.get<PortalDashboardResponse>('/api/v1/portal/dashboard');
+};
+
+/**
+ * 获取快捷入口
+ */
+export const getQuickLinks = (categories?: string[]) => {
+  return apiClient.get<QuickLinksResponse>('/api/v1/portal/quick-links', {
+    params: { categories },
+  });
+};
+
+/**
+ * 获取通知列表
+ */
+export const getPortalNotifications = (params?: {
+  unread_only?: boolean;
+  limit?: number;
+}) => {
+  return apiClient.get<PortalNotificationsResponse>('/api/v1/portal/notifications', { params });
+};
+
+/**
+ * 标记通知为已读
+ */
+export const markNotificationRead = (notificationId: string) => {
+  return apiClient.post<{ read: boolean }>(`/api/v1/portal/notifications/${notificationId}/read`, {});
+};
+
+/**
+ * 标记所有通知为已读
+ */
+export const markAllNotificationsRead = () => {
+  return apiClient.post<{ count: number }>('/api/v1/portal/notifications/read-all', {});
+};
+
+/**
+ * 删除通知
+ */
+export const deleteNotification = (notificationId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/portal/notifications/${notificationId}`);
+};
+
+/**
+ * 获取待办事项
+ */
+export const getPortalTodos = (params?: {
+  status?: 'pending' | 'completed' | 'all';
+  source?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<TodosResponse>('/api/v1/portal/todos', { params });
+};
+
+/**
+ * 完成待办事项
+ */
+export const completeTodo = (todoId: string) => {
+  return apiClient.post<{ completed: boolean }>(`/api/v1/portal/todos/${todoId}/complete`, {});
+};
+
+/**
+ * 获取用户门户布局
+ */
+export const getUserLayout = () => {
+  return apiClient.get<UserLayout>('/api/v1/portal/layout');
+};
+
+/**
+ * 更新用户门户布局
+ */
+export const updateUserLayout = (layout: Partial<UserLayout>) => {
+  return apiClient.put<{ updated: boolean }>('/api/v1/portal/layout', layout);
+};
+
+/**
+ * 门户全局搜索
+ */
+export const portalGlobalSearch = (params: {
+  query: string;
+  categories?: string[];
+  limit?: number;
+}) => {
+  return apiClient.get<GlobalSearchResponse>('/api/v1/portal/search', { params });
+};
+
+/**
+ * 获取系统状态
+ */
+export const getSystemStatus = () => {
+  return apiClient.get<SystemStatusResponse>('/api/v1/portal/system-status');
+};
+
+// ============= 统一通知管理 API =============
+
+export interface NotificationChannelInfo {
+  type: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface NotificationChannelsResponse {
+  channels: NotificationChannelInfo[];
+  total: number;
+}
+
+export interface NotificationTemplate {
+  template_id: string;
+  name: string;
+  description: string;
+  subject_template: string;
+  body_template: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  supported_channels: string[];
+  variables: string[];
+  enabled: boolean;
+}
+
+export interface NotificationTemplatesResponse {
+  templates: NotificationTemplate[];
+  total: number;
+}
+
+export interface NotificationRule {
+  rule_id: string;
+  name: string;
+  description: string;
+  event_type: string;
+  conditions: Record<string, unknown>;
+  template_id: string;
+  channels: string[];
+  recipients: string[];
+  enabled: boolean;
+  throttle_minutes: number;
+}
+
+export interface NotificationRulesResponse {
+  rules: NotificationRule[];
+  total: number;
+}
+
+export interface NotificationHistoryItem {
+  history_id: string;
+  message_id: string;
+  recipient: string;
+  channel: string;
+  status: 'pending' | 'sent' | 'failed';
+  error_message: string | null;
+  sent_at: string | null;
+  retry_count: number;
+}
+
+export interface NotificationHistoryResponse {
+  history: NotificationHistoryItem[];
+  total: number;
+}
+
+export interface NotificationStatistics {
+  period_days: number;
+  total_notifications: number;
+  sent: number;
+  failed: number;
+  success_rate: number;
+  by_channel: Record<string, { total: number; sent: number; failed: number }>;
+}
+
+export interface SendNotificationRequest {
+  recipients: string[];
+  subject?: string;
+  body?: string;
+  channels?: string[];
+  title?: string;
+  type?: 'info' | 'warning' | 'error' | 'success';
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  action_url?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface SendNotificationByTemplateRequest {
+  template_id: string;
+  variables: Record<string, unknown>;
+  recipients: string[];
+  channels?: string[];
+  action_url?: string;
+}
+
+export interface SendNotificationResponse {
+  message_ids: string[];
+  sent_count: number;
+}
+
+/**
+ * 获取通知渠道列表
+ */
+export const getNotificationChannels = () => {
+  return apiClient.get<NotificationChannelsResponse>('/api/v1/notifications/channels');
+};
+
+/**
+ * 获取通知模板列表
+ */
+export const getNotificationTemplates = () => {
+  return apiClient.get<NotificationTemplatesResponse>('/api/v1/notifications/templates');
+};
+
+/**
+ * 获取通知模板详情
+ */
+export const getNotificationTemplate = (templateId: string) => {
+  return apiClient.get<NotificationTemplate>(`/api/v1/notifications/templates/${templateId}`);
+};
+
+/**
+ * 创建通知模板
+ */
+export const createNotificationTemplate = (template: {
+  template_id?: string;
+  name: string;
+  description?: string;
+  subject_template: string;
+  body_template: string;
+  type?: 'info' | 'warning' | 'error' | 'success';
+  supported_channels?: string[];
+  variables?: string[];
+}) => {
+  return apiClient.post<{ template_id: string }>('/api/v1/notifications/templates', template);
+};
+
+/**
+ * 更新通知模板
+ */
+export const updateNotificationTemplate = (
+  templateId: string,
+  updates: Partial<NotificationTemplate>
+) => {
+  return apiClient.put<{ template_id: string }>(
+    `/api/v1/notifications/templates/${templateId}`,
+    updates
+  );
+};
+
+/**
+ * 删除通知模板
+ */
+export const deleteNotificationTemplate = (templateId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/notifications/templates/${templateId}`);
+};
+
+/**
+ * 获取通知规则列表
+ */
+export const getNotificationRules = () => {
+  return apiClient.get<NotificationRulesResponse>('/api/v1/notifications/rules');
+};
+
+/**
+ * 获取通知规则详情
+ */
+export const getNotificationRule = (ruleId: string) => {
+  return apiClient.get<NotificationRule>(`/api/v1/notifications/rules/${ruleId}`);
+};
+
+/**
+ * 创建通知规则
+ */
+export const createNotificationRule = (rule: {
+  rule_id?: string;
+  name: string;
+  description?: string;
+  event_type: string;
+  conditions?: Record<string, unknown>;
+  template_id: string;
+  channels?: string[];
+  recipients: string[];
+  throttle_minutes?: number;
+}) => {
+  return apiClient.post<{ rule_id: string }>('/api/v1/notifications/rules', rule);
+};
+
+/**
+ * 更新通知规则
+ */
+export const updateNotificationRule = (ruleId: string, updates: Partial<NotificationRule>) => {
+  return apiClient.put<{ rule_id: string }>(`/api/v1/notifications/rules/${ruleId}`, updates);
+};
+
+/**
+ * 删除通知规则
+ */
+export const deleteNotificationRule = (ruleId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/notifications/rules/${ruleId}`);
+};
+
+/**
+ * 启用通知规则
+ */
+export const enableNotificationRule = (ruleId: string) => {
+  return apiClient.post<{ enabled: boolean }>(`/api/v1/notifications/rules/${ruleId}/enable`, {});
+};
+
+/**
+ * 禁用通知规则
+ */
+export const disableNotificationRule = (ruleId: string) => {
+  return apiClient.post<{ enabled: boolean }>(`/api/v1/notifications/rules/${ruleId}/disable`, {});
+};
+
+/**
+ * 发送通知
+ */
+export const sendNotification = (request: SendNotificationRequest) => {
+  return apiClient.post<SendNotificationResponse>('/api/v1/notifications/send', request);
+};
+
+/**
+ * 使用模板发送通知
+ */
+export const sendNotificationByTemplate = (request: SendNotificationByTemplateRequest) => {
+  return apiClient.post<SendNotificationResponse>('/api/v1/notifications/send', request);
+};
+
+/**
+ * 触发通知事件
+ */
+export const triggerNotificationEvent = (event_type: string, event_data: Record<string, unknown>) => {
+  return apiClient.post<SendNotificationResponse>('/api/v1/notifications/trigger', {
+    event_type,
+    event_data,
+  });
+};
+
+/**
+ * 获取通知历史
+ */
+export const getNotificationHistory = (params?: {
+  recipient?: string;
+  channel?: string;
+  status?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<NotificationHistoryResponse>('/api/v1/notifications/history', { params });
+};
+
+/**
+ * 获取通知统计
+ */
+export const getNotificationStatistics = (days: number = 30) => {
+  return apiClient.get<NotificationStatistics>('/api/v1/notifications/statistics', {
+    params: { days },
+  });
+};
+
+// ============= 统一内容管理 API =============
+
+export type ContentStatus = 'draft' | 'reviewing' | 'published' | 'archived';
+export type ContentType = 'article' | 'announcement' | 'document' | 'tutorial' | 'faq' | 'news';
+
+export interface ContentArticle {
+  content_id: string;
+  title: string;
+  summary: string;
+  content: string;
+  content_type: ContentType;
+  status: ContentStatus;
+  category_id: string | null;
+  tags: string[];
+  author_id: string;
+  author_name: string;
+  cover_image: string;
+  featured: boolean;
+  allow_comment: boolean;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ContentArticlesResponse {
+  articles: ContentArticle[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ContentCategory {
+  category_id: string;
+  name: string;
+  description: string;
+  parent_id: string | null;
+  icon: string;
+  sort_order: number;
+  enabled: boolean;
+}
+
+export interface ContentCategoriesResponse {
+  categories: ContentCategory[];
+  total: number;
+}
+
+export interface ContentTag {
+  tag_id: string;
+  name: string;
+  color: string;
+  usage_count: number;
+}
+
+export interface ContentTagsResponse {
+  tags: ContentTag[];
+  total: number;
+}
+
+export interface ContentComment {
+  comment_id: string;
+  content_id: string;
+  parent_id: string | null;
+  user_id: string;
+  user_name: string;
+  user_avatar: string;
+  content: string;
+  like_count: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export interface ContentCommentsResponse {
+  comments: ContentComment[];
+  total: number;
+}
+
+export interface ContentStatistics {
+  total_articles: number;
+  total_categories: number;
+  total_tags: number;
+  total_comments: number;
+  total_views: number;
+  total_likes: number;
+  status_counts: Record<string, number>;
+  type_counts: Record<string, number>;
+  featured_count: number;
+}
+
+/**
+ * 获取内容文章列表
+ */
+export const getContentArticles = (params?: {
+  content_type?: ContentType;
+  status?: ContentStatus;
+  category_id?: string;
+  tag_id?: string;
+  author_id?: string;
+  featured?: boolean;
+  keyword?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  return apiClient.get<ContentArticlesResponse>('/api/v1/content/articles', { params });
+};
+
+/**
+ * 获取文章详情
+ */
+export const getContentArticle = (contentId: string) => {
+  return apiClient.get<ContentArticle>(`/api/v1/content/articles/${contentId}`);
+};
+
+/**
+ * 创建文章
+ */
+export const createContentArticle = (article: {
+  title: string;
+  content: string;
+  content_type?: ContentType;
+  author_id?: string;
+  author_name?: string;
+  summary?: string;
+  category_id?: string;
+  tags?: string[];
+  cover_image?: string;
+  featured?: boolean;
+  allow_comment?: boolean;
+  status?: ContentStatus;
+  metadata?: Record<string, unknown>;
+}) => {
+  return apiClient.post<{ content_id: string }>('/api/v1/content/articles', article);
+};
+
+/**
+ * 更新文章
+ */
+export const updateContentArticle = (
+  contentId: string,
+  updates: Partial<ContentArticle>
+) => {
+  return apiClient.put<{ content_id: string }>(`/api/v1/content/articles/${contentId}`, updates);
+};
+
+/**
+ * 删除文章
+ */
+export const deleteContentArticle = (contentId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/content/articles/${contentId}`);
+};
+
+/**
+ * 发布文章
+ */
+export const publishContentArticle = (contentId: string) => {
+  return apiClient.post<ContentArticle>(`/api/v1/content/articles/${contentId}/publish`, {});
+};
+
+/**
+ * 点赞文章
+ */
+export const likeContentArticle = (contentId: string) => {
+  return apiClient.post<{ liked: boolean }>(`/api/v1/content/articles/${contentId}/like`, {});
+};
+
+/**
+ * 获取内容分类列表
+ */
+export const getContentCategories = (enabledOnly?: boolean) => {
+  return apiClient.get<ContentCategoriesResponse>('/api/v1/content/categories', {
+    params: { enabled_only: enabledOnly },
+  });
+};
+
+/**
+ * 创建分类
+ */
+export const createContentCategory = (category: {
+  name: string;
+  description?: string;
+  parent_id?: string;
+  icon?: string;
+  sort_order?: number;
+}) => {
+  return apiClient.post<{ category_id: string }>('/api/v1/content/categories', category);
+};
+
+/**
+ * 获取内容标签列表
+ */
+export const getContentTags = () => {
+  return apiClient.get<ContentTagsResponse>('/api/v1/content/tags');
+};
+
+/**
+ * 创建标签
+ */
+export const createContentTag = (tag: {
+  name: string;
+  color?: string;
+}) => {
+  return apiClient.post<{ tag_id: string }>('/api/v1/content/tags', tag);
+};
+
+/**
+ * 获取文章评论列表
+ */
+export const getContentComments = (contentId: string, params?: {
+  status?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<ContentCommentsResponse>(`/api/v1/content/articles/${contentId}/comments`, { params });
+};
+
+/**
+ * 创建评论
+ */
+export const createContentComment = (comment: {
+  content_id: string;
+  user_id?: string;
+  user_name?: string;
+  content: string;
+  parent_id?: string;
+  user_avatar?: string;
+}) => {
+  return apiClient.post<{ comment_id: string }>('/api/v1/content/comments', comment);
+};
+
+/**
+ * 审核通过评论
+ */
+export const approveContentComment = (commentId: string) => {
+  return apiClient.post<{ approved: boolean }>(`/api/v1/content/comments/${commentId}/approve`, {});
+};
+
+/**
+ * 删除评论
+ */
+export const deleteContentComment = (commentId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/content/comments/${commentId}`);
+};
+
+/**
+ * 搜索内容
+ */
+export const searchContent = (params: {
+  q: string;
+  content_type?: ContentType;
+  limit?: number;
+}) => {
+  return apiClient.get<{ results: ContentArticle[]; total: number }>('/api/v1/content/search', { params });
+};
+
+/**
+ * 获取内容统计
+ */
+export const getContentStatistics = () => {
+  return apiClient.get<ContentStatistics>('/api/v1/content/statistics');
+};
+
+// ============= 元数据版本对比 API =============
+
+export type ChangeType = 'added' | 'removed' | 'modified' | 'unchanged';
+
+export interface FieldChange {
+  change_type: ChangeType;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
+}
+
+export interface ColumnDiff {
+  column_name: string;
+  changes: FieldChange[];
+  has_changes: boolean;
+}
+
+export interface TableDiff {
+  table_name: string;
+  added_columns: string[];
+  removed_columns: string[];
+  modified_columns: ColumnDiff[];
+  unchanged_columns: string[];
+  summary: string;
+  is_new_table?: boolean;
+  is_removed_table?: boolean;
+}
+
+export interface MetadataColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  primary_key: boolean;
+  default_value: string | null;
+  comment: string;
+  max_length: number | null;
+  decimal_places: number | null;
+  auto_increment: boolean;
+}
+
+export interface MetadataTable {
+  table_name: string;
+  database: string;
+  columns: Record<string, MetadataColumn>;
+  indexes: Record<string, unknown>[];
+  relations: Record<string, unknown>[];
+  row_count: number;
+  comment: string;
+  engine: string;
+  charset: string;
+  collation: string;
+}
+
+export interface MetadataSnapshot {
+  snapshot_id: string;
+  version: string;
+  database: string;
+  tables: Record<string, MetadataTable>;
+  created_at: string;
+  created_by: string;
+  description: string;
+  tags: string[];
+}
+
+export interface MetadataSnapshotsResponse {
+  snapshots: MetadataSnapshot[];
+  total: number;
+}
+
+export interface MetadataComparisonResult {
+  from_snapshot: {
+    id: string;
+    version: string;
+    created_at: string;
+  };
+  to_snapshot: {
+    id: string;
+    version: string;
+    created_at: string;
+  };
+  added_tables: string[];
+  removed_tables: string[];
+  modified_tables: string[];
+  unchanged_tables: string[];
+  table_diffs: Record<string, TableDiff>;
+  summary: string;
+}
+
+export interface MigrationSQLResponse {
+  sql_statements: Record<string, string[]>;
+  summary: string;
+}
+
+export interface VersionHistoryItem {
+  snapshot_id: string;
+  version: string;
+  created_at: string;
+  created_by: string;
+  description: string;
+  table_count: number;
+  table_exists?: boolean;
+  column_count?: number;
+}
+
+export interface VersionHistoryResponse {
+  history: VersionHistoryItem[];
+  total: number;
+}
+
+/**
+ * 获取元数据快照列表
+ */
+export const getMetadataSnapshots = (params?: {
+  database?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<MetadataSnapshotsResponse>('/api/v1/metadata/snapshots', { params });
+};
+
+/**
+ * 获取元数据快照详情
+ */
+export const getMetadataSnapshot = (snapshotId: string) => {
+  return apiClient.get<MetadataSnapshot>(`/api/v1/metadata/snapshots/${snapshotId}`);
+};
+
+/**
+ * 创建元数据快照
+ */
+export const createMetadataSnapshot = (snapshot: {
+  version: string;
+  database?: string;
+  created_by?: string;
+  description?: string;
+  tags?: string[];
+}) => {
+  return apiClient.post<{ snapshot_id: string }>('/api/v1/metadata/snapshots', snapshot);
+};
+
+/**
+ * 删除元数据快照
+ */
+export const deleteMetadataSnapshot = (snapshotId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/metadata/snapshots/${snapshotId}`);
+};
+
+/**
+ * 对比两个元数据快照
+ */
+export const compareMetadataSnapshots = (fromSnapshotId: string, toSnapshotId: string) => {
+  return apiClient.post<MetadataComparisonResult>('/api/v1/metadata/compare', {
+    from_snapshot_id: fromSnapshotId,
+    to_snapshot_id: toSnapshotId,
+  });
+};
+
+/**
+ * 获取迁移 SQL
+ */
+export const getMigrationSQL = (fromId: string, toId: string) => {
+  return apiClient.get<MigrationSQLResponse>(`/api/v1/metadata/compare/${fromId}/${toId}/sql`);
+};
+
+/**
+ * 获取元数据版本历史
+ */
+export const getMetadataVersionHistory = (params?: {
+  database?: string;
+  table_name?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<VersionHistoryResponse>('/api/v1/metadata/history', { params });
+};
+
+// ============= 智能任务调度 API =============
+
+export type SchedulerTaskStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'skipped' | 'retrying';
+export type SchedulerTaskPriority = 'critical' | 'high' | 'normal' | 'low';
+
+export interface SchedulerTaskDependency {
+  task_id: string;
+  type: 'success' | 'completion' | 'failure';
+  condition: Record<string, unknown>;
+}
+
+export interface SchedulerResourceRequirement {
+  cpu_cores: number;
+  memory_mb: number;
+  gpu_count: number;
+  gpu_memory_mb: number;
+  disk_mb: number;
+}
+
+export interface SchedulerTaskMetrics {
+  execution_time_ms: number;
+  wait_time_ms: number;
+  retry_count: number;
+  last_error: string;
+  last_success_time: string | null;
+  last_failure_time: string | null;
+  success_rate: number;
+  avg_execution_time_ms: number;
+}
+
+export interface SchedulerTask {
+  task_id: string;
+  name: string;
+  description: string;
+  task_type: string;
+  priority: SchedulerTaskPriority;
+  status: SchedulerTaskStatus;
+  dependencies: SchedulerTaskDependency[];
+  resource_requirement: SchedulerResourceRequirement;
+  estimated_duration_ms: number;
+  timeout_ms: number;
+  max_retries: number;
+  retry_delay_ms: number;
+  schedule_time: string | null;
+  deadline: string | null;
+  created_by: string;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  metrics: SchedulerTaskMetrics;
+  tags: string[];
+  metadata: Record<string, unknown>;
+}
+
+export interface SchedulerTasksResponse {
+  tasks: SchedulerTask[];
+  total: number;
+}
+
+export interface SchedulerOptimizeResult {
+  optimized_order: string[];
+  total_tasks: number;
+  estimated_completion_time: number;
+}
+
+export interface ResourceDemandPrediction {
+  window_minutes: number;
+  predicted_tasks: number;
+  resource_demand: {
+    cpu_cores: number;
+    memory_mb: number;
+    gpu_count: number;
+  };
+  resource_utilization: {
+    cpu_percent: number;
+    memory_percent: number;
+    gpu_percent: number;
+  };
+  recommendations: string[];
+}
+
+export interface SchedulerStatistics {
+  total_tasks: number;
+  status_counts: Record<string, number>;
+  queue_length: number;
+  total_resources: SchedulerResourceRequirement;
+  used_resources: SchedulerResourceRequirement;
+  available_resources: SchedulerResourceRequirement;
+  scheduling_stats: {
+    total_scheduled: number;
+    total_completed: number;
+    total_failed: number;
+    total_retries: number;
+  };
+}
+
+/**
+ * 获取调度任务列表
+ */
+export const getScheduledTasks = (params?: {
+  status?: SchedulerTaskStatus;
+  priority?: SchedulerTaskPriority;
+  task_type?: string;
+  limit?: number;
+}) => {
+  return apiClient.get<SchedulerTasksResponse>('/api/v1/scheduler/tasks', { params });
+};
+
+/**
+ * 获取调度任务详情
+ */
+export const getScheduledTask = (taskId: string) => {
+  return apiClient.get<SchedulerTask>(`/api/v1/scheduler/tasks/${taskId}`);
+};
+
+/**
+ * 创建调度任务
+ */
+export const createScheduledTask = (task: {
+  name: string;
+  task_type?: string;
+  priority?: SchedulerTaskPriority;
+  description?: string;
+  dependencies?: SchedulerTaskDependency[];
+  resource_requirement?: Partial<SchedulerResourceRequirement>;
+  estimated_duration_ms?: number;
+  deadline?: string;
+  created_by?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+}) => {
+  return apiClient.post<{ task_id: string }>('/api/v1/scheduler/tasks', task);
+};
+
+/**
+ * 更新调度任务
+ */
+export const updateScheduledTask = (
+  taskId: string,
+  updates: Partial<SchedulerTask>
+) => {
+  return apiClient.put<{ task_id: string }>(`/api/v1/scheduler/tasks/${taskId}`, updates);
+};
+
+/**
+ * 删除调度任务
+ */
+export const deleteScheduledTask = (taskId: string) => {
+  return apiClient.delete<{ deleted: boolean }>(`/api/v1/scheduler/tasks/${taskId}`);
+};
+
+/**
+ * 优化调度顺序
+ */
+export const optimizeSchedule = () => {
+  return apiClient.post<SchedulerOptimizeResult>('/api/v1/scheduler/optimize', {});
+};
+
+/**
+ * 获取资源需求预测
+ */
+export const getResourceDemand = (windowMinutes: number = 60) => {
+  return apiClient.get<ResourceDemandPrediction>('/api/v1/scheduler/resource-demand', {
+    params: { window_minutes: windowMinutes },
+  });
+};
+
+/**
+ * 获取调度统计
+ */
+export const getSchedulerStatistics = () => {
+  return apiClient.get<SchedulerStatistics>('/api/v1/scheduler/statistics');
+};
+
+/**
+ * 获取下一个可执行任务
+ */
+export const getNextTask = () => {
+  return apiClient.post<SchedulerTask | null>('/api/v1/scheduler/next-task', {});
+};
+
+/**
+ * 完成任务
+ */
+export const completeScheduledTask = (
+  taskId: string,
+  result: { success: boolean; error_message?: string; execution_time_ms?: number }
+) => {
+  return apiClient.post<SchedulerTask>(`/api/v1/scheduler/tasks/${taskId}/complete`, result);
 };
