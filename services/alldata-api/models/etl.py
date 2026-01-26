@@ -28,6 +28,14 @@ class ETLTaskType(enum.Enum):
     FULL_SYNC = "full_sync"
 
 
+class ETLEngineType(enum.Enum):
+    """ETL 执行引擎类型"""
+    BUILTIN = "builtin"  # 内置引擎
+    KETTLE = "kettle"    # Kettle/PDI 引擎
+    SPARK = "spark"      # Spark 引擎
+    FLINK = "flink"      # Flink 引擎
+
+
 class ETLTask(Base):
     """ETL 任务表"""
     __tablename__ = "etl_tasks"
@@ -39,6 +47,7 @@ class ETLTask(Base):
 
     # 任务类型和状态
     task_type = Column(String(32), default="batch")
+    engine_type = Column(String(32), default="builtin")  # builtin, kettle, spark, flink
     status = Column(String(32), default="pending")
 
     # 数据源配置
@@ -57,6 +66,13 @@ class ETLTask(Base):
     # 调度配置
     schedule_type = Column(String(32), default="manual")  # manual, cron, interval
     schedule_config = Column(JSON)  # cron 表达式或间隔配置
+
+    # Kettle 引擎配置（仅当 engine_type='kettle' 时使用）
+    kettle_job_path = Column(String(512))  # Kettle 作业文件路径 (.kjb)
+    kettle_trans_path = Column(String(512))  # Kettle 转换文件路径 (.ktr)
+    kettle_repository = Column(String(255))  # Kettle 仓库名称
+    kettle_directory = Column(String(255))  # Kettle 目录
+    kettle_params = Column(JSON)  # Kettle 参数
 
     # 执行信息
     last_run_at = Column(DateTime)
@@ -86,6 +102,7 @@ class ETLTask(Base):
             "name": self.name,
             "description": self.description,
             "task_type": self.task_type,
+            "engine_type": self.engine_type,
             "status": self.status,
             "source_type": self.source_type,
             "source_config": self.source_config,
@@ -96,6 +113,11 @@ class ETLTask(Base):
             "transform_config": self.transform_config,
             "schedule_type": self.schedule_type,
             "schedule_config": self.schedule_config,
+            "kettle_job_path": self.kettle_job_path,
+            "kettle_trans_path": self.kettle_trans_path,
+            "kettle_repository": self.kettle_repository,
+            "kettle_directory": self.kettle_directory,
+            "kettle_params": self.kettle_params,
             "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None,
             "last_success_at": self.last_success_at.isoformat() if self.last_success_at else None,
             "next_run_at": self.next_run_at.isoformat() if self.next_run_at else None,

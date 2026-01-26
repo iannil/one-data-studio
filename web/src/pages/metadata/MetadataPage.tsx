@@ -11,16 +11,25 @@ import {
   message,
   Tabs,
   Modal,
+  Tooltip,
+  Progress,
+  Alert,
+  Spin,
 } from 'antd';
 import {
   DatabaseOutlined,
   TableOutlined,
   SearchOutlined,
   CopyOutlined,
+  RobotOutlined,
+  SafetyOutlined,
+  TagsOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DataNode } from 'antd/es/tree';
 import alldata from '@/services/alldata';
+import type { AIAnnotation, SensitivityReport } from '@/services/alldata';
 
 const { Search } = Input;
 const { TextArea } = Input;
@@ -33,6 +42,13 @@ function MetadataPage() {
   const [sqlModalOpen, setSqlModalOpen] = useState(false);
   const [generatedSql, setGeneratedSql] = useState('');
   const [naturalLanguage, setNaturalLanguage] = useState('');
+
+  // AI 标注相关状态
+  const [annotationModalOpen, setAnnotationModalOpen] = useState(false);
+  const [annotations, setAnnotations] = useState<AIAnnotation[]>([]);
+  const [sensitivityReport, setSensitivityReport] = useState<SensitivityReport | null>(null);
+
+  const queryClient = useQueryClient();
 
   // 获取数据库列表
   const { data: databasesData } = useQuery({
@@ -60,6 +76,67 @@ function MetadataPage() {
     queryFn: () => alldata.searchTables(searchText),
     enabled: searchText.length > 1,
   });
+
+  // AI 标注 mutation
+  const annotateMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDatabase || !selectedTable) {
+        throw new Error('请先选择表');
+      }
+      return alldata.annotateTable(selectedDatabase, selectedTable, {
+        use_llm: true,
+        save: true,
+      });
+    },
+    onSuccess: (response) => {
+      if (response?.data?.annotations) {
+        setAnnotations(response.data.annotations);
+        message.success('AI 标注完成');
+        // 刷新表详情
+        queryClient.invalidateQueries({ queryKey: ['tableDetail', selectedDatabase, selectedTable] });
+      }
+    },
+    onError: (error: Error) => {
+      message.error(`AI 标注失败: ${error.message}`);
+    },
+  });
+
+  // 敏感字段报告 mutation
+  const sensitivityMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDatabase || !selectedTable) {
+        throw new Error('请先选择表');
+      }
+      return alldata.getSensitivityReport(selectedDatabase, selectedTable);
+    },
+    onSuccess: (response) => {
+      if (response?.data) {
+        setSensitivityReport(response.data);
+        setAnnotationModalOpen(true);
+      }
+    },
+    onError: (error: Error) => {
+      message.error(`获取敏感字段报告失败: ${error.message}`);
+    },
+  });
+
+  // 执行 AI 标注
+  const handleAIAnnotate = () => {
+    if (!selectedDatabase || !selectedTable) {
+      message.warning('请先选择表');
+      return;
+    }
+    annotateMutation.mutate();
+  };
+
+  // 查看敏感字段报告
+  const handleViewSensitivityReport = () => {
+    if (!selectedDatabase || !selectedTable) {
+      message.warning('请先选择表');
+      return;
+    }
+    sensitivityMutation.mutate();
+  };
 
   // Text-to-SQL
   const handleText2Sql = async () => {
@@ -138,6 +215,28 @@ function MetadataPage() {
     message.success('SQL 已复制到剪贴板');
   };
 
+  // 获取敏感级别颜色
+  const getSensitivityLevelColor = (level?: string) => {
+    switch (level) {
+      case 'restricted': return 'red';
+      case 'confidential': return 'orange';
+      case 'internal': return 'blue';
+      case 'public': return 'green';
+      default: return 'default';
+    }
+  };
+
+  // 获取敏感类型标签颜色
+  const getSensitivityTypeColor = (type?: string) => {
+    switch (type) {
+      case 'pii': return 'red';
+      case 'financial': return 'orange';
+      case 'health': return 'purple';
+      case 'credential': return 'volcano';
+      default: return 'default';
+    }
+  };
+
   const tableColumns = [
     {
       title: '列名',
@@ -182,7 +281,47 @@ function MetadataPage() {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (desc?: string) => desc || '-',
+      render: (desc?: string, record?: { ai_description?: string }) => (
+        <Tooltip title={record?.ai_description ? `AI 描述: ${record.ai_description}` : undefined}>
+          <span>
+            {desc || record?.ai_description || '-'}
+            {record?.ai_description && !desc && (
+              <RobotOutlined style={{ marginLeft: 4, color: '#1890ff' }} />
+            )}
+          </span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '敏感级别',
+      dataIndex: 'sensitivity_level',
+      key: 'sensitivity_level',
+      width: 100,
+      render: (level?: string) => level && level !== 'public' ? (
+        <Tag color={getSensitivityLevelColor(level)} icon={<SafetyOutlined />}>
+          {level}
+        </Tag>
+      ) : '-',
+    },
+    {
+      title: '语义标签',
+      dataIndex: 'semantic_tags',
+      key: 'semantic_tags',
+      width: 150,
+      render: (tags?: string[]) => tags && tags.length > 0 ? (
+        <Space size={[0, 4]} wrap>
+          {tags.slice(0, 2).map((tag) => (
+            <Tag key={tag} icon={<TagsOutlined />} color="geekblue">
+              {tag}
+            </Tag>
+          ))}
+          {tags.length > 2 && (
+            <Tooltip title={tags.slice(2).join(', ')}>
+              <Tag>+{tags.length - 2}</Tag>
+            </Tooltip>
+          )}
+        </Space>
+      ) : '-',
     },
   ];
 
@@ -245,6 +384,28 @@ function MetadataPage() {
             title={selectedTable ? `表: ${selectedTable}` : '请选择表'}
             style={{ flex: 1 }}
             loading={isLoadingDetail}
+            extra={selectedTable && (
+              <Space>
+                <Tooltip title="使用 AI 自动标注列的描述、敏感级别和语义标签">
+                  <Button
+                    icon={<RobotOutlined />}
+                    loading={annotateMutation.isPending}
+                    onClick={handleAIAnnotate}
+                  >
+                    AI 标注
+                  </Button>
+                </Tooltip>
+                <Tooltip title="查看敏感字段分析报告">
+                  <Button
+                    icon={<SafetyOutlined />}
+                    loading={sensitivityMutation.isPending}
+                    onClick={handleViewSensitivityReport}
+                  >
+                    敏感报告
+                  </Button>
+                </Tooltip>
+              </Space>
+            )}
           >
             {tableDetail?.data ? (
               <>
@@ -260,13 +421,26 @@ function MetadataPage() {
                   </Descriptions.Item>
                 </Descriptions>
 
-                <h3>列信息</h3>
+                {annotateMutation.isPending && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    icon={<Spin size="small" />}
+                    message="AI 正在分析表结构并生成标注..."
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <h3 style={{ margin: 0 }}>列信息</h3>
+                </div>
                 <Table
                   size="small"
                   dataSource={tableDetail.data.columns}
                   rowKey="name"
                   columns={tableColumns}
                   pagination={false}
+                  scroll={{ x: 900 }}
                 />
 
                 {tableDetail.data.relations && tableDetail.data.relations.length > 0 && (
@@ -434,6 +608,121 @@ function MetadataPage() {
         >
           {generatedSql || '// SQL 生成中...'}
         </pre>
+      </Modal>
+
+      {/* 敏感字段报告模态框 */}
+      <Modal
+        title={
+          <Space>
+            <SafetyOutlined />
+            <span>敏感字段分析报告</span>
+          </Space>
+        }
+        open={annotationModalOpen}
+        onCancel={() => setAnnotationModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setAnnotationModalOpen(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={700}
+      >
+        {sensitivityReport && (
+          <div>
+            {/* 总体统计 */}
+            <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="总列数">
+                {sensitivityReport.total_columns}
+              </Descriptions.Item>
+              <Descriptions.Item label="敏感列数">
+                <Tag color={sensitivityReport.sensitive_columns > 0 ? 'orange' : 'green'}>
+                  {sensitivityReport.sensitive_columns}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* 按敏感级别分布 */}
+            <h4>按敏感级别分布</h4>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+              {Object.entries(sensitivityReport.by_level).map(([level, count]) => (
+                <div key={level} style={{ textAlign: 'center' }}>
+                  <Progress
+                    type="circle"
+                    percent={Math.round((count / sensitivityReport.total_columns) * 100)}
+                    size={60}
+                    strokeColor={getSensitivityLevelColor(level)}
+                  />
+                  <div style={{ marginTop: 4 }}>
+                    <Tag color={getSensitivityLevelColor(level)}>{level}</Tag>
+                    <span style={{ marginLeft: 4 }}>{count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 按敏感类型分布 */}
+            <h4>按敏感类型分布</h4>
+            <div style={{ marginBottom: 16 }}>
+              {Object.entries(sensitivityReport.by_type).map(([type, columns]) => (
+                columns.length > 0 && (
+                  <div key={type} style={{ marginBottom: 8 }}>
+                    <Tag color={getSensitivityTypeColor(type)} style={{ width: 80 }}>
+                      {type.toUpperCase()}
+                    </Tag>
+                    <span style={{ marginLeft: 8 }}>
+                      {columns.map((col) => (
+                        <Tag key={col}>{col}</Tag>
+                      ))}
+                    </span>
+                  </div>
+                )
+              ))}
+              {Object.values(sensitivityReport.by_type).every((cols) => cols.length === 0) && (
+                <Alert message="未发现敏感字段" type="success" showIcon />
+              )}
+            </div>
+
+            {/* 高风险列 */}
+            {sensitivityReport.high_risk_columns.length > 0 && (
+              <>
+                <h4>
+                  <ExclamationCircleOutlined style={{ color: 'red', marginRight: 8 }} />
+                  高风险字段
+                </h4>
+                <Alert
+                  type="error"
+                  message="以下字段包含高度敏感数据，需要特别保护"
+                  style={{ marginBottom: 8 }}
+                />
+                <Table
+                  size="small"
+                  dataSource={sensitivityReport.high_risk_columns}
+                  rowKey="column"
+                  pagination={false}
+                  columns={[
+                    { title: '列名', dataIndex: 'column', key: 'column' },
+                    {
+                      title: '敏感类型',
+                      dataIndex: 'type',
+                      key: 'type',
+                      render: (type: string) => (
+                        <Tag color={getSensitivityTypeColor(type)}>{type}</Tag>
+                      ),
+                    },
+                    {
+                      title: '敏感级别',
+                      dataIndex: 'level',
+                      key: 'level',
+                      render: (level: string) => (
+                        <Tag color={getSensitivityLevelColor(level)}>{level}</Tag>
+                      ),
+                    },
+                  ]}
+                />
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

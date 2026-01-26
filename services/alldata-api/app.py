@@ -501,6 +501,412 @@ def list_columns(database, table):
 
 
 # ============================================
+# Phase 1 P1: AI Metadata Enhancement APIs
+# ============================================
+
+@app.route("/api/v1/metadata/ai/annotate/column", methods=["POST"])
+@require_jwt()
+def ai_annotate_column():
+    """
+    AI 标注单个列
+    使用 AI 增强能力自动生成列描述、识别敏感字段、生成语义标签
+    """
+    if not AI_ANNOTATION_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "AI annotation service not available",
+            "error": "ai_annotation_not_enabled"
+        }), 503
+
+    data = request.json or {}
+    column_name = data.get("column_name")
+    column_type = data.get("column_type", "varchar")
+    table_name = data.get("table_name")
+    database_name = data.get("database_name")
+    sample_values = data.get("sample_values")
+    use_llm = data.get("use_llm", True)
+    save_to_db = data.get("save_to_db", False)
+
+    if not column_name:
+        return jsonify({"code": 40001, "message": "column_name is required"}), 400
+
+    try:
+        service = get_ai_annotation_service()
+        result = service.annotate_column(
+            column_name=column_name,
+            column_type=column_type,
+            table_name=table_name,
+            sample_values=sample_values,
+            use_llm=use_llm,
+        )
+
+        # 如果需要保存到数据库
+        if save_to_db and database_name and table_name:
+            db = get_db_session()
+            try:
+                column = db.query(MetadataColumn).filter(
+                    MetadataColumn.database_name == database_name,
+                    MetadataColumn.table_name == table_name,
+                    MetadataColumn.column_name == column_name
+                ).first()
+
+                if column:
+                    import json
+                    column.ai_description = result.get("ai_description")
+                    column.sensitivity_level = result.get("sensitivity_level")
+                    column.sensitivity_type = result.get("sensitivity_type")
+                    column.semantic_tags = json.dumps(result.get("semantic_tags", []))
+                    column.ai_annotated_at = datetime.utcnow()
+                    column.ai_confidence = result.get("ai_confidence")
+                    db.commit()
+                    result["saved_to_db"] = True
+                else:
+                    result["saved_to_db"] = False
+                    result["save_error"] = "Column not found in database"
+            except Exception as e:
+                db.rollback()
+                result["saved_to_db"] = False
+                result["save_error"] = str(e)
+            finally:
+                db.close()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"AI annotation failed: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/metadata/ai/annotate/table", methods=["POST"])
+@require_jwt()
+def ai_annotate_table():
+    """
+    AI 批量标注表的所有列
+    为表中的所有列自动生成描述、识别敏感字段
+    """
+    if not AI_ANNOTATION_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "AI annotation service not available",
+            "error": "ai_annotation_not_enabled"
+        }), 503
+
+    data = request.json or {}
+    database_name = data.get("database_name")
+    table_name = data.get("table_name")
+    use_llm = data.get("use_llm", True)
+    save_to_db = data.get("save_to_db", False)
+
+    if not database_name or not table_name:
+        return jsonify({
+            "code": 40001,
+            "message": "database_name and table_name are required"
+        }), 400
+
+    db = get_db_session()
+    try:
+        # 获取表的列信息
+        columns = db.query(MetadataColumn).filter(
+            MetadataColumn.database_name == database_name,
+            MetadataColumn.table_name == table_name
+        ).order_by(MetadataColumn.position).all()
+
+        if not columns:
+            return jsonify({
+                "code": 40401,
+                "message": f"Table {database_name}.{table_name} not found or has no columns"
+            }), 404
+
+        # 准备列信息
+        column_list = [
+            {"name": c.column_name, "type": c.column_type}
+            for c in columns
+        ]
+
+        # 调用 AI 标注服务
+        service = get_ai_annotation_service()
+        results = service.annotate_table(
+            table_name=table_name,
+            columns=column_list,
+            sample_data=None,  # TODO: 可以从实际表中获取样本数据
+            use_llm=use_llm,
+        )
+
+        # 如果需要保存到数据库
+        saved_count = 0
+        if save_to_db:
+            import json
+            for result in results:
+                col_name = result.get("column_name")
+                column = next((c for c in columns if c.column_name == col_name), None)
+                if column:
+                    column.ai_description = result.get("ai_description")
+                    column.sensitivity_level = result.get("sensitivity_level")
+                    column.sensitivity_type = result.get("sensitivity_type")
+                    column.semantic_tags = json.dumps(result.get("semantic_tags", []))
+                    column.ai_annotated_at = datetime.utcnow()
+                    column.ai_confidence = result.get("ai_confidence")
+                    saved_count += 1
+            db.commit()
+
+        # 生成敏感字段报告
+        report = service.get_sensitivity_report(results)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "table": f"{database_name}.{table_name}",
+                "annotations": results,
+                "sensitivity_report": report,
+                "saved_count": saved_count if save_to_db else None
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({
+            "code": 50001,
+            "message": f"AI annotation failed: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/ai/sensitivity-report", methods=["GET"])
+@require_jwt(optional=True)
+def get_sensitivity_report():
+    """
+    获取敏感字段报告
+    返回已标注列的敏感字段统计信息
+    """
+    database_name = request.args.get("database")
+    table_name = request.args.get("table")
+
+    db = get_db_session()
+    try:
+        query = db.query(MetadataColumn).filter(
+            MetadataColumn.ai_annotated_at.isnot(None)
+        )
+
+        if database_name:
+            query = query.filter(MetadataColumn.database_name == database_name)
+        if table_name:
+            query = query.filter(MetadataColumn.table_name == table_name)
+
+        columns = query.all()
+
+        if not columns:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "total_columns": 0,
+                    "sensitive_columns": 0,
+                    "message": "No annotated columns found"
+                }
+            })
+
+        # 构建统计报告
+        import json
+        annotations = []
+        for col in columns:
+            annotations.append({
+                "column_name": col.column_name,
+                "table_name": col.table_name,
+                "database_name": col.database_name,
+                "sensitivity_type": col.sensitivity_type,
+                "sensitivity_level": col.sensitivity_level,
+                "semantic_tags": json.loads(col.semantic_tags) if col.semantic_tags else [],
+                "ai_confidence": col.ai_confidence,
+            })
+
+        # 使用 AI 服务生成报告
+        if AI_ANNOTATION_ENABLED:
+            service = get_ai_annotation_service()
+            report = service.get_sensitivity_report(annotations)
+        else:
+            # 手动生成简单报告
+            report = {
+                "total_columns": len(annotations),
+                "sensitive_columns": sum(1 for a in annotations if a.get("sensitivity_type") != "none"),
+                "by_type": {},
+                "by_level": {},
+            }
+            for ann in annotations:
+                sens_type = ann.get("sensitivity_type", "none")
+                sens_level = ann.get("sensitivity_level", "public")
+                if sens_type != "none":
+                    if sens_type not in report["by_type"]:
+                        report["by_type"][sens_type] = []
+                    report["by_type"][sens_type].append(f"{ann['database_name']}.{ann['table_name']}.{ann['column_name']}")
+                report["by_level"][sens_level] = report["by_level"].get(sens_level, 0) + 1
+
+        # 添加详细的列表信息
+        report["columns"] = annotations
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": report
+        })
+
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/ai/batch-annotate", methods=["POST"])
+@require_jwt()
+def ai_batch_annotate():
+    """
+    批量 AI 标注多个表
+    支持一次性标注多个表的所有列
+    """
+    if not AI_ANNOTATION_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "AI annotation service not available",
+            "error": "ai_annotation_not_enabled"
+        }), 503
+
+    data = request.json or {}
+    tables = data.get("tables", [])  # [{"database": "db1", "table": "t1"}, ...]
+    use_llm = data.get("use_llm", True)
+    save_to_db = data.get("save_to_db", False)
+
+    if not tables:
+        return jsonify({
+            "code": 40001,
+            "message": "tables list is required"
+        }), 400
+
+    results = []
+    total_columns = 0
+    total_sensitive = 0
+    service = get_ai_annotation_service()
+
+    db = get_db_session()
+    try:
+        for table_spec in tables:
+            database_name = table_spec.get("database")
+            table_name = table_spec.get("table")
+
+            if not database_name or not table_name:
+                continue
+
+            # 获取列信息
+            columns = db.query(MetadataColumn).filter(
+                MetadataColumn.database_name == database_name,
+                MetadataColumn.table_name == table_name
+            ).all()
+
+            if not columns:
+                results.append({
+                    "table": f"{database_name}.{table_name}",
+                    "status": "skipped",
+                    "message": "Table not found or has no columns"
+                })
+                continue
+
+            # 标注
+            column_list = [{"name": c.column_name, "type": c.column_type} for c in columns]
+            annotations = service.annotate_table(
+                table_name=table_name,
+                columns=column_list,
+                use_llm=use_llm,
+            )
+
+            # 统计
+            sensitive_count = sum(1 for a in annotations if a.get("sensitivity_type") != "none")
+            total_columns += len(annotations)
+            total_sensitive += sensitive_count
+
+            # 保存到数据库
+            if save_to_db:
+                import json
+                for ann in annotations:
+                    col = next((c for c in columns if c.column_name == ann.get("column_name")), None)
+                    if col:
+                        col.ai_description = ann.get("ai_description")
+                        col.sensitivity_level = ann.get("sensitivity_level")
+                        col.sensitivity_type = ann.get("sensitivity_type")
+                        col.semantic_tags = json.dumps(ann.get("semantic_tags", []))
+                        col.ai_annotated_at = datetime.utcnow()
+                        col.ai_confidence = ann.get("ai_confidence")
+
+            results.append({
+                "table": f"{database_name}.{table_name}",
+                "status": "success",
+                "columns_count": len(annotations),
+                "sensitive_count": sensitive_count,
+            })
+
+        if save_to_db:
+            db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": results,
+                "summary": {
+                    "tables_processed": len([r for r in results if r.get("status") == "success"]),
+                    "total_columns": total_columns,
+                    "total_sensitive": total_sensitive,
+                    "saved_to_db": save_to_db
+                }
+            }
+        })
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({
+            "code": 50001,
+            "message": f"Batch annotation failed: {str(e)}"
+        }), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/ai/status", methods=["GET"])
+@require_jwt(optional=True)
+def get_ai_annotation_status():
+    """
+    获取 AI 标注服务状态
+    返回服务配置和可用性信息
+    """
+    status_info = {
+        "enabled": AI_ANNOTATION_ENABLED,
+        "service_available": False,
+        "llm_configured": False,
+        "model": None,
+        "api_url": None,
+    }
+
+    if AI_ANNOTATION_ENABLED:
+        try:
+            service = get_ai_annotation_service()
+            status_info["service_available"] = True
+            status_info["llm_configured"] = service.enabled
+            status_info["model"] = service.model
+            status_info["api_url"] = service.api_url
+        except Exception as e:
+            status_info["error"] = str(e)
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": status_info
+    })
+
+
+# ============================================
 # Sprint 7: Query Execution APIs
 # ============================================
 
@@ -514,6 +920,30 @@ except ImportError:
     logging.getLogger(__name__).warning(
         "SQLSanitizer not available. Using basic SQL validation. "
         "For production, ensure src/sql_executor.py is available."
+    )
+
+# Import Kettle bridge for ETL engine integration
+try:
+    from src.kettle_bridge import get_kettle_bridge, KettleBridge
+    KETTLE_ENABLED = True
+except ImportError:
+    KETTLE_ENABLED = False
+    import logging
+    logging.getLogger(__name__).warning(
+        "Kettle bridge not available. Kettle ETL features will be disabled. "
+        "For Kettle support, ensure src/kettle_bridge.py is available."
+    )
+
+# Import AI annotation service for Phase 1 P1
+try:
+    from src.ai_annotation import get_ai_annotation_service, AIAnnotationService
+    AI_ANNOTATION_ENABLED = True
+except ImportError:
+    AI_ANNOTATION_ENABLED = False
+    import logging
+    logging.getLogger(__name__).warning(
+        "AI annotation service not available. AI metadata enhancement features will be disabled. "
+        "For AI annotation support, ensure src/ai_annotation.py is available."
     )
 
 
@@ -1281,6 +1711,387 @@ def get_etl_task_logs(task_id):
 
 
 # ============================================
+# Kettle ETL Engine APIs
+# 基于 Alldata 原生 Kettle (Pentaho Data Integration) 能力
+# ============================================
+
+@app.route("/api/v1/kettle/status", methods=["GET"])
+@require_jwt(optional=True)
+def get_kettle_status():
+    """
+    获取 Kettle 服务状态
+    返回 Kettle 安装信息和可用性
+    """
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "enabled": False,
+                "message": "Kettle bridge not available",
+                "kettle_installed": False
+            }
+        })
+
+    try:
+        kettle = get_kettle_bridge()
+        status = kettle.get_status()
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "enabled": True,
+                **status
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to get Kettle status: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/kettle/jobs/execute", methods=["POST"])
+@require_jwt()
+def execute_kettle_job():
+    """
+    执行 Kettle 作业 (.kjb)
+    支持文件模式和仓库模式
+    """
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Kettle engine not available",
+            "error": "kettle_not_enabled"
+        }), 503
+
+    data = request.json or {}
+
+    # 验证参数
+    job_path = data.get("job_path")
+    repository = data.get("repository")
+    job_name = data.get("job_name")
+
+    if not job_path and not (repository and job_name):
+        return jsonify({
+            "code": 40001,
+            "message": "Must provide either job_path or repository/job_name"
+        }), 400
+
+    try:
+        kettle = get_kettle_bridge()
+
+        # 如果提供了文件路径，先验证
+        if job_path:
+            is_valid, error = kettle.validate_job_file(job_path)
+            if not is_valid:
+                return jsonify({
+                    "code": 40002,
+                    "message": f"Invalid job file: {error}"
+                }), 400
+
+        # 执行作业
+        result = kettle.execute_job(
+            job_path=job_path,
+            repository=repository,
+            directory=data.get("directory"),
+            job_name=job_name,
+            params=data.get("params"),
+            log_level=data.get("log_level", "Basic")
+        )
+
+        return jsonify({
+            "code": 0 if result.success else 50002,
+            "message": "success" if result.success else "Job execution failed",
+            "data": result.to_dict()
+        }), 200 if result.success else 500
+
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Kettle job execution error: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/kettle/transformations/execute", methods=["POST"])
+@require_jwt()
+def execute_kettle_transformation():
+    """
+    执行 Kettle 转换 (.ktr)
+    支持文件模式和仓库模式
+    """
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Kettle engine not available",
+            "error": "kettle_not_enabled"
+        }), 503
+
+    data = request.json or {}
+
+    # 验证参数
+    trans_path = data.get("trans_path")
+    repository = data.get("repository")
+    trans_name = data.get("trans_name")
+
+    if not trans_path and not (repository and trans_name):
+        return jsonify({
+            "code": 40001,
+            "message": "Must provide either trans_path or repository/trans_name"
+        }), 400
+
+    try:
+        kettle = get_kettle_bridge()
+
+        # 如果提供了文件路径，先验证
+        if trans_path:
+            is_valid, error = kettle.validate_transformation_file(trans_path)
+            if not is_valid:
+                return jsonify({
+                    "code": 40002,
+                    "message": f"Invalid transformation file: {error}"
+                }), 400
+
+        # 执行转换
+        result = kettle.execute_transformation(
+            trans_path=trans_path,
+            repository=repository,
+            directory=data.get("directory"),
+            trans_name=trans_name,
+            params=data.get("params"),
+            log_level=data.get("log_level", "Basic")
+        )
+
+        return jsonify({
+            "code": 0 if result.success else 50002,
+            "message": "success" if result.success else "Transformation execution failed",
+            "data": result.to_dict()
+        }), 200 if result.success else 500
+
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Kettle transformation execution error: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/kettle/validate/job", methods=["POST"])
+@require_jwt(optional=True)
+def validate_kettle_job():
+    """验证 Kettle 作业文件 (.kjb)"""
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Kettle engine not available"
+        }), 503
+
+    data = request.json or {}
+    job_path = data.get("job_path")
+
+    if not job_path:
+        return jsonify({
+            "code": 40001,
+            "message": "job_path is required"
+        }), 400
+
+    try:
+        kettle = get_kettle_bridge()
+        is_valid, error = kettle.validate_job_file(job_path)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "is_valid": is_valid,
+                "error": error,
+                "file_path": job_path
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Validation error: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/kettle/validate/transformation", methods=["POST"])
+@require_jwt(optional=True)
+def validate_kettle_transformation():
+    """验证 Kettle 转换文件 (.ktr)"""
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Kettle engine not available"
+        }), 503
+
+    data = request.json or {}
+    trans_path = data.get("trans_path")
+
+    if not trans_path:
+        return jsonify({
+            "code": 40001,
+            "message": "trans_path is required"
+        }), 400
+
+    try:
+        kettle = get_kettle_bridge()
+        is_valid, error = kettle.validate_transformation_file(trans_path)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "is_valid": is_valid,
+                "error": error,
+                "file_path": trans_path
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Validation error: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/etl/tasks/<task_id>/execute-kettle", methods=["POST"])
+@require_jwt()
+def execute_etl_task_with_kettle(task_id):
+    """
+    使用 Kettle 引擎执行 ETL 任务
+    仅适用于 engine_type='kettle' 的任务
+    """
+    if not KETTLE_ENABLED:
+        return jsonify({
+            "code": 50003,
+            "message": "Kettle engine not available"
+        }), 503
+
+    db = get_db_session()
+    try:
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40401, "message": "Task not found"}), 404
+
+        # 验证任务引擎类型
+        if task.engine_type != "kettle":
+            return jsonify({
+                "code": 40002,
+                "message": f"Task engine type is '{task.engine_type}', not 'kettle'"
+            }), 400
+
+        if task.status == "running":
+            return jsonify({
+                "code": 40002,
+                "message": "Task is already running"
+            }), 400
+
+        # 检查 Kettle 配置
+        if not task.kettle_job_path and not task.kettle_trans_path:
+            if not (task.kettle_repository and (task.kettle_job_path or task.kettle_trans_path)):
+                return jsonify({
+                    "code": 40003,
+                    "message": "Kettle job/transformation path or repository not configured"
+                }), 400
+
+        # 更新任务状态
+        task.status = "running"
+        task.last_run_at = datetime.utcnow()
+        task.run_count = (task.run_count or 0) + 1
+
+        # 创建执行日志
+        log_id = generate_id("etl_log_")
+        log = ETLTaskLog(
+            log_id=log_id,
+            task_id=task_id,
+            status="running",
+            trigger_type=request.json.get("trigger_type", "manual") if request.json else "manual",
+            triggered_by=request.json.get("triggered_by") if request.json else None,
+        )
+        db.add(log)
+        db.commit()
+
+        # 执行 Kettle 任务
+        kettle = get_kettle_bridge()
+        params = task.kettle_params or {}
+
+        # 根据配置决定执行作业还是转换
+        if task.kettle_job_path:
+            result = kettle.execute_job(
+                job_path=task.kettle_job_path,
+                repository=task.kettle_repository,
+                directory=task.kettle_directory,
+                params=params,
+                log_level="Basic"
+            )
+        elif task.kettle_trans_path:
+            result = kettle.execute_transformation(
+                trans_path=task.kettle_trans_path,
+                repository=task.kettle_repository,
+                directory=task.kettle_directory,
+                params=params,
+                log_level="Basic"
+            )
+        else:
+            # 仓库模式（需要 job_name 或 trans_name 配置）
+            return jsonify({
+                "code": 40003,
+                "message": "Repository mode requires job_name or trans_name in kettle_params"
+            }), 400
+
+        # 更新执行结果
+        log.finished_at = datetime.utcnow()
+        log.duration_seconds = int(result.duration_seconds)
+        log.rows_read = result.rows_read
+        log.rows_written = result.rows_written
+        log.rows_failed = result.rows_error
+        log.log_content = result.stdout[:10000] if result.stdout else None  # 限制日志长度
+
+        if result.success:
+            log.status = "completed"
+            task.status = "completed"
+            task.last_success_at = datetime.utcnow()
+            task.success_count = (task.success_count or 0) + 1
+            task.last_row_count = result.rows_written
+            task.last_duration_seconds = int(result.duration_seconds)
+            task.last_error = None
+        else:
+            log.status = "failed"
+            log.error_message = result.error_message
+            log.error_stack = result.stderr[:5000] if result.stderr else None
+            task.status = "failed"
+            task.fail_count = (task.fail_count or 0) + 1
+            task.last_error = result.error_message
+
+        db.commit()
+
+        return jsonify({
+            "code": 0 if result.success else 50002,
+            "message": "success" if result.success else "Kettle execution failed",
+            "data": {
+                "task_id": task_id,
+                "log_id": log_id,
+                "status": log.status,
+                "execution_result": result.to_dict()
+            }
+        }), 200 if result.success else 500
+
+    except Exception as e:
+        db.rollback()
+        # 尝试更新任务状态为失败
+        try:
+            task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+            if task:
+                task.status = "failed"
+                task.last_error = str(e)
+                db.commit()
+        except:
+            pass
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ============================================
 # P1.2: Data Quality Management APIs
 # ============================================
 
@@ -2004,6 +2815,349 @@ def search_lineage():
         })
     finally:
         db.close()
+
+
+# ============================================
+# P1: AI 增强血缘分析 APIs
+# ============================================
+
+@app.route("/api/v1/lineage/parse-sql", methods=["POST"])
+@require_jwt(optional=True)
+def parse_sql_lineage():
+    """
+    解析 SQL 语句提取血缘关系
+    请求体:
+    - sql: SQL 语句 (必需)
+    - source_database: 默认数据库名 (可选)
+    - use_ai: 是否使用 AI 增强解析 (可选，默认 true)
+    """
+    try:
+        from src.lineage_analyzer import get_lineage_analyzer
+    except ImportError as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘分析服务不可用: {str(e)}"
+        }), 500
+
+    data = request.get_json() or {}
+    sql = data.get("sql")
+
+    if not sql:
+        return jsonify({
+            "code": 400,
+            "message": "缺少必需参数: sql"
+        }), 400
+
+    source_database = data.get("source_database")
+    use_ai = data.get("use_ai", True)
+
+    try:
+        analyzer = get_lineage_analyzer()
+        result = analyzer.parse_sql_lineage(sql, source_database, use_ai)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"SQL 血缘解析失败: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/lineage/analyze-etl", methods=["POST"])
+@require_jwt(optional=True)
+def analyze_etl_lineage():
+    """
+    分析 ETL 任务的血缘关系
+    请求体:
+    - etl_config: ETL 任务配置 (必需)
+    - task_type: 任务类型 (可选，默认 batch)
+    """
+    try:
+        from src.lineage_analyzer import get_lineage_analyzer
+    except ImportError as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘分析服务不可用: {str(e)}"
+        }), 500
+
+    data = request.get_json() or {}
+    etl_config = data.get("etl_config")
+
+    if not etl_config:
+        return jsonify({
+            "code": 400,
+            "message": "缺少必需参数: etl_config"
+        }), 400
+
+    task_type = data.get("task_type", "batch")
+
+    try:
+        analyzer = get_lineage_analyzer()
+        result = analyzer.analyze_etl_lineage(etl_config, task_type)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"ETL 血缘分析失败: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/lineage/ai-impact-analysis", methods=["POST"])
+@require_jwt(optional=True)
+def ai_impact_analysis():
+    """
+    AI 驱动的影响分析
+    请求体:
+    - node_info: 源节点信息 (必需)
+    - downstream_nodes: 下游节点列表 (可选，为空时自动查询)
+    - change_type: 变更类型 (可选，默认 schema_change)
+    """
+    try:
+        from src.lineage_analyzer import get_lineage_analyzer
+    except ImportError as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘分析服务不可用: {str(e)}"
+        }), 500
+
+    data = request.get_json() or {}
+    node_info = data.get("node_info")
+
+    if not node_info:
+        return jsonify({
+            "code": 400,
+            "message": "缺少必需参数: node_info"
+        }), 400
+
+    downstream_nodes = data.get("downstream_nodes", [])
+    change_type = data.get("change_type", "schema_change")
+
+    # 如果没有提供下游节点，自动查询
+    if not downstream_nodes:
+        db = get_db_session()
+        try:
+            full_name = node_info.get("full_name") or node_info.get("name")
+            if full_name:
+                # 查找所有下游节点
+                edges = db.query(LineageEdge).filter(
+                    LineageEdge.source_name == full_name,
+                    LineageEdge.is_active == True
+                ).all()
+
+                for edge in edges:
+                    target_node = db.query(LineageNode).filter(
+                        LineageNode.node_id == edge.target_node_id
+                    ).first()
+                    if target_node:
+                        downstream_nodes.append({
+                            "node_id": target_node.node_id,
+                            "name": target_node.name,
+                            "full_name": target_node.full_name,
+                            "node_type": target_node.node_type,
+                            "impact_level": 1
+                        })
+        finally:
+            db.close()
+
+    try:
+        analyzer = get_lineage_analyzer()
+        result = analyzer.ai_impact_analysis(node_info, downstream_nodes, change_type)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"AI 影响分析失败: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/lineage/infer-columns", methods=["POST"])
+@require_jwt(optional=True)
+def infer_column_lineage():
+    """
+    推断列级血缘关系
+    请求体:
+    - sql: SQL 语句 (必需)
+    - source_columns: 源表列信息 {"table_name": ["col1", "col2"]} (可选)
+    - use_ai: 是否使用 AI (可选，默认 true)
+    """
+    try:
+        from src.lineage_analyzer import get_lineage_analyzer
+    except ImportError as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘分析服务不可用: {str(e)}"
+        }), 500
+
+    data = request.get_json() or {}
+    sql = data.get("sql")
+
+    if not sql:
+        return jsonify({
+            "code": 400,
+            "message": "缺少必需参数: sql"
+        }), 400
+
+    source_columns = data.get("source_columns", {})
+    use_ai = data.get("use_ai", True)
+
+    try:
+        analyzer = get_lineage_analyzer()
+        mappings = analyzer.infer_column_lineage(sql, source_columns, use_ai)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "column_mappings": mappings,
+                "total": len(mappings)
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"列级血缘推断失败: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/lineage/generate-from-sql", methods=["POST"])
+@require_jwt(optional=True)
+def generate_lineage_from_sql():
+    """
+    从 SQL 生成并保存血缘关系
+    请求体:
+    - sql: SQL 语句 (必需)
+    - source_database: 默认数据库名 (可选)
+    - job_id: 关联的任务 ID (可选)
+    - job_type: 任务类型 (可选，默认 sql)
+    - save: 是否保存到数据库 (可选，默认 false)
+    """
+    try:
+        from src.lineage_analyzer import get_lineage_analyzer
+    except ImportError as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘分析服务不可用: {str(e)}"
+        }), 500
+
+    data = request.get_json() or {}
+    sql = data.get("sql")
+
+    if not sql:
+        return jsonify({
+            "code": 400,
+            "message": "缺少必需参数: sql"
+        }), 400
+
+    source_database = data.get("source_database")
+    job_id = data.get("job_id")
+    job_type = data.get("job_type", "sql")
+    save = data.get("save", False)
+
+    try:
+        analyzer = get_lineage_analyzer()
+
+        # 解析 SQL
+        parse_result = analyzer.parse_sql_lineage(sql, source_database, use_ai=True)
+
+        # 生成节点和边
+        nodes, edges = analyzer.generate_lineage_nodes_and_edges(
+            parse_result, job_id, job_type
+        )
+
+        # 如果需要保存到数据库
+        saved_count = {"nodes": 0, "edges": 0}
+        if save and (nodes or edges):
+            db = get_db_session()
+            try:
+                from datetime import datetime
+
+                # 保存节点
+                for node_data in nodes:
+                    existing = db.query(LineageNode).filter(
+                        LineageNode.full_name == node_data["full_name"]
+                    ).first()
+
+                    if existing:
+                        # 更新现有节点
+                        existing.updated_at = datetime.utcnow()
+                    else:
+                        # 创建新节点
+                        node = LineageNode(
+                            node_id=node_data["node_id"],
+                            node_type=node_data["node_type"],
+                            name=node_data["name"],
+                            full_name=node_data["full_name"],
+                            database_name=node_data.get("database_name"),
+                            table_name=node_data.get("table_name"),
+                            column_name=node_data.get("column_name"),
+                            is_active=True,
+                            created_at=datetime.utcnow(),
+                            updated_at=datetime.utcnow()
+                        )
+                        db.add(node)
+                        saved_count["nodes"] += 1
+
+                # 保存边
+                for edge_data in edges:
+                    edge = LineageEdge(
+                        edge_id=edge_data["edge_id"],
+                        source_node_id=edge_data["source_node_id"],
+                        source_type=edge_data["source_type"],
+                        source_name=edge_data["source_name"],
+                        target_node_id=edge_data["target_node_id"],
+                        target_type=edge_data["target_type"],
+                        target_name=edge_data["target_name"],
+                        relation_type=edge_data.get("relation_type", "derive"),
+                        transformation=edge_data.get("transformation"),
+                        job_id=edge_data.get("job_id"),
+                        job_type=edge_data.get("job_type"),
+                        confidence=edge_data.get("confidence", 60),
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    db.add(edge)
+                    saved_count["edges"] += 1
+
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                return jsonify({
+                    "code": 500,
+                    "message": f"保存血缘数据失败: {str(e)}"
+                }), 500
+            finally:
+                db.close()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "parse_result": parse_result,
+                "nodes": nodes,
+                "edges": edges,
+                "saved": saved_count if save else None
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"血缘生成失败: {str(e)}"
+        }), 500
 
 
 # ============================================
@@ -3344,6 +4498,471 @@ def resolve_data_alert(alert_id):
         db.close()
 
 
+# ==================== P6.2: 智能预警推送 ====================
+
+@app.route("/api/v1/alerts/metric-rules", methods=["GET"])
+@require_jwt()
+def list_metric_alert_rules():
+    """获取指标预警规则列表"""
+    from models.data_monitoring import MetricAlertRule
+    db = next(get_db())
+
+    try:
+        is_enabled = request.args.get("is_enabled")
+        metric_type = request.args.get("metric_type")
+        condition_type = request.args.get("condition_type")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(MetricAlertRule)
+
+        if is_enabled is not None:
+            query = query.filter(MetricAlertRule.is_enabled == (is_enabled.lower() == 'true'))
+        if metric_type:
+            query = query.filter(MetricAlertRule.metric_type == metric_type)
+        if condition_type:
+            query = query.filter(MetricAlertRule.condition_type == condition_type)
+
+        total = query.count()
+        rules = query.order_by(MetricAlertRule.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": [r.to_dict() for r in rules],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules", methods=["POST"])
+@require_jwt()
+def create_metric_alert_rule():
+    """创建指标预警规则"""
+    from models.data_monitoring import MetricAlertRule
+    db = next(get_db())
+    data = request.json
+
+    try:
+        name = data.get("name")
+        condition_type = data.get("condition_type")
+
+        if not name:
+            return jsonify({"code": 40001, "message": "规则名称不能为空"}), 400
+        if not condition_type:
+            return jsonify({"code": 40001, "message": "条件类型不能为空"}), 400
+        if condition_type not in ["threshold", "change_rate", "anomaly"]:
+            return jsonify({"code": 40001, "message": "无效的条件类型"}), 400
+
+        rule = MetricAlertRule(
+            rule_id=generate_id("mar_"),
+            name=name,
+            description=data.get("description"),
+            metric_id=data.get("metric_id"),
+            metric_name=data.get("metric_name"),
+            metric_type=data.get("metric_type"),
+            condition_type=condition_type,
+            condition_config=data.get("condition_config"),
+            severity=data.get("severity", "warning"),
+            alert_title_template=data.get("alert_title_template"),
+            alert_message_template=data.get("alert_message_template"),
+            notification_channels=data.get("notification_channels"),
+            notification_targets=data.get("notification_targets"),
+            cooldown_minutes=data.get("cooldown_minutes", 30),
+            is_enabled=data.get("is_enabled", True),
+            created_by=data.get("created_by", "system")
+        )
+
+        db.add(rule)
+        db.commit()
+        db.refresh(rule)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        }), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules/<rule_id>", methods=["GET"])
+@require_jwt()
+def get_metric_alert_rule(rule_id):
+    """获取指标预警规则详情"""
+    from models.data_monitoring import MetricAlertRule
+    db = next(get_db())
+
+    try:
+        rule = db.query(MetricAlertRule).filter(MetricAlertRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_metric_alert_rule(rule_id):
+    """更新指标预警规则"""
+    from models.data_monitoring import MetricAlertRule
+    db = next(get_db())
+    data = request.json
+
+    try:
+        rule = db.query(MetricAlertRule).filter(MetricAlertRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        if "name" in data:
+            rule.name = data["name"]
+        if "description" in data:
+            rule.description = data["description"]
+        if "metric_id" in data:
+            rule.metric_id = data["metric_id"]
+        if "metric_name" in data:
+            rule.metric_name = data["metric_name"]
+        if "metric_type" in data:
+            rule.metric_type = data["metric_type"]
+        if "condition_type" in data:
+            rule.condition_type = data["condition_type"]
+        if "condition_config" in data:
+            rule.condition_config = data["condition_config"]
+        if "severity" in data:
+            rule.severity = data["severity"]
+        if "alert_title_template" in data:
+            rule.alert_title_template = data["alert_title_template"]
+        if "alert_message_template" in data:
+            rule.alert_message_template = data["alert_message_template"]
+        if "notification_channels" in data:
+            rule.notification_channels = data["notification_channels"]
+        if "notification_targets" in data:
+            rule.notification_targets = data["notification_targets"]
+        if "cooldown_minutes" in data:
+            rule.cooldown_minutes = data["cooldown_minutes"]
+        if "is_enabled" in data:
+            rule.is_enabled = data["is_enabled"]
+
+        rule.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(rule)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": rule.to_dict()
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_metric_alert_rule(rule_id):
+    """删除指标预警规则"""
+    from models.data_monitoring import MetricAlertRule
+    db = next(get_db())
+
+    try:
+        rule = db.query(MetricAlertRule).filter(MetricAlertRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        db.delete(rule)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "删除成功"
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules/<rule_id>/test", methods=["POST"])
+@require_jwt()
+def test_metric_alert_rule(rule_id):
+    """测试指标预警规则"""
+    from models.data_monitoring import MetricAlertRule
+    from src.alert_engine import get_alert_engine
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        rule = db.query(MetricAlertRule).filter(MetricAlertRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        engine = get_alert_engine(db)
+        current_value = data.get("current_value")
+
+        result = engine.check_metric_rule(rule, current_value)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "should_alert": result.should_alert,
+                "current_value": result.current_value,
+                "threshold_value": result.threshold_value,
+                "change_rate": result.change_rate,
+                "anomaly_score": result.anomaly_score,
+                "message": result.message
+            }
+        })
+    except Exception as e:
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metric-rules/<rule_id>/trigger", methods=["POST"])
+@require_jwt()
+def trigger_metric_alert_rule(rule_id):
+    """手动触发指标预警规则"""
+    from models.data_monitoring import MetricAlertRule
+    from src.alert_engine import get_alert_engine
+    db = next(get_db())
+    data = request.json or {}
+
+    try:
+        rule = db.query(MetricAlertRule).filter(MetricAlertRule.rule_id == rule_id).first()
+        if not rule:
+            return jsonify({"code": 40401, "message": "规则不存在"}), 404
+
+        engine = get_alert_engine(db)
+        current_value = data.get("current_value")
+
+        result = engine.check_metric_rule(rule, current_value)
+
+        if result.should_alert:
+            alert_id = engine.trigger_alert(rule, result, notify=data.get("notify", True))
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "triggered": True,
+                    "alert_id": alert_id,
+                    "result": result.message
+                }
+            })
+        else:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "triggered": False,
+                    "result": result.message
+                }
+            })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/check-all", methods=["POST"])
+@require_jwt()
+def check_all_metric_alert_rules():
+    """检查所有启用的预警规则（供定时任务调用）"""
+    from src.alert_engine import get_alert_engine
+    db = next(get_db())
+
+    try:
+        engine = get_alert_engine(db)
+        triggered_alerts = engine.check_all_enabled_rules()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "triggered_count": len(triggered_alerts),
+                "alert_ids": triggered_alerts
+            }
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/history", methods=["GET"])
+@require_jwt()
+def list_alert_history():
+    """获取告警历史记录"""
+    from models.data_monitoring import AlertHistory
+    db = next(get_db())
+
+    try:
+        alert_id = request.args.get("alert_id")
+        rule_id = request.args.get("rule_id")
+        action = request.args.get("action")
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        query = db.query(AlertHistory)
+
+        if alert_id:
+            query = query.filter(AlertHistory.alert_id == alert_id)
+        if rule_id:
+            query = query.filter(AlertHistory.rule_id == rule_id)
+        if action:
+            query = query.filter(AlertHistory.action == action)
+
+        total = query.count()
+        history = query.order_by(AlertHistory.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "history": [h.to_dict() for h in history],
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metrics", methods=["POST"])
+@require_jwt()
+def record_metric_value():
+    """记录指标值（供外部系统推送）"""
+    from models.data_monitoring import MetricValue
+    db = next(get_db())
+    data = request.json
+
+    try:
+        metric_id = data.get("metric_id")
+        value = data.get("value")
+
+        if not metric_id:
+            return jsonify({"code": 40001, "message": "指标ID不能为空"}), 400
+        if value is None:
+            return jsonify({"code": 40001, "message": "指标值不能为空"}), 400
+
+        metric = MetricValue(
+            metric_id=metric_id,
+            metric_name=data.get("metric_name"),
+            metric_type=data.get("metric_type"),
+            value=float(value),
+            dimensions=data.get("dimensions")
+        )
+
+        db.add(metric)
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success"
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({"code": 50001, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/metrics/<metric_id>", methods=["GET"])
+@require_jwt()
+def get_metric_values(metric_id):
+    """获取指标历史值"""
+    from models.data_monitoring import MetricValue
+    db = next(get_db())
+
+    try:
+        start_time = request.args.get("start_time")
+        end_time = request.args.get("end_time")
+        limit = int(request.args.get("limit", 100))
+
+        query = db.query(MetricValue).filter(MetricValue.metric_id == metric_id)
+
+        if start_time:
+            query = query.filter(MetricValue.timestamp >= start_time)
+        if end_time:
+            query = query.filter(MetricValue.timestamp <= end_time)
+
+        values = query.order_by(MetricValue.timestamp.desc()).limit(limit).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "values": [v.to_dict() for v in values]
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/alerts/statistics", methods=["GET"])
+@require_jwt()
+def get_alert_statistics():
+    """获取告警统计"""
+    from models.data_monitoring import MetricAlertRule, AlertHistory
+    from sqlalchemy import func
+    db = next(get_db())
+
+    try:
+        # 规则统计
+        total_rules = db.query(MetricAlertRule).count()
+        enabled_rules = db.query(MetricAlertRule).filter(MetricAlertRule.is_enabled == True).count()
+
+        # 告警统计
+        active_alerts = db.query(DataAlert).filter(DataAlert.status == "active").count()
+        acknowledged_alerts = db.query(DataAlert).filter(DataAlert.status == "acknowledged").count()
+        resolved_today = db.query(DataAlert).filter(
+            DataAlert.status == "resolved",
+            DataAlert.resolved_at >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        ).count()
+
+        # 按严重级别统计活跃告警
+        severity_stats = db.query(
+            DataAlert.severity,
+            func.count(DataAlert.id).label("count")
+        ).filter(DataAlert.status == "active").group_by(DataAlert.severity).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": {
+                    "total": total_rules,
+                    "enabled": enabled_rules
+                },
+                "alerts": {
+                    "active": active_alerts,
+                    "acknowledged": acknowledged_alerts,
+                    "resolved_today": resolved_today
+                },
+                "severity_distribution": {s: c for s, c in severity_stats}
+            }
+        })
+    finally:
+        db.close()
+
+
 # ==================== P5.2: BI 仪表板 ====================
 
 @app.route("/api/v1/bi/dashboards", methods=["GET"])
@@ -4675,6 +6294,1744 @@ def unauthorized(error):
         "message": "Unauthorized",
         "error": "authentication_required"
     }), 401
+
+
+# ==================== 数据脱敏 API ====================
+
+@app.route("/api/v1/masking/preview", methods=["POST"])
+@require_jwt()
+def masking_preview():
+    """
+    获取数据脱敏预览
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service
+
+        data = request.get_json()
+        sample_data = data.get("sample_data", [])
+        column_metadata = data.get("column_metadata", {})
+        max_rows = min(data.get("max_rows", 5), 10)
+
+        if not sample_data:
+            return jsonify({"code": 40000, "message": "sample_data is required"}), 400
+
+        service = get_masking_service()
+        preview = service.get_masking_preview(sample_data, column_metadata, max_rows)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": preview
+        })
+    except Exception as e:
+        logger.error(f"脱敏预览失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/execute", methods=["POST"])
+@require_jwt()
+def masking_execute():
+    """
+    执行数据脱敏
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service
+
+        data = request.get_json()
+        records = data.get("data", [])
+        column_metadata = data.get("column_metadata", {})
+
+        if not records:
+            return jsonify({"code": 40000, "message": "data is required"}), 400
+
+        service = get_masking_service()
+        masked_data = service.mask_dataframe(records, column_metadata)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "masked_data": masked_data,
+                "record_count": len(masked_data)
+            }
+        })
+    except Exception as e:
+        logger.error(f"数据脱敏失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/config", methods=["POST"])
+@require_jwt()
+def masking_config():
+    """
+    生成脱敏配置
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service
+
+        data = request.get_json()
+        columns = data.get("columns", [])
+
+        if not columns:
+            return jsonify({"code": 40000, "message": "columns is required"}), 400
+
+        service = get_masking_service()
+        config = service.create_masking_config(columns)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": config
+        })
+    except Exception as e:
+        logger.error(f"生成脱敏配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/rules", methods=["GET"])
+@require_jwt()
+def list_masking_rules():
+    """
+    获取可用的脱敏规则列表
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service, MaskingStrategy
+
+        service = get_masking_service()
+
+        rules = []
+        for rule in service.rules:
+            rules.append({
+                "rule_id": rule.rule_id,
+                "name": rule.name,
+                "strategy": rule.strategy.value,
+                "sensitivity_type": rule.sensitivity_type,
+                "sensitivity_level": rule.sensitivity_level,
+                "column_pattern": rule.column_pattern,
+                "data_type": rule.data_type,
+                "options": rule.options,
+                "enabled": rule.enabled,
+                "priority": rule.priority
+            })
+
+        strategies = [
+            {"value": s.value, "label": s.value.replace("_", " ").title()}
+            for s in MaskingStrategy
+        ]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": rules,
+                "strategies": strategies
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/value", methods=["POST"])
+@require_jwt()
+def mask_single_value():
+    """
+    对单个值进行脱敏
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service, MaskingStrategy
+
+        data = request.get_json()
+        value = data.get("value")
+        column_name = data.get("column_name", "unknown")
+        sensitivity_type = data.get("sensitivity_type")
+        sensitivity_level = data.get("sensitivity_level")
+        strategy = data.get("strategy")
+        options = data.get("options", {})
+
+        if value is None:
+            return jsonify({"code": 40000, "message": "value is required"}), 400
+
+        service = get_masking_service()
+
+        strategy_enum = None
+        if strategy:
+            try:
+                strategy_enum = MaskingStrategy(strategy)
+            except ValueError:
+                return jsonify({"code": 40000, "message": f"Invalid strategy: {strategy}"}), 400
+
+        masked_value = service.mask_value(
+            value=value,
+            column_name=column_name,
+            sensitivity_type=sensitivity_type,
+            sensitivity_level=sensitivity_level,
+            strategy_override=strategy_enum,
+            options_override=options if options else None
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "original": value,
+                "masked": masked_value
+            }
+        })
+    except Exception as e:
+        logger.error(f"单值脱敏失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/table/<table_id>", methods=["POST"])
+@require_jwt()
+def mask_table_data(table_id: str):
+    """
+    根据表元数据自动脱敏数据
+    P6: 数据安全管理 - 数据脱敏
+    """
+    try:
+        from src.data_masking import get_masking_service
+
+        db = get_db()
+
+        # 获取表的列元数据
+        table = db.query(MetadataTable).filter(
+            MetadataTable.table_id == table_id
+        ).first()
+
+        if not table:
+            return jsonify({"code": 40400, "message": "Table not found"}), 404
+
+        columns = db.query(MetadataColumn).filter(
+            MetadataColumn.table_id == table.id
+        ).all()
+
+        # 构建列元数据
+        column_metadata = {}
+        for col in columns:
+            column_metadata[col.column_name] = {
+                "sensitivity_type": col.sensitivity_type,
+                "sensitivity_level": col.sensitivity_level,
+                "data_type": "string"  # 简化处理
+            }
+
+        # 获取要脱敏的数据
+        data = request.get_json()
+        records = data.get("data", [])
+
+        if not records:
+            return jsonify({"code": 40000, "message": "data is required"}), 400
+
+        # 执行脱敏
+        service = get_masking_service()
+        masked_data = service.mask_dataframe(records, column_metadata)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "table_id": table_id,
+                "table_name": table.table_name,
+                "masked_data": masked_data,
+                "record_count": len(masked_data),
+                "columns_with_masking": [
+                    col for col, meta in column_metadata.items()
+                    if meta.get("sensitivity_type") and meta["sensitivity_type"] != "none"
+                ]
+            }
+        })
+    except Exception as e:
+        logger.error(f"表数据脱敏失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 非结构化文档 OCR API ====================
+
+# OCR 服务单例
+_ocr_service = None
+
+
+def get_ocr_service():
+    """获取 OCR 服务实例"""
+    global _ocr_service
+    if _ocr_service is None:
+        from src.ocr_service import OCRService
+        _ocr_service = OCRService()
+    return _ocr_service
+
+
+@app.route("/api/v1/ocr/extract", methods=["POST"])
+@require_auth
+def ocr_extract_document():
+    """
+    从文档提取内容
+
+    支持的文档类型：
+    - PDF：提取文本、表格、图片
+    - 图片：OCR 识别
+    - Word：提取文本和表格
+    - 文本文件：直接读取
+    """
+    try:
+        # 检查是否有上传文件
+        if 'file' not in request.files:
+            # 尝试从 base64 读取
+            data = request.get_json()
+            if not data or 'content' not in data:
+                return jsonify({"code": 40000, "message": "file or content is required"}), 400
+
+            content_base64 = data.get('content')
+            filename = data.get('filename', 'document')
+            content_type = data.get('content_type')
+            extract_tables = data.get('extract_tables', True)
+            extract_images = data.get('extract_images', False)
+            ocr_images = data.get('ocr_images', True)
+
+            # 解码 base64
+            try:
+                file_data = base64.b64decode(content_base64)
+            except Exception as e:
+                return jsonify({"code": 40000, "message": f"Invalid base64 content: {e}"}), 400
+
+            service = get_ocr_service()
+            result = service.extract_from_bytes(
+                data=file_data,
+                filename=filename,
+                content_type=content_type,
+                extract_tables=extract_tables,
+                extract_images=extract_images,
+                ocr_images=ocr_images,
+            )
+        else:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"code": 40000, "message": "No file selected"}), 400
+
+            extract_tables = request.form.get('extract_tables', 'true').lower() == 'true'
+            extract_images = request.form.get('extract_images', 'false').lower() == 'true'
+            ocr_images = request.form.get('ocr_images', 'true').lower() == 'true'
+
+            # 读取文件内容
+            file_data = file.read()
+
+            service = get_ocr_service()
+            result = service.extract_from_bytes(
+                data=file_data,
+                filename=file.filename,
+                content_type=file.content_type,
+                extract_tables=extract_tables,
+                extract_images=extract_images,
+                ocr_images=ocr_images,
+            )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"文档内容提取失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ocr/image", methods=["POST"])
+@require_auth
+def ocr_image():
+    """
+    图片 OCR 识别
+
+    支持上传文件或 base64 编码的图片
+    """
+    try:
+        engine = None
+
+        # 检查是否有上传文件
+        if 'file' not in request.files:
+            # 尝试从 base64 读取
+            data = request.get_json()
+            if not data or 'image' not in data:
+                return jsonify({"code": 40000, "message": "file or image is required"}), 400
+
+            image_base64 = data.get('image')
+            engine = data.get('engine')
+
+            # 解码 base64
+            try:
+                image_data = base64.b64decode(image_base64)
+            except Exception as e:
+                return jsonify({"code": 40000, "message": f"Invalid base64 image: {e}"}), 400
+
+            service = get_ocr_service()
+            results = service.ocr_image(image_data, engine=engine)
+        else:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"code": 40000, "message": "No file selected"}), 400
+
+            engine = request.form.get('engine')
+            image_data = file.read()
+
+            service = get_ocr_service()
+            results = service.ocr_image(image_data, engine=engine)
+
+        # 合并文本
+        full_text = " ".join([r.text for r in results])
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "text": full_text,
+                "results": [
+                    {
+                        "text": r.text,
+                        "confidence": r.confidence,
+                        "bounding_box": r.bounding_box,
+                        "block_type": r.block_type,
+                    }
+                    for r in results
+                ],
+                "total_items": len(results),
+                "average_confidence": sum(r.confidence for r in results) / len(results) if results else 0.0,
+            }
+        })
+    except Exception as e:
+        logger.error(f"图片 OCR 识别失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ocr/structured", methods=["POST"])
+@require_auth
+def ocr_extract_structured():
+    """
+    提取结构化数据
+
+    支持的类型：
+    - invoice: 发票信息提取
+    - id_card: 身份证信息提取
+    - contract: 合同关键信息提取
+    """
+    try:
+        # 首先提取文本
+        file_data = None
+        filename = None
+        content_type = None
+        data_type = "invoice"
+
+        if 'file' not in request.files:
+            # 尝试从 base64 读取
+            data = request.get_json()
+            if not data or 'content' not in data:
+                return jsonify({"code": 40000, "message": "file or content is required"}), 400
+
+            content_base64 = data.get('content')
+            filename = data.get('filename', 'document')
+            content_type = data.get('content_type')
+            data_type = data.get('data_type', 'invoice')
+
+            try:
+                file_data = base64.b64decode(content_base64)
+            except Exception as e:
+                return jsonify({"code": 40000, "message": f"Invalid base64 content: {e}"}), 400
+        else:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"code": 40000, "message": "No file selected"}), 400
+
+            filename = file.filename
+            content_type = file.content_type
+            data_type = request.form.get('data_type', 'invoice')
+            file_data = file.read()
+
+        # 提取文档内容
+        service = get_ocr_service()
+        extraction_result = service.extract_from_bytes(
+            data=file_data,
+            filename=filename,
+            content_type=content_type,
+            extract_tables=True,
+            ocr_images=True,
+        )
+
+        # 提取结构化数据
+        structured_data = service.extract_structured_data(
+            extraction_result.text,
+            data_type=data_type,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "data_type": data_type,
+                "structured_data": structured_data,
+                "raw_text": extraction_result.text[:2000] if len(extraction_result.text) > 2000 else extraction_result.text,
+                "full_text_length": len(extraction_result.text),
+                "table_count": len(extraction_result.tables),
+                "errors": extraction_result.errors,
+            }
+        })
+    except Exception as e:
+        logger.error(f"结构化数据提取失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ocr/status", methods=["GET"])
+@require_auth
+def ocr_get_status():
+    """
+    获取 OCR 服务状态
+
+    返回可用的 OCR 引擎和配置
+    """
+    try:
+        import os as ocr_os
+
+        # 检查可用的 OCR 引擎
+        engines = {
+            "tesseract": False,
+            "paddleocr": False,
+            "easyocr": False,
+        }
+
+        try:
+            import pytesseract
+            engines["tesseract"] = True
+        except ImportError:
+            pass
+
+        try:
+            from paddleocr import PaddleOCR
+            engines["paddleocr"] = True
+        except ImportError:
+            pass
+
+        try:
+            import easyocr
+            engines["easyocr"] = True
+        except ImportError:
+            pass
+
+        # 支持的文档类型
+        supported_types = [
+            {"type": "pdf", "description": "PDF 文档", "extensions": [".pdf"]},
+            {"type": "image", "description": "图片", "extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]},
+            {"type": "word", "description": "Word 文档", "extensions": [".doc", ".docx"]},
+            {"type": "text", "description": "文本文件", "extensions": [".txt", ".md", ".csv"]},
+        ]
+
+        # 支持的结构化数据类型
+        structured_types = [
+            {"type": "invoice", "description": "发票信息提取"},
+            {"type": "id_card", "description": "身份证信息提取"},
+            {"type": "contract", "description": "合同关键信息提取"},
+        ]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "enabled": any(engines.values()),
+                "default_engine": ocr_os.getenv("OCR_ENGINE", "auto"),
+                "languages": ocr_os.getenv("OCR_LANGUAGES", "chi_sim+eng"),
+                "available_engines": engines,
+                "supported_document_types": supported_types,
+                "supported_structured_types": structured_types,
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 OCR 状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ocr/batch", methods=["POST"])
+@require_auth
+def ocr_batch_extract():
+    """
+    批量文档提取
+
+    支持同时处理多个文档
+    """
+    try:
+        data = request.get_json()
+        if not data or 'documents' not in data:
+            return jsonify({"code": 40000, "message": "documents is required"}), 400
+
+        documents = data.get('documents', [])
+        if not documents:
+            return jsonify({"code": 40000, "message": "documents cannot be empty"}), 400
+
+        if len(documents) > 10:
+            return jsonify({"code": 40000, "message": "Maximum 10 documents allowed"}), 400
+
+        extract_tables = data.get('extract_tables', True)
+        ocr_images = data.get('ocr_images', True)
+
+        service = get_ocr_service()
+        results = []
+
+        for i, doc in enumerate(documents):
+            doc_result = {
+                "index": i,
+                "filename": doc.get('filename', f'document_{i}'),
+                "success": False,
+                "error": None,
+                "data": None,
+            }
+
+            try:
+                content_base64 = doc.get('content')
+                if not content_base64:
+                    doc_result["error"] = "content is required"
+                    results.append(doc_result)
+                    continue
+
+                file_data = base64.b64decode(content_base64)
+                extraction = service.extract_from_bytes(
+                    data=file_data,
+                    filename=doc.get('filename'),
+                    content_type=doc.get('content_type'),
+                    extract_tables=extract_tables,
+                    ocr_images=ocr_images,
+                )
+
+                doc_result["success"] = True
+                doc_result["data"] = extraction.to_dict()
+            except Exception as e:
+                doc_result["error"] = str(e)
+
+            results.append(doc_result)
+
+        success_count = sum(1 for r in results if r["success"])
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "total": len(results),
+                "success_count": success_count,
+                "failed_count": len(results) - success_count,
+                "results": results,
+            }
+        })
+    except Exception as e:
+        logger.error(f"批量文档提取失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 元数据驱动 Kettle 配置自动生成 API ====================
+
+# Kettle 配置生成器单例
+_kettle_generator = None
+
+
+def get_kettle_generator():
+    """获取 Kettle 配置生成器实例"""
+    global _kettle_generator
+    if _kettle_generator is None:
+        from src.kettle_generator import KettleConfigGenerator
+        _kettle_generator = KettleConfigGenerator()
+    return _kettle_generator
+
+
+@app.route("/api/v1/kettle/generate/transformation", methods=["POST"])
+@require_auth
+def kettle_generate_transformation():
+    """
+    从元数据生成 Kettle 转换配置
+
+    请求体：
+    {
+        "source": {
+            "connection": { "type": "mysql", "host": "...", "port": 3306, ... },
+            "table": "source_table",
+            "schema": "source_schema",
+            "columns": [{ "column_name": "...", "data_type": "..." }, ...]
+        },
+        "target": {
+            "connection": { "type": "mysql", "host": "...", "port": 3306, ... },
+            "table": "target_table",
+            "schema": "target_schema",
+            "columns": [{ "column_name": "...", "data_type": "..." }, ...]
+        },
+        "options": {
+            "name": "transformation_name",
+            "write_mode": "insert",
+            "batch_size": 1000,
+            "incremental_field": "",
+            "filter_condition": "",
+            "column_mappings": { "source_col": "target_col" }
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "Request body is required"}), 400
+
+        source = data.get("source", {})
+        target = data.get("target", {})
+        options = data.get("options", {})
+
+        # 验证必要参数
+        if not source.get("connection"):
+            return jsonify({"code": 40000, "message": "source.connection is required"}), 400
+        if not source.get("table"):
+            return jsonify({"code": 40000, "message": "source.table is required"}), 400
+        if not target.get("connection"):
+            return jsonify({"code": 40000, "message": "target.connection is required"}), 400
+        if not target.get("table"):
+            return jsonify({"code": 40000, "message": "target.table is required"}), 400
+
+        # 构建元数据
+        source_meta = {
+            "table_name": source.get("table"),
+            "schema": source.get("schema", ""),
+            "columns": source.get("columns", []),
+        }
+        target_meta = {
+            "table_name": target.get("table"),
+            "schema": target.get("schema", ""),
+            "columns": target.get("columns", source.get("columns", [])),
+        }
+
+        generator = get_kettle_generator()
+        transformation_name = options.get("name", f"sync_{source.get('table')}_to_{target.get('table')}")
+
+        xml_content = generator.generate_from_metadata(
+            source_table_meta=source_meta,
+            target_table_meta=target_meta,
+            source_connection=source.get("connection"),
+            target_connection=target.get("connection"),
+            transformation_name=transformation_name,
+            options=options,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "name": transformation_name,
+                "type": "transformation",
+                "format": "ktr",
+                "content": xml_content,
+                "source_table": source.get("table"),
+                "target_table": target.get("table"),
+                "column_count": len(source.get("columns", [])),
+            }
+        })
+    except Exception as e:
+        logger.error(f"生成 Kettle 转换配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/kettle/generate/job", methods=["POST"])
+@require_auth
+def kettle_generate_job():
+    """
+    生成 Kettle 作业配置
+
+    请求体：
+    {
+        "name": "job_name",
+        "description": "job description",
+        "transformations": ["/path/to/trans1.ktr", "/path/to/trans2.ktr"],
+        "sequential": true
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "Request body is required"}), 400
+
+        job_name = data.get("name")
+        if not job_name:
+            return jsonify({"code": 40000, "message": "name is required"}), 400
+
+        transformations = data.get("transformations", [])
+        if not transformations:
+            return jsonify({"code": 40000, "message": "transformations is required"}), 400
+
+        description = data.get("description", "")
+        sequential = data.get("sequential", True)
+
+        generator = get_kettle_generator()
+        xml_content = generator.generate_job(
+            job_name=job_name,
+            transformations=transformations,
+            description=description,
+            sequential=sequential,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "name": job_name,
+                "type": "job",
+                "format": "kjb",
+                "content": xml_content,
+                "transformation_count": len(transformations),
+                "sequential": sequential,
+            }
+        })
+    except Exception as e:
+        logger.error(f"生成 Kettle 作业配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/kettle/generate/from-etl-task/<task_id>", methods=["POST"])
+@require_auth
+def kettle_generate_from_etl_task(task_id: str):
+    """
+    从 ETL 任务配置生成 Kettle 转换
+
+    基于已有的 ETL 任务配置自动生成对应的 Kettle 转换文件
+    """
+    try:
+        db = get_db()
+
+        # 获取 ETL 任务
+        task = db.query(ETLTask).filter(ETLTask.task_id == task_id).first()
+        if not task:
+            return jsonify({"code": 40400, "message": "ETL task not found"}), 404
+
+        # 解析任务配置
+        source_config = task.source_config or {}
+        target_config = task.target_config or {}
+        options = request.get_json() or {}
+
+        # 获取源表元数据
+        source_columns = []
+        if source_config.get("table"):
+            # 尝试从元数据表获取列信息
+            table = db.query(MetadataTable).filter(
+                MetadataTable.table_name == source_config.get("table")
+            ).first()
+            if table:
+                columns = db.query(MetadataColumn).filter(
+                    MetadataColumn.table_id == table.id
+                ).all()
+                source_columns = [
+                    {"column_name": col.column_name, "data_type": col.data_type}
+                    for col in columns
+                ]
+
+        # 如果没有元数据，使用任务配置中的字段映射
+        if not source_columns and task.mapping_config:
+            mapping_config = task.mapping_config if isinstance(task.mapping_config, dict) else {}
+            field_mappings = mapping_config.get("field_mappings", [])
+            source_columns = [
+                {"column_name": m.get("source_field", ""), "data_type": m.get("source_type", "string")}
+                for m in field_mappings
+            ]
+
+        # 构建源连接配置
+        source_connection = {
+            "type": source_config.get("type", "mysql"),
+            "host": source_config.get("host", "localhost"),
+            "port": source_config.get("port", 3306),
+            "database": source_config.get("database", ""),
+            "username": source_config.get("username", ""),
+            "password": source_config.get("password", ""),
+            "schema": source_config.get("schema", ""),
+        }
+
+        # 构建目标连接配置
+        target_connection = {
+            "type": target_config.get("type", "mysql"),
+            "host": target_config.get("host", "localhost"),
+            "port": target_config.get("port", 3306),
+            "database": target_config.get("database", ""),
+            "username": target_config.get("username", ""),
+            "password": target_config.get("password", ""),
+            "schema": target_config.get("schema", ""),
+        }
+
+        # 构建元数据
+        source_meta = {
+            "table_name": source_config.get("table", "source"),
+            "schema": source_config.get("schema", ""),
+            "columns": source_columns,
+        }
+        target_meta = {
+            "table_name": target_config.get("table", "target"),
+            "schema": target_config.get("schema", ""),
+            "columns": source_columns,  # 默认同结构
+        }
+
+        # 生成配置
+        generator = get_kettle_generator()
+        transformation_name = options.get("name", f"etl_task_{task_id}")
+
+        xml_content = generator.generate_from_metadata(
+            source_table_meta=source_meta,
+            target_table_meta=target_meta,
+            source_connection=source_connection,
+            target_connection=target_connection,
+            transformation_name=transformation_name,
+            options={
+                "write_mode": target_config.get("write_mode", "insert"),
+                "batch_size": target_config.get("batch_size", 1000),
+                "incremental_field": task.incremental_field or "",
+                **options,
+            },
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task_id": task_id,
+                "task_name": task.name,
+                "name": transformation_name,
+                "type": "transformation",
+                "format": "ktr",
+                "content": xml_content,
+                "source_table": source_config.get("table"),
+                "target_table": target_config.get("table"),
+                "column_count": len(source_columns),
+            }
+        })
+    except Exception as e:
+        logger.error(f"从 ETL 任务生成 Kettle 配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/kettle/generate/from-metadata", methods=["POST"])
+@require_auth
+def kettle_generate_from_metadata_api():
+    """
+    从元数据表自动生成 Kettle 转换
+
+    请求体：
+    {
+        "source_table_id": "table_uuid",
+        "target_table_id": "table_uuid",
+        "source_connection": { "type": "mysql", "host": "...", ... },
+        "target_connection": { "type": "mysql", "host": "...", ... },
+        "options": { ... }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "Request body is required"}), 400
+
+        source_table_id = data.get("source_table_id")
+        target_table_id = data.get("target_table_id")
+
+        if not source_table_id:
+            return jsonify({"code": 40000, "message": "source_table_id is required"}), 400
+        if not target_table_id:
+            return jsonify({"code": 40000, "message": "target_table_id is required"}), 400
+
+        db = get_db()
+
+        # 获取源表元数据
+        source_table = db.query(MetadataTable).filter(
+            MetadataTable.table_id == source_table_id
+        ).first()
+        if not source_table:
+            return jsonify({"code": 40400, "message": "Source table not found"}), 404
+
+        source_columns = db.query(MetadataColumn).filter(
+            MetadataColumn.table_id == source_table.id
+        ).all()
+
+        # 获取目标表元数据
+        target_table = db.query(MetadataTable).filter(
+            MetadataTable.table_id == target_table_id
+        ).first()
+        if not target_table:
+            return jsonify({"code": 40400, "message": "Target table not found"}), 404
+
+        target_columns = db.query(MetadataColumn).filter(
+            MetadataColumn.table_id == target_table.id
+        ).all()
+
+        # 构建源连接配置
+        source_connection = data.get("source_connection", {})
+        if not source_connection:
+            # 尝试从数据源获取连接信息
+            if source_table.datasource_id:
+                datasource = db.query(DataSource).filter(
+                    DataSource.datasource_id == source_table.datasource_id
+                ).first()
+                if datasource:
+                    source_connection = datasource.connection_config or {}
+                    source_connection["type"] = datasource.type
+
+        target_connection = data.get("target_connection", {})
+        if not target_connection:
+            if target_table.datasource_id:
+                datasource = db.query(DataSource).filter(
+                    DataSource.datasource_id == target_table.datasource_id
+                ).first()
+                if datasource:
+                    target_connection = datasource.connection_config or {}
+                    target_connection["type"] = datasource.type
+
+        # 构建元数据
+        source_meta = {
+            "table_name": source_table.table_name,
+            "schema": source_table.schema_name or "",
+            "columns": [
+                {"column_name": col.column_name, "data_type": col.data_type}
+                for col in source_columns
+            ],
+        }
+        target_meta = {
+            "table_name": target_table.table_name,
+            "schema": target_table.schema_name or "",
+            "columns": [
+                {"column_name": col.column_name, "data_type": col.data_type}
+                for col in target_columns
+            ],
+        }
+
+        options = data.get("options", {})
+        transformation_name = options.get("name", f"sync_{source_table.table_name}_to_{target_table.table_name}")
+
+        generator = get_kettle_generator()
+        xml_content = generator.generate_from_metadata(
+            source_table_meta=source_meta,
+            target_table_meta=target_meta,
+            source_connection=source_connection,
+            target_connection=target_connection,
+            transformation_name=transformation_name,
+            options=options,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "name": transformation_name,
+                "type": "transformation",
+                "format": "ktr",
+                "content": xml_content,
+                "source_table": source_table.table_name,
+                "target_table": target_table.table_name,
+                "source_column_count": len(source_columns),
+                "target_column_count": len(target_columns),
+            }
+        })
+    except Exception as e:
+        logger.error(f"从元数据生成 Kettle 配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/kettle/types", methods=["GET"])
+@require_auth
+def kettle_get_types():
+    """
+    获取 Kettle 支持的类型和选项
+    """
+    try:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "source_types": [
+                    {"value": "mysql", "label": "MySQL"},
+                    {"value": "postgresql", "label": "PostgreSQL"},
+                    {"value": "oracle", "label": "Oracle"},
+                    {"value": "sqlserver", "label": "SQL Server"},
+                    {"value": "hive", "label": "Hive"},
+                    {"value": "csv", "label": "CSV 文件"},
+                    {"value": "excel", "label": "Excel 文件"},
+                    {"value": "json", "label": "JSON 文件"},
+                ],
+                "write_modes": [
+                    {"value": "insert", "label": "插入 (INSERT)"},
+                    {"value": "update", "label": "更新 (UPDATE)"},
+                    {"value": "upsert", "label": "更新或插入 (UPSERT)"},
+                    {"value": "truncate_insert", "label": "清空后插入 (TRUNCATE + INSERT)"},
+                ],
+                "data_types": [
+                    {"value": "String", "label": "字符串"},
+                    {"value": "Integer", "label": "整数"},
+                    {"value": "Number", "label": "数值"},
+                    {"value": "BigNumber", "label": "大数值"},
+                    {"value": "Date", "label": "日期"},
+                    {"value": "Boolean", "label": "布尔"},
+                    {"value": "Binary", "label": "二进制"},
+                ],
+                "log_levels": [
+                    {"value": "Nothing", "label": "无日志"},
+                    {"value": "Error", "label": "仅错误"},
+                    {"value": "Minimal", "label": "最小"},
+                    {"value": "Basic", "label": "基本"},
+                    {"value": "Detailed", "label": "详细"},
+                    {"value": "Debug", "label": "调试"},
+                    {"value": "Rowlevel", "label": "行级"},
+                ],
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 Kettle 类型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== AI 能力增强 API ====================
+
+@app.route("/api/v1/quality/recommend-cleaning", methods=["POST"])
+@require_jwt()
+def recommend_cleaning_rules():
+    """
+    AI 清洗规则推荐
+
+    基于数据质量问题自动推荐清洗规则
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from src.ai_cleaning_advisor import get_ai_cleaning_advisor, CleaningAdvisor
+
+        advisor = get_ai_cleaning_advisor()
+
+        # 获取质量告警（如果提供了 table_id）
+        table_id = data.get("table_id")
+        quality_alerts = data.get("quality_alerts", [])
+
+        if table_id and not quality_alerts:
+            # 从数据库获取该表的质量告警
+            alerts = db.query(QualityAlert).filter(
+                QualityAlert.table_name == table_id,
+                QualityAlert.status == "open"
+            ).limit(50).all()
+            quality_alerts = [a.to_dict() for a in alerts]
+
+        # 分析质量问题并推荐清洗规则
+        recommendations = advisor.analyze_quality_issues(quality_alerts)
+
+        # 可选：生成 Kettle 步骤配置
+        include_kettle = data.get("include_kettle_steps", False)
+        kettle_steps = []
+        if include_kettle and recommendations:
+            kettle_steps = advisor.generate_kettle_steps(recommendations)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "recommendations": [r.to_dict() for r in recommendations],
+                "total_count": len(recommendations),
+                "kettle_steps": kettle_steps if include_kettle else None,
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 清洗服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 清洗规则推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/data/impute-missing", methods=["POST"])
+@require_jwt()
+def impute_missing_values():
+    """
+    AI 缺失值填充
+
+    基于数据模式智能填充缺失值
+    """
+    data = request.json
+
+    try:
+        from src.ai_imputation import get_ai_imputation_service
+
+        service = get_ai_imputation_service()
+
+        # 获取参数
+        column_name = data.get("column_name")
+        column_type = data.get("column_type", "string")
+        sample_values = data.get("sample_values", [])
+        strategy = data.get("strategy")  # 可选，不指定则自动推荐
+        context = data.get("context", {})
+
+        if not column_name:
+            return jsonify({"code": 40001, "message": "column_name 不能为空"}), 400
+
+        # 分析缺失模式
+        analysis = service.analyze_missing_patterns(
+            data=sample_values,
+            column=column_name,
+            column_type=column_type,
+        )
+
+        # 推荐策略（如果未指定）
+        if not strategy:
+            strategy = service.recommend_imputation_strategy(analysis, context)
+
+        # 执行填充
+        result = service.impute_values(
+            data=sample_values,
+            column=column_name,
+            strategy=strategy,
+            column_type=column_type,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "analysis": analysis.to_dict() if hasattr(analysis, 'to_dict') else analysis,
+                "strategy": strategy.value if hasattr(strategy, 'value') else strategy,
+                "result": result.to_dict() if hasattr(result, 'to_dict') else result,
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 填充服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 缺失值填充失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/data/impute-preview", methods=["POST"])
+@require_jwt()
+def preview_imputation():
+    """
+    缺失值填充预览
+
+    预览填充结果而不实际修改数据
+    """
+    data = request.json
+
+    try:
+        from src.ai_imputation import get_ai_imputation_service
+
+        service = get_ai_imputation_service()
+
+        column_name = data.get("column_name")
+        column_type = data.get("column_type", "string")
+        sample_values = data.get("sample_values", [])
+        strategy = data.get("strategy")
+
+        if not column_name:
+            return jsonify({"code": 40001, "message": "column_name 不能为空"}), 400
+
+        # 预览填充
+        preview = service.preview_imputation(
+            data=sample_values,
+            column=column_name,
+            strategy=strategy,
+            column_type=column_type,
+            preview_count=data.get("preview_count", 10),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": preview
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 填充服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"缺失值填充预览失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/semantic-search", methods=["POST"])
+@require_jwt()
+def semantic_search_assets():
+    """
+    语义资产检索
+
+    基于自然语言查询数据资产
+    """
+    data = request.json
+
+    try:
+        from src.semantic_search import get_semantic_search_service
+
+        service = get_semantic_search_service()
+
+        query = data.get("query")
+        if not query:
+            return jsonify({"code": 40001, "message": "query 不能为空"}), 400
+
+        top_k = data.get("top_k", 10)
+        filters = data.get("filters")  # {"asset_type": "table", "database": "xxx"}
+        rerank = data.get("rerank", True)
+
+        # 执行搜索
+        results = service.search(
+            query=query,
+            top_k=top_k,
+            filters=filters,
+            rerank=rerank,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "query": query,
+                "results": [r.to_dict() for r in results],
+                "total_count": len(results),
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"语义检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"语义资产检索失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/semantic-search/index", methods=["POST"])
+@require_jwt()
+def index_asset_for_search():
+    """
+    索引数据资产用于语义检索
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from src.semantic_search import get_semantic_search_service, DataAsset, AssetType
+
+        service = get_semantic_search_service()
+
+        # 批量索引
+        if data.get("batch"):
+            table_ids = data.get("table_ids", [])
+            indexed_count = 0
+
+            for table_id in table_ids:
+                table = db.query(MetadataTable).filter(
+                    MetadataTable.table_id == table_id
+                ).first()
+
+                if table:
+                    columns = db.query(MetadataColumn).filter(
+                        MetadataColumn.table_id == table.id
+                    ).all()
+
+                    asset = DataAsset(
+                        id=table.table_id,
+                        name=table.table_name,
+                        asset_type=AssetType.TABLE,
+                        database=table.database_name or "",
+                        schema=table.schema_name or "",
+                        description=table.description or table.ai_description or "",
+                        columns=[{"name": c.column_name, "type": c.data_type} for c in columns],
+                        tags=table.tags.split(",") if table.tags else [],
+                        owner=table.owner or "",
+                    )
+
+                    if service.index_asset(asset):
+                        indexed_count += 1
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "indexed_count": indexed_count,
+                    "total_requested": len(table_ids),
+                }
+            })
+
+        # 单个索引
+        table_id = data.get("table_id")
+        if not table_id:
+            return jsonify({"code": 40001, "message": "table_id 不能为空"}), 400
+
+        table = db.query(MetadataTable).filter(
+            MetadataTable.table_id == table_id
+        ).first()
+
+        if not table:
+            return jsonify({"code": 40401, "message": "表不存在"}), 404
+
+        columns = db.query(MetadataColumn).filter(
+            MetadataColumn.table_id == table.id
+        ).all()
+
+        asset = DataAsset(
+            id=table.table_id,
+            name=table.table_name,
+            asset_type=AssetType.TABLE,
+            database=table.database_name or "",
+            schema=table.schema_name or "",
+            description=table.description or table.ai_description or "",
+            columns=[{"name": c.column_name, "type": c.data_type} for c in columns],
+            tags=table.tags.split(",") if table.tags else [],
+            owner=table.owner or "",
+        )
+
+        success = service.index_asset(asset)
+
+        return jsonify({
+            "code": 0,
+            "message": "success" if success else "索引失败",
+            "data": {
+                "indexed": success,
+                "table_id": table_id,
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"语义检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"资产索引失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/assets/semantic-search/stats", methods=["GET"])
+@require_jwt()
+def get_semantic_search_stats():
+    """
+    获取语义检索服务状态
+    """
+    try:
+        from src.semantic_search import get_semantic_search_service
+
+        service = get_semantic_search_service()
+        stats = service.get_stats()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"语义检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取语义检索状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/similar/<asset_id>", methods=["GET"])
+@require_jwt()
+def get_similar_assets(asset_id):
+    """
+    获取相似资产
+    """
+    try:
+        from src.semantic_search import get_semantic_search_service
+
+        service = get_semantic_search_service()
+        top_k = request.args.get("top_k", 5, type=int)
+
+        results = service.get_similar_assets(asset_id, top_k)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "asset_id": asset_id,
+                "similar_assets": [r.to_dict() for r in results],
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"语义检索服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取相似资产失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== Kettle AI 集成 API ====================
+
+@app.route("/api/v1/etl/inject-ai-rules", methods=["POST"])
+@require_jwt()
+def inject_ai_rules_to_kettle():
+    """
+    注入 AI 规则到 Kettle 转换
+
+    将 AI 清洗/填充规则自动转换为 Kettle 步骤
+    """
+    data = request.json
+
+    try:
+        from src.kettle_ai_integrator import get_kettle_ai_integrator
+
+        integrator = get_kettle_ai_integrator()
+
+        trans_xml = data.get("transformation_xml")
+        if not trans_xml:
+            return jsonify({"code": 40001, "message": "transformation_xml 不能为空"}), 400
+
+        cleaning_rules = data.get("cleaning_rules", [])
+        imputation_rules = data.get("imputation_rules", [])
+
+        # 注入 AI 步骤
+        modified_xml = integrator.inject_ai_steps_to_transformation(
+            trans_xml=trans_xml,
+            cleaning_rules=cleaning_rules,
+            imputation_rules=imputation_rules,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "modified_xml": modified_xml,
+                "injected_cleaning_rules": len(cleaning_rules),
+                "injected_imputation_rules": len(imputation_rules),
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"Kettle AI 集成服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"注入 AI 规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/etl/inject-masking", methods=["POST"])
+@require_jwt()
+def inject_masking_rules_to_kettle():
+    """
+    注入脱敏规则到 Kettle 转换
+
+    基于敏感字段标注自动注入脱敏步骤
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from src.kettle_ai_integrator import get_kettle_ai_integrator
+
+        integrator = get_kettle_ai_integrator()
+
+        trans_xml = data.get("transformation_xml")
+        if not trans_xml:
+            return jsonify({"code": 40001, "message": "transformation_xml 不能为空"}), 400
+
+        masking_rules = data.get("masking_rules", {})
+
+        # 如果未提供脱敏规则，尝试从表的敏感字段标注获取
+        if not masking_rules and data.get("table_id"):
+            table_id = data.get("table_id")
+            table = db.query(MetadataTable).filter(
+                MetadataTable.table_id == table_id
+            ).first()
+
+            if table:
+                columns = db.query(MetadataColumn).filter(
+                    MetadataColumn.table_id == table.id,
+                    MetadataColumn.sensitivity_level.in_(["confidential", "restricted"])
+                ).all()
+
+                for col in columns:
+                    sens_type = col.sensitivity_type or "pii"
+                    # 根据敏感类型选择脱敏策略
+                    strategy = "partial_mask"
+                    if sens_type == "credential":
+                        strategy = "full_mask"
+                    elif sens_type in ["pii", "phone"]:
+                        strategy = "phone_mask" if "phone" in col.column_name.lower() else "partial_mask"
+                    elif sens_type == "email":
+                        strategy = "email_mask"
+                    elif sens_type == "financial":
+                        strategy = "hash"
+
+                    masking_rules[col.column_name] = {
+                        "strategy": strategy,
+                        "sensitivity_type": sens_type,
+                    }
+
+        if not masking_rules:
+            return jsonify({
+                "code": 0,
+                "message": "无需脱敏",
+                "data": {
+                    "modified_xml": trans_xml,
+                    "masked_columns": [],
+                }
+            })
+
+        # 注入脱敏规则
+        modified_xml = integrator.inject_masking_rules(
+            trans_xml=trans_xml,
+            masking_config=masking_rules,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "modified_xml": modified_xml,
+                "masked_columns": list(masking_rules.keys()),
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"Kettle AI 集成服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"注入脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 元数据版本 API ====================
+
+@app.route("/api/v1/metadata/versions/<table_id>", methods=["GET"])
+@require_jwt()
+def get_metadata_versions(table_id):
+    """
+    获取元数据版本历史
+    """
+    db = next(get_db())
+
+    try:
+        from models.metadata_version import MetadataVersionModel
+
+        page = request.args.get("page", 1, type=int)
+        page_size = request.args.get("page_size", 20, type=int)
+        change_type = request.args.get("change_type")
+
+        query = db.query(MetadataVersionModel).filter(
+            MetadataVersionModel.table_id == table_id
+        )
+
+        if change_type:
+            query = query.filter(MetadataVersionModel.change_type == change_type)
+
+        total = query.count()
+        versions = query.order_by(
+            MetadataVersionModel.created_at.desc()
+        ).offset((page - 1) * page_size).limit(page_size).all()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "versions": [v.to_dict() for v in versions],
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total": total,
+                    "total_pages": (total + page_size - 1) // page_size,
+                }
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"元数据版本服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取元数据版本失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/<table_id>/<version_id>", methods=["GET"])
+@require_jwt()
+def get_metadata_version_detail(table_id, version_id):
+    """
+    获取元数据版本详情
+    """
+    db = next(get_db())
+
+    try:
+        from models.metadata_version import MetadataVersionModel
+
+        version = db.query(MetadataVersionModel).filter(
+            MetadataVersionModel.id == version_id,
+            MetadataVersionModel.table_id == table_id
+        ).first()
+
+        if not version:
+            return jsonify({"code": 40401, "message": "版本不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": version.to_dict()
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"元数据版本服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"获取元数据版本详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/<table_id>/compare", methods=["POST"])
+@require_jwt()
+def compare_metadata_versions(table_id):
+    """
+    比较两个元数据版本
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from src.metadata_sync import get_metadata_sync_service
+
+        service = get_metadata_sync_service()
+
+        version_id_1 = data.get("version_id_1")
+        version_id_2 = data.get("version_id_2")
+
+        if not version_id_1 or not version_id_2:
+            return jsonify({"code": 40001, "message": "需要提供两个版本 ID"}), 400
+
+        diff = service.compare_versions(db, version_id_1, version_id_2)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": diff
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"元数据同步服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"比较元数据版本失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/<table_id>/rollback", methods=["POST"])
+@require_jwt()
+def rollback_metadata_version(table_id):
+    """
+    回滚到指定元数据版本
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from src.metadata_sync import get_metadata_sync_service
+
+        service = get_metadata_sync_service()
+
+        version_id = data.get("version_id")
+        if not version_id:
+            return jsonify({"code": 40001, "message": "version_id 不能为空"}), 400
+
+        success = service.rollback_to_version(db, table_id, version_id)
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": "回滚成功",
+                "data": {
+                    "table_id": table_id,
+                    "rolled_back_to": version_id,
+                }
+            })
+        else:
+            return jsonify({"code": 50002, "message": "回滚失败"}), 500
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"元数据同步服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"元数据版本回滚失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
 
 
 @app.errorhandler(403)

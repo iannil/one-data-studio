@@ -9,6 +9,8 @@ from .role import Role, Permission, role_permissions
 from .group import UserGroup
 from .audit import AuditLog
 from .settings import SystemSettings, NotificationChannel, NotificationRule
+from .notification import NotificationTemplate, NotificationLog
+from .portal import UserNotification, UserTodo, UserActivityLog, Announcement
 
 __all__ = [
     # Base
@@ -37,4 +39,14 @@ __all__ = [
     'SystemSettings',
     'NotificationChannel',
     'NotificationRule',
+
+    # Notification
+    'NotificationTemplate',
+    'NotificationLog',
+
+    # Portal
+    'UserNotification',
+    'UserTodo',
+    'UserActivityLog',
+    'Announcement',
 ]

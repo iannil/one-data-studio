@@ -741,6 +741,291 @@ export async function getModelCosts(params?: { period?: string }): Promise<ApiRe
   return apiClient.get('/api/v1/cost/models', { params });
 }
 
+// ============= 门户 API 类型定义 =============
+
+// 用户通知类型
+export interface UserNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  content?: string;
+  summary?: string;
+  notification_type: 'info' | 'success' | 'warning' | 'error' | 'alert' | 'task' | 'approval' | 'system';
+  category?: 'message' | 'alert' | 'task' | 'announcement';
+  severity?: 'info' | 'low' | 'medium' | 'high' | 'critical';
+  action_url?: string;
+  action_label?: string;
+  action_type?: 'link' | 'api_call' | 'modal';
+  source_type?: string;
+  source_id?: string;
+  source_name?: string;
+  is_read: boolean;
+  read_at?: string;
+  is_archived: boolean;
+  extra_data?: Record<string, unknown>;
+  created_at: string;
+  sender_id?: string;
+  sender_name?: string;
+}
+
+export interface NotificationListParams {
+  category?: string;
+  is_read?: boolean;
+  type?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface NotificationListResponse {
+  notifications: UserNotification[];
+  total: number;
+  unread_count: number;
+  page: number;
+  page_size: number;
+}
+
+// 用户待办类型
+export interface UserTodo {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  todo_type: 'approval' | 'task' | 'reminder' | 'alert' | 'review';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  source_type?: string;
+  source_id?: string;
+  source_name?: string;
+  source_url?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
+  due_date?: string;
+  reminder_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  is_overdue: boolean;
+  extra_data?: Record<string, unknown>;
+  action_buttons?: Array<{ label: string; action: string; url?: string; style?: string }>;
+  created_at: string;
+  created_by?: string;
+  updated_at?: string;
+}
+
+export interface TodoListParams {
+  status?: string;
+  type?: string;
+  priority?: string;
+  include_completed?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export interface TodoListResponse {
+  todos: UserTodo[];
+  total: number;
+  pending_count: number;
+  overdue_count: number;
+  page: number;
+  page_size: number;
+}
+
+export interface TodoSummary {
+  by_status: Record<string, number>;
+  by_type: Record<string, number>;
+  overdue_count: number;
+  due_today: number;
+}
+
+// 系统公告类型
+export interface Announcement {
+  id: string;
+  title: string;
+  content?: string;
+  summary?: string;
+  announcement_type: 'info' | 'update' | 'maintenance' | 'warning' | 'urgent';
+  priority: number;
+  is_pinned: boolean;
+  is_popup: boolean;
+  target_roles: string[];
+  start_time?: string;
+  end_time?: string;
+  status: 'draft' | 'published' | 'archived';
+  publish_at?: string;
+  view_count: number;
+  is_active: boolean;
+  created_at: string;
+  created_by?: string;
+  updated_at?: string;
+}
+
+export interface AnnouncementListParams {
+  status?: string;
+  type?: string;
+  active_only?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export interface AnnouncementListResponse {
+  announcements: Announcement[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+// 门户仪表板类型
+export interface PortalDashboard {
+  stats: {
+    unread_notifications: number;
+    pending_todos: number;
+    overdue_todos: number;
+    today_activities: number;
+  };
+  recent_todos: UserTodo[];
+  recent_notifications: UserNotification[];
+  active_announcements: Announcement[];
+}
+
+// ============= 门户通知 API =============
+
+/**
+ * 获取用户通知列表
+ */
+export async function getUserNotifications(params?: NotificationListParams): Promise<ApiResponse<NotificationListResponse>> {
+  return apiClient.get('/api/v1/portal/notifications', { params });
+}
+
+/**
+ * 获取未读通知数量
+ */
+export async function getUnreadCount(): Promise<ApiResponse<{ unread_count: number; by_category: Record<string, number> }>> {
+  return apiClient.get('/api/v1/portal/notifications/unread-count');
+}
+
+/**
+ * 获取通知详情
+ */
+export async function getUserNotification(notificationId: string): Promise<ApiResponse<UserNotification>> {
+  return apiClient.get(`/api/v1/portal/notifications/${notificationId}`);
+}
+
+/**
+ * 标记通知为已读
+ */
+export async function markNotificationRead(notificationId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/portal/notifications/${notificationId}/read`);
+}
+
+/**
+ * 标记所有通知为已读
+ */
+export async function markAllNotificationsRead(category?: string): Promise<ApiResponse<{ marked_count: number }>> {
+  return apiClient.post('/api/v1/portal/notifications/read-all', { category });
+}
+
+/**
+ * 归档通知
+ */
+export async function archiveNotification(notificationId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/portal/notifications/${notificationId}/archive`);
+}
+
+/**
+ * 删除通知
+ */
+export async function deleteNotification(notificationId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/portal/notifications/${notificationId}`);
+}
+
+// ============= 门户待办 API =============
+
+/**
+ * 获取用户待办列表
+ */
+export async function getUserTodos(params?: TodoListParams): Promise<ApiResponse<TodoListResponse>> {
+  return apiClient.get('/api/v1/portal/todos', { params });
+}
+
+/**
+ * 获取待办统计摘要
+ */
+export async function getTodosSummary(): Promise<ApiResponse<TodoSummary>> {
+  return apiClient.get('/api/v1/portal/todos/summary');
+}
+
+/**
+ * 获取待办详情
+ */
+export async function getUserTodo(todoId: string): Promise<ApiResponse<UserTodo>> {
+  return apiClient.get(`/api/v1/portal/todos/${todoId}`);
+}
+
+/**
+ * 开始处理待办
+ */
+export async function startTodo(todoId: string): Promise<ApiResponse<UserTodo>> {
+  return apiClient.post(`/api/v1/portal/todos/${todoId}/start`);
+}
+
+/**
+ * 完成待办
+ */
+export async function completeTodo(todoId: string): Promise<ApiResponse<UserTodo>> {
+  return apiClient.post(`/api/v1/portal/todos/${todoId}/complete`);
+}
+
+/**
+ * 取消待办
+ */
+export async function cancelTodo(todoId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/portal/todos/${todoId}/cancel`);
+}
+
+// ============= 门户公告 API =============
+
+/**
+ * 获取公告列表
+ */
+export async function getAnnouncements(params?: AnnouncementListParams): Promise<ApiResponse<AnnouncementListResponse>> {
+  return apiClient.get('/api/v1/portal/announcements', { params });
+}
+
+/**
+ * 获取弹窗公告
+ */
+export async function getPopupAnnouncements(): Promise<ApiResponse<{ announcements: Announcement[] }>> {
+  return apiClient.get('/api/v1/portal/announcements/popup');
+}
+
+/**
+ * 获取公告详情
+ */
+export async function getAnnouncement(announcementId: string): Promise<ApiResponse<Announcement>> {
+  return apiClient.get(`/api/v1/portal/announcements/${announcementId}`);
+}
+
+// ============= 门户仪表板 API =============
+
+/**
+ * 获取门户仪表板数据
+ */
+export async function getPortalDashboard(): Promise<ApiResponse<PortalDashboard>> {
+  return apiClient.get('/api/v1/portal/dashboard');
+}
+
+/**
+ * 记录用户活动
+ */
+export async function logUserActivity(data: {
+  action: string;
+  action_label?: string;
+  resource_type?: string;
+  resource_id?: string;
+  resource_name?: string;
+  resource_url?: string;
+  duration_ms?: number;
+}): Promise<ApiResponse<{ log_id: string }>> {
+  return apiClient.post('/api/v1/portal/activities', data);
+}
+
 export default {
   // 用户管理
   getUsers,
@@ -807,4 +1092,30 @@ export default {
   getActiveUsers,
   setAuditLogRetention,
   getAuditLogRetention,
+
+  // 门户 - 通知
+  getUserNotifications,
+  getUnreadCount,
+  getUserNotification,
+  markNotificationRead,
+  markAllNotificationsRead,
+  archiveNotification,
+  deleteNotification,
+
+  // 门户 - 待办
+  getUserTodos,
+  getTodosSummary,
+  getUserTodo,
+  startTodo,
+  completeTodo,
+  cancelTodo,
+
+  // 门户 - 公告
+  getAnnouncements,
+  getPopupAnnouncements,
+  getAnnouncement,
+
+  // 门户 - 仪表板
+  getPortalDashboard,
+  logUserActivity,
 };

@@ -34,6 +34,8 @@ from models import (
     SessionLocal, init_db,
     User, Role, Permission, UserGroup,
     AuditLog, SystemSettings, NotificationChannel, NotificationRule,
+    NotificationTemplate, NotificationLog,
+    UserNotification, UserTodo, UserActivityLog, Announcement,
     user_roles, role_permissions
 )
 
@@ -1460,6 +1462,1512 @@ def delete_notification_rule(rule_id: str):
     return jsonify({
         "code": 0,
         "message": "success"
+    })
+
+
+# ==================== 通知模板 API ====================
+
+@app.route("/api/v1/notification-templates", methods=["GET"])
+@app.route("/api/v1/admin/notification-templates", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def list_notification_templates():
+    """列出通知模板"""
+    db = get_db_session()
+
+    event_type = request.args.get("event_type")
+    channel = request.args.get("channel")
+    enabled = request.args.get("enabled")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(NotificationTemplate)
+
+    if event_type:
+        query = query.filter(NotificationTemplate.event_type == event_type)
+    if channel:
+        query = query.filter(NotificationTemplate.channel == channel)
+    if enabled is not None:
+        query = query.filter(NotificationTemplate.is_enabled == (enabled.lower() == 'true'))
+
+    total = query.count()
+    templates = query.order_by(NotificationTemplate.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "templates": [t.to_dict() for t in templates],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/notification-templates", methods=["POST"])
+@app.route("/api/v1/admin/notification-templates", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_notification_template():
+    """创建通知模板"""
+    db = get_db_session()
+    data = request.json
+
+    name = data.get("name")
+    event_type = data.get("event_type")
+    channel = data.get("channel")
+
+    if not name or not event_type or not channel:
+        return jsonify({"code": 40001, "message": "模板名称、事件类型和渠道不能为空"}), 400
+
+    template = NotificationTemplate(
+        template_id=NotificationTemplate.generate_id(),
+        name=name,
+        description=data.get("description"),
+        event_type=event_type,
+        channel=channel,
+        subject_template=data.get("subject_template"),
+        body_template=data.get("body_template"),
+        is_enabled=data.get("is_enabled", True),
+        is_default=data.get("is_default", False),
+        created_by=getattr(g, 'username', 'system')
+    )
+
+    if data.get("variables"):
+        template.set_variables(data["variables"])
+
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+
+    log_audit("create", "system", template.template_id, f"notification_template: {name}")
+    logger.info(f"创建通知模板: {template.template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/notification-templates/<template_id>", methods=["GET"])
+@app.route("/api/v1/admin/notification-templates/<template_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_notification_template(template_id: str):
+    """获取通知模板详情"""
+    db = get_db_session()
+
+    template = db.query(NotificationTemplate).filter(NotificationTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    })
+
+
+@app.route("/api/v1/notification-templates/<template_id>", methods=["PUT"])
+@app.route("/api/v1/admin/notification-templates/<template_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def update_notification_template(template_id: str):
+    """更新通知模板"""
+    db = get_db_session()
+    data = request.json
+
+    template = db.query(NotificationTemplate).filter(NotificationTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    old_data = template.to_dict()
+
+    if data.get("name"):
+        template.name = data["name"]
+    if data.get("description") is not None:
+        template.description = data["description"]
+    if data.get("event_type"):
+        template.event_type = data["event_type"]
+    if data.get("channel"):
+        template.channel = data["channel"]
+    if data.get("subject_template") is not None:
+        template.subject_template = data["subject_template"]
+    if data.get("body_template") is not None:
+        template.body_template = data["body_template"]
+    if data.get("variables") is not None:
+        template.set_variables(data["variables"])
+    if data.get("is_enabled") is not None:
+        template.is_enabled = data["is_enabled"]
+    if data.get("is_default") is not None:
+        template.is_default = data["is_default"]
+
+    template.updated_by = getattr(g, 'username', 'system')
+
+    db.commit()
+    db.refresh(template)
+
+    log_audit("update", "system", template.template_id, template.name, changes={"before": old_data, "after": template.to_dict()})
+    logger.info(f"更新通知模板: {template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    })
+
+
+@app.route("/api/v1/notification-templates/<template_id>", methods=["DELETE"])
+@app.route("/api/v1/admin/notification-templates/<template_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.DELETE)
+def delete_notification_template(template_id: str):
+    """删除通知模板"""
+    db = get_db_session()
+
+    template = db.query(NotificationTemplate).filter(NotificationTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    template_name = template.name
+    db.delete(template)
+    db.commit()
+
+    log_audit("delete", "system", template_id, f"notification_template: {template_name}")
+    logger.info(f"删除通知模板: {template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+# ==================== 通知发送 API ====================
+
+@app.route("/api/v1/notifications/send", methods=["POST"])
+@app.route("/api/v1/admin/notifications/send", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def send_notification():
+    """发送通知"""
+    import asyncio
+    db = get_db_session()
+    data = request.json
+
+    channel = data.get("channel")
+    recipients = data.get("recipients", [])
+    subject = data.get("subject", "")
+    content = data.get("content", "")
+    template_id = data.get("template_id")
+    variables = data.get("variables", {})
+
+    if not channel:
+        return jsonify({"code": 40001, "message": "渠道类型不能为空"}), 400
+    if not recipients:
+        return jsonify({"code": 40001, "message": "接收方不能为空"}), 400
+
+    # 如果使用模板，先渲染模板
+    if template_id:
+        template = db.query(NotificationTemplate).filter(
+            NotificationTemplate.template_id == template_id,
+            NotificationTemplate.is_enabled == True
+        ).first()
+        if not template:
+            return jsonify({"code": 40401, "message": "模板不存在或未启用"}), 404
+        subject, content = template.render(variables)
+
+    if not content:
+        return jsonify({"code": 40001, "message": "通知内容不能为空"}), 400
+
+    # 导入通知服务
+    try:
+        sys.path.insert(0, '/app/shared')
+        from notification_service import get_notification_service
+        service = get_notification_service()
+    except ImportError:
+        return jsonify({"code": 50001, "message": "通知服务不可用"}), 500
+
+    # 发送通知并记录日志
+    results = []
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        for recipient in recipients:
+            # 创建日志记录
+            log_entry = NotificationLog(
+                log_id=NotificationLog.generate_id(),
+                channel=channel,
+                template_id=template_id,
+                subject=subject,
+                content=content,
+                recipient_type=data.get("recipient_type", "user"),
+                recipient_id=recipient,
+                recipient_address=data.get("addresses", {}).get(recipient, recipient),
+                status="sending",
+                source_type=data.get("source_type"),
+                source_id=data.get("source_id"),
+                event_type=data.get("event_type"),
+                created_by=getattr(g, 'username', 'system')
+            )
+            db.add(log_entry)
+            db.flush()
+
+            # 异步发送
+            extra = data.get("extra", {})
+            result = loop.run_until_complete(
+                service.send(channel, log_entry.recipient_address, subject, content, extra)
+            )
+
+            if result.success:
+                log_entry.mark_sent()
+                if result.response_data:
+                    log_entry.set_response_data(result.response_data)
+            else:
+                log_entry.mark_failed(result.error or "Unknown error", result.error_code)
+
+            results.append({
+                "recipient": recipient,
+                "success": result.success,
+                "log_id": log_entry.log_id,
+                "error": result.error
+            })
+
+        db.commit()
+    finally:
+        loop.close()
+
+    success_count = sum(1 for r in results if r["success"])
+    log_audit("create", "notification", None, f"Sent {success_count}/{len(results)} notifications via {channel}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "total": len(results),
+            "success_count": success_count,
+            "failed_count": len(results) - success_count,
+            "results": results
+        }
+    })
+
+
+@app.route("/api/v1/notifications/send-by-event", methods=["POST"])
+@app.route("/api/v1/admin/notifications/send-by-event", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def send_notification_by_event():
+    """基于事件类型发送通知"""
+    import asyncio
+    db = get_db_session()
+    data = request.json
+
+    event_type = data.get("event_type")
+    recipients = data.get("recipients", [])
+    variables = data.get("variables", {})
+    channels = data.get("channels")  # 可选，不指定则使用模板配置的渠道
+
+    if not event_type:
+        return jsonify({"code": 40001, "message": "事件类型不能为空"}), 400
+    if not recipients:
+        return jsonify({"code": 40001, "message": "接收方不能为空"}), 400
+
+    # 查找该事件类型的所有启用模板
+    query = db.query(NotificationTemplate).filter(
+        NotificationTemplate.event_type == event_type,
+        NotificationTemplate.is_enabled == True
+    )
+    if channels:
+        query = query.filter(NotificationTemplate.channel.in_(channels))
+
+    templates = query.all()
+    if not templates:
+        return jsonify({"code": 40401, "message": f"未找到事件类型 {event_type} 的通知模板"}), 404
+
+    # 导入通知服务
+    try:
+        sys.path.insert(0, '/app/shared')
+        from notification_service import get_notification_service
+        service = get_notification_service()
+    except ImportError:
+        return jsonify({"code": 50001, "message": "通知服务不可用"}), 500
+
+    results = []
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        for template in templates:
+            subject, content = template.render(variables)
+
+            for recipient in recipients:
+                log_entry = NotificationLog(
+                    log_id=NotificationLog.generate_id(),
+                    channel=template.channel,
+                    template_id=template.template_id,
+                    subject=subject,
+                    content=content,
+                    recipient_type=data.get("recipient_type", "user"),
+                    recipient_id=recipient,
+                    recipient_address=data.get("addresses", {}).get(recipient, recipient),
+                    status="sending",
+                    source_type=data.get("source_type"),
+                    source_id=data.get("source_id"),
+                    event_type=event_type,
+                    created_by=getattr(g, 'username', 'system')
+                )
+                db.add(log_entry)
+                db.flush()
+
+                extra = data.get("extra", {})
+                result = loop.run_until_complete(
+                    service.send(template.channel, log_entry.recipient_address, subject, content, extra)
+                )
+
+                if result.success:
+                    log_entry.mark_sent()
+                    if result.response_data:
+                        log_entry.set_response_data(result.response_data)
+                else:
+                    log_entry.mark_failed(result.error or "Unknown error", result.error_code)
+
+                results.append({
+                    "recipient": recipient,
+                    "channel": template.channel,
+                    "template_id": template.template_id,
+                    "success": result.success,
+                    "log_id": log_entry.log_id,
+                    "error": result.error
+                })
+
+        db.commit()
+    finally:
+        loop.close()
+
+    success_count = sum(1 for r in results if r["success"])
+    log_audit("create", "notification", None, f"Event {event_type}: sent {success_count}/{len(results)} notifications")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "event_type": event_type,
+            "total": len(results),
+            "success_count": success_count,
+            "failed_count": len(results) - success_count,
+            "results": results
+        }
+    })
+
+
+# ==================== 通知日志 API ====================
+
+@app.route("/api/v1/notification-logs", methods=["GET"])
+@app.route("/api/v1/admin/notification-logs", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def list_notification_logs():
+    """列出通知发送日志"""
+    db = get_db_session()
+
+    channel = request.args.get("channel")
+    status = request.args.get("status")
+    recipient_id = request.args.get("recipient_id")
+    event_type = request.args.get("event_type")
+    start_time = request.args.get("start_time")
+    end_time = request.args.get("end_time")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(NotificationLog)
+
+    if channel:
+        query = query.filter(NotificationLog.channel == channel)
+    if status:
+        query = query.filter(NotificationLog.status == status)
+    if recipient_id:
+        query = query.filter(NotificationLog.recipient_id == recipient_id)
+    if event_type:
+        query = query.filter(NotificationLog.event_type == event_type)
+    if start_time:
+        query = query.filter(NotificationLog.created_at >= start_time)
+    if end_time:
+        query = query.filter(NotificationLog.created_at <= end_time)
+
+    total = query.count()
+    logs = query.order_by(NotificationLog.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "logs": [log.to_dict() for log in logs],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/notification-logs/<log_id>", methods=["GET"])
+@app.route("/api/v1/admin/notification-logs/<log_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_notification_log(log_id: str):
+    """获取通知日志详情"""
+    db = get_db_session()
+
+    log = db.query(NotificationLog).filter(NotificationLog.log_id == log_id).first()
+    if not log:
+        return jsonify({"code": 40401, "message": "日志不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": log.to_dict()
+    })
+
+
+@app.route("/api/v1/notification-logs/<log_id>/retry", methods=["POST"])
+@app.route("/api/v1/admin/notification-logs/<log_id>/retry", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def retry_notification(log_id: str):
+    """重试发送通知"""
+    import asyncio
+    db = get_db_session()
+
+    log = db.query(NotificationLog).filter(NotificationLog.log_id == log_id).first()
+    if not log:
+        return jsonify({"code": 40401, "message": "日志不存在"}), 404
+
+    if not log.can_retry():
+        return jsonify({"code": 40002, "message": "该通知不可重试（已达最大重试次数或状态非失败）"}), 400
+
+    # 导入通知服务
+    try:
+        sys.path.insert(0, '/app/shared')
+        from notification_service import get_notification_service
+        service = get_notification_service()
+    except ImportError:
+        return jsonify({"code": 50001, "message": "通知服务不可用"}), 500
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        log.retry_count += 1
+        log.status = "sending"
+
+        result = loop.run_until_complete(
+            service.send(log.channel, log.recipient_address, log.subject, log.content, {})
+        )
+
+        if result.success:
+            log.mark_sent()
+            if result.response_data:
+                log.set_response_data(result.response_data)
+        else:
+            log.mark_failed(result.error or "Unknown error", result.error_code)
+
+        db.commit()
+    finally:
+        loop.close()
+
+    log_audit("update", "notification", log_id, f"Retry notification: {'success' if result.success else 'failed'}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "success": result.success,
+            "retry_count": log.retry_count,
+            "status": log.status,
+            "error": result.error if not result.success else None
+        }
+    })
+
+
+@app.route("/api/v1/notification-logs/statistics", methods=["GET"])
+@app.route("/api/v1/admin/notification-logs/statistics", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.READ)
+def get_notification_statistics():
+    """获取通知发送统计"""
+    db = get_db_session()
+
+    start_time = request.args.get("start_time")
+    end_time = request.args.get("end_time")
+
+    query = db.query(NotificationLog)
+    if start_time:
+        query = query.filter(NotificationLog.created_at >= start_time)
+    if end_time:
+        query = query.filter(NotificationLog.created_at <= end_time)
+
+    total = query.count()
+    sent_count = query.filter(NotificationLog.status.in_(['sent', 'delivered'])).count()
+    failed_count = query.filter(NotificationLog.status == 'failed').count()
+    pending_count = query.filter(NotificationLog.status.in_(['pending', 'sending'])).count()
+
+    # 按渠道统计
+    channel_stats = db.query(
+        NotificationLog.channel,
+        func.count(NotificationLog.id).label('count')
+    ).group_by(NotificationLog.channel).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "total": total,
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "pending_count": pending_count,
+            "success_rate": round(sent_count / total * 100, 2) if total > 0 else 0,
+            "channel_distribution": {ch: cnt for ch, cnt in channel_stats}
+        }
+    })
+
+
+# ==================== 门户 - 用户通知 API (P7.3 消息中心) ====================
+
+@app.route("/api/v1/portal/notifications", methods=["GET"])
+@require_jwt()
+def get_user_notifications():
+    """获取当前用户的通知列表"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    # 查询参数
+    category = request.args.get("category")
+    is_read = request.args.get("is_read")
+    notification_type = request.args.get("type")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_deleted == False
+    )
+
+    if category:
+        query = query.filter(UserNotification.category == category)
+    if is_read is not None:
+        query = query.filter(UserNotification.is_read == (is_read.lower() == 'true'))
+    if notification_type:
+        query = query.filter(UserNotification.notification_type == notification_type)
+
+    # 未归档的排前面
+    query = query.order_by(UserNotification.is_archived, UserNotification.created_at.desc())
+
+    total = query.count()
+    notifications = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    # 未读数量
+    unread_count = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_read == False,
+        UserNotification.is_deleted == False
+    ).count()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "notifications": [n.to_dict() for n in notifications],
+            "total": total,
+            "unread_count": unread_count,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/portal/notifications/unread-count", methods=["GET"])
+@require_jwt()
+def get_unread_count():
+    """获取未读通知数量"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    unread_count = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_read == False,
+        UserNotification.is_deleted == False
+    ).count()
+
+    # 按类别统计
+    category_counts = db.query(
+        UserNotification.category,
+        func.count(UserNotification.id).label('count')
+    ).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_read == False,
+        UserNotification.is_deleted == False
+    ).group_by(UserNotification.category).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "unread_count": unread_count,
+            "by_category": {cat: cnt for cat, cnt in category_counts if cat}
+        }
+    })
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>", methods=["GET"])
+@require_jwt()
+def get_user_notification(notification_id: str):
+    """获取单条通知详情"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    notification = db.query(UserNotification).filter(
+        UserNotification.notification_id == notification_id,
+        UserNotification.user_id == user_id,
+        UserNotification.is_deleted == False
+    ).first()
+
+    if not notification:
+        return jsonify({"code": 40401, "message": "通知不存在"}), 404
+
+    # 自动标记为已读
+    if not notification.is_read:
+        notification.mark_read()
+        db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": notification.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>/read", methods=["POST"])
+@require_jwt()
+def mark_notification_read(notification_id: str):
+    """标记通知为已读"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    notification = db.query(UserNotification).filter(
+        UserNotification.notification_id == notification_id,
+        UserNotification.user_id == user_id
+    ).first()
+
+    if not notification:
+        return jsonify({"code": 40401, "message": "通知不存在"}), 404
+
+    notification.mark_read()
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/portal/notifications/read-all", methods=["POST"])
+@require_jwt()
+def mark_all_notifications_read():
+    """标记所有通知为已读"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+    data = request.json or {}
+
+    category = data.get("category")
+
+    query = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_read == False
+    )
+
+    if category:
+        query = query.filter(UserNotification.category == category)
+
+    count = query.update({
+        UserNotification.is_read: True,
+        UserNotification.read_at: datetime.utcnow()
+    })
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"marked_count": count}
+    })
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>/archive", methods=["POST"])
+@require_jwt()
+def archive_notification(notification_id: str):
+    """归档通知"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    notification = db.query(UserNotification).filter(
+        UserNotification.notification_id == notification_id,
+        UserNotification.user_id == user_id
+    ).first()
+
+    if not notification:
+        return jsonify({"code": 40401, "message": "通知不存在"}), 404
+
+    notification.mark_archived()
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/portal/notifications/<notification_id>", methods=["DELETE"])
+@require_jwt()
+def delete_user_notification(notification_id: str):
+    """删除通知（软删除）"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    notification = db.query(UserNotification).filter(
+        UserNotification.notification_id == notification_id,
+        UserNotification.user_id == user_id
+    ).first()
+
+    if not notification:
+        return jsonify({"code": 40401, "message": "通知不存在"}), 404
+
+    notification.is_deleted = True
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/portal/notifications", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_user_notification():
+    """创建用户通知（管理员或系统调用）"""
+    db = get_db_session()
+    data = request.json
+
+    user_ids = data.get("user_ids", [])
+    if not user_ids:
+        return jsonify({"code": 40001, "message": "接收用户不能为空"}), 400
+
+    title = data.get("title")
+    if not title:
+        return jsonify({"code": 40001, "message": "标题不能为空"}), 400
+
+    created_notifications = []
+    for user_id in user_ids:
+        notification = UserNotification(
+            notification_id=UserNotification.generate_id(),
+            user_id=user_id,
+            title=title,
+            content=data.get("content"),
+            summary=data.get("summary") or (title[:100] if title else ""),
+            notification_type=data.get("notification_type", "info"),
+            category=data.get("category", "message"),
+            severity=data.get("severity", "info"),
+            action_url=data.get("action_url"),
+            action_label=data.get("action_label"),
+            action_type=data.get("action_type"),
+            source_type=data.get("source_type"),
+            source_id=data.get("source_id"),
+            source_name=data.get("source_name"),
+            sender_id=getattr(g, 'user_id', 'system'),
+            sender_name=getattr(g, 'username', 'system')
+        )
+
+        if data.get("extra_data"):
+            notification.set_extra_data(data["extra_data"])
+
+        db.add(notification)
+        created_notifications.append(notification)
+
+    db.commit()
+
+    logger.info(f"创建用户通知: {len(created_notifications)} 条")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "created_count": len(created_notifications),
+            "notification_ids": [n.notification_id for n in created_notifications]
+        }
+    }), 201
+
+
+# ==================== 门户 - 待办事项 API (P7.3 工作台) ====================
+
+@app.route("/api/v1/portal/todos", methods=["GET"])
+@require_jwt()
+def get_user_todos():
+    """获取当前用户的待办事项"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    # 查询参数
+    status = request.args.get("status")
+    todo_type = request.args.get("type")
+    priority = request.args.get("priority")
+    include_completed = request.args.get("include_completed", "false").lower() == "true"
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(UserTodo).filter(UserTodo.user_id == user_id)
+
+    if status:
+        query = query.filter(UserTodo.status == status)
+    elif not include_completed:
+        query = query.filter(UserTodo.status.in_(['pending', 'in_progress']))
+    if todo_type:
+        query = query.filter(UserTodo.todo_type == todo_type)
+    if priority:
+        query = query.filter(UserTodo.priority == priority)
+
+    # 按优先级和截止日期排序
+    priority_order = {'urgent': 0, 'high': 1, 'medium': 2, 'low': 3}
+    query = query.order_by(
+        UserTodo.status.asc(),  # pending 和 in_progress 在前
+        UserTodo.due_date.asc().nullslast(),
+        UserTodo.created_at.desc()
+    )
+
+    total = query.count()
+    todos = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    # 统计
+    pending_count = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending'
+    ).count()
+
+    overdue_count = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending',
+        UserTodo.due_date < datetime.utcnow()
+    ).count()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "todos": [t.to_dict() for t in todos],
+            "total": total,
+            "pending_count": pending_count,
+            "overdue_count": overdue_count,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/portal/todos/summary", methods=["GET"])
+@require_jwt()
+def get_todos_summary():
+    """获取待办事项统计摘要"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    # 各状态数量
+    status_counts = db.query(
+        UserTodo.status,
+        func.count(UserTodo.id).label('count')
+    ).filter(UserTodo.user_id == user_id).group_by(UserTodo.status).all()
+
+    # 各类型数量
+    type_counts = db.query(
+        UserTodo.todo_type,
+        func.count(UserTodo.id).label('count')
+    ).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status.in_(['pending', 'in_progress'])
+    ).group_by(UserTodo.todo_type).all()
+
+    # 过期数量
+    overdue_count = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending',
+        UserTodo.due_date < datetime.utcnow()
+    ).count()
+
+    # 今日到期
+    today_end = datetime.utcnow().replace(hour=23, minute=59, second=59)
+    due_today = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending',
+        UserTodo.due_date <= today_end,
+        UserTodo.due_date >= datetime.utcnow()
+    ).count()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "by_status": {s: c for s, c in status_counts},
+            "by_type": {t: c for t, c in type_counts if t},
+            "overdue_count": overdue_count,
+            "due_today": due_today
+        }
+    })
+
+
+@app.route("/api/v1/portal/todos/<todo_id>", methods=["GET"])
+@require_jwt()
+def get_user_todo(todo_id: str):
+    """获取单条待办详情"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    todo = db.query(UserTodo).filter(
+        UserTodo.todo_id == todo_id,
+        UserTodo.user_id == user_id
+    ).first()
+
+    if not todo:
+        return jsonify({"code": 40401, "message": "待办不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": todo.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/todos/<todo_id>/start", methods=["POST"])
+@require_jwt()
+def start_todo(todo_id: str):
+    """开始处理待办"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    todo = db.query(UserTodo).filter(
+        UserTodo.todo_id == todo_id,
+        UserTodo.user_id == user_id
+    ).first()
+
+    if not todo:
+        return jsonify({"code": 40401, "message": "待办不存在"}), 404
+
+    todo.start()
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": todo.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/todos/<todo_id>/complete", methods=["POST"])
+@require_jwt()
+def complete_todo(todo_id: str):
+    """完成待办"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    todo = db.query(UserTodo).filter(
+        UserTodo.todo_id == todo_id,
+        UserTodo.user_id == user_id
+    ).first()
+
+    if not todo:
+        return jsonify({"code": 40401, "message": "待办不存在"}), 404
+
+    todo.complete()
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": todo.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/todos/<todo_id>/cancel", methods=["POST"])
+@require_jwt()
+def cancel_todo(todo_id: str):
+    """取消待办"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    todo = db.query(UserTodo).filter(
+        UserTodo.todo_id == todo_id,
+        UserTodo.user_id == user_id
+    ).first()
+
+    if not todo:
+        return jsonify({"code": 40401, "message": "待办不存在"}), 404
+
+    todo.cancel()
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/portal/todos", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_user_todo():
+    """创建用户待办（管理员或系统调用）"""
+    db = get_db_session()
+    data = request.json
+
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"code": 40001, "message": "用户ID不能为空"}), 400
+
+    title = data.get("title")
+    if not title:
+        return jsonify({"code": 40001, "message": "标题不能为空"}), 400
+
+    todo = UserTodo(
+        todo_id=UserTodo.generate_id(),
+        user_id=user_id,
+        title=title,
+        description=data.get("description"),
+        todo_type=data.get("todo_type", "task"),
+        priority=data.get("priority", "medium"),
+        source_type=data.get("source_type"),
+        source_id=data.get("source_id"),
+        source_name=data.get("source_name"),
+        source_url=data.get("source_url"),
+        created_by=getattr(g, 'username', 'system')
+    )
+
+    if data.get("due_date"):
+        todo.due_date = datetime.fromisoformat(data["due_date"].replace('Z', '+00:00'))
+    if data.get("reminder_at"):
+        todo.reminder_at = datetime.fromisoformat(data["reminder_at"].replace('Z', '+00:00'))
+
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
+
+    logger.info(f"创建用户待办: {todo.todo_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": todo.to_dict()
+    }), 201
+
+
+# ==================== 门户 - 公告管理 API ====================
+
+@app.route("/api/v1/portal/announcements", methods=["GET"])
+@require_jwt(optional=True)
+def get_announcements():
+    """获取公告列表"""
+    db = get_db_session()
+
+    # 查询参数
+    status = request.args.get("status")
+    announcement_type = request.args.get("type")
+    active_only = request.args.get("active_only", "true").lower() == "true"
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(Announcement)
+
+    if status:
+        query = query.filter(Announcement.status == status)
+    elif active_only:
+        query = query.filter(Announcement.status == 'published')
+
+    if announcement_type:
+        query = query.filter(Announcement.announcement_type == announcement_type)
+
+    # 按置顶和优先级排序
+    query = query.order_by(
+        Announcement.is_pinned.desc(),
+        Announcement.priority.desc(),
+        Announcement.publish_at.desc()
+    )
+
+    total = query.count()
+    announcements = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    # 过滤掉已过期的
+    if active_only:
+        now = datetime.utcnow()
+        announcements = [a for a in announcements if a.is_active()]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "announcements": [a.to_dict() for a in announcements],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/portal/announcements/popup", methods=["GET"])
+@require_jwt()
+def get_popup_announcements():
+    """获取需要弹窗显示的公告"""
+    db = get_db_session()
+
+    announcements = db.query(Announcement).filter(
+        Announcement.status == 'published',
+        Announcement.is_popup == True
+    ).order_by(Announcement.priority.desc()).all()
+
+    # 过滤已过期的
+    active_announcements = [a for a in announcements if a.is_active()]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "announcements": [a.to_dict() for a in active_announcements]
+        }
+    })
+
+
+@app.route("/api/v1/portal/announcements/<announcement_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_announcement(announcement_id: str):
+    """获取公告详情"""
+    db = get_db_session()
+
+    announcement = db.query(Announcement).filter(
+        Announcement.announcement_id == announcement_id
+    ).first()
+
+    if not announcement:
+        return jsonify({"code": 40401, "message": "公告不存在"}), 404
+
+    # 增加浏览次数
+    announcement.view_count = (announcement.view_count or 0) + 1
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": announcement.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/announcements", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_announcement():
+    """创建公告"""
+    db = get_db_session()
+    data = request.json
+
+    title = data.get("title")
+    if not title:
+        return jsonify({"code": 40001, "message": "公告标题不能为空"}), 400
+
+    announcement = Announcement(
+        announcement_id=Announcement.generate_id(),
+        title=title,
+        content=data.get("content"),
+        summary=data.get("summary"),
+        announcement_type=data.get("announcement_type", "info"),
+        priority=data.get("priority", 0),
+        is_pinned=data.get("is_pinned", False),
+        is_popup=data.get("is_popup", False),
+        status=data.get("status", "draft"),
+        created_by=getattr(g, 'username', 'system')
+    )
+
+    if data.get("target_roles"):
+        announcement.target_roles = json.dumps(data["target_roles"])
+    if data.get("start_time"):
+        announcement.start_time = datetime.fromisoformat(data["start_time"].replace('Z', '+00:00'))
+    if data.get("end_time"):
+        announcement.end_time = datetime.fromisoformat(data["end_time"].replace('Z', '+00:00'))
+    if data.get("status") == "published":
+        announcement.publish_at = datetime.utcnow()
+
+    db.add(announcement)
+    db.commit()
+    db.refresh(announcement)
+
+    log_audit("create", "announcement", announcement.announcement_id, announcement.title)
+    logger.info(f"创建公告: {announcement.announcement_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": announcement.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/portal/announcements/<announcement_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def update_announcement(announcement_id: str):
+    """更新公告"""
+    db = get_db_session()
+    data = request.json
+
+    announcement = db.query(Announcement).filter(
+        Announcement.announcement_id == announcement_id
+    ).first()
+
+    if not announcement:
+        return jsonify({"code": 40401, "message": "公告不存在"}), 404
+
+    old_data = announcement.to_dict()
+
+    if data.get("title"):
+        announcement.title = data["title"]
+    if data.get("content") is not None:
+        announcement.content = data["content"]
+    if data.get("summary") is not None:
+        announcement.summary = data["summary"]
+    if data.get("announcement_type"):
+        announcement.announcement_type = data["announcement_type"]
+    if data.get("priority") is not None:
+        announcement.priority = data["priority"]
+    if data.get("is_pinned") is not None:
+        announcement.is_pinned = data["is_pinned"]
+    if data.get("is_popup") is not None:
+        announcement.is_popup = data["is_popup"]
+    if data.get("status"):
+        old_status = announcement.status
+        announcement.status = data["status"]
+        if data["status"] == "published" and old_status != "published":
+            announcement.publish_at = datetime.utcnow()
+    if data.get("target_roles") is not None:
+        announcement.target_roles = json.dumps(data["target_roles"]) if data["target_roles"] else None
+    if data.get("start_time"):
+        announcement.start_time = datetime.fromisoformat(data["start_time"].replace('Z', '+00:00'))
+    if data.get("end_time"):
+        announcement.end_time = datetime.fromisoformat(data["end_time"].replace('Z', '+00:00'))
+
+    announcement.updated_by = getattr(g, 'username', 'system')
+
+    db.commit()
+    db.refresh(announcement)
+
+    log_audit("update", "announcement", announcement.announcement_id, announcement.title,
+              changes={"before": old_data, "after": announcement.to_dict()})
+    logger.info(f"更新公告: {announcement_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": announcement.to_dict()
+    })
+
+
+@app.route("/api/v1/portal/announcements/<announcement_id>", methods=["DELETE"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.DELETE)
+def delete_announcement(announcement_id: str):
+    """删除公告"""
+    db = get_db_session()
+
+    announcement = db.query(Announcement).filter(
+        Announcement.announcement_id == announcement_id
+    ).first()
+
+    if not announcement:
+        return jsonify({"code": 40401, "message": "公告不存在"}), 404
+
+    title = announcement.title
+    db.delete(announcement)
+    db.commit()
+
+    log_audit("delete", "announcement", announcement_id, title)
+    logger.info(f"删除公告: {announcement_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+# ==================== 门户 - 用户活动日志 API ====================
+
+@app.route("/api/v1/portal/activities", methods=["GET"])
+@require_jwt()
+def get_user_activities():
+    """获取当前用户的活动记录"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    # 查询参数
+    action = request.args.get("action")
+    resource_type = request.args.get("resource_type")
+    start_time = request.args.get("start_time")
+    end_time = request.args.get("end_time")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(UserActivityLog).filter(UserActivityLog.user_id == user_id)
+
+    if action:
+        query = query.filter(UserActivityLog.action == action)
+    if resource_type:
+        query = query.filter(UserActivityLog.resource_type == resource_type)
+    if start_time:
+        query = query.filter(UserActivityLog.created_at >= start_time)
+    if end_time:
+        query = query.filter(UserActivityLog.created_at <= end_time)
+
+    query = query.order_by(UserActivityLog.created_at.desc())
+
+    total = query.count()
+    activities = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "activities": [a.to_dict() for a in activities],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/portal/activities", methods=["POST"])
+@require_jwt()
+def log_user_activity():
+    """记录用户活动（前端调用）"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+    username = getattr(g, 'username', None)
+    data = request.json
+
+    action = data.get("action")
+    if not action:
+        return jsonify({"code": 40001, "message": "操作类型不能为空"}), 400
+
+    activity = UserActivityLog(
+        log_id=UserActivityLog.generate_id(),
+        user_id=user_id,
+        username=username,
+        action=action,
+        action_label=data.get("action_label"),
+        resource_type=data.get("resource_type"),
+        resource_id=data.get("resource_id"),
+        resource_name=data.get("resource_name"),
+        resource_url=data.get("resource_url"),
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', '')[:512],
+        duration_ms=data.get("duration_ms")
+    )
+
+    db.add(activity)
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"log_id": activity.log_id}
+    }), 201
+
+
+# ==================== 门户统计 API ====================
+
+@app.route("/api/v1/portal/dashboard", methods=["GET"])
+@require_jwt()
+def get_portal_dashboard():
+    """获取门户仪表板数据"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    if not user_id:
+        return jsonify({"code": 40101, "message": "未登录"}), 401
+
+    # 未读通知数
+    unread_notifications = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_read == False,
+        UserNotification.is_deleted == False
+    ).count()
+
+    # 待办统计
+    pending_todos = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending'
+    ).count()
+
+    overdue_todos = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status == 'pending',
+        UserTodo.due_date < datetime.utcnow()
+    ).count()
+
+    # 今日活动数
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_activities = db.query(UserActivityLog).filter(
+        UserActivityLog.user_id == user_id,
+        UserActivityLog.created_at >= today_start
+    ).count()
+
+    # 最近待办
+    recent_todos = db.query(UserTodo).filter(
+        UserTodo.user_id == user_id,
+        UserTodo.status.in_(['pending', 'in_progress'])
+    ).order_by(UserTodo.due_date.asc().nullslast()).limit(5).all()
+
+    # 最近通知
+    recent_notifications = db.query(UserNotification).filter(
+        UserNotification.user_id == user_id,
+        UserNotification.is_deleted == False
+    ).order_by(UserNotification.created_at.desc()).limit(5).all()
+
+    # 活跃公告
+    active_announcements = db.query(Announcement).filter(
+        Announcement.status == 'published',
+        Announcement.is_pinned == True
+    ).order_by(Announcement.priority.desc()).limit(3).all()
+    active_announcements = [a for a in active_announcements if a.is_active()]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "stats": {
+                "unread_notifications": unread_notifications,
+                "pending_todos": pending_todos,
+                "overdue_todos": overdue_todos,
+                "today_activities": today_activities
+            },
+            "recent_todos": [t.to_dict() for t in recent_todos],
+            "recent_notifications": [n.to_dict() for n in recent_notifications],
+            "active_announcements": [a.to_dict() for a in active_announcements]
+        }
     })
 
 

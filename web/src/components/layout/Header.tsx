@@ -6,9 +6,12 @@ import {
   LogoutOutlined,
   SettingOutlined,
   GlobalOutlined,
+  BellOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supportedLanguages, changeLanguage } from '../../i18n';
 
@@ -23,6 +26,7 @@ interface HeaderProps {
 function Header({ collapsed, onToggle }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   // 语言菜单
   const languageMenuItems: MenuProps['items'] = supportedLanguages.map((lang) => ({
@@ -42,7 +46,7 @@ function Header({ collapsed, onToggle }: HeaderProps) {
   // 用户菜单
   const userMenuItems: MenuProps['items'] = [
     {
-      key: 'profile',
+      key: 'profile-info',
       icon: <UserOutlined />,
       label: (
         <Space>
@@ -60,20 +64,22 @@ function Header({ collapsed, onToggle }: HeaderProps) {
       type: 'divider',
     },
     {
-      key: 'roles',
-      label: (
-        <Space direction="vertical" size={0}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {t('user.role')}
-          </Text>
-          {user?.roles?.map((role) => (
-            <span key={role} style={{ fontSize: 12 }}>
-              {role}
-            </span>
-          ))}
-        </Space>
-      ),
-      disabled: true,
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      onClick: () => navigate('/portal/profile'),
+    },
+    {
+      key: 'notifications',
+      icon: <BellOutlined />,
+      label: '消息通知',
+      onClick: () => navigate('/portal/notifications'),
+    },
+    {
+      key: 'todos',
+      icon: <ClockCircleOutlined />,
+      label: '待办事项',
+      onClick: () => navigate('/portal/todos'),
     },
     {
       type: 'divider',
@@ -82,6 +88,7 @@ function Header({ collapsed, onToggle }: HeaderProps) {
       key: 'settings',
       icon: <SettingOutlined />,
       label: t('user.settings'),
+      onClick: () => navigate('/admin/settings'),
     },
     {
       key: 'logout',

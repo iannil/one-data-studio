@@ -83,6 +83,14 @@ class MetadataColumn(Base):
     description = Column(Text, comment='列描述')
     position = Column(Integer, nullable=False, comment='列位置')
 
+    # AI 增强字段 (Phase 1 P1)
+    ai_description = Column(Text, comment='AI 生成的列描述')
+    sensitivity_level = Column(String(32), comment='敏感级别: public, internal, confidential, restricted')
+    sensitivity_type = Column(String(64), comment='敏感类型: pii, financial, health, credential, none')
+    semantic_tags = Column(Text, comment='语义标签，JSON 数组格式')
+    ai_annotated_at = Column(TIMESTAMP, comment='AI 标注时间')
+    ai_confidence = Column(Integer, comment='AI 标注置信度 0-100')
+
     # 外键
     __table_args__ = (
         ForeignKeyConstraint(['database_name'], ['metadata_databases.database_name'], ondelete='CASCADE'),
@@ -94,9 +102,17 @@ class MetadataColumn(Base):
 
     def to_dict(self):
         """转换为字典"""
+        import json
         return {
             "name": self.column_name,
             "type": self.column_type,
             "nullable": self.is_nullable,
             "description": self.description or "",
+            # AI 增强字段
+            "ai_description": self.ai_description,
+            "sensitivity_level": self.sensitivity_level,
+            "sensitivity_type": self.sensitivity_type,
+            "semantic_tags": json.loads(self.semantic_tags) if self.semantic_tags else [],
+            "ai_annotated_at": self.ai_annotated_at.isoformat() if self.ai_annotated_at else None,
+            "ai_confidence": self.ai_confidence,
         }

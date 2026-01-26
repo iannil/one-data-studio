@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+# 是否启用模拟 embedding（仅用于开发测试）
+EMBEDDING_MOCK_ENABLED = os.getenv("EMBEDDING_MOCK_ENABLED", "false").lower() in ("true", "1", "yes")
 
 
 def _make_embedding_request(api_url: str, text: str, model: str) -> requests.Response:
@@ -67,6 +69,9 @@ class EmbeddingService:
 
         Returns:
             向量列表
+
+        Raises:
+            RuntimeError: 当 API 调用失败且未启用模拟模式时
         """
         if not text or not text.strip():
             return [0.0] * EMBEDDING_DIM
@@ -79,14 +84,22 @@ class EmbeddingService:
                 embedding = result.get("data", [{}])[0].get("embedding", [])
                 return embedding
             else:
-                logger.warning(f"Embedding API error: {response.status_code}, falling back to mock embedding. "
-                              "Check EMBEDDING_API_URL configuration.")
-                return self._mock_embedding(text)
+                error_msg = f"Embedding API error: {response.status_code}"
+                if EMBEDDING_MOCK_ENABLED:
+                    logger.warning(f"{error_msg}, falling back to mock embedding (EMBEDDING_MOCK_ENABLED=true)")
+                    return self._mock_embedding(text)
+                else:
+                    logger.error(f"{error_msg}. Set EMBEDDING_MOCK_ENABLED=true for development or configure a valid embedding service.")
+                    raise RuntimeError(f"{error_msg}. Embedding service unavailable.")
 
-        except Exception as e:
-            logger.warning(f"Embedding generation failed: {e}, falling back to mock embedding. "
-                          "Set a valid EMBEDDING_API_URL environment variable for production use.")
-            return self._mock_embedding(text)
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Embedding API connection failed: {e}"
+            if EMBEDDING_MOCK_ENABLED:
+                logger.warning(f"{error_msg}, falling back to mock embedding (EMBEDDING_MOCK_ENABLED=true)")
+                return self._mock_embedding(text)
+            else:
+                logger.error(f"{error_msg}. Set EMBEDDING_MOCK_ENABLED=true for development or configure a valid embedding service.")
+                raise RuntimeError(f"Embedding service unavailable: {e}")
 
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """

@@ -191,6 +191,11 @@ export interface ColumnInfo {
     column: string;
   };
   enum?: string[];
+  // AI 增强字段
+  ai_description?: string;
+  sensitivity_level?: 'public' | 'internal' | 'confidential' | 'restricted';
+  sensitivity_type?: 'pii' | 'financial' | 'health' | 'credential' | 'none';
+  semantic_tags?: string[];
 }
 
 export interface TableDetail {
@@ -519,6 +524,108 @@ export async function deleteDataSource(sourceId: string): Promise<ApiResponse<vo
  */
 export async function testDataSource(data: TestConnectionRequest): Promise<ApiResponse<TestConnectionResponse>> {
   return apiClient.post('/api/v1/datasources/test', data);
+}
+
+// ============= Kettle ETL 引擎类型 =============
+
+export type KettleLogLevel = 'Nothing' | 'Error' | 'Minimal' | 'Basic' | 'Detailed' | 'Debug' | 'Rowlevel';
+
+export interface KettleStatus {
+  enabled: boolean;
+  kettle_installed: boolean;
+  kettle_home?: string;
+  java_version?: string;
+  message?: string;
+}
+
+export interface KettleExecutionResult {
+  success: boolean;
+  exit_code: number;
+  stdout?: string;
+  stderr?: string;
+  error_message?: string;
+  duration_seconds: number;
+  rows_read: number;
+  rows_written: number;
+  rows_error: number;
+  started_at: string;
+  finished_at: string;
+}
+
+export interface KettleJobRequest {
+  job_path?: string;
+  repository?: string;
+  directory?: string;
+  job_name?: string;
+  params?: Record<string, string>;
+  log_level?: KettleLogLevel;
+}
+
+export interface KettleTransformationRequest {
+  trans_path?: string;
+  repository?: string;
+  directory?: string;
+  trans_name?: string;
+  params?: Record<string, string>;
+  log_level?: KettleLogLevel;
+}
+
+export interface KettleValidateResponse {
+  is_valid: boolean;
+  error?: string;
+  file_path: string;
+}
+
+// ============= Kettle ETL API =============
+
+/**
+ * 获取 Kettle 服务状态
+ */
+export async function getKettleStatus(): Promise<ApiResponse<KettleStatus>> {
+  return apiClient.get('/api/v1/kettle/status');
+}
+
+/**
+ * 执行 Kettle 作业 (.kjb)
+ */
+export async function executeKettleJob(data: KettleJobRequest): Promise<ApiResponse<KettleExecutionResult>> {
+  return apiClient.post('/api/v1/kettle/jobs/execute', data);
+}
+
+/**
+ * 执行 Kettle 转换 (.ktr)
+ */
+export async function executeKettleTransformation(data: KettleTransformationRequest): Promise<ApiResponse<KettleExecutionResult>> {
+  return apiClient.post('/api/v1/kettle/transformations/execute', data);
+}
+
+/**
+ * 验证 Kettle 作业文件 (.kjb)
+ */
+export async function validateKettleJob(jobPath: string): Promise<ApiResponse<KettleValidateResponse>> {
+  return apiClient.post('/api/v1/kettle/validate/job', { job_path: jobPath });
+}
+
+/**
+ * 验证 Kettle 转换文件 (.ktr)
+ */
+export async function validateKettleTransformation(transPath: string): Promise<ApiResponse<KettleValidateResponse>> {
+  return apiClient.post('/api/v1/kettle/validate/transformation', { trans_path: transPath });
+}
+
+/**
+ * 使用 Kettle 引擎执行 ETL 任务
+ */
+export async function executeETLTaskWithKettle(taskId: string, triggeredBy?: string): Promise<ApiResponse<{
+  task_id: string;
+  log_id: string;
+  status: string;
+  execution_result: KettleExecutionResult;
+}>> {
+  return apiClient.post(`/api/v1/etl/tasks/${taskId}/execute-kettle`, {
+    trigger_type: 'manual',
+    triggered_by: triggeredBy,
+  });
 }
 
 // ============= ETL API =============
@@ -1161,6 +1268,285 @@ export async function getLineagePath(sourceTable: string, targetTable: string): 
 }>> {
   return apiClient.get('/api/v1/lineage/path', {
     params: { source: sourceTable, target: targetTable },
+  });
+}
+
+// ============= AI 增强类型定义 =============
+
+export interface AIAnnotation {
+  column_name: string;
+  ai_description?: string;
+  sensitivity_level: 'public' | 'internal' | 'confidential' | 'restricted';
+  sensitivity_type: 'pii' | 'financial' | 'health' | 'credential' | 'none';
+  semantic_tags: string[];
+  ai_confidence: number;
+  annotated_at?: string;
+}
+
+export interface SensitivityReport {
+  total_columns: number;
+  sensitive_columns: number;
+  by_type: {
+    pii: string[];
+    financial: string[];
+    health: string[];
+    credential: string[];
+  };
+  by_level: {
+    public: number;
+    internal: number;
+    confidential: number;
+    restricted: number;
+  };
+  high_risk_columns: Array<{
+    column: string;
+    type: string;
+    level: string;
+  }>;
+}
+
+export interface SQLLineageResult {
+  sql: string;
+  source_tables: string[];
+  target_table?: string;
+  column_mappings: Array<{
+    source_column: string;
+    target_column: string;
+    transformation?: string;
+  }>;
+  lineage_edges: Array<{
+    source: string;
+    target: string;
+    relation_type: string;
+    confidence: number;
+  }>;
+  confidence: number;
+  parse_method: 'rule' | 'ai_enhanced';
+  errors: string[];
+}
+
+export interface AIImpactAnalysis {
+  source_node: {
+    node_type?: string;
+    name?: string;
+    full_name?: string;
+  };
+  change_type: string;
+  impact_summary?: string;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  recommendations: string[];
+  affected_nodes: Array<{
+    node: {
+      node_id?: string;
+      name?: string;
+      full_name?: string;
+      node_type?: string;
+    };
+    impact_level: number;
+  }>;
+}
+
+// ============= AI 增强 API =============
+
+/**
+ * 标注单个列的元数据
+ */
+export async function annotateColumn(
+  database: string,
+  table: string,
+  column: string,
+  options?: { use_llm?: boolean }
+): Promise<ApiResponse<AIAnnotation>> {
+  return apiClient.post('/api/v1/metadata/annotate/column', {
+    database,
+    table,
+    column,
+    use_llm: options?.use_llm ?? true,
+  });
+}
+
+/**
+ * 批量标注表的所有列
+ */
+export async function annotateTable(
+  database: string,
+  table: string,
+  options?: { use_llm?: boolean; save?: boolean }
+): Promise<ApiResponse<{ annotations: AIAnnotation[] }>> {
+  return apiClient.post('/api/v1/metadata/annotate/table', {
+    database,
+    table,
+    use_llm: options?.use_llm ?? true,
+    save: options?.save ?? true,
+  });
+}
+
+/**
+ * 获取表的敏感字段报告
+ */
+export async function getSensitivityReport(
+  database: string,
+  table: string
+): Promise<ApiResponse<SensitivityReport>> {
+  return apiClient.post('/api/v1/metadata/sensitivity-report', {
+    database,
+    table,
+  });
+}
+
+/**
+ * 获取 AI 标注服务状态
+ */
+export async function getAIAnnotationStatus(): Promise<ApiResponse<{
+  enabled: boolean;
+  model: string;
+  api_url: string;
+}>> {
+  return apiClient.get('/api/v1/ai/annotation-status');
+}
+
+/**
+ * 解析 SQL 提取血缘关系
+ */
+export async function parseSQLLineage(
+  sql: string,
+  options?: { source_database?: string; use_ai?: boolean }
+): Promise<ApiResponse<SQLLineageResult>> {
+  return apiClient.post('/api/v1/lineage/parse-sql', {
+    sql,
+    source_database: options?.source_database,
+    use_ai: options?.use_ai ?? true,
+  });
+}
+
+/**
+ * 分析 ETL 任务血缘
+ */
+export async function analyzeETLLineage(
+  etlConfig: {
+    source_type?: string;
+    source_config?: Record<string, unknown>;
+    source_query?: string;
+    target_type?: string;
+    target_config?: Record<string, unknown>;
+    target_table?: string;
+  },
+  taskType?: string
+): Promise<ApiResponse<{
+  source_nodes: Array<{
+    node_type: string;
+    full_name: string;
+    database_name?: string;
+    table_name?: string;
+  }>;
+  target_nodes: Array<{
+    node_type: string;
+    full_name: string;
+    database_name?: string;
+    table_name?: string;
+  }>;
+  lineage_edges: Array<{
+    source: string;
+    target: string;
+    relation_type: string;
+    confidence: number;
+  }>;
+  confidence: number;
+}>> {
+  return apiClient.post('/api/v1/lineage/analyze-etl', {
+    etl_config: etlConfig,
+    task_type: taskType || 'batch',
+  });
+}
+
+/**
+ * AI 驱动的影响分析
+ */
+export async function getAIImpactAnalysis(
+  nodeInfo: {
+    node_type?: string;
+    name?: string;
+    full_name?: string;
+  },
+  options?: {
+    downstream_nodes?: Array<{
+      node_id?: string;
+      name?: string;
+      full_name?: string;
+      node_type?: string;
+      impact_level?: number;
+    }>;
+    change_type?: 'schema_change' | 'data_change' | 'deletion' | 'rename';
+  }
+): Promise<ApiResponse<AIImpactAnalysis>> {
+  return apiClient.post('/api/v1/lineage/ai-impact-analysis', {
+    node_info: nodeInfo,
+    downstream_nodes: options?.downstream_nodes || [],
+    change_type: options?.change_type || 'schema_change',
+  });
+}
+
+/**
+ * 推断列级血缘关系
+ */
+export async function inferColumnLineage(
+  sql: string,
+  options?: {
+    source_columns?: Record<string, string[]>;
+    use_ai?: boolean;
+  }
+): Promise<ApiResponse<{
+  column_mappings: Array<{
+    source_table: string;
+    source_column: string;
+    target_column: string;
+    transformation?: string;
+  }>;
+  total: number;
+}>> {
+  return apiClient.post('/api/v1/lineage/infer-columns', {
+    sql,
+    source_columns: options?.source_columns || {},
+    use_ai: options?.use_ai ?? true,
+  });
+}
+
+/**
+ * 从 SQL 生成并保存血缘关系
+ */
+export async function generateLineageFromSQL(
+  sql: string,
+  options?: {
+    source_database?: string;
+    job_id?: string;
+    job_type?: string;
+    save?: boolean;
+  }
+): Promise<ApiResponse<{
+  parse_result: SQLLineageResult;
+  nodes: Array<{
+    node_id: string;
+    node_type: string;
+    name: string;
+    full_name: string;
+    database_name?: string;
+    table_name?: string;
+  }>;
+  edges: Array<{
+    edge_id: string;
+    source_node_id: string;
+    target_node_id: string;
+    relation_type: string;
+    confidence: number;
+  }>;
+  saved?: { nodes: number; edges: number };
+}>> {
+  return apiClient.post('/api/v1/lineage/generate-from-sql', {
+    sql,
+    source_database: options?.source_database,
+    job_id: options?.job_id,
+    job_type: options?.job_type || 'sql',
+    save: options?.save ?? false,
   });
 }
 
@@ -2617,6 +3003,854 @@ export async function getMetricCategories(): Promise<ApiResponse<{
   return apiClient.get('/api/v1/metrics/categories/stats');
 }
 
+// ==================== 数据脱敏 API ====================
+
+export interface MaskingRule {
+  rule_id: string;
+  name: string;
+  strategy: string;
+  sensitivity_type: string;
+  sensitivity_level: string;
+  column_pattern?: string;
+  data_type?: string;
+  options: Record<string, any>;
+  enabled: boolean;
+  priority: number;
+}
+
+export interface MaskingStrategy {
+  value: string;
+  label: string;
+}
+
+export interface MaskingConfig {
+  rule_id: string | null;
+  rule_name?: string;
+  strategy: string | null;
+  sensitivity_type?: string;
+  sensitivity_level?: string;
+  options?: Record<string, any>;
+  no_masking?: boolean;
+}
+
+export interface ColumnMeta {
+  name?: string;
+  column_name?: string;
+  sensitivity_type?: string;
+  sensitivity_level?: string;
+  data_type?: string;
+}
+
+/**
+ * 获取数据脱敏预览
+ */
+export async function getMaskingPreview(
+  sampleData: Record<string, any>[],
+  columnMetadata?: Record<string, { sensitivity_type?: string; sensitivity_level?: string; data_type?: string }>,
+  maxRows?: number
+): Promise<ApiResponse<{
+  original: Record<string, any>[];
+  masked: Record<string, any>[];
+  config: Record<string, MaskingConfig>;
+}>> {
+  return apiClient.post('/api/v1/masking/preview', {
+    sample_data: sampleData,
+    column_metadata: columnMetadata,
+    max_rows: maxRows,
+  });
+}
+
+/**
+ * 执行数据脱敏
+ */
+export async function executeMasking(
+  data: Record<string, any>[],
+  columnMetadata?: Record<string, { sensitivity_type?: string; sensitivity_level?: string; data_type?: string }>
+): Promise<ApiResponse<{
+  masked_data: Record<string, any>[];
+  record_count: number;
+}>> {
+  return apiClient.post('/api/v1/masking/execute', {
+    data,
+    column_metadata: columnMetadata,
+  });
+}
+
+/**
+ * 生成脱敏配置
+ */
+export async function generateMaskingConfig(
+  columns: ColumnMeta[]
+): Promise<ApiResponse<Record<string, MaskingConfig>>> {
+  return apiClient.post('/api/v1/masking/config', { columns });
+}
+
+/**
+ * 获取可用的脱敏规则列表
+ */
+export async function getMaskingRules(): Promise<ApiResponse<{
+  rules: MaskingRule[];
+  strategies: MaskingStrategy[];
+}>> {
+  return apiClient.get('/api/v1/masking/rules');
+}
+
+/**
+ * 对单个值进行脱敏
+ */
+export async function maskSingleValue(params: {
+  value: any;
+  column_name?: string;
+  sensitivity_type?: string;
+  sensitivity_level?: string;
+  strategy?: string;
+  options?: Record<string, any>;
+}): Promise<ApiResponse<{
+  original: any;
+  masked: any;
+}>> {
+  return apiClient.post('/api/v1/masking/value', params);
+}
+
+/**
+ * 根据表元数据自动脱敏数据
+ */
+export async function maskTableData(
+  tableId: string,
+  data: Record<string, any>[]
+): Promise<ApiResponse<{
+  table_id: string;
+  table_name: string;
+  masked_data: Record<string, any>[];
+  record_count: number;
+  columns_with_masking: string[];
+}>> {
+  return apiClient.post(`/api/v1/masking/table/${tableId}`, { data });
+}
+
+// ==================== 非结构化文档 OCR API ====================
+
+/**
+ * OCR 识别结果项
+ */
+export interface OCRResultItem {
+  text: string;
+  confidence: number;
+  bounding_box?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  block_type: string;
+}
+
+/**
+ * 表格数据
+ */
+export interface ExtractedTableData {
+  page: number;
+  rows: number;
+  cols: number;
+  data: string[][];
+  markdown: string;
+}
+
+/**
+ * 文档提取结果
+ */
+export interface DocumentExtractionData {
+  text: string;
+  page_count: number;
+  pages: Array<{
+    page_number: number;
+    text: string;
+  }>;
+  tables: ExtractedTableData[];
+  image_count: number;
+  images: Array<{
+    page_number: number;
+    image_index: number;
+    format: string;
+    size?: { width: number; height: number };
+  }>;
+  metadata: Record<string, any>;
+  char_count: number;
+  errors: string[];
+}
+
+/**
+ * OCR 服务状态
+ */
+export interface OCRServiceStatus {
+  enabled: boolean;
+  default_engine: string;
+  languages: string;
+  available_engines: {
+    tesseract: boolean;
+    paddleocr: boolean;
+    easyocr: boolean;
+  };
+  supported_document_types: Array<{
+    type: string;
+    description: string;
+    extensions: string[];
+  }>;
+  supported_structured_types: Array<{
+    type: string;
+    description: string;
+  }>;
+}
+
+/**
+ * 结构化数据提取结果
+ */
+export interface StructuredExtractionResult {
+  data_type: string;
+  structured_data: Record<string, any>;
+  raw_text: string;
+  full_text_length: number;
+  table_count: number;
+  errors: string[];
+}
+
+/**
+ * 批量 OCR 文档项
+ */
+export interface BatchOCRDocument {
+  content: string; // base64 编码
+  filename?: string;
+  content_type?: string;
+}
+
+/**
+ * 批量 OCR 结果项
+ */
+export interface BatchOCRResultItem {
+  index: number;
+  filename: string;
+  success: boolean;
+  error: string | null;
+  data: DocumentExtractionData | null;
+}
+
+/**
+ * 从文档提取内容
+ * 支持 PDF、图片、Word、文本文件
+ */
+export async function extractDocument(
+  options: {
+    file?: File;
+    content?: string; // base64 编码
+    filename?: string;
+    content_type?: string;
+    extract_tables?: boolean;
+    extract_images?: boolean;
+    ocr_images?: boolean;
+  }
+): Promise<ApiResponse<DocumentExtractionData>> {
+  if (options.file) {
+    const formData = new FormData();
+    formData.append('file', options.file);
+    if (options.extract_tables !== undefined) {
+      formData.append('extract_tables', String(options.extract_tables));
+    }
+    if (options.extract_images !== undefined) {
+      formData.append('extract_images', String(options.extract_images));
+    }
+    if (options.ocr_images !== undefined) {
+      formData.append('ocr_images', String(options.ocr_images));
+    }
+    return apiClient.post('/api/v1/ocr/extract', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } else {
+    return apiClient.post('/api/v1/ocr/extract', {
+      content: options.content,
+      filename: options.filename,
+      content_type: options.content_type,
+      extract_tables: options.extract_tables ?? true,
+      extract_images: options.extract_images ?? false,
+      ocr_images: options.ocr_images ?? true,
+    });
+  }
+}
+
+/**
+ * 图片 OCR 识别
+ */
+export async function ocrImage(
+  options: {
+    file?: File;
+    image?: string; // base64 编码
+    engine?: 'tesseract' | 'paddleocr' | 'easyocr' | 'auto';
+  }
+): Promise<ApiResponse<{
+  text: string;
+  results: OCRResultItem[];
+  total_items: number;
+  average_confidence: number;
+}>> {
+  if (options.file) {
+    const formData = new FormData();
+    formData.append('file', options.file);
+    if (options.engine) {
+      formData.append('engine', options.engine);
+    }
+    return apiClient.post('/api/v1/ocr/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } else {
+    return apiClient.post('/api/v1/ocr/image', {
+      image: options.image,
+      engine: options.engine,
+    });
+  }
+}
+
+/**
+ * 提取结构化数据（发票、身份证、合同等）
+ */
+export async function extractStructuredData(
+  options: {
+    file?: File;
+    content?: string; // base64 编码
+    filename?: string;
+    content_type?: string;
+    data_type: 'invoice' | 'id_card' | 'contract';
+  }
+): Promise<ApiResponse<StructuredExtractionResult>> {
+  if (options.file) {
+    const formData = new FormData();
+    formData.append('file', options.file);
+    formData.append('data_type', options.data_type);
+    return apiClient.post('/api/v1/ocr/structured', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } else {
+    return apiClient.post('/api/v1/ocr/structured', {
+      content: options.content,
+      filename: options.filename,
+      content_type: options.content_type,
+      data_type: options.data_type,
+    });
+  }
+}
+
+/**
+ * 获取 OCR 服务状态
+ */
+export async function getOCRStatus(): Promise<ApiResponse<OCRServiceStatus>> {
+  return apiClient.get('/api/v1/ocr/status');
+}
+
+/**
+ * 批量文档提取
+ */
+export async function batchExtractDocuments(
+  documents: BatchOCRDocument[],
+  options?: {
+    extract_tables?: boolean;
+    ocr_images?: boolean;
+  }
+): Promise<ApiResponse<{
+  total: number;
+  success_count: number;
+  failed_count: number;
+  results: BatchOCRResultItem[];
+}>> {
+  return apiClient.post('/api/v1/ocr/batch', {
+    documents,
+    extract_tables: options?.extract_tables ?? true,
+    ocr_images: options?.ocr_images ?? true,
+  });
+}
+
+/**
+ * 将文件转换为 base64 字符串
+ */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      // 移除 data:xxx;base64, 前缀
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+// ==================== 元数据驱动 Kettle 配置自动生成 API ====================
+
+/**
+ * Kettle 生成的配置结果
+ */
+export interface KettleGenerationResult {
+  name: string;
+  type: 'transformation' | 'job';
+  format: 'ktr' | 'kjb';
+  content: string;
+  source_table?: string;
+  target_table?: string;
+  column_count?: number;
+  source_column_count?: number;
+  target_column_count?: number;
+  transformation_count?: number;
+  sequential?: boolean;
+  task_id?: string;
+  task_name?: string;
+}
+
+/**
+ * Kettle 数据源类型选项
+ */
+export interface KettleTypeOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Kettle 支持的类型配置
+ */
+export interface KettleTypesConfig {
+  source_types: KettleTypeOption[];
+  write_modes: KettleTypeOption[];
+  data_types: KettleTypeOption[];
+  log_levels: KettleTypeOption[];
+}
+
+/**
+ * Kettle 连接配置
+ */
+export interface KettleConnectionConfig {
+  type: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  username?: string;
+  password?: string;
+  schema?: string;
+  name?: string;
+}
+
+/**
+ * Kettle 列配置
+ */
+export interface KettleColumnConfig {
+  column_name: string;
+  data_type: string;
+}
+
+/**
+ * 生成 Kettle 转换配置
+ */
+export async function generateKettleTransformation(params: {
+  source: {
+    connection: KettleConnectionConfig;
+    table: string;
+    schema?: string;
+    columns: KettleColumnConfig[];
+  };
+  target: {
+    connection: KettleConnectionConfig;
+    table: string;
+    schema?: string;
+    columns?: KettleColumnConfig[];
+  };
+  options?: {
+    name?: string;
+    write_mode?: 'insert' | 'update' | 'upsert' | 'truncate_insert';
+    batch_size?: number;
+    commit_size?: number;
+    incremental_field?: string;
+    filter_condition?: string;
+    column_mappings?: Record<string, string>;
+    primary_keys?: string[];
+  };
+}): Promise<ApiResponse<KettleGenerationResult>> {
+  return apiClient.post('/api/v1/kettle/generate/transformation', params);
+}
+
+/**
+ * 生成 Kettle 作业配置
+ */
+export async function generateKettleJob(params: {
+  name: string;
+  description?: string;
+  transformations: string[];
+  sequential?: boolean;
+}): Promise<ApiResponse<KettleGenerationResult>> {
+  return apiClient.post('/api/v1/kettle/generate/job', params);
+}
+
+/**
+ * 从 ETL 任务生成 Kettle 配置
+ */
+export async function generateKettleFromETLTask(
+  taskId: string,
+  options?: {
+    name?: string;
+    write_mode?: string;
+    batch_size?: number;
+  }
+): Promise<ApiResponse<KettleGenerationResult>> {
+  return apiClient.post(`/api/v1/kettle/generate/from-etl-task/${taskId}`, options || {});
+}
+
+/**
+ * 从元数据表生成 Kettle 配置
+ */
+export async function generateKettleFromMetadata(params: {
+  source_table_id: string;
+  target_table_id: string;
+  source_connection?: KettleConnectionConfig;
+  target_connection?: KettleConnectionConfig;
+  options?: {
+    name?: string;
+    write_mode?: string;
+    batch_size?: number;
+    column_mappings?: Record<string, string>;
+  };
+}): Promise<ApiResponse<KettleGenerationResult>> {
+  return apiClient.post('/api/v1/kettle/generate/from-metadata', params);
+}
+
+/**
+ * 获取 Kettle 支持的类型和选项
+ */
+export async function getKettleTypes(): Promise<ApiResponse<KettleTypesConfig>> {
+  return apiClient.get('/api/v1/kettle/types');
+}
+
+/**
+ * 下载 Kettle 配置文件
+ */
+export function downloadKettleConfig(
+  content: string,
+  filename: string,
+  format: 'ktr' | 'kjb' = 'ktr'
+): void {
+  const blob = new Blob([content], { type: 'application/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith(`.${format}`) ? filename : `${filename}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==================== AI 能力增强 API ====================
+
+/**
+ * 清洗规则推荐结果
+ */
+export interface CleaningRecommendation {
+  id: string;
+  rule_type: string;
+  column_name: string;
+  description: string;
+  priority: string;
+  confidence: number;
+  config: Record<string, unknown>;
+  kettle_step_type?: string;
+}
+
+/**
+ * AI 清洗规则推荐
+ */
+export async function recommendCleaningRules(params: {
+  table_id?: string;
+  quality_alerts?: unknown[];
+  include_kettle_steps?: boolean;
+}): Promise<ApiResponse<{
+  recommendations: CleaningRecommendation[];
+  total_count: number;
+  kettle_steps?: unknown[];
+}>> {
+  return apiClient.post('/api/v1/quality/recommend-cleaning', params);
+}
+
+/**
+ * 缺失值填充分析结果
+ */
+export interface MissingAnalysis {
+  column_name: string;
+  total_count: number;
+  missing_count: number;
+  missing_ratio: number;
+  pattern: string;
+  recommended_strategy: string;
+}
+
+/**
+ * 缺失值填充结果
+ */
+export interface ImputationResult {
+  column_name: string;
+  strategy: string;
+  imputed_count: number;
+  fill_value?: unknown;
+  values?: unknown[];
+}
+
+/**
+ * AI 缺失值填充
+ */
+export async function imputeMissingValues(params: {
+  column_name: string;
+  column_type?: string;
+  sample_values: unknown[];
+  strategy?: string;
+  context?: Record<string, unknown>;
+}): Promise<ApiResponse<{
+  analysis: MissingAnalysis;
+  strategy: string;
+  result: ImputationResult;
+}>> {
+  return apiClient.post('/api/v1/data/impute-missing', params);
+}
+
+/**
+ * 缺失值填充预览
+ */
+export async function previewImputation(params: {
+  column_name: string;
+  column_type?: string;
+  sample_values: unknown[];
+  strategy?: string;
+  preview_count?: number;
+}): Promise<ApiResponse<{
+  original_values: unknown[];
+  imputed_values: unknown[];
+  changes: Array<{ index: number; original: unknown; imputed: unknown }>;
+}>> {
+  return apiClient.post('/api/v1/data/impute-preview', params);
+}
+
+// ==================== 语义检索 API ====================
+
+/**
+ * 语义检索结果
+ */
+export interface SemanticSearchResult {
+  asset: {
+    id: string;
+    name: string;
+    asset_type: string;
+    database: string;
+    schema: string;
+    description: string;
+    tags: string[];
+    owner: string;
+  };
+  score: number;
+  relevance_reason?: string;
+  highlights?: string[];
+}
+
+/**
+ * 语义资产检索
+ */
+export async function semanticSearchAssets(params: {
+  query: string;
+  top_k?: number;
+  filters?: {
+    asset_type?: string;
+    database?: string;
+    schema?: string;
+    owner?: string;
+  };
+  rerank?: boolean;
+}): Promise<ApiResponse<{
+  query: string;
+  results: SemanticSearchResult[];
+  total_count: number;
+}>> {
+  return apiClient.post('/api/v1/assets/semantic-search', params);
+}
+
+/**
+ * 索引资产用于语义检索
+ */
+export async function indexAssetForSearch(params: {
+  table_id?: string;
+  batch?: boolean;
+  table_ids?: string[];
+}): Promise<ApiResponse<{
+  indexed: boolean;
+  indexed_count?: number;
+  total_requested?: number;
+  table_id?: string;
+}>> {
+  return apiClient.post('/api/v1/assets/semantic-search/index', params);
+}
+
+/**
+ * 获取语义检索服务状态
+ */
+export async function getSemanticSearchStats(): Promise<ApiResponse<{
+  status: string;
+  collection?: string;
+  num_entities?: number;
+  milvus_host?: string;
+  milvus_port?: number;
+  embedding_model?: string;
+  embedding_dim?: number;
+  error?: string;
+}>> {
+  return apiClient.get('/api/v1/assets/semantic-search/stats');
+}
+
+/**
+ * 获取相似资产
+ */
+export async function getSimilarAssets(
+  assetId: string,
+  topK?: number
+): Promise<ApiResponse<{
+  asset_id: string;
+  similar_assets: SemanticSearchResult[];
+}>> {
+  return apiClient.get(`/api/v1/assets/similar/${assetId}`, {
+    params: { top_k: topK },
+  });
+}
+
+// ==================== Kettle AI 集成 API ====================
+
+/**
+ * 注入 AI 规则到 Kettle 转换
+ */
+export async function injectAIRulesToKettle(params: {
+  transformation_xml: string;
+  cleaning_rules?: CleaningRecommendation[];
+  imputation_rules?: Array<{
+    column_name: string;
+    strategy: string;
+    fill_value?: unknown;
+  }>;
+}): Promise<ApiResponse<{
+  modified_xml: string;
+  injected_cleaning_rules: number;
+  injected_imputation_rules: number;
+}>> {
+  return apiClient.post('/api/v1/etl/inject-ai-rules', params);
+}
+
+/**
+ * 注入脱敏规则到 Kettle 转换
+ */
+export async function injectMaskingRulesToKettle(params: {
+  transformation_xml: string;
+  table_id?: string;
+  masking_rules?: Record<string, {
+    strategy: string;
+    sensitivity_type?: string;
+    preserve_length?: boolean;
+    mask_char?: string;
+  }>;
+}): Promise<ApiResponse<{
+  modified_xml: string;
+  masked_columns: string[];
+}>> {
+  return apiClient.post('/api/v1/etl/inject-masking', params);
+}
+
+// ==================== 元数据版本 API ====================
+
+/**
+ * 元数据版本记录
+ */
+export interface MetadataVersion {
+  id: string;
+  table_id: string;
+  change_type: string;
+  change_summary: string;
+  change_details: Record<string, unknown>;
+  schema_snapshot: Record<string, unknown>;
+  previous_version_id?: string;
+  changed_by: string;
+  change_source: string;
+  version_number: number;
+  created_at: string;
+  tenant_id?: string;
+}
+
+/**
+ * 获取元数据版本历史
+ */
+export async function getMetadataVersions(
+  tableId: string,
+  params?: {
+    page?: number;
+    page_size?: number;
+    change_type?: string;
+  }
+): Promise<ApiResponse<{
+  versions: MetadataVersion[];
+  pagination: {
+    page: number;
+    page_size: number;
+    total: number;
+    total_pages: number;
+  };
+}>> {
+  return apiClient.get(`/api/v1/metadata/versions/${tableId}`, { params });
+}
+
+/**
+ * 获取元数据版本详情
+ */
+export async function getMetadataVersionDetail(
+  tableId: string,
+  versionId: string
+): Promise<ApiResponse<MetadataVersion>> {
+  return apiClient.get(`/api/v1/metadata/versions/${tableId}/${versionId}`);
+}
+
+/**
+ * 比较两个元数据版本
+ */
+export async function compareMetadataVersions(
+  tableId: string,
+  versionId1: string,
+  versionId2: string
+): Promise<ApiResponse<{
+  added_columns: string[];
+  removed_columns: string[];
+  modified_columns: Array<{
+    name: string;
+    before: Record<string, unknown>;
+    after: Record<string, unknown>;
+  }>;
+  other_changes: Record<string, unknown>;
+}>> {
+  return apiClient.post(`/api/v1/metadata/versions/${tableId}/compare`, {
+    version_id_1: versionId1,
+    version_id_2: versionId2,
+  });
+}
+
+/**
+ * 回滚到指定元数据版本
+ */
+export async function rollbackMetadataVersion(
+  tableId: string,
+  versionId: string
+): Promise<ApiResponse<{
+  table_id: string;
+  rolled_back_to: string;
+}>> {
+  return apiClient.post(`/api/v1/metadata/versions/${tableId}/rollback`, {
+    version_id: versionId,
+  });
+}
+
 export default {
   // 数据集
   getDatasets,
@@ -2656,6 +3890,14 @@ export default {
   stopETLTask,
   getETLTaskLogs,
 
+  // Kettle ETL 引擎
+  getKettleStatus,
+  executeKettleJob,
+  executeKettleTransformation,
+  validateKettleJob,
+  validateKettleTransformation,
+  executeETLTaskWithKettle,
+
   // 数据质量
   getQualityRules,
   getQualityRule,
@@ -2687,6 +3929,17 @@ export default {
   searchLineage,
   getETLLineage,
   getLineagePath,
+
+  // AI 增强
+  annotateColumn,
+  annotateTable,
+  getSensitivityReport,
+  getAIAnnotationStatus,
+  parseSQLLineage,
+  analyzeETLLineage,
+  getAIImpactAnalysis,
+  inferColumnLineage,
+  generateLineageFromSQL,
 
   // 特征存储
   getFeatures,
@@ -2806,4 +4059,49 @@ export default {
   stopMetricCalculationTask,
   calculateMetric,
   getMetricCategories,
+
+  // 数据脱敏
+  getMaskingPreview,
+  executeMasking,
+  generateMaskingConfig,
+  getMaskingRules,
+  maskSingleValue,
+  maskTableData,
+
+  // 非结构化文档 OCR
+  extractDocument,
+  ocrImage,
+  extractStructuredData,
+  getOCRStatus,
+  batchExtractDocuments,
+  fileToBase64,
+
+  // 元数据驱动 Kettle 配置自动生成
+  generateKettleTransformation,
+  generateKettleJob,
+  generateKettleFromETLTask,
+  generateKettleFromMetadata,
+  getKettleTypes,
+  downloadKettleConfig,
+
+  // AI 能力增强
+  recommendCleaningRules,
+  imputeMissingValues,
+  previewImputation,
+
+  // 语义检索
+  semanticSearchAssets,
+  indexAssetForSearch,
+  getSemanticSearchStats,
+  getSimilarAssets,
+
+  // Kettle AI 集成
+  injectAIRulesToKettle,
+  injectMaskingRulesToKettle,
+
+  // 元数据版本
+  getMetadataVersions,
+  getMetadataVersionDetail,
+  compareMetadataVersions,
+  rollbackMetadataVersion,
 };

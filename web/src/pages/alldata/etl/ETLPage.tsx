@@ -17,6 +17,7 @@ import {
   Statistic,
   Row,
   Col,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,11 +31,15 @@ import {
   SwapRightOutlined,
   FileTextOutlined,
   ScheduleOutlined,
+  ThunderboltOutlined,
+  ApiOutlined,
+  SettingOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import alldata from '@/services/alldata';
-import type { ETLTask, CreateETLTaskRequest, ETLTaskStatus, ETLTaskType } from '@/services/alldata';
+import type { ETLTask, CreateETLTaskRequest, ETLTaskStatus, ETLTaskType, KettleStatus } from '@/services/alldata';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -51,6 +56,7 @@ function ETLPage() {
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ETLTask | null>(null);
   const [taskLogs, setTaskLogs] = useState<string>('');
+  const [engineType, setEngineType] = useState<string>('builtin');
 
   const [form] = Form.useForm();
 
@@ -70,6 +76,12 @@ function ETLPage() {
   const { data: sourcesData } = useQuery({
     queryKey: ['datasources'],
     queryFn: () => alldata.getDataSources(),
+  });
+
+  // 获取 Kettle 服务状态
+  const { data: kettleStatusData } = useQuery({
+    queryKey: ['kettle-status'],
+    queryFn: () => alldata.getKettleStatus(),
   });
 
   // 创建 ETL 任务
@@ -123,6 +135,25 @@ function ETLPage() {
     },
   });
 
+  // 使用 Kettle 引擎执行 ETL 任务
+  const executeKettleMutation = useMutation({
+    mutationFn: (taskId: string) => alldata.executeETLTaskWithKettle(taskId),
+    onSuccess: (response) => {
+      if (response.data?.execution_result?.success) {
+        message.success(`Kettle 任务执行成功，处理 ${response.data.execution_result.rows_written} 行`);
+      } else {
+        message.warning(`Kettle 任务执行完成，但有错误: ${response.data?.execution_result?.error_message || '未知错误'}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['etl-tasks'] });
+    },
+    onError: (error: Error) => {
+      message.error(`Kettle 任务执行失败: ${error.message}`);
+    },
+  });
+
+  const kettleStatus: KettleStatus | undefined = kettleStatusData?.data;
+  const isKettleAvailable = kettleStatus?.enabled && kettleStatus?.kettle_installed;
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'default',
@@ -163,6 +194,39 @@ function ETLPage() {
     return texts[type] || type;
   };
 
+  const getEngineColor = (engine: string) => {
+    const colors: Record<string, string> = {
+      builtin: 'default',
+      kettle: 'purple',
+      spark: 'orange',
+      flink: 'cyan',
+    };
+    return colors[engine] || 'default';
+  };
+
+  const getEngineText = (engine: string) => {
+    const texts: Record<string, string> = {
+      builtin: '内置',
+      kettle: 'Kettle',
+      spark: 'Spark',
+      flink: 'Flink',
+    };
+    return texts[engine] || engine;
+  };
+
+  const getEngineIcon = (engine: string) => {
+    switch (engine) {
+      case 'kettle':
+        return <ThunderboltOutlined />;
+      case 'spark':
+        return <ExperimentOutlined />;
+      case 'flink':
+        return <ApiOutlined />;
+      default:
+        return <SettingOutlined />;
+    }
+  };
+
   const handleViewLogs = async (task: ETLTask) => {
     try {
       const result = await alldata.getETLTaskLogs(task.task_id);
@@ -196,6 +260,19 @@ function ETLPage() {
       render: (type: string) => (
         <Tag color={getTypeColor(type)}>{getTypeText(type)}</Tag>
       ),
+    },
+    {
+      title: '引擎',
+      key: 'engine',
+      width: 100,
+      render: (_: unknown, record: ETLTask & { engine_type?: string }) => {
+        const engine = record.engine_type || 'builtin';
+        return (
+          <Tag color={getEngineColor(engine)} icon={getEngineIcon(engine)}>
+            {getEngineText(engine)}
+          </Tag>
+        );
+      },
     },
     {
       title: '数据流向',
@@ -258,51 +335,72 @@ function ETLPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 200,
-      render: (_: unknown, record: ETLTask) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedTask(record);
-              setIsDetailDrawerOpen(true);
-            }}
-          />
-          {record.status !== 'running' && (
+      width: 240,
+      render: (_: unknown, record: ETLTask & { engine_type?: string }) => {
+        const isKettleTask = record.engine_type === 'kettle';
+        return (
+          <Space>
             <Button
               type="text"
-              icon={<PlayCircleOutlined />}
-              onClick={() => startMutation.mutate(record.task_id)}
-              loading={startMutation.isPending}
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setSelectedTask(record);
+                setIsDetailDrawerOpen(true);
+              }}
             />
-          )}
-          {record.status === 'running' && (
+            {record.status !== 'running' && !isKettleTask && (
+              <Button
+                type="text"
+                icon={<PlayCircleOutlined />}
+                onClick={() => startMutation.mutate(record.task_id)}
+                loading={startMutation.isPending}
+                title="使用内置引擎执行"
+              />
+            )}
+            {record.status !== 'running' && isKettleTask && (
+              <Button
+                type="text"
+                icon={<ThunderboltOutlined />}
+                onClick={() => executeKettleMutation.mutate(record.task_id)}
+                loading={executeKettleMutation.isPending}
+                disabled={!isKettleAvailable}
+                title={isKettleAvailable ? '使用 Kettle 引擎执行' : 'Kettle 引擎不可用'}
+                style={{ color: isKettleAvailable ? '#722ed1' : undefined }}
+              />
+            )}
+            {record.status === 'running' && (
+              <Popconfirm
+                title="确定要停止这个任务吗？"
+                onConfirm={() => stopMutation.mutate(record.task_id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button type="text" danger icon={<StopOutlined />} />
+              </Popconfirm>
+            )}
             <Popconfirm
-              title="确定要停止这个任务吗？"
-              onConfirm={() => stopMutation.mutate(record.task_id)}
+              title="确定要删除这个任务吗？"
+              onConfirm={() => deleteMutation.mutate(record.task_id)}
               okText="确定"
               cancelText="取消"
             >
-              <Button type="text" danger icon={<StopOutlined />} />
+              <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
-          )}
-          <Popconfirm
-            title="确定要删除这个任务吗？"
-            onConfirm={() => deleteMutation.mutate(record.task_id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+          </Space>
+        );
+      },
     },
   ];
 
   const handleCreate = () => {
     form.validateFields().then((values) => {
-      const data: CreateETLTaskRequest = {
+      const data: CreateETLTaskRequest & {
+        engine_type?: string;
+        kettle_job_path?: string;
+        kettle_trans_path?: string;
+        kettle_repository?: string;
+        kettle_directory?: string;
+      } = {
         name: values.name,
         description: values.description,
         type: values.type,
@@ -325,6 +423,11 @@ function ETLPage() {
             }
           : undefined,
         tags: values.tags,
+        engine_type: values.engine_type,
+        kettle_job_path: values.kettle_job_path,
+        kettle_trans_path: values.kettle_trans_path,
+        kettle_repository: values.kettle_repository,
+        kettle_directory: values.kettle_directory,
       };
       createMutation.mutate(data);
     });
@@ -333,7 +436,25 @@ function ETLPage() {
   return (
     <div style={{ padding: '24px' }}>
       <Card
-        title="ETL 任务管理"
+        title={
+          <Space>
+            <span>ETL 任务管理</span>
+            <Tooltip title={
+              kettleStatus?.enabled
+                ? kettleStatus?.kettle_installed
+                  ? `Kettle 已就绪 (${kettleStatus?.kettle_home || '默认路径'})`
+                  : 'Kettle 未安装'
+                : 'Kettle 引擎未启用'
+            }>
+              <Tag
+                color={isKettleAvailable ? 'purple' : 'default'}
+                icon={<ThunderboltOutlined />}
+              >
+                Kettle {isKettleAvailable ? '可用' : '不可用'}
+              </Tag>
+            </Tooltip>
+          </Space>
+        }
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateModalOpen(true)}>
             新建任务
@@ -394,6 +515,7 @@ function ETLPage() {
         onCancel={() => {
           setIsCreateModalOpen(false);
           form.resetFields();
+          setEngineType('builtin');
         }}
         confirmLoading={createMutation.isPending}
         width={700}
@@ -481,6 +603,55 @@ function ETLPage() {
             </Form.Item>
           </Card>
 
+          <Card size="small" title="执行引擎配置" style={{ marginBottom: 16 }}>
+            <Form.Item
+              label="执行引擎"
+              name="engine_type"
+              initialValue="builtin"
+            >
+              <Select onChange={(value) => setEngineType(value)}>
+                <Option value="builtin">内置引擎</Option>
+                <Option value="kettle" disabled={!isKettleAvailable}>
+                  Kettle {!isKettleAvailable && '(不可用)'}
+                </Option>
+                <Option value="spark" disabled>Spark (即将推出)</Option>
+                <Option value="flink" disabled>Flink (即将推出)</Option>
+              </Select>
+            </Form.Item>
+            {engineType === 'kettle' && (
+              <>
+                <Form.Item
+                  label="Kettle 作业路径"
+                  name="kettle_job_path"
+                  tooltip="Kettle 作业文件 (.kjb) 的路径"
+                >
+                  <Input placeholder="例如: /data/kettle/jobs/my_job.kjb" />
+                </Form.Item>
+                <Form.Item
+                  label="Kettle 转换路径"
+                  name="kettle_trans_path"
+                  tooltip="Kettle 转换文件 (.ktr) 的路径"
+                >
+                  <Input placeholder="例如: /data/kettle/transformations/my_trans.ktr" />
+                </Form.Item>
+                <Form.Item
+                  label="Repository"
+                  name="kettle_repository"
+                  tooltip="Kettle 资源库名称（可选）"
+                >
+                  <Input placeholder="资源库名称" />
+                </Form.Item>
+                <Form.Item
+                  label="目录"
+                  name="kettle_directory"
+                  tooltip="资源库中的目录路径"
+                >
+                  <Input placeholder="例如: /home/admin" />
+                </Form.Item>
+              </>
+            )}
+          </Card>
+
           <Card size="small" title="调度配置">
             <Form.Item label="启用调度" name="enable_schedule" valuePropName="checked">
               <Select>
@@ -547,6 +718,14 @@ function ETLPage() {
               </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Tag color={getStatusColor(selectedTask.status)}>{getStatusText(selectedTask.status)}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="执行引擎" span={2}>
+                <Tag
+                  color={getEngineColor((selectedTask as ETLTask & { engine_type?: string }).engine_type || 'builtin')}
+                  icon={getEngineIcon((selectedTask as ETLTask & { engine_type?: string }).engine_type || 'builtin')}
+                >
+                  {getEngineText((selectedTask as ETLTask & { engine_type?: string }).engine_type || 'builtin')}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="数据源" span={2}>
                 <Tag>{selectedTask.source.type}</Tag>
@@ -645,6 +824,36 @@ function ETLPage() {
               </div>
             )}
 
+            {/* Kettle 配置信息 */}
+            {(selectedTask as ETLTask & { engine_type?: string; kettle_job_path?: string; kettle_trans_path?: string; kettle_repository?: string; kettle_directory?: string }).engine_type === 'kettle' && (
+              <div style={{ marginTop: 16 }}>
+                <Card size="small" title={<><ThunderboltOutlined style={{ marginRight: 8 }} />Kettle 配置</>}>
+                  <Descriptions column={1} size="small">
+                    {(selectedTask as ETLTask & { kettle_job_path?: string }).kettle_job_path && (
+                      <Descriptions.Item label="作业路径">
+                        <code>{(selectedTask as ETLTask & { kettle_job_path?: string }).kettle_job_path}</code>
+                      </Descriptions.Item>
+                    )}
+                    {(selectedTask as ETLTask & { kettle_trans_path?: string }).kettle_trans_path && (
+                      <Descriptions.Item label="转换路径">
+                        <code>{(selectedTask as ETLTask & { kettle_trans_path?: string }).kettle_trans_path}</code>
+                      </Descriptions.Item>
+                    )}
+                    {(selectedTask as ETLTask & { kettle_repository?: string }).kettle_repository && (
+                      <Descriptions.Item label="资源库">
+                        {(selectedTask as ETLTask & { kettle_repository?: string }).kettle_repository}
+                      </Descriptions.Item>
+                    )}
+                    {(selectedTask as ETLTask & { kettle_directory?: string }).kettle_directory && (
+                      <Descriptions.Item label="目录">
+                        {(selectedTask as ETLTask & { kettle_directory?: string }).kettle_directory}
+                      </Descriptions.Item>
+                    )}
+                  </Descriptions>
+                </Card>
+              </div>
+            )}
+
             <div style={{ marginTop: 24, textAlign: 'right' }}>
               <Space>
                 <Button
@@ -653,7 +862,7 @@ function ETLPage() {
                 >
                   查看日志
                 </Button>
-                {selectedTask.status !== 'running' && (
+                {selectedTask.status !== 'running' && (selectedTask as ETLTask & { engine_type?: string }).engine_type !== 'kettle' && (
                   <Button
                     type="primary"
                     icon={<PlayCircleOutlined />}
@@ -661,6 +870,18 @@ function ETLPage() {
                     loading={startMutation.isPending}
                   >
                     立即运行
+                  </Button>
+                )}
+                {selectedTask.status !== 'running' && (selectedTask as ETLTask & { engine_type?: string }).engine_type === 'kettle' && (
+                  <Button
+                    type="primary"
+                    icon={<ThunderboltOutlined />}
+                    onClick={() => executeKettleMutation.mutate(selectedTask.task_id)}
+                    loading={executeKettleMutation.isPending}
+                    disabled={!isKettleAvailable}
+                    style={{ backgroundColor: isKettleAvailable ? '#722ed1' : undefined, borderColor: isKettleAvailable ? '#722ed1' : undefined }}
+                  >
+                    Kettle 执行
                   </Button>
                 )}
                 {selectedTask.status === 'running' && (

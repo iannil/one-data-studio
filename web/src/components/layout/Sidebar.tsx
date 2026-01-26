@@ -37,6 +37,9 @@ import {
   FileSearchOutlined,
   ControlOutlined as AntControlOutlined,
   AuditOutlined as AntAuditOutlined,
+  ToolOutlined,
+  BellOutlined,
+  ScanOutlined,
 } from '@ant-design/icons';
 
 const menuItems = [
@@ -111,6 +114,21 @@ const menuItems = [
         key: '/alldata/etl',
         icon: <SwapOutlined />,
         label: 'ETL 任务',
+      },
+      {
+        key: '/alldata/kettle',
+        icon: <ToolOutlined />,
+        label: 'Kettle 引擎',
+      },
+      {
+        key: '/alldata/kettle-generator',
+        icon: <SettingOutlined />,
+        label: 'Kettle 配置生成',
+      },
+      {
+        key: '/alldata/ocr',
+        icon: <ScanOutlined />,
+        label: '文档 OCR',
       },
       {
         key: '/alldata/quality',
@@ -279,6 +297,11 @@ const menuItems = [
         label: '系统监控',
       },
       {
+        key: '/alldata/alerts',
+        icon: <ThunderboltOutlined />,
+        label: '智能预警',
+      },
+      {
         key: '/schedules',
         icon: <ClockCircleOutlined />,
         label: '调度管理',
@@ -311,6 +334,11 @@ const menuItems = [
         key: '/admin/groups',
         icon: <TeamOutlined />,
         label: '用户组管理',
+      },
+      {
+        key: '/admin/notifications',
+        icon: <BellOutlined />,
+        label: '通知管理',
       },
       {
         key: '/admin/settings',
@@ -350,6 +378,7 @@ function Sidebar({ collapsed }: SidebarProps) {
 
     // 数据开发
     if (pathname.startsWith('/alldata/etl')) return '/alldata/etl';
+    if (pathname.startsWith('/alldata/kettle')) return '/alldata/kettle';
     if (pathname.startsWith('/alldata/quality')) return '/alldata/quality';
     if (pathname.startsWith('/alldata/lineage')) return '/alldata/lineage';
     if (pathname.startsWith('/alldata/offline')) return '/alldata/offline';
@@ -383,6 +412,7 @@ function Sidebar({ collapsed }: SidebarProps) {
 
     // 运维中心
     if (pathname.startsWith('/alldata/monitoring')) return '/alldata/monitoring';
+    if (pathname.startsWith('/alldata/alerts')) return '/alldata/alerts';
     if (pathname === '/schedules') return '/schedules';
     if (pathname === '/executions') return '/executions';
     if (pathname === '/documents') return '/documents';
@@ -390,6 +420,7 @@ function Sidebar({ collapsed }: SidebarProps) {
     // 系统管理
     if (pathname.startsWith('/admin/users')) return '/admin/users';
     if (pathname.startsWith('/admin/groups')) return '/admin/groups';
+    if (pathname.startsWith('/admin/notifications')) return '/admin/notifications';
     if (pathname.startsWith('/admin/settings')) return '/admin/settings';
     if (pathname.startsWith('/admin/audit')) return '/admin/audit';
 
@@ -409,7 +440,8 @@ function Sidebar({ collapsed }: SidebarProps) {
     }
 
     // 数据开发
-    if (pathname.startsWith('/alldata/etl') || pathname.startsWith('/alldata/quality') ||
+    if (pathname.startsWith('/alldata/etl') || pathname.startsWith('/alldata/kettle') ||
+        pathname.startsWith('/alldata/quality') ||
         pathname.startsWith('/alldata/lineage') || pathname.startsWith('/alldata/offline') ||
         pathname.startsWith('/alldata/streaming') || pathname.startsWith('/alldata/streaming-ide') ||
         pathname.startsWith('/cube/notebooks') || pathname.startsWith('/cube/sql-lab')) {
@@ -437,7 +469,8 @@ function Sidebar({ collapsed }: SidebarProps) {
     }
 
     // 运维中心
-    if (pathname.startsWith('/alldata/monitoring') || pathname.startsWith('/schedules') ||
+    if (pathname.startsWith('/alldata/monitoring') || pathname.startsWith('/alldata/alerts') ||
+        pathname.startsWith('/schedules') ||
         pathname.startsWith('/executions') || pathname.startsWith('/documents')) {
       keys.push('ops');
     }

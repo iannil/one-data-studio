@@ -39,6 +39,7 @@ const SqlLabPage = lazy(() => import('./pages/cube/sql-lab/SqlLabPage'));
 // Alldata Pages
 const DataSourcesPage = lazy(() => import('./pages/alldata/datasources/DataSourcesPage'));
 const ETLPage = lazy(() => import('./pages/alldata/etl/ETLPage'));
+const KettlePanel = lazy(() => import('./pages/alldata/etl/KettlePanel'));
 const QualityPage = lazy(() => import('./pages/alldata/quality/QualityPage'));
 const LineagePage = lazy(() => import('./pages/alldata/lineage/LineagePage'));
 const FeaturesPage = lazy(() => import('./pages/alldata/features/FeaturesPage'));
@@ -51,6 +52,9 @@ const StreamingPage = lazy(() => import('./pages/alldata/streaming/StreamingPage
 const StreamingIDEPage = lazy(() => import('./pages/alldata/streaming-ide/StreamingIDEPage'));
 const OfflinePage = lazy(() => import('./pages/alldata/offline/OfflinePage'));
 const MetricsPage = lazy(() => import('./pages/alldata/metrics/MetricsPage'));
+const AlertsPage = lazy(() => import('./pages/alldata/monitoring/AlertsPage'));
+const OCRPage = lazy(() => import('./pages/alldata/ocr/OCRPage'));
+const KettleGeneratorPage = lazy(() => import('./pages/alldata/etl/KettlePage'));
 
 // Bisheng Pages
 const PromptsPage = lazy(() => import('./pages/bisheng/prompts/PromptsPage'));
@@ -66,6 +70,13 @@ const SettingsPage = lazy(() => import('./pages/admin/settings/SettingsPage'));
 const AuditPage = lazy(() => import('./pages/admin/audit/AuditPage'));
 const RolesPage = lazy(() => import('./pages/admin/RolesPage'));
 const CostReportPage = lazy(() => import('./pages/admin/CostReportPage'));
+const AdminNotificationsPage = lazy(() => import('./pages/admin/NotificationsPage'));
+
+// Portal Pages
+const PortalNotificationsPage = lazy(() => import('./pages/portal/NotificationsPage'));
+const TodosPage = lazy(() => import('./pages/portal/TodosPage'));
+const AnnouncementsPage = lazy(() => import('./pages/portal/AnnouncementsPage'));
+const ProfilePage = lazy(() => import('./pages/portal/ProfilePage'));
 
 // 懒加载组件的包装器，显示加载状态
 function LazyWrapper({ children }: { children: React.ReactNode }) {
@@ -128,6 +139,7 @@ function AppRoutes() {
         {/* Alldata Routes */}
         <Route path="alldata/datasources" element={<LazyWrapper><DataSourcesPage /></LazyWrapper>} />
         <Route path="alldata/etl" element={<LazyWrapper><ETLPage /></LazyWrapper>} />
+        <Route path="alldata/kettle" element={<LazyWrapper><KettlePanel /></LazyWrapper>} />
         <Route path="alldata/quality" element={<LazyWrapper><QualityPage /></LazyWrapper>} />
         <Route path="alldata/lineage" element={<LazyWrapper><LineagePage /></LazyWrapper>} />
         <Route path="alldata/features" element={<LazyWrapper><FeaturesPage /></LazyWrapper>} />
@@ -140,6 +152,9 @@ function AppRoutes() {
         <Route path="alldata/streaming-ide" element={<LazyWrapper><StreamingIDEPage /></LazyWrapper>} />
         <Route path="alldata/offline" element={<LazyWrapper><OfflinePage /></LazyWrapper>} />
         <Route path="alldata/metrics" element={<LazyWrapper><MetricsPage /></LazyWrapper>} />
+        <Route path="alldata/alerts" element={<LazyWrapper><AlertsPage /></LazyWrapper>} />
+        <Route path="alldata/ocr" element={<LazyWrapper><OCRPage /></LazyWrapper>} />
+        <Route path="alldata/kettle-generator" element={<LazyWrapper><KettleGeneratorPage /></LazyWrapper>} />
 
         {/* Bisheng Routes */}
         <Route path="bisheng/prompts" element={<LazyWrapper><PromptsPage /></LazyWrapper>} />
@@ -155,6 +170,13 @@ function AppRoutes() {
         <Route path="admin/audit" element={<LazyWrapper><AuditPage /></LazyWrapper>} />
         <Route path="admin/roles" element={<LazyWrapper><RolesPage /></LazyWrapper>} />
         <Route path="admin/cost-report" element={<LazyWrapper><CostReportPage /></LazyWrapper>} />
+        <Route path="admin/notifications" element={<LazyWrapper><AdminNotificationsPage /></LazyWrapper>} />
+
+        {/* Portal Routes */}
+        <Route path="portal/notifications" element={<LazyWrapper><PortalNotificationsPage /></LazyWrapper>} />
+        <Route path="portal/todos" element={<LazyWrapper><TodosPage /></LazyWrapper>} />
+        <Route path="portal/announcements" element={<LazyWrapper><AnnouncementsPage /></LazyWrapper>} />
+        <Route path="portal/profile" element={<LazyWrapper><ProfilePage /></LazyWrapper>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
