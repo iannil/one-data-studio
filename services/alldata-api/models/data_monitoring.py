@@ -268,9 +268,9 @@ class AlertHistory(Base):
         }
 
 
-class MetricValue(Base):
-    """指标值记录表 - 用于时序分析和异常检测"""
-    __tablename__ = "metric_values"
+class MonitoringMetricValue(Base):
+    """监控指标值记录表 - 用于时序分析和异常检测"""
+    __tablename__ = "monitoring_metric_values"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     metric_id = Column(String(255), index=True, nullable=False)

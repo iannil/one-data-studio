@@ -18,6 +18,8 @@ import sys
 import logging
 import uuid
 import hashlib
+import json
+import time
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from functools import wraps
@@ -36,42 +38,109 @@ from models import (
     AuditLog, SystemSettings, NotificationChannel, NotificationRule,
     NotificationTemplate, NotificationLog,
     UserNotification, UserTodo, UserActivityLog, Announcement,
-    user_roles, role_permissions
+    user_roles, role_permissions,
+    # Content Management
+    ContentCategory, ContentTag, Article, ArticleVersion, ContentApproval,
+    generate_category_id, generate_tag_id,
+    # API Management
+    ApiEndpoint, ApiCallLog,
+    # User Profile
+    UserProfile, UserSegment, UserTag, BehaviorAnomaly,
+    generate_segment_id,
 )
 
-# 尝试导入认证模块
-try:
-    from auth import (
-        require_jwt,
-        require_permission,
-        Resource,
-        Operation,
-        get_current_user
-    )
-    AUTH_ENABLED = True
-except ImportError:
-    if os.getenv('ENVIRONMENT', '').lower() in ('production', 'prod'):
-        raise ImportError(
-            "Authentication module is required in production. "
-            "Ensure auth.py is present and all dependencies are installed."
-        )
+# 认证配置
+AUTH_MODE = os.getenv('AUTH_MODE', 'false').lower() == 'true'
+STRICT_AUTH_MODE = os.getenv('STRICT_AUTH_MODE', 'false').lower() == 'true'
 
+# 尝试导入认证模块
+if AUTH_MODE and STRICT_AUTH_MODE:
+    # 生产模式：使用完整的认证
+    try:
+        from auth import (
+            require_jwt,
+            require_permission,
+            Resource,
+            Operation,
+            get_current_user
+        )
+        AUTH_ENABLED = True
+    except ImportError:
+        if os.getenv('ENVIRONMENT', '').lower() in ('production', 'prod'):
+            raise ImportError(
+                "Authentication module is required in production. "
+                "Ensure auth.py is present and all dependencies are installed."
+            )
+
+        AUTH_ENABLED = False
+        logging.getLogger(__name__).warning(
+            "Authentication module not available. Running in development mode without auth."
+        )
+        def require_jwt(optional=False):
+            def decorator(fn):
+                return fn
+            return decorator
+        def require_permission(resource, operation):
+            def decorator(fn):
+                return fn
+            return decorator
+        class Resource:
+            USER = type('', (), {'value': 'user'})()
+            SYSTEM = type('', (), {'value': 'system'})()
+        class Operation:
+            CREATE = type('', (), {'value': 'create'})()
+            READ = type('', (), {'value': 'read'})()
+            UPDATE = type('', (), {'value': 'update'})()
+            DELETE = type('', (), {'value': 'delete'})()
+            MANAGE = type('', (), {'value': 'manage'})()
+else:
+    # 开发模式：跳过认证检查
     AUTH_ENABLED = False
-    logging.getLogger(__name__).warning(
-        "Authentication module not available. Running in development mode without auth."
+    logging.getLogger(__name__).info(
+        "Running in development mode with AUTH_MODE=%s, STRICT_AUTH_MODE=%s. Authentication is disabled.",
+        os.getenv('AUTH_MODE', 'false'),
+        os.getenv('STRICT_AUTH_MODE', 'false')
     )
+
     def require_jwt(optional=False):
+        """开发模式：跳过 JWT 认证，设置模拟用户"""
         def decorator(fn):
-            return fn
+            @wraps(fn)
+            def wrapper(*args, **kwargs):
+                # 设置模拟用户信息
+                g.user = "dev_user"
+                g.user_id = "dev_user_001"
+                g.roles = ["admin"]
+                g.payload = {"sub": "dev_user_001"}
+                g.email = "dev@example.com"
+                return fn(*args, **kwargs)
+            return wrapper
         return decorator
+
     def require_permission(resource, operation):
+        """开发模式：跳过权限检查"""
         def decorator(fn):
-            return fn
+            @wraps(fn)
+            def wrapper(*args, **kwargs):
+                return fn(*args, **kwargs)
+            return wrapper
         return decorator
+
+    def get_current_user():
+        """开发模式：返回模拟用户"""
+        return {
+            "user_id": "dev_user_001",
+            "username": "dev_user",
+            "roles": ["admin"]
+        }
+
     class Resource:
+        """资源类型"""
         USER = type('', (), {'value': 'user'})()
         SYSTEM = type('', (), {'value': 'system'})()
+
     class Operation:
+        """操作类型"""
         CREATE = type('', (), {'value': 'create'})()
         READ = type('', (), {'value': 'read'})()
         UPDATE = type('', (), {'value': 'update'})()
@@ -2348,7 +2417,7 @@ def get_user_todos():
     priority_order = {'urgent': 0, 'high': 1, 'medium': 2, 'low': 3}
     query = query.order_by(
         UserTodo.status.asc(),  # pending 和 in_progress 在前
-        UserTodo.due_date.asc().nullslast(),
+        UserTodo.due_date.asc(),
         UserTodo.created_at.desc()
     )
 
@@ -2939,7 +3008,7 @@ def get_portal_dashboard():
     recent_todos = db.query(UserTodo).filter(
         UserTodo.user_id == user_id,
         UserTodo.status.in_(['pending', 'in_progress'])
-    ).order_by(UserTodo.due_date.asc().nullslast()).limit(5).all()
+    ).order_by(UserTodo.due_date.asc()).limit(5).all()
 
     # 最近通知
     recent_notifications = db.query(UserNotification).filter(
@@ -3084,6 +3153,969 @@ def get_stats_overview():
                 "cpu_hours_today": 256
             }
         }
+    })
+
+
+# ==================== 内容管理 API ====================
+
+@app.route("/api/v1/content/categories", methods=["GET"])
+@require_jwt()
+def get_content_categories():
+    """获取内容分类列表"""
+    db = get_db_session()
+    parent_id = request.args.get("parent_id")
+    is_visible = request.args.get("is_visible", "true").lower() == "true"
+
+    query = db.query(ContentCategory)
+    if parent_id == "root" or parent_id is None:
+        query = query.filter(ContentCategory.parent_id.is_(None))
+    elif parent_id:
+        query = query.filter(ContentCategory.parent_id == parent_id)
+
+    if is_visible:
+        query = query.filter(ContentCategory.is_visible == True)
+
+    categories = query.order_by(ContentCategory.sort_order).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "categories": [c.to_dict(include_children=False) for c in categories]
+        }
+    })
+
+
+@app.route("/api/v1/content/categories", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_content_category():
+    """创建内容分类"""
+    db = get_db_session()
+    data = request.json
+    user_id = getattr(g, 'user_id', None)
+
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "分类名称不能为空"}), 400
+
+    # 生成 slug
+    from pypinyin import lazy_pinyin
+    slug = data.get("slug") or '-'.join(lazy_pinyin(name))
+
+    category = ContentCategory(
+        category_id=generate_category_id(),
+        name=name,
+        slug=slug,
+        description=data.get("description"),
+        icon=data.get("icon"),
+        parent_id=data.get("parent_id"),
+        level=data.get("level", 0),
+        path=data.get("path"),
+        sort_order=data.get("sort_order", 0),
+        is_visible=data.get("is_visible", True),
+        meta_title=data.get("meta_title"),
+        meta_keywords=data.get("meta_keywords"),
+        meta_description=data.get("meta_description"),
+    )
+
+    db.add(category)
+    db.commit()
+
+    log_audit("create", "content_category", category.category_id, name, user_id)
+    logger.info(f"创建内容分类: {category.category_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": category.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/content/tags", methods=["GET"])
+@require_jwt()
+def get_content_tags():
+    """获取内容标签列表"""
+    db = get_db_session()
+    search = request.args.get("search")
+
+    query = db.query(ContentTag)
+    if search:
+        query = query.filter(ContentTag.name.like(f"%{search}%"))
+
+    tags = query.order_by(ContentTag.usage_count.desc()).limit(50).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "tags": [t.to_dict() for t in tags]
+        }
+    })
+
+
+@app.route("/api/v1/content/articles", methods=["GET"])
+@require_jwt()
+def get_articles():
+    """获取文章列表"""
+    db = get_db_session()
+    category_id = request.args.get("category_id")
+    status = request.args.get("status", "published")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+    keyword = request.args.get("keyword")
+
+    query = db.query(Article)
+
+    if category_id:
+        query = query.filter(Article.category_id == category_id)
+    if status:
+        query = query.filter(Article.status == status)
+    if keyword:
+        query = query.filter(Article.title.like(f"%{keyword}%"))
+
+    total = query.count()
+    articles = query.order_by(Article.is_top.desc(), Article.published_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "articles": [a.to_dict(include_content=False) for a in articles],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/content/articles", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.CREATE)
+def create_article():
+    """创建文章"""
+    db = get_db_session()
+    data = request.json
+    user_id = getattr(g, 'user_id', None)
+    username = getattr(g, 'username', None)
+
+    title = data.get("title")
+    if not title:
+        return jsonify({"code": 40001, "message": "标题不能为空"}), 400
+
+    content = data.get("content")
+    if not content:
+        return jsonify({"code": 40001, "message": "内容不能为空"}), 400
+
+    from pypinyin import lazy_pinyin
+    slug = data.get("slug") or '-'.join(lazy_pinyin(title))
+
+    article = Article(
+        article_id=f"article_{uuid.uuid4().hex[:12]}",
+        title=title,
+        slug=slug,
+        summary=data.get("summary"),
+        content=content,
+        content_type=data.get("content_type", "markdown"),
+        cover_image=data.get("cover_image"),
+        category_id=data.get("category_id"),
+        author_id=user_id,
+        author_name=username,
+        status=data.get("status", "draft"),
+        allow_comment=data.get("allow_comment", True),
+        is_featured=data.get("is_featured", False),
+        is_top=data.get("is_top", False),
+        meta_title=data.get("meta_title"),
+        meta_keywords=data.get("meta_keywords"),
+        meta_description=data.get("meta_description"),
+    )
+
+    if data.get("tags"):
+        article.set_tags(data.get("tags"))
+
+    db.add(article)
+
+    # 创建版本记录
+    version = ArticleVersion(
+        version_id=f"version_{uuid.uuid4().hex[:12]}",
+        article_id=article.article_id,
+        version_number=1,
+        title=title,
+        content=content,
+        summary=data.get("summary"),
+        change_description="初始创建",
+        change_type="create",
+        created_by=user_id,
+        created_by_name=username,
+    )
+    db.add(version)
+
+    db.commit()
+
+    log_audit("create", "article", article.article_id, title, user_id)
+    logger.info(f"创建文章: {article.article_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": article.to_dict(include_content=True)
+    }), 201
+
+
+@app.route("/api/v1/content/articles/<article_id>", methods=["GET"])
+@require_jwt()
+def get_article(article_id):
+    """获取文章详情"""
+    db = get_db_session()
+    article = db.query(Article).filter(Article.article_id == article_id).first()
+
+    if not article:
+        return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+    # 增加浏览计数
+    article.view_count += 1
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": article.to_dict(include_content=True)
+    })
+
+
+@app.route("/api/v1/content/articles/<article_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def update_article(article_id):
+    """更新文章"""
+    db = get_db_session()
+    data = request.json
+    user_id = getattr(g, 'user_id', None)
+
+    article = db.query(Article).filter(Article.article_id == article_id).first()
+    if not article:
+        return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+    # 更新字段
+    for field in ["title", "summary", "content", "cover_image", "category_id", "allow_comment", "is_featured", "is_top"]:
+        if field in data:
+            setattr(article, field, data[field])
+
+    if "tags" in data:
+        article.set_tags(data["tags"])
+
+    # 获取当前版本号
+    last_version = db.query(ArticleVersion).filter(
+        ArticleVersion.article_id == article_id
+    ).order_by(ArticleVersion.version_number.desc()).first()
+
+    next_version = (last_version.version_number + 1) if last_version else 1
+
+    # 创建新版本
+    version = ArticleVersion(
+        version_id=f"version_{uuid.uuid4().hex[:12]}",
+        article_id=article_id,
+        version_number=next_version,
+        title=article.title,
+        content=article.content,
+        summary=article.summary,
+        change_description=data.get("change_description", "更新内容"),
+        change_type=data.get("change_type", "update"),
+        created_by=user_id,
+        created_by_name=getattr(g, 'username', None),
+    )
+    db.add(version)
+
+    db.commit()
+
+    log_audit("update", "article", article_id, article.title, user_id)
+    logger.info(f"更新文章: {article_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": article.to_dict(include_content=True)
+    })
+
+
+@app.route("/api/v1/content/articles/<article_id>/publish", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def publish_article(article_id):
+    """提交发布文章"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    article = db.query(Article).filter(Article.article_id == article_id).first()
+    if not article:
+        return jsonify({"code": 40401, "message": "文章不存在"}), 404
+
+    # 创建审批记录
+    approval = ContentApproval(
+        approval_id=f"approval_{uuid.uuid4().hex[:12]}",
+        content_type="article",
+        content_id=article_id,
+        content_title=article.title,
+        submitted_by=user_id,
+        submitted_by_name=getattr(g, 'username', None),
+        workflow_type=data.get("workflow_type", "standard"),
+        status="pending",
+    )
+    db.add(approval)
+
+    article.status = "pending"
+    article.submitted_at = datetime.utcnow()
+    db.commit()
+
+    log_audit("publish", "article", article_id, article.title, user_id)
+    logger.info(f"提交发布文章: {article_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"approval_id": approval.approval_id}
+    })
+
+
+@app.route("/api/v1/content/articles/<article_id>/versions", methods=["GET"])
+@require_jwt()
+def get_article_versions(article_id):
+    """获取文章版本历史"""
+    db = get_db_session()
+    versions = db.query(ArticleVersion).filter(
+        ArticleVersion.article_id == article_id
+    ).order_by(ArticleVersion.version_number.desc()).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "versions": [v.to_dict() for v in versions]
+        }
+    })
+
+
+@app.route("/api/v1/content/approvals", methods=["GET"])
+@require_jwt()
+def get_content_approvals():
+    """获取内容审批列表"""
+    db = get_db_session()
+    status = request.args.get("status")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(ContentApproval)
+    if status:
+        query = query.filter(ContentApproval.status == status)
+
+    total = query.count()
+    approvals = query.order_by(ContentApproval.submitted_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "approvals": [a.to_dict() for a in approvals],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/content/approvals/<approval_id>/approve", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def approve_content(approval_id):
+    """审批通过"""
+    db = get_db_session()
+    data = request.json
+    user_id = getattr(g, 'user_id', None)
+
+    approval = db.query(ContentApproval).filter(ContentApproval.approval_id == approval_id).first()
+    if not approval:
+        return jsonify({"code": 40401, "message": "审批记录不存在"}), 404
+
+    approval.status = "approved"
+    approval.reviewer_id = user_id
+    approval.reviewer_name = getattr(g, 'username', None)
+    approval.reviewed_at = datetime.utcnow()
+    approval.comment = data.get("comment")
+    approval.completed_at = datetime.utcnow()
+
+    # 更新文章状态
+    if approval.content_type == "article":
+        article = db.query(Article).filter(Article.article_id == approval.content_id).first()
+        if article:
+            article.status = "published"
+            article.published_at = datetime.utcnow()
+            article.published_by = user_id
+            article.reviewed_by = user_id
+            article.reviewed_at = datetime.utcnow()
+
+    db.commit()
+
+    log_audit("approve", "content_approval", approval_id, approval.content_title, user_id)
+    logger.info(f"审批通过: {approval_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": approval.to_dict()
+    })
+
+
+@app.route("/api/v1/content/approvals/<approval_id>/reject", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.UPDATE)
+def reject_content(approval_id):
+    """审批拒绝"""
+    db = get_db_session()
+    data = request.json
+    user_id = getattr(g, 'user_id', None)
+
+    approval = db.query(ContentApproval).filter(ContentApproval.approval_id == approval_id).first()
+    if not approval:
+        return jsonify({"code": 40401, "message": "审批记录不存在"}), 404
+
+    approval.status = "rejected"
+    approval.reviewer_id = user_id
+    approval.reviewer_name = getattr(g, 'username', None)
+    approval.reviewed_at = datetime.utcnow()
+    approval.rejection_reason = data.get("reason")
+    approval.comment = data.get("comment")
+    approval.completed_at = datetime.utcnow()
+
+    # 更新文章状态
+    if approval.content_type == "article":
+        article = db.query(Article).filter(Article.article_id == approval.content_id).first()
+        if article:
+            article.status = "rejected"
+            article.reviewed_by = user_id
+            article.reviewed_at = datetime.utcnow()
+            article.rejection_reason = data.get("reason")
+
+    db.commit()
+
+    log_audit("reject", "content_approval", approval_id, approval.content_title, user_id)
+    logger.info(f"审批拒绝: {approval_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": approval.to_dict()
+    })
+
+
+# ==================== API可视化管理 API ====================
+
+@app.route("/api/v1/admin/api-endpoints", methods=["GET"])
+@require_jwt()
+def get_api_endpoints():
+    """获取API端点列表"""
+    db = get_db_session()
+    service = request.args.get("service")
+    method = request.args.get("method")
+    search = request.args.get("search")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 50))
+
+    query = db.query(ApiEndpoint)
+
+    if service:
+        query = query.filter(ApiEndpoint.service == service)
+    if method:
+        query = query.filter(ApiEndpoint.method == method)
+    if search:
+        query = query.filter(ApiEndpoint.path.like(f"%{search}%"))
+
+    total = query.count()
+    endpoints = query.order_by(ApiEndpoint.path, ApiEndpoint.method).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "endpoints": [e.to_dict() for e in endpoints],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/admin/api-endpoints/scan", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def scan_api_endpoints():
+    """扫描并注册API端点"""
+    from src.api_scanner import get_api_scanner
+
+    scanner = get_api_scanner()
+    result = scanner.scan_app(app)
+
+    # 注册到数据库
+    registered = scanner.register_endpoints(result["endpoints"], "admin-api")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "total": result["total"],
+            "registered": registered,
+            "endpoints": result["endpoints"]
+        }
+    })
+
+
+@app.route("/api/v1/admin/api-stats", methods=["GET"])
+@require_jwt()
+def get_api_stats():
+    """获取API调用统计"""
+    from src.api_scanner import get_api_monitor
+
+    monitor = get_api_monitor()
+    days = int(request.args.get("days", 7))
+    service = request.args.get("service")
+
+    stats = monitor.get_statistics(service=service, days=days)
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": stats
+    })
+
+
+@app.route("/api/v1/admin/api-endpoints/<endpoint_id>/test", methods=["POST"])
+@require_jwt()
+def test_api_endpoint(endpoint_id):
+    """测试API端点"""
+    db = get_db_session()
+    endpoint = db.query(ApiEndpoint).filter(ApiEndpoint.endpoint_id == endpoint_id).first()
+
+    if not endpoint:
+        return jsonify({"code": 40401, "message": "端点不存在"}), 404
+
+    data = request.json
+    path_params = data.get("path_params", {})
+    query_params = data.get("query_params", {})
+    request_body = data.get("request_body")
+    headers = data.get("headers", {})
+
+    # 构建测试URL
+    import requests
+    from flask import current_app
+
+    base_url = current_app.config.get("API_TEST_BASE_URL", "http://localhost:8004")
+    url = base_url + endpoint.path
+
+    # 替换路径参数
+    for key, value in path_params.items():
+        url = url.replace(f"<{key}>", str(value)).replace(f"{{{key}}}", str(value))
+
+    try:
+        # 添加查询参数
+        if query_params:
+            import urllib.parse
+            url += "?" + urllib.parse.urlencode(query_params)
+
+        # 发送请求
+        start_time = time.time()
+        response = requests.request(
+            method=endpoint.method,
+            url=url,
+            json=request_body if endpoint.method in ["POST", "PUT", "PATCH"] else None,
+            headers=headers,
+            timeout=30
+        )
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # 记录调用日志
+        from src.api_scanner import get_api_monitor
+        monitor = get_api_monitor()
+        monitor.log_call(
+            path=endpoint.path,
+            method=endpoint.method,
+            user_id=getattr(g, 'user_id', None),
+            username=getattr(g, 'username', None),
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            request_body=json.dumps(request_body) if request_body else None,
+            response_body=response.text[:5000],
+        )
+
+        # 更新端点统计
+        endpoint.call_count += 1
+        if response.status_code >= 400:
+            endpoint.error_count += 1
+        endpoint.last_call = datetime.utcnow()
+
+        db.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "status_code": response.status_code,
+                "status_text": response.reason,
+                "headers": dict(response.headers),
+                "body": response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                "duration_ms": duration_ms
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"API测试失败: {e}")
+        return jsonify({
+            "code": 50001,
+            "message": f"测试失败: {str(e)}",
+            "data": {
+                "error": str(e)
+            }
+        }), 500
+
+
+@app.route("/api/v1/admin/api-calls", methods=["GET"])
+@require_jwt()
+def get_api_call_logs():
+    """获取API调用日志"""
+    db = get_db_session()
+    path = request.args.get("path")
+    method = request.args.get("method")
+    user_id = request.args.get("user_id")
+    status_code = request.args.get("status_code")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 50))
+
+    query = db.query(ApiCallLog)
+
+    if path:
+        query = query.filter(ApiCallLog.path.like(f"%{path}%"))
+    if method:
+        query = query.filter(ApiCallLog.method == method)
+    if user_id:
+        query = query.filter(ApiCallLog.user_id == user_id)
+    if status_code:
+        query = query.filter(ApiCallLog.status_code == int(status_code))
+
+    total = query.count()
+    logs = query.order_by(ApiCallLog.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "logs": [l.to_dict() for l in logs],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/admin/api-calls/<call_id>", methods=["GET"])
+@require_jwt()
+def get_api_call_detail(call_id):
+    """获取API调用详情"""
+    db = get_db_session()
+    log = db.query(ApiCallLog).filter(ApiCallLog.call_id == call_id).first()
+
+    if not log:
+        return jsonify({"code": 40401, "message": "调用记录不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "call_id": log.call_id,
+            "path": log.path,
+            "method": log.method,
+            "user_id": log.user_id,
+            "username": log.username,
+            "status_code": log.status_code,
+            "duration_ms": log.duration_ms,
+            "query_params": log.get_query_params(),
+            "request_body": log.get_request_body(),
+            "response_body": log.response_body[:5000] if log.response_body else None,
+            "error_message": log.error_message,
+            "client_ip": log.client_ip,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+    })
+
+
+# ==================== 用户画像 API ====================
+
+@app.route("/api/v1/admin/user-profiles", methods=["GET"])
+@require_jwt()
+def get_user_profiles():
+    """获取用户画像列表"""
+    db = get_db_session()
+    segment_id = request.args.get("segment_id")
+    search = request.args.get("search")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(UserProfile)
+
+    if segment_id:
+        query = query.filter(UserProfile.segment_id == segment_id)
+    if search:
+        query = query.filter(UserProfile.username.like(f"%{search}%"))
+
+    total = query.count()
+    profiles = query.order_by(UserProfile.activity_score.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "profiles": [p.to_dict() for p in profiles],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/admin/user-profiles/<user_id>", methods=["GET"])
+@require_jwt()
+def get_user_profile_detail(user_id):
+    """获取用户画像详情"""
+    db = get_db_session()
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+
+    if not profile:
+        # 如果画像不存在，尝试创建
+        from src.user_profile import get_user_profile_service
+        service = get_user_profile_service()
+        profile = service.build_profile(user_id)
+        if not profile:
+            return jsonify({"code": 40401, "message": "用户不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"profile": profile.to_dict()}
+    })
+
+
+@app.route("/api/v1/admin/user-profiles/<user_id>/rebuild", methods=["POST"])
+@require_jwt()
+def rebuild_user_profile(user_id):
+    """重建用户画像"""
+    db = get_db_session()
+    from src.user_profile import get_user_profile_service
+
+    service = get_user_profile_service()
+    profile = service.build_profile(user_id, force_rebuild=True)
+
+    if not profile:
+        return jsonify({"code": 40401, "message": "用户不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"profile": profile.to_dict()}
+    })
+
+
+@app.route("/api/v1/admin/user-segments", methods=["GET"])
+@require_jwt()
+def get_user_segments():
+    """获取用户分群列表"""
+    db = get_db_session()
+    is_active = request.args.get("is_active", "true").lower() == "true"
+
+    query = db.query(UserSegment)
+    if is_active:
+        query = query.filter(UserSegment.is_active == True)
+
+    segments = query.order_by(UserSegment.segment_type).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "segments": [s.to_dict() for s in segments]
+        }
+    })
+
+
+@app.route("/api/v1/admin/user-segments/rebuild", methods=["POST"])
+@require_jwt()
+def rebuild_user_segments():
+    """重建用户分群"""
+    from src.user_segmentation import get_segmentation_service
+
+    service = get_segmentation_service()
+    # 初始化预定义分群（如果不存在）
+    service.initialize_segments()
+    result = service.rebuild_segments()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "segment_count": result["segments_updated"],
+            "total_users": result["total_users"],
+            "segmented_users": result["segmented_users"],
+        }
+    })
+
+
+@app.route("/api/v1/admin/user-segments", methods=["POST"])
+@require_jwt()
+def create_user_segment():
+    """创建自定义分群"""
+    db = get_db_session()
+    data = request.json
+
+    segment = UserSegment(
+        segment_id=generate_segment_id(),
+        segment_name=data["segment_name"],
+        segment_type="custom",
+        description=data.get("description"),
+        criteria=data["criteria"],
+        user_count=0,
+        is_active=True,
+    )
+
+    db.add(segment)
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"segment": segment.to_dict()}
+    }), 201
+
+
+@app.route("/api/v1/admin/user-tags", methods=["GET"])
+@require_jwt()
+def get_user_tags():
+    """获取用户标签列表"""
+    db = get_db_session()
+    tag_type = request.args.get("tag_type")
+
+    query = db.query(UserTag)
+    if tag_type:
+        query = query.filter(UserTag.tag_type == tag_type)
+
+    tags = query.order_by(UserTag.user_count.desc()).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "tags": [t.to_dict() for t in tags]
+        }
+    })
+
+
+@app.route("/api/v1/admin/user-tags", methods=["POST"])
+@require_jwt()
+def create_user_tag():
+    """创建用户标签"""
+    db = get_db_session()
+    data = request.json
+
+    from models.user_profile import generate_tag_id
+    tag = UserTag(
+        tag_id=generate_tag_id(),
+        tag_name=data["tag_name"],
+        tag_type=data["tag_type"],
+        description=data.get("description"),
+        color=data.get("color"),
+        auto_assign=data.get("auto_assign", False),
+        assign_rule=data.get("assign_rule"),
+        user_count=0,
+    )
+
+    db.add(tag)
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"tag": tag.to_dict()}
+    }), 201
+
+
+@app.route("/api/v1/admin/behavior-insights", methods=["GET"])
+@require_jwt()
+def get_behavior_insights():
+    """获取行为洞察"""
+    from src.user_profile import get_user_profile_service
+    from datetime import datetime, timedelta
+
+    days = int(request.args.get("days", 30))
+
+    service = get_user_profile_service()
+    insights = service.get_insights(days=days)
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": insights
+    })
+
+
+@app.route("/api/v1/admin/behavior-anomalies", methods=["GET"])
+@require_jwt()
+def get_behavior_anomalies():
+    """获取行为异常列表"""
+    db = get_db_session()
+    user_id = request.args.get("user_id")
+    severity = request.args.get("severity")
+    resolved = request.args.get("resolved")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(BehaviorAnomaly)
+
+    if user_id:
+        query = query.filter(BehaviorAnomaly.user_id == user_id)
+    if severity:
+        query = query.filter(BehaviorAnomaly.severity == severity)
+    if resolved is not None:
+        query = query.filter(BehaviorAnomaly.resolved == (resolved == "true"))
+
+    total = query.count()
+    anomalies = query.order_by(BehaviorAnomaly.detected_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "anomalies": [a.to_dict() for a in anomalies],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/admin/behavior-anomalies/<anomaly_id>/resolve", methods=["POST"])
+@require_jwt()
+def resolve_behavior_anomaly(anomaly_id):
+    """解决行为异常"""
+    db = get_db_session()
+    user_id = getattr(g, 'user_id', None)
+
+    anomaly = db.query(BehaviorAnomaly).filter(BehaviorAnomaly.anomaly_id == anomaly_id).first()
+    if not anomaly:
+        return jsonify({"code": 40401, "message": "异常记录不存在"}), 404
+
+    anomaly.resolved = True
+    anomaly.resolved_at = datetime.utcnow()
+    anomaly.resolved_by = user_id
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
     })
 
 

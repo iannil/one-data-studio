@@ -235,6 +235,7 @@ services:
       PORT: 8004
       # Development mode: disable authentication
       AUTH_MODE: "false"
+      STRICT_AUTH_MODE: "false"
     ports:
       - "8004:8004"
     depends_on:

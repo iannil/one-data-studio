@@ -1026,6 +1026,638 @@ export async function logUserActivity(data: {
   return apiClient.post('/api/v1/portal/activities', data);
 }
 
+// ============= 内容管理 API 类型定义 =============
+
+export interface ContentCategory {
+  category_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  parent_id?: string;
+  level: number;
+  path?: string;
+  sort_order: number;
+  is_visible: boolean;
+  content_count: number;
+  created_at: string;
+  updated_at: string;
+  children?: ContentCategory[];
+}
+
+export interface ContentTag {
+  tag_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  usage_count: number;
+  created_at: string;
+}
+
+export interface Article {
+  article_id: string;
+  title: string;
+  slug: string;
+  summary?: string;
+  content?: string;
+  content_type?: 'markdown' | 'html';
+  cover_image?: string;
+  category_id?: string;
+  category_name?: string;
+  tags: string[];
+  author_id: string;
+  author_name: string;
+  status: 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
+  submitted_at?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  published_at?: string;
+  published_by?: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  share_count: number;
+  allow_comment: boolean;
+  is_featured: boolean;
+  is_top: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArticleVersion {
+  version_id: string;
+  article_id: string;
+  version_number: number;
+  title: string;
+  summary?: string;
+  change_description?: string;
+  change_type: 'create' | 'update' | 'minor';
+  created_by?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export interface ContentApproval {
+  approval_id: string;
+  content_type: string;
+  content_id: string;
+  content_title: string;
+  submitted_by: string;
+  submitted_by_name: string;
+  submitted_at: string;
+  workflow_type?: string;
+  current_step: number;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewer_id?: string;
+  reviewer_name?: string;
+  reviewed_at?: string;
+  comment?: string;
+  rejection_reason?: string;
+  completed_at?: string;
+}
+
+export interface CreateArticleRequest {
+  title: string;
+  slug?: string;
+  summary?: string;
+  content: string;
+  content_type?: 'markdown' | 'html';
+  cover_image?: string;
+  category_id?: string;
+  tags?: string[];
+  status?: 'draft' | 'pending';
+  allow_comment?: boolean;
+  is_featured?: boolean;
+  is_top?: boolean;
+  meta_title?: string;
+  meta_keywords?: string;
+  meta_description?: string;
+}
+
+export interface UpdateArticleRequest {
+  title?: string;
+  summary?: string;
+  content?: string;
+  cover_image?: string;
+  category_id?: string;
+  tags?: string[];
+  allow_comment?: boolean;
+  is_featured?: boolean;
+  is_top?: boolean;
+  change_description?: string;
+  change_type?: 'create' | 'update' | 'minor';
+}
+
+// ============= API管理 API 类型定义 =============
+
+export interface ApiEndpoint {
+  endpoint_id: string;
+  path: string;
+  method: string;
+  service: string;
+  blueprint?: string;
+  endpoint_name?: string;
+  description?: string;
+  summary?: string;
+  request_schema?: Record<string, unknown>;
+  response_schema?: Record<string, unknown>;
+  parameters?: Array<{ name: string; type: string; in: string; description: string }>;
+  query_params?: Array<{ name: string; type: string; description: string }>;
+  body_params?: Array<{ name: string; type: string; description: string }>;
+  tags?: string[];
+  requires_auth: boolean;
+  required_permissions?: string[];
+  call_count: number;
+  error_count: number;
+  avg_duration_ms?: number;
+  first_call?: string;
+  last_call?: string;
+}
+
+export interface ApiTestResult {
+  status_code: number;
+  status_text: string;
+  headers: Record<string, string>;
+  body: unknown;
+  duration_ms: number;
+  error?: string;
+}
+
+export interface ApiCallLog {
+  call_id: string;
+  path: string;
+  method: string;
+  user_id?: string;
+  username?: string;
+  status_code: number;
+  duration_ms?: number;
+  error_message?: string;
+  client_ip?: string;
+  created_at: string;
+}
+
+export interface ApiStats {
+  total_calls: number;
+  error_rate: number;
+  avg_duration: number;
+  status_distribution: Record<number, number>;
+  method_distribution: Record<string, number>;
+  slowest_apis: Array<{ path: string; method: string; avg_duration: number }>;
+  period_days: number;
+}
+
+// ============= 用户画像 API 类型定义 =============
+
+export interface UserProfile {
+  profile_id: string;
+  user_id: string;
+  username?: string;
+  display_name?: string;
+  activity_score: number;
+  behavior_tags: string[];
+  segment_id?: string;
+  segment_name?: string;
+  preference_features?: Record<string, unknown>;
+  last_activity?: string;
+  profile_updated_at: string;
+  created_at: string;
+}
+
+export interface UserSegment {
+  segment_id: string;
+  segment_name: string;
+  segment_type: 'active' | 'exploratory' | 'conservative' | 'power' | 'new' | 'churned' | 'custom';
+  description?: string;
+  criteria?: Record<string, unknown>;
+  user_count: number;
+  characteristics?: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTag {
+  tag_id: string;
+  tag_name: string;
+  tag_type: 'behavior' | 'preference' | 'demographic' | 'custom';
+  description?: string;
+  color?: string;
+  user_count: number;
+  auto_assign: boolean;
+  assign_rule?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface BehaviorAnomaly {
+  anomaly_id: string;
+  user_id: string;
+  anomaly_type: 'login_anomaly' | 'usage_spike' | 'usage_drop' | 'unusual_access' | 'data_access';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  detected_at: string;
+  resolved: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  context_data?: Record<string, unknown>;
+}
+
+export interface BehaviorInsights {
+  total_users: number;
+  active_users: number;
+  segment_distribution: Record<string, number>;
+  activity_heatmap: Record<string, number>;
+  top_features: Array<{ feature: string; usage_count: number }>;
+  churn_risk_users: number;
+  trending_behaviors: Array<{ behavior: string; count: number; trend: 'up' | 'down' }>;
+}
+
+// ============= 内容管理 API =============
+
+/**
+ * 获取内容分类列表
+ */
+export async function getContentCategories(params?: {
+  parent_id?: string;
+  is_visible?: boolean;
+}): Promise<ApiResponse<{ categories: ContentCategory[] }>> {
+  return apiClient.get('/api/v1/content/categories', { params });
+}
+
+/**
+ * 创建内容分类
+ */
+export async function createContentCategory(data: {
+  name: string;
+  slug?: string;
+  description?: string;
+  icon?: string;
+  parent_id?: string;
+  level?: number;
+  path?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+}): Promise<ApiResponse<{ category: ContentCategory }>> {
+  return apiClient.post('/api/v1/content/categories', data);
+}
+
+/**
+ * 获取内容标签列表
+ */
+export async function getContentTags(params?: {
+  search?: string;
+}): Promise<ApiResponse<{ tags: ContentTag[] }>> {
+  return apiClient.get('/api/v1/content/tags', { params });
+}
+
+/**
+ * 获取文章列表
+ */
+export async function getArticles(params?: {
+  category_id?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+  keyword?: string;
+}): Promise<ApiResponse<{ articles: Article[]; total: number; page: number; page_size: number }>> {
+  return apiClient.get('/api/v1/content/articles', { params });
+}
+
+/**
+ * 创建文章
+ */
+export async function createArticle(data: CreateArticleRequest): Promise<ApiResponse<{ article: Article }>> {
+  return apiClient.post('/api/v1/content/articles', data);
+}
+
+/**
+ * 获取文章详情
+ */
+export async function getArticle(articleId: string): Promise<ApiResponse<{ article: Article }>> {
+  return apiClient.get(`/api/v1/content/articles/${articleId}`);
+}
+
+/**
+ * 更新文章
+ */
+export async function updateArticle(articleId: string, data: UpdateArticleRequest): Promise<ApiResponse<{ article: Article }>> {
+  return apiClient.put(`/api/v1/content/articles/${articleId}`, data);
+}
+
+/**
+ * 提交发布文章
+ */
+export async function publishArticle(articleId: string, data?: {
+  workflow_type?: string;
+}): Promise<ApiResponse<{ approval_id: string }>> {
+  return apiClient.post(`/api/v1/content/articles/${articleId}/publish`, data);
+}
+
+/**
+ * 获取文章版本历史
+ */
+export async function getArticleVersions(articleId: string): Promise<ApiResponse<{ versions: ArticleVersion[] }>> {
+  return apiClient.get(`/api/v1/content/articles/${articleId}/versions`);
+}
+
+/**
+ * 删除文章
+ */
+export async function deleteArticle(articleId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/content/articles/${articleId}`);
+}
+
+/**
+ * 提交文章审核
+ */
+export async function submitArticleForApproval(articleId: string): Promise<ApiResponse<{ approval: ContentApproval }>> {
+  return apiClient.post(`/api/v1/content/articles/${articleId}/submit`);
+}
+
+/**
+ * 更新内容分类
+ */
+export async function updateContentCategory(categoryId: string, data: {
+  name?: string;
+  slug?: string;
+  description?: string;
+  icon?: string;
+  parent_id?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+}): Promise<ApiResponse<{ category: ContentCategory }>> {
+  return apiClient.put(`/api/v1/content/categories/${categoryId}`, data);
+}
+
+/**
+ * 删除内容分类
+ */
+export async function deleteContentCategory(categoryId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/content/categories/${categoryId}`);
+}
+
+/**
+ * 创建内容标签
+ */
+export async function createContentTag(data: {
+  name: string;
+  slug?: string;
+  description?: string;
+  color?: string;
+}): Promise<ApiResponse<{ tag: ContentTag }>> {
+  return apiClient.post('/api/v1/content/tags', data);
+}
+
+/**
+ * 更新内容标签
+ */
+export async function updateContentTag(tagId: string, data: {
+  name?: string;
+  slug?: string;
+  description?: string;
+  color?: string;
+}): Promise<ApiResponse<{ tag: ContentTag }>> {
+  return apiClient.put(`/api/v1/content/tags/${tagId}`, data);
+}
+
+/**
+ * 删除内容标签
+ */
+export async function deleteContentTag(tagId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/content/tags/${tagId}`);
+}
+
+/**
+ * 获取内容审批列表
+ */
+export async function getContentApprovals(params?: {
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ approvals: ContentApproval[]; total: number; page: number; page_size: number }>> {
+  return apiClient.get('/api/v1/content/approvals', { params });
+}
+
+/**
+ * 审批通过
+ */
+export async function approveContent(approvalId: string, data?: {
+  comment?: string;
+}): Promise<ApiResponse<{ approval: ContentApproval }>> {
+  return apiClient.post(`/api/v1/content/approvals/${approvalId}/approve`, data);
+}
+
+/**
+ * 审批拒绝
+ */
+export async function rejectContent(approvalId: string, data: {
+  reason: string;
+  comment?: string;
+}): Promise<ApiResponse<{ approval: ContentApproval }>> {
+  return apiClient.post(`/api/v1/content/approvals/${approvalId}/reject`, data);
+}
+
+// ============= API可视化管理 API =============
+
+/**
+ * 获取API端点列表
+ */
+export async function getApiEndpoints(params?: {
+  service?: string;
+  method?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ endpoints: ApiEndpoint[]; total: number; page: number; page_size: number }>> {
+  return apiClient.get('/api/v1/admin/api-endpoints', { params });
+}
+
+/**
+ * 扫描并注册API端点
+ */
+export async function scanApiEndpoints(): Promise<ApiResponse<{ total: number; registered: number; endpoints: ApiEndpoint[] }>> {
+  return apiClient.post('/api/v1/admin/api-endpoints/scan');
+}
+
+/**
+ * 获取API调用统计
+ */
+export async function getApiStats(params?: {
+  days?: number;
+  service?: string;
+}): Promise<ApiResponse<ApiStats>> {
+  return apiClient.get('/api/v1/admin/api-stats', { params });
+}
+
+/**
+ * 测试API端点
+ */
+export async function testApiEndpoint(endpointId: string, data: {
+  path_params?: Record<string, string>;
+  query_params?: Record<string, string>;
+  request_body?: Record<string, unknown>;
+  headers?: Record<string, string>;
+}): Promise<ApiResponse<ApiTestResult>> {
+  return apiClient.post(`/api/v1/admin/api-endpoints/${endpointId}/test`, data);
+}
+
+// 别名，用于兼容 ApiTester.tsx
+export const testApi = testApiEndpoint;
+
+/**
+ * 获取API调用日志列表
+ */
+export async function getApiCallLogs(params?: {
+  path?: string;
+  method?: string;
+  user_id?: string;
+  status_code?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ logs: ApiCallLog[]; total: number; page: number; page_size: number }>> {
+  return apiClient.get('/api/v1/admin/api-calls', { params });
+}
+
+/**
+ * 获取API调用详情
+ */
+export async function getApiCallDetail(callId: string): Promise<ApiResponse<{ log: ApiCallLog & { query_params: Record<string, string>; request_body: unknown; response_body: string } }>> {
+  return apiClient.get(`/api/v1/admin/api-calls/${callId}`);
+}
+
+// ============= 用户画像 API =============
+
+/**
+ * 获取用户画像列表
+ */
+export async function getUserProfiles(params?: {
+  segment_id?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{
+  profiles: UserProfile[];
+  total: number;
+  page: number;
+  page_size: number;
+  active_count?: number;
+  risk_count?: number;
+  avg_activity?: number;
+}>> {
+  return apiClient.get('/api/v1/admin/user-profiles', { params });
+}
+
+/**
+ * 获取用户画像详情
+ */
+export async function getUserProfile(userId: string): Promise<ApiResponse<{ profile: UserProfile }>> {
+  return apiClient.get(`/api/v1/admin/user-profiles/${userId}`);
+}
+
+/**
+ * 刷新用户画像分析
+ */
+export async function refreshUserProfiles(): Promise<ApiResponse<{ count: number; message: string }>> {
+  return apiClient.post('/api/v1/admin/user-profiles/refresh');
+}
+
+/**
+ * 获取用户分群列表
+ */
+export async function getUserSegments(params?: {
+  is_active?: boolean;
+  include_users?: boolean;
+}): Promise<ApiResponse<{
+  segments: UserSegment[];
+  segment_count: number;
+  total_users: number;
+  segmented_users?: number;
+}>> {
+  return apiClient.get('/api/v1/admin/user-segments', { params });
+}
+
+/**
+ * 重建用户分群
+ */
+export async function rebuildUserSegments(): Promise<ApiResponse<{
+  segment_count: number;
+  total_users: number;
+  segmented_users: number;
+}>> {
+  return apiClient.post('/api/v1/admin/user-segments/rebuild');
+}
+
+/**
+ * 删除用户分群
+ */
+export async function deleteUserSegment(segmentId: string): Promise<ApiResponse<void>> {
+  return apiClient.delete(`/api/v1/admin/user-segments/${segmentId}`);
+}
+
+/**
+ * 创建自定义分群
+ */
+export async function createUserSegment(data: {
+  segment_name: string;
+  description?: string;
+  criteria: Record<string, unknown>;
+}): Promise<ApiResponse<{ segment: UserSegment }>> {
+  return apiClient.post('/api/v1/admin/user-segments', data);
+}
+
+/**
+ * 获取用户标签列表
+ */
+export async function getUserTags(params?: {
+  tag_type?: string;
+}): Promise<ApiResponse<{ tags: UserTag[] }>> {
+  return apiClient.get('/api/v1/admin/user-tags', { params });
+}
+
+/**
+ * 创建用户标签
+ */
+export async function createUserTag(data: {
+  tag_name: string;
+  tag_type: string;
+  description?: string;
+  color?: string;
+  auto_assign?: boolean;
+  assign_rule?: Record<string, unknown>;
+}): Promise<ApiResponse<{ tag: UserTag }>> {
+  return apiClient.post('/api/v1/admin/user-tags', data);
+}
+
+/**
+ * 获取行为洞察
+ */
+export async function getBehaviorInsights(params?: {
+  days?: number;
+}): Promise<ApiResponse<BehaviorInsights>> {
+  return apiClient.get('/api/v1/admin/behavior-insights', { params });
+}
+
+/**
+ * 获取行为异常列表
+ */
+export async function getBehaviorAnomalies(params?: {
+  user_id?: string;
+  severity?: string;
+  resolved?: boolean;
+  page?: number;
+  page_size?: number;
+}): Promise<ApiResponse<{ anomalies: BehaviorAnomaly[]; total: number }>> {
+  return apiClient.get('/api/v1/admin/behavior-anomalies', { params });
+}
+
+/**
+ * 解决行为异常
+ */
+export async function resolveBehaviorAnomaly(anomalyId: string): Promise<ApiResponse<void>> {
+  return apiClient.post(`/api/v1/admin/behavior-anomalies/${anomalyId}/resolve`);
+}
+
 export default {
   // 用户管理
   getUsers,
@@ -1118,4 +1750,50 @@ export default {
   // 门户 - 仪表板
   getPortalDashboard,
   logUserActivity,
+
+  // 内容管理
+  getContentCategories,
+  createContentCategory,
+  getContentTags,
+  getArticles,
+  createArticle,
+  getArticle,
+  updateArticle,
+  publishArticle,
+  getArticleVersions,
+  getContentApprovals,
+  approveContent,
+  rejectContent,
+
+  // API可视化管理
+  getApiEndpoints,
+  scanApiEndpoints,
+  getApiStats,
+  testApiEndpoint,
+  testApi,
+  getApiCallLogs,
+  getApiCallDetail,
+
+  // 用户画像
+  getUserProfiles,
+  getUserProfile,
+  refreshUserProfiles,
+  getUserSegments,
+  rebuildUserSegments,
+  deleteUserSegment,
+  createUserSegment,
+  getUserTags,
+  createUserTag,
+  getBehaviorInsights,
+  getBehaviorAnomalies,
+  resolveBehaviorAnomaly,
+
+  // 内容管理扩展
+  updateContentCategory,
+  deleteContentCategory,
+  createContentTag,
+  updateContentTag,
+  deleteContentTag,
+  deleteArticle,
+  submitArticleForApproval,
 };

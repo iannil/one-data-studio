@@ -14,6 +14,14 @@ from .monitoring import MonitoringDashboard, AlertRule, AlertNotification
 from .llmtuning import LLMTuningTask
 from .sqllab import SqlQuery, SavedQuery, DatabaseConnection
 from .aihub import AIHubModel, AIHubCategory
+from .prediction import (
+    PredictionTemplate,
+    TrainingJob as PredictionTrainingJob,
+    PredictionRecord,
+    generate_template_id,
+    generate_job_id,
+    PREDEFINED_TEMPLATES,
+)
 
 __all__ = [
     'Base',
@@ -57,4 +65,11 @@ __all__ = [
     # AI Hub (P4.7)
     'AIHubModel',
     'AIHubCategory',
+    # Prediction (P2.3)
+    'PredictionTemplate',
+    'PredictionTrainingJob',
+    'PredictionRecord',
+    'generate_template_id',
+    'generate_job_id',
+    'PREDEFINED_TEMPLATES',
 ]

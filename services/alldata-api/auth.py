@@ -101,6 +101,8 @@ class Operation:
     DELETE = "delete"
     EXPORT = "export"
     IMPORT = "import"
+    EXECUTE = "execute"
+    MANAGE = "manage"
 
 
 # ============= 权限矩阵 =============

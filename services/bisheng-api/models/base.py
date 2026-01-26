@@ -55,3 +55,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def create_tables():
+    """创建所有数据库表（开发环境使用）"""
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created")

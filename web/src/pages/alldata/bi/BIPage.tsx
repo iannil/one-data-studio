@@ -14,6 +14,7 @@ import {
   message,
   Drawer,
   Tabs,
+  Divider,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,11 +26,15 @@ import {
   TableOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  RobotOutlined,
+  ThunderboltFilled,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import alldata from '@/services/alldata';
 import type { Report, CreateReportRequest } from '@/services/alldata';
+import AIChatPanel from '@/components/AIChatPanel';
+import SmartChart from '@/components/SmartChart';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -45,6 +50,15 @@ function BIPage() {
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [chartData, setChartData] = useState<any>(null); // 真实图表数据
+
+  // AI 查询相关状态
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiQueryResult, setAiQueryResult] = useState<{
+    sql: string;
+    data?: { columns: string[]; rows: Record<string, unknown>[] };
+    chartRecommendation?: any;
+  } | null>(null);
+  const [selectedDatabase, setSelectedDatabase] = useState<string>('');
 
   const [form] = Form.useForm();
 
@@ -205,6 +219,35 @@ function BIPage() {
     });
   };
 
+  // 处理 AI 生成的查询
+  const handleAIQueryGenerated = async (sql: string, chartConfig?: any) => {
+    if (!selectedDatabase) {
+      message.warning('请先选择数据库');
+      return;
+    }
+
+    try {
+      const response = await alldata.executeQuery({
+        database: selectedDatabase,
+        sql: sql,
+      });
+
+      setAiQueryResult({
+        sql,
+        data: {
+          columns: response.data?.columns || [],
+          rows: response.data?.rows || [],
+        },
+        chartRecommendation: chartConfig,
+      });
+
+      message.success(`查询成功，返回 ${response.data?.row_count || 0} 条记录`);
+    } catch (error) {
+      message.error('执行查询失败');
+      console.error(error);
+    }
+  };
+
   // 获取报表图表数据（真实API调用）
   const fetchReportChartData = async (reportId: string) => {
     try {
@@ -216,6 +259,13 @@ function BIPage() {
       return null;
     }
   };
+
+  // 获取数据库列表
+  const { data: databasesData } = useQuery({
+    queryKey: ['databases'],
+    queryFn: alldata.getDatabases,
+  });
+  const databases = databasesData?.data?.databases || [];
 
   // 模拟图表数据（仅用于演示，实际生产环境应从API获取真实数据）
   const mockChartData = {
@@ -256,9 +306,18 @@ function BIPage() {
           <Card
             title="BI 报表"
             extra={
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateModalOpen(true)}>
-                创建报表
-              </Button>
+              <Space>
+                <Button
+                  icon={<RobotOutlined />}
+                  onClick={() => setShowAIChat(!showAIChat)}
+                  type={showAIChat ? 'primary' : 'default'}
+                >
+                  智能查询
+                </Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateModalOpen(true)}>
+                  创建报表
+                </Button>
+              </Space>
             }
           >
             <Space style={{ marginBottom: 16 }} size="middle">
@@ -305,6 +364,67 @@ function BIPage() {
               }}
             />
           </Card>
+
+          {/* AI 智能查询面板 */}
+          {showAIChat && (
+            <Card
+              title={
+                <Space>
+                  <RobotOutlined />
+                  <span>智能数据分析</span>
+                  {aiQueryResult?.chartRecommendation && (
+                    <Tag icon={<ThunderboltFilled />} color="blue">
+                      AI 推荐：{aiQueryResult.chartRecommendation.chart_name}
+                    </Tag>
+                  )}
+                </Space>
+              }
+              style={{ marginTop: 16 }}
+            >
+              <Row gutter={16}>
+                {/* 数据库选择 */}
+                <Col span={24}>
+                  <Space style={{ marginBottom: 16 }}>
+                    <span>选择数据库：</span>
+                    <Select
+                      placeholder="请选择数据库"
+                      style={{ width: 200 }}
+                      value={selectedDatabase || undefined}
+                      onChange={setSelectedDatabase}
+                      allowClear
+                    >
+                      {databases.map((db: any) => (
+                        <Option key={db.name} value={db.name}>
+                          {db.name}
+                          {db.description && <span style={{ color: '#999', marginLeft: 8 }}> - {db.description}</span>}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Space>
+                </Col>
+
+                {/* AI 聊天面板 */}
+                <Col span={aiQueryResult ? 12 : 24}>
+                  <AIChatPanel
+                    database={selectedDatabase}
+                    onQueryGenerated={handleAIQueryGenerated}
+                    height={400}
+                  />
+                </Col>
+
+                {/* AI 查询结果 */}
+                {aiQueryResult && (
+                  <Col span={12}>
+                    <SmartChart
+                      data={aiQueryResult.data}
+                      chartRecommendation={aiQueryResult.chartRecommendation}
+                      height={400}
+                    />
+                  </Col>
+                )}
+              </Row>
+            </Card>
+          )}
         </Col>
       </Row>
 

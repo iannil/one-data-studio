@@ -71,6 +71,10 @@ const AuditPage = lazy(() => import('./pages/admin/audit/AuditPage'));
 const RolesPage = lazy(() => import('./pages/admin/RolesPage'));
 const CostReportPage = lazy(() => import('./pages/admin/CostReportPage'));
 const AdminNotificationsPage = lazy(() => import('./pages/admin/NotificationsPage'));
+const ContentPage = lazy(() => import('./pages/admin/ContentPage'));
+const UserProfilesPage = lazy(() => import('./pages/admin/UserProfilesPage'));
+const UserSegmentsPage = lazy(() => import('./pages/admin/UserSegmentsPage'));
+const ApiTesterPage = lazy(() => import('./pages/admin/ApiTester'));
 
 // Portal Pages
 const PortalNotificationsPage = lazy(() => import('./pages/portal/NotificationsPage'));
@@ -171,6 +175,10 @@ function AppRoutes() {
         <Route path="admin/roles" element={<LazyWrapper><RolesPage /></LazyWrapper>} />
         <Route path="admin/cost-report" element={<LazyWrapper><CostReportPage /></LazyWrapper>} />
         <Route path="admin/notifications" element={<LazyWrapper><AdminNotificationsPage /></LazyWrapper>} />
+        <Route path="admin/content" element={<LazyWrapper><ContentPage /></LazyWrapper>} />
+        <Route path="admin/user-profiles" element={<LazyWrapper><UserProfilesPage /></LazyWrapper>} />
+        <Route path="admin/user-segments" element={<LazyWrapper><UserSegmentsPage /></LazyWrapper>} />
+        <Route path="admin/api-tester" element={<LazyWrapper><ApiTesterPage /></LazyWrapper>} />
 
         {/* Portal Routes */}
         <Route path="portal/notifications" element={<LazyWrapper><PortalNotificationsPage /></LazyWrapper>} />

@@ -65,7 +65,7 @@ class DatasetColumn(Base):
     __tablename__ = "dataset_columns"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    dataset_id = Column(String(64), ForeignKey('datasets.dataset_id', ondelete='CASCADE'), nullable=False, comment='所属数据集ID')
+    dataset_id = Column(String(64), ForeignKey('datasets.id', ondelete='CASCADE'), nullable=False, comment='所属数据集ID')
     column_name = Column(String(128), nullable=False, comment='列名')
     column_type = Column(String(64), nullable=False, comment='数据类型')
     is_nullable = Column(Boolean, default=True, comment='是否可空')
@@ -92,7 +92,7 @@ class DatasetVersion(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     version_id = Column(String(64), unique=True, nullable=False, comment='版本唯一标识')
-    dataset_id = Column(String(64), ForeignKey('datasets.dataset_id', ondelete='CASCADE'), nullable=False, comment='所属数据集ID')
+    dataset_id = Column(String(64), ForeignKey('datasets.id', ondelete='CASCADE'), nullable=False, comment='所属数据集ID')
     version_number = Column(Integer, nullable=False, comment='版本号')
     storage_path = Column(String(512), nullable=False, comment='版本存储路径')
     description = Column(Text, comment='版本描述')

@@ -15,6 +15,7 @@ import sys
 import logging
 import uuid
 import asyncio
+import time
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from functools import wraps
@@ -40,7 +41,14 @@ from models import (
     MonitoringDashboard, AlertRule, AlertNotification,
     LLMTuningTask,
     SqlQuery, SavedQuery, DatabaseConnection,
-    AIHubModel, AIHubCategory
+    AIHubModel, AIHubCategory,
+    # Prediction
+    PredictionTemplate,
+    PredictionTrainingJob,
+    PredictionRecord,
+    generate_template_id,
+    generate_job_id,
+    PREDEFINED_TEMPLATES,
 )
 from services.huggingface import get_huggingface_service, HuggingFaceService
 from services.inference import get_inference_service, ModelInferenceService
@@ -4480,6 +4488,531 @@ def start_llm_tuning_alias(task_id):
 def stop_llm_tuning_alias(task_id):
     """停止 LLM 微调任务（别名）"""
     return stop_llm_tuning_task(task_id)
+
+
+# ==================== 业务预测模型 API ====================
+
+@app.route("/api/v1/prediction/templates", methods=["GET"])
+@require_jwt(optional=True)
+def get_prediction_templates():
+    """获取预测模板列表"""
+    db = get_db()
+    category = request.args.get("category")
+    is_active = request.args.get("is_active", "true").lower() == "true"
+
+    query = db.query(PredictionTemplate)
+
+    if category:
+        query = query.filter(PredictionTemplate.category == category)
+
+    if is_active:
+        query = query.filter(PredictionTemplate.is_active == True)
+
+    templates = query.order_by(PredictionTemplate.is_system.desc(), PredictionTemplate.usage_count.desc()).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "templates": [t.to_dict() for t in templates]
+        }
+    })
+
+
+@app.route("/api/v1/prediction/templates/predefined", methods=["GET"])
+@require_jwt(optional=True)
+def get_predefined_templates():
+    """获取预定义模板列表"""
+    category = request.args.get("category")
+
+    templates = PREDEFINED_TEMPLATES
+    if category:
+        templates = [t for t in templates if t.get("category") == category]
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "templates": templates
+        }
+    })
+
+
+@app.route("/api/v1/prediction/templates", methods=["POST"])
+@require_jwt(optional=True)
+def create_prediction_template():
+    """创建预测模板"""
+    db = get_db()
+    data = request.json
+    user_id = getattr(g, 'user_id', 'system')
+
+    name = data.get("name")
+    if not name:
+        return jsonify({"code": 40001, "message": "模板名称不能为空"}), 400
+
+    category = data.get("category")
+    if not category:
+        return jsonify({"code": 40001, "message": "分类不能为空"}), 400
+
+    template = PredictionTemplate(
+        template_id=generate_template_id(),
+        name=name,
+        category=category,
+        description=data.get("description"),
+        target_variable=data.get("target_variable"),
+        target_type=data.get("target_type", "regression"),
+        prediction_horizon=data.get("prediction_horizon"),
+        required_features=data.get("required_features", []),
+        optional_features=data.get("optional_features", []),
+        default_model=data.get("default_model"),
+        allowed_models=data.get("allowed_models"),
+        model_params=data.get("model_params"),
+        min_rows=data.get("min_rows", 1000),
+        feature_importance_threshold=data.get("feature_importance_threshold", 0.1),
+        metrics=data.get("metrics"),
+        success_threshold=data.get("success_threshold"),
+        chart_type=data.get("chart_type"),
+        chart_config=data.get("chart_config"),
+        is_active=data.get("is_active", True),
+        is_system=False,
+        created_by=user_id,
+    )
+
+    # 设置特征列表
+    if data.get("required_features"):
+        template.set_required_features(data["required_features"])
+    if data.get("optional_features"):
+        template.set_optional_features(data["optional_features"])
+
+    db.add(template)
+    db.commit()
+
+    logger.info(f"创建预测模板: {template.template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/prediction/templates/<template_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_prediction_template(template_id):
+    """获取预测模板详情"""
+    db = get_db()
+    template = db.query(PredictionTemplate).filter(PredictionTemplate.template_id == template_id).first()
+
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    # 增加使用计数
+    template.usage_count += 1
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    })
+
+
+@app.route("/api/v1/prediction/templates/<template_id>", methods=["PUT"])
+@require_jwt(optional=True)
+def update_prediction_template(template_id):
+    """更新预测模板"""
+    db = get_db()
+    data = request.json
+
+    template = db.query(PredictionTemplate).filter(PredictionTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    # 更新字段
+    for field in ["name", "description", "target_variable", "target_type", "prediction_horizon",
+                  "default_model", "allowed_models", "model_params", "min_rows",
+                  "feature_importance_threshold", "metrics", "success_threshold",
+                  "chart_type", "chart_config", "is_active"]:
+        if field in data:
+            setattr(template, field, data[field])
+
+    if "required_features" in data:
+        template.set_required_features(data["required_features"])
+    if "optional_features" in data:
+        template.set_optional_features(data["optional_features"])
+
+    db.commit()
+
+    logger.info(f"更新预测模板: {template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": template.to_dict()
+    })
+
+
+@app.route("/api/v1/prediction/templates/<template_id>", methods=["DELETE"])
+@require_jwt(optional=True)
+def delete_prediction_template(template_id):
+    """删除预测模板"""
+    db = get_db()
+
+    template = db.query(PredictionTemplate).filter(PredictionTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    # 系统模板不能删除
+    if template.is_system:
+        return jsonify({"code": 40301, "message": "系统模板不能删除"}), 403
+
+    db.delete(template)
+    db.commit()
+
+    logger.info(f"删除预测模板: {template_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success"
+    })
+
+
+@app.route("/api/v1/prediction/training-jobs", methods=["GET"])
+@require_jwt(optional=True)
+def get_prediction_training_jobs():
+    """获取训练任务列表"""
+    db = get_db()
+    status = request.args.get("status")
+    category = request.args.get("category")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(PredictionTrainingJob)
+
+    if status:
+        query = query.filter(PredictionTrainingJob.status == status)
+    if category:
+        query = query.filter(PredictionTrainingJob.category == category)
+
+    total = query.count()
+    jobs = query.order_by(PredictionTrainingJob.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "jobs": [j.to_dict() for j in jobs],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/prediction/training-jobs", methods=["POST"])
+@require_jwt(optional=True)
+def create_prediction_training_job():
+    """创建训练任务"""
+    db = get_db()
+    data = request.json
+    user_id = getattr(g, 'user_id', 'system')
+
+    template_id = data.get("template_id")
+    if not template_id:
+        return jsonify({"code": 40001, "message": "模板ID不能为空"}), 400
+
+    # 验证模板存在
+    template = db.query(PredictionTemplate).filter(PredictionTemplate.template_id == template_id).first()
+    if not template:
+        return jsonify({"code": 40401, "message": "模板不存在"}), 404
+
+    job = PredictionTrainingJob(
+        job_id=generate_job_id(),
+        template_id=template_id,
+        job_name=data.get("job_name", template.name),
+        description=data.get("description"),
+        category=template.category,
+        dataset_id=data.get("dataset_id"),
+        table_name=data.get("table_name"),
+        model_type=data.get("model_type", template.default_model),
+        model_params=data.get("model_params") or template.model_params,
+        feature_config=data.get("feature_config"),
+        selected_features=data.get("selected_features"),
+        train_test_split=data.get("train_test_split", 0.8),
+        random_state=data.get("random_state", 42),
+        max_epochs=data.get("max_epochs", 100),
+        early_stopping=data.get("early_stopping", True),
+        status="pending",
+        created_by=user_id,
+    )
+
+    db.add(job)
+    db.commit()
+
+    logger.info(f"创建预测训练任务: {job.job_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": job.to_dict()
+    }), 201
+
+
+@app.route("/api/v1/prediction/training-jobs/<job_id>", methods=["GET"])
+@require_jwt(optional=True)
+def get_prediction_training_job(job_id):
+    """获取训练任务详情"""
+    db = get_db()
+    job = db.query(PredictionTrainingJob).filter(PredictionTrainingJob.job_id == job_id).first()
+
+    if not job:
+        return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": job.to_dict()
+    })
+
+
+@app.route("/api/v1/prediction/training-jobs/<job_id>/start", methods=["POST"])
+@require_jwt(optional=True)
+def start_prediction_training_job(job_id):
+    """启动训练任务"""
+    db = get_db()
+    job = db.query(PredictionTrainingJob).filter(PredictionTrainingJob.job_id == job_id).first()
+
+    if not job:
+        return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+    if job.status not in ["pending", "failed"]:
+        return jsonify({"code": 40001, "message": "任务状态不允许启动"}), 400
+
+    job.status = "running"
+    job.started_at = datetime.utcnow()
+    job.progress = 0
+    db.commit()
+
+    # 异步训练任务
+    import threading
+
+    def train_task():
+        try:
+            from src.feature_auto import get_auto_ml_service
+            import pandas as pd
+
+            # 模拟加载数据
+            # df = pd.read_sql(f"SELECT * FROM {job.table_name}", db.bind)
+
+            # 模拟训练进度
+            for i in range(0, 101, 10):
+                job.progress = i
+                db.commit()
+                time.sleep(0.5)
+
+            # 模拟训练结果
+            job.set_metrics({
+                "rmse": 12.5,
+                "r2": 0.85,
+                "mae": 8.3,
+            })
+            job.set_feature_importance([
+                {"feature": "feature_1", "importance": 0.35},
+                {"feature": "feature_2", "importance": 0.25},
+                {"feature": "feature_3", "importance": 0.15},
+            ])
+            job.status = "completed"
+            job.progress = 100
+            job.completed_at = datetime.utcnow()
+            job.model_path = f"/models/{job.job_id}.pkl"
+            job.model_version = "v1.0"
+
+            db.commit()
+            logger.info(f"训练任务完成: {job_id}")
+
+        except Exception as e:
+            logger.error(f"训练任务失败: {e}")
+            job.status = "failed"
+            job.error_message = str(e)
+            job.progress = 0
+            db.commit()
+
+    thread = threading.Thread(target=train_task)
+    thread.daemon = True
+    thread.start()
+
+    logger.info(f"启动预测训练任务: {job_id}")
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {"job_id": job_id, "status": "running"}
+    })
+
+
+@app.route("/api/v1/prediction/predict", methods=["POST"])
+@require_jwt(optional=True)
+def predict_with_model():
+    """使用训练好的模型进行预测"""
+    db = get_db()
+    data = request.json
+
+    job_id = data.get("job_id")
+    if not job_id:
+        return jsonify({"code": 40001, "message": "任务ID不能为空"}), 400
+
+    job = db.query(PredictionTrainingJob).filter(PredictionTrainingJob.job_id == job_id).first()
+    if not job:
+        return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+    if job.status != "completed":
+        return jsonify({"code": 40001, "message": "模型未训练完成"}), 400
+
+    input_data = data.get("input_data")
+    if not input_data:
+        return jsonify({"code": 40001, "message": "输入数据不能为空"}), 400
+
+    # 模拟预测
+    import random
+    prediction = {
+        "value": random.uniform(100, 1000),
+        "confidence": random.uniform(0.7, 0.95),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    # 记录预测
+    record = PredictionRecord(
+        record_id=f"pred_{uuid.uuid4().hex[:12]}",
+        job_id=job_id,
+        input_data=input_data,
+        prediction=prediction,
+        prediction_probability=prediction.get("confidence"),
+        created_by=getattr(g, 'user_id', 'system'),
+    )
+    db.add(record)
+    db.commit()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": prediction
+    })
+
+
+@app.route("/api/v1/prediction/records", methods=["GET"])
+@require_jwt(optional=True)
+def get_prediction_records():
+    """获取预测记录列表"""
+    db = get_db()
+    job_id = request.args.get("job_id")
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+
+    query = db.query(PredictionRecord)
+
+    if job_id:
+        query = query.filter(PredictionRecord.job_id == job_id)
+
+    total = query.count()
+    records = query.order_by(PredictionRecord.predicted_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "records": [r.to_dict() for r in records],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    })
+
+
+@app.route("/api/v1/prediction/features/auto", methods=["POST"])
+@require_jwt(optional=True)
+def auto_feature_engineering():
+    """自动特征工程"""
+    data = request.json
+
+    # 获取数据
+    df_data = data.get("data")
+    if not df_data:
+        return jsonify({"code": 40001, "message": "数据不能为空"}), 400
+
+    import pandas as pd
+    from src.feature_auto import get_feature_engine
+
+    df = pd.DataFrame(df_data)
+    category = data.get("category", "sales")
+    target_column = data.get("target_column", "target")
+
+    # 执行特征工程
+    feature_engine = get_feature_engine()
+    df_enhanced = feature_engine.auto_feature_engineering(
+        df=df,
+        category=category,
+        target_column=target_column,
+        feature_config=data.get("feature_config"),
+    )
+
+    # 特征选择
+    max_features = data.get("max_features", 50)
+    threshold = data.get("threshold", 0.1)
+    method = data.get("method", "importance")
+
+    selected_features = feature_engine.select_features(
+        df=df_enhanced,
+        target_column=target_column,
+        method=method,
+        max_features=max_features,
+        threshold=threshold,
+    )
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "original_features": len(df.columns),
+            "enhanced_features": len(df_enhanced.columns),
+            "selected_features": [f.to_dict() for f in selected_features],
+            "feature_names": [f.name for f in selected_features],
+        }
+    })
+
+
+@app.route("/api/v1/prediction/train/auto", methods=["POST"])
+@require_jwt(optional=True)
+def auto_train_model():
+    """自动训练模型"""
+    data = request.json
+
+    # 获取数据
+    df_data = data.get("data")
+    if not df_data:
+        return jsonify({"code": 40001, "message": "数据不能为空"}), 400
+
+    import pandas as pd
+    from src.feature_auto import get_auto_ml_service
+
+    df = pd.DataFrame(df_data)
+    target_column = data.get("target_column", "target")
+    task_type = data.get("task_type", "regression")
+
+    # 自动训练
+    auto_ml = get_auto_ml_service()
+    result = auto_ml.auto_train(
+        df=df,
+        target_column=target_column,
+        task_type=task_type,
+        test_size=data.get("test_size", 0.2),
+        random_state=data.get("random_state", 42),
+    )
+
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": result
+    })
 
 
 # ==================== 启动应用 ====================

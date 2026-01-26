@@ -22,6 +22,11 @@ from .offline import OfflineTask, OfflineTaskLog
 from .assets import DataAsset, AssetCategory, AssetCollection
 from .standards import DataStandard, StandardValidation
 from .data_service import DataService, ServiceCallLog
+from .sensitivity import (
+    SensitivityScanTask,
+    SensitivityScanResult,
+    SensitivityPattern,
+)
 
 __all__ = [
     # Base
@@ -83,4 +88,8 @@ __all__ = [
     # Data Service models (P5.6)
     "DataService",
     "ServiceCallLog",
+    # Sensitivity Scan models (P1.1)
+    "SensitivityScanTask",
+    "SensitivityScanResult",
+    "SensitivityPattern",
 ]

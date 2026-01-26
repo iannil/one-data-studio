@@ -462,7 +462,7 @@ def list_apps():
     page_size = int(request.args.get("page_size", 10))
     app_type = request.args.get("type")
 
-    db = get_db()
+    db = get_db_session()
     try:
         # 构建查询
         query = db.query(App)
@@ -567,7 +567,7 @@ def calculate_workflow_statistics(db, workflow_id: str) -> dict:
 @require_jwt(optional=True)
 def get_app(app_id: str):
     """获取应用详情（数据库版本）"""
-    db = get_db()
+    db = get_db_session()
     try:
         app = db.query(App).filter(App.app_id == app_id).first()
 
@@ -2395,7 +2395,7 @@ def list_knowledge_bases():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 10))
 
-    db = get_db()
+    db = get_db_session()
     try:
         # 构建查询
         query = db.query(KnowledgeBase)
@@ -2428,7 +2428,7 @@ def list_knowledge_bases():
 @require_jwt(optional=True)
 def get_knowledge_base(knowledge_base_id: str):
     """获取知识库详情（数据库版本）"""
-    db = get_db()
+    db = get_db_session()
     try:
         kb = db.query(KnowledgeBase).filter(KnowledgeBase.kb_id == knowledge_base_id).first()
 
@@ -2569,7 +2569,7 @@ def list_tools():
     """列出可用工具（数据库版本）"""
     category = request.args.get("category")
 
-    db = get_db()
+    db = get_db_session()
     try:
         # 构建查询
         query = db.query(Tool).filter(Tool.enabled == True)
@@ -4002,7 +4002,7 @@ def list_workflow_templates():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 20))
 
-    db = get_db()
+    db = get_db_session()
     try:
         # 构建查询
         query = db.query(Template).filter(Template.is_public == True)
@@ -4055,7 +4055,7 @@ def list_workflow_templates():
 @require_jwt(optional=True)
 def get_workflow_template(template_id: str):
     """获取工作流模板详情（数据库版本）"""
-    db = get_db()
+    db = get_db_session()
     try:
         tpl = db.query(Template).filter(Template.template_id == template_id).first()
 
@@ -4788,6 +4788,11 @@ def create_sft_dataset():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8081))
     debug = os.getenv("DEBUG", "false").lower() == "true"
+
+    # 开发环境：自动创建缺失的表
+    if os.getenv("ENVIRONMENT") != "production":
+        from models.base import create_tables
+        create_tables()
 
     # SECURITY WARNING: Debug mode exposes sensitive information
     if debug:

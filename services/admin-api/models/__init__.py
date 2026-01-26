@@ -11,6 +11,30 @@ from .audit import AuditLog
 from .settings import SystemSettings, NotificationChannel, NotificationRule
 from .notification import NotificationTemplate, NotificationLog
 from .portal import UserNotification, UserTodo, UserActivityLog, Announcement
+from .user_profile import (
+    UserProfile,
+    UserSegment,
+    UserTag,
+    BehaviorAnomaly,
+    generate_profile_id,
+    generate_segment_id,
+)
+from .content import (
+    ContentCategory,
+    ContentTag,
+    Article,
+    ArticleVersion,
+    ContentApproval,
+    generate_content_id,
+    generate_category_id,
+    generate_tag_id,
+)
+from .api_call_log import (
+    ApiEndpoint,
+    ApiCallLog,
+    generate_api_endpoint_id,
+    generate_api_call_id,
+)
 
 __all__ = [
     # Base
@@ -49,4 +73,28 @@ __all__ = [
     'UserTodo',
     'UserActivityLog',
     'Announcement',
+
+    # User Profile
+    'UserProfile',
+    'UserSegment',
+    'UserTag',
+    'BehaviorAnomaly',
+    'generate_profile_id',
+    'generate_segment_id',
+
+    # Content Management
+    'ContentCategory',
+    'ContentTag',
+    'Article',
+    'ArticleVersion',
+    'ContentApproval',
+    'generate_content_id',
+    'generate_category_id',
+    'generate_tag_id',
+
+    # API Management
+    'ApiEndpoint',
+    'ApiCallLog',
+    'generate_api_endpoint_id',
+    'generate_api_call_id',
 ]

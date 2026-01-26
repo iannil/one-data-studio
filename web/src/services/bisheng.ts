@@ -234,6 +234,22 @@ export interface Text2SqlResponse {
   sql: string;
   confidence: number;
   tables_used: string[];
+  interpretation?: string;  // SQL解释
+  chartRecommendation?: ChartRecommendation;  // 推荐图表
+  suggestions?: string[];  // 后续查询建议
+}
+
+export interface ChartRecommendation {
+  chartType?: string;
+  chartName?: string;
+  confidence?: number;
+  reason?: string;
+  type?: 'bar' | 'line' | 'pie' | 'table' | 'area' | 'scatter';
+  title?: string;
+  x_axis?: string;
+  y_axis?: string;
+  group_by?: string;
+  aggregation?: 'sum' | 'avg' | 'count' | 'max' | 'min';
 }
 
 // ============= API 方法 =============

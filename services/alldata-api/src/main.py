@@ -27,7 +27,8 @@ from models import (
     DataService, ServiceCallLog,
     BIDashboard, BIChart,
     MetricDefinition, MetricValue, MetricCategory,
-    ETLTask, QualityRule, QualityAlert, OfflineTask, FlinkJob
+    ETLTask, QualityRule, QualityAlert, OfflineTask, FlinkJob,
+    SensitivityScanTask, SensitivityScanResult, SensitivityPattern,
 )
 from storage import minio_client, init_storage
 
@@ -70,6 +71,10 @@ def initialize_app():
     """应用启动初始化"""
     try:
         init_database()
+        # 开发环境：自动创建缺失的表
+        if os.getenv("ENVIRONMENT") != "production":
+            logger.info("Development mode: Creating missing database tables...")
+            db_manager.create_tables()
         init_storage()
         logger.info("Alldata API initialized successfully")
     except Exception as e:
@@ -3709,6 +3714,542 @@ def list_quality_alerts():
             }), 200
     except Exception as e:
         logger.error(f"Error listing quality alerts: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 敏感数据扫描 API ====================
+
+@app.route("/api/v1/sensitivity/scan/start", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def start_sensitivity_scan():
+    """启动敏感数据扫描任务"""
+    try:
+        data = request.get_json()
+
+        # 导入扫描管理器
+        from scan_task import get_scan_manager
+
+        manager = get_scan_manager()
+
+        task = manager.create_task(
+            target_type=data.get("target_type", "database"),
+            target_id=data.get("target_id"),
+            target_name=data.get("target_name"),
+            scan_mode=data.get("scan_mode", "full"),
+            sample_rate=data.get("sample_rate", 100),
+            confidence_threshold=data.get("confidence_threshold", 70),
+            databases=data.get("databases"),
+            tables=data.get("tables"),
+            exclude_patterns=data.get("exclude_patterns"),
+            created_by=data.get("created_by", "admin"),
+            auto_start=True,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "Scan task created and started",
+            "data": {
+                "task_id": task.task_id,
+                "status": task.status,
+            }
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error starting sensitivity scan: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/scan/<task_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_scan_task_status(task_id: str):
+    """获取扫描任务状态"""
+    try:
+        from scan_task import get_scan_manager
+
+        manager = get_scan_manager()
+        task_info = manager.get_task_status(task_id)
+
+        if not task_info:
+            return jsonify({
+                "code": 40400,
+                "message": f"Scan task {task_id} not found"
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task_info
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting scan task {task_id}: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/scan/<task_id>/cancel", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def cancel_scan_task(task_id: str):
+    """取消扫描任务"""
+    try:
+        from scan_task import get_scan_manager
+
+        manager = get_scan_manager()
+        success = manager.cancel_task(task_id)
+
+        if not success:
+            return jsonify({
+                "code": 40000,
+                "message": f"Cannot cancel task {task_id}"
+            }), 400
+
+        return jsonify({
+            "code": 0,
+            "message": "Task cancelled"
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error cancelling scan task {task_id}: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/scan/<task_id>/results", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_scan_results(task_id: str):
+    """获取扫描结果"""
+    try:
+        from scan_task import get_scan_manager
+
+        verified_only = request.args.get("verified_only", "false").lower() == "true"
+        limit = int(request.args.get("limit", 100))
+        offset = int(request.args.get("offset", 0))
+
+        manager = get_scan_manager()
+        results = manager.get_task_results(task_id, verified_only, limit, offset)
+
+        # 获取总数
+        with db_manager.get_session() as session:
+            query = session.query(SensitivityScanResult).filter(
+                SensitivityScanResult.task_id == task_id
+            )
+            if verified_only:
+                query = query.filter(SensitivityScanResult.verified == True)
+            total = query.count()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": results,
+                "total": total
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting scan results for {task_id}: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/confirm", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def verify_sensitivity_result():
+    """校验/修正敏感数据识别结果"""
+    try:
+        from scan_task import get_scan_manager
+
+        data = request.get_json()
+        result_id = data.get("result_id")
+        verified_result = data.get("verified_result")  # confirmed, rejected, modified
+        verified_by = data.get("verified_by", "admin")
+
+        if not result_id or not verified_result:
+            return jsonify({
+                "code": 40000,
+                "message": "result_id and verified_result are required"
+            }), 400
+
+        manager = get_scan_manager()
+        success = manager.verify_result(
+            result_id=result_id,
+            verified_result=verified_result,
+            verified_by=verified_by,
+            sensitivity_type=data.get("sensitivity_type"),
+            sensitivity_level=data.get("sensitivity_level"),
+        )
+
+        if not success:
+            return jsonify({
+                "code": 40400,
+                "message": f"Result {result_id} not found"
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "Result verified"
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error verifying sensitivity result: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/patterns", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_sensitivity_patterns():
+    """获取动态模式库"""
+    try:
+        category = request.args.get("category")
+        is_active = request.args.get("is_active", "true").lower() == "true"
+
+        with db_manager.get_session() as session:
+            query = session.query(SensitivityPattern)
+
+            if category:
+                query = query.filter(SensitivityPattern.category == category)
+            if is_active:
+                query = query.filter(SensitivityPattern.is_active == True)
+
+            patterns = query.order_by(
+                SensitivityPattern.category,
+                SensitivityPattern.sub_type
+            ).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "patterns": [p.to_dict() for p in patterns],
+                    "total": len(patterns)
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting sensitivity patterns: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/patterns", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def create_sensitivity_pattern():
+    """创建自定义敏感模式"""
+    try:
+        data = request.get_json()
+
+        pattern = SensitivityPattern(
+            pattern_id=f"pat_{uuid.uuid4().hex[:8]}",
+            category=data.get("category", "pii"),
+            sub_type=data.get("sub_type"),
+            name=data.get("name"),
+            pattern_type=data.get("pattern_type", "regex"),
+            pattern=data.get("pattern"),
+            description=data.get("description"),
+            confidence_weight=data.get("confidence_weight", 80),
+            sensitivity_level=data.get("sensitivity_level", "confidential"),
+            masking_strategy=data.get("masking_strategy", "mask"),
+            created_by=data.get("created_by", "admin"),
+        )
+
+        keywords = data.get("keywords")
+        if keywords:
+            pattern.set_keywords(keywords)
+
+        examples = data.get("examples")
+        if examples:
+            pattern.set_examples(examples)
+
+        counter_examples = data.get("counter_examples")
+        if counter_examples:
+            pattern.set_counter_examples(counter_examples)
+
+        with db_manager.get_session() as session:
+            session.add(pattern)
+            session.commit()
+            session.refresh(pattern)
+
+        return jsonify({
+            "code": 0,
+            "message": "Pattern created",
+            "data": pattern.to_dict()
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error creating sensitivity pattern: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/patterns/<pattern_id>", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def update_sensitivity_pattern(pattern_id: str):
+    """更新敏感模式"""
+    try:
+        data = request.get_json()
+
+        with db_manager.get_session() as session:
+            pattern = session.query(SensitivityPattern).filter(
+                SensitivityPattern.pattern_id == pattern_id
+            ).first()
+
+            if not pattern:
+                return jsonify({
+                    "code": 40400,
+                    "message": f"Pattern {pattern_id} not found"
+                }), 404
+
+            if not pattern.is_system:
+                # 系统预置模式不允许修改
+                if "name" in data:
+                    pattern.name = data["name"]
+                if "pattern" in data:
+                    pattern.pattern = data["pattern"]
+                if "description" in data:
+                    pattern.description = data["description"]
+                if "confidence_weight" in data:
+                    pattern.confidence_weight = data["confidence_weight"]
+                if "sensitivity_level" in data:
+                    pattern.sensitivity_level = data["sensitivity_level"]
+                if "masking_strategy" in data:
+                    pattern.masking_strategy = data["masking_strategy"]
+                if "is_active" in data:
+                    pattern.is_active = data["is_active"]
+
+                if "keywords" in data:
+                    pattern.set_keywords(data["keywords"])
+                if "examples" in data:
+                    pattern.set_examples(data["examples"])
+                if "counter_examples" in data:
+                    pattern.set_counter_examples(data["counter_examples"])
+
+            pattern.updated_at = datetime.utcnow()
+            session.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "Pattern updated",
+            "data": pattern.to_dict()
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error updating sensitivity pattern {pattern_id}: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/statistics", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_sensitivity_statistics():
+    """获取敏感数据扫描统计"""
+    try:
+        from scan_task import get_scan_manager
+
+        manager = get_scan_manager()
+        stats = manager.get_statistics()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": stats
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting sensitivity statistics: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== Kettle ETL API ====================
+
+@app.route("/api/v1/kettle/status", methods=["GET"])
+def get_kettle_status():
+    """
+    获取 Kettle 服务状态
+    返回 Kettle 安装信息和可用性
+    """
+    return jsonify({
+        "code": 0,
+        "message": "success",
+        "data": {
+            "enabled": False,
+            "message": "Kettle bridge not available in this deployment",
+            "kettle_installed": False,
+            "available_features": []
+        }
+    })
+
+
+@app.route("/api/v1/kettle/types", methods=["GET"])
+def kettle_get_types():
+    """
+    获取 Kettle 支持的类型和选项
+    """
+    try:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "source_types": [
+                    {"value": "mysql", "label": "MySQL"},
+                    {"value": "postgresql", "label": "PostgreSQL"},
+                    {"value": "oracle", "label": "Oracle"},
+                    {"value": "sqlserver", "label": "SQL Server"},
+                    {"value": "hive", "label": "Hive"},
+                    {"value": "csv", "label": "CSV 文件"},
+                    {"value": "excel", "label": "Excel 文件"},
+                    {"value": "json", "label": "JSON 文件"},
+                ],
+                "write_modes": [
+                    {"value": "insert", "label": "插入 (INSERT)"},
+                    {"value": "update", "label": "更新 (UPDATE)"},
+                    {"value": "upsert", "label": "更新或插入 (UPSERT)"},
+                    {"value": "truncate_insert", "label": "清空后插入 (TRUNCATE + INSERT)"},
+                ],
+                "data_types": [
+                    {"value": "String", "label": "字符串"},
+                    {"value": "Integer", "label": "整数"},
+                    {"value": "Number", "label": "数值"},
+                    {"value": "BigNumber", "label": "大数值"},
+                    {"value": "Date", "label": "日期"},
+                    {"value": "Boolean", "label": "布尔"},
+                    {"value": "Binary", "label": "二进制"},
+                ],
+                "log_levels": [
+                    {"value": "Nothing", "label": "无日志"},
+                    {"value": "Error", "label": "仅错误"},
+                    {"value": "Minimal", "label": "最小"},
+                    {"value": "Basic", "label": "基本"},
+                    {"value": "Detailed", "label": "详细"},
+                    {"value": "Debug", "label": "调试"},
+                    {"value": "Rowlevel", "label": "行级"},
+                ],
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 Kettle 类型失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== OCR API ====================
+
+@app.route("/api/v1/ocr/status", methods=["GET"])
+def ocr_get_status():
+    """
+    获取 OCR 服务状态
+
+    返回可用的 OCR 引擎和配置
+    """
+    try:
+        # 检查可用的 OCR 引擎
+        engines = {
+            "tesseract": False,
+            "paddleocr": False,
+            "easyocr": False,
+        }
+
+        try:
+            import pytesseract
+            engines["tesseract"] = True
+        except ImportError:
+            pass
+
+        try:
+            from paddleocr import PaddleOCR
+            engines["paddleocr"] = True
+        except ImportError:
+            pass
+
+        try:
+            import easyocr
+            engines["easyocr"] = True
+        except ImportError:
+            pass
+
+        # 支持的文档类型
+        supported_types = [
+            {"type": "pdf", "description": "PDF 文档", "extensions": [".pdf"]},
+            {"type": "image", "description": "图片", "extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]},
+            {"type": "word", "description": "Word 文档", "extensions": [".doc", ".docx"]},
+            {"type": "text", "description": "文本文件", "extensions": [".txt", ".md", ".csv"]},
+        ]
+
+        # 支持的结构化数据类型
+        structured_types = [
+            {"type": "invoice", "description": "发票信息提取"},
+            {"type": "id_card", "description": "身份证信息提取"},
+            {"type": "contract", "description": "合同关键信息提取"},
+        ]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "enabled": any(engines.values()),
+                "default_engine": os.getenv("OCR_ENGINE", "auto"),
+                "languages": os.getenv("OCR_LANGUAGES", "chi_sim+eng"),
+                "available_engines": engines,
+                "supported_document_types": supported_types,
+                "supported_structured_types": structured_types,
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 OCR 状态失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== Alerts API ====================
+
+@app.route("/api/v1/alerts/metric-rules", methods=["GET"])
+def list_metric_alert_rules():
+    """
+    获取指标预警规则列表
+    """
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取告警规则失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/alerts/statistics", methods=["GET"])
+def get_alert_statistics():
+    """
+    获取告警统计
+    """
+    try:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "rules": {
+                    "total": 0,
+                    "enabled": 0
+                },
+                "alerts": {
+                    "active": 0,
+                    "acknowledged": 0,
+                    "resolved_today": 0
+                },
+                "severity_distribution": {}
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取告警统计失败: {e}")
         return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 

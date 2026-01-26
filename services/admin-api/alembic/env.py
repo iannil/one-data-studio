@@ -1,8 +1,6 @@
 """
-Alembic Environment Configuration for Alldata-API
+Alembic Environment Configuration for Admin-API
 ONE-DATA-STUDIO Database Migration Management
-
-This file is used by Alembic to generate and run migrations.
 """
 
 import os
@@ -18,10 +16,7 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models for autogenerate support
-from models import Base
-from models.dataset import Dataset
-from models.metadata import MetadataTable, MetadataColumn
-from models.file_upload import FileUpload
+from models.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -38,24 +33,10 @@ target_metadata = Base.metadata
 # Get database URL from environment
 def get_url():
     """Get database URL from environment variables."""
-    # First try DATABASE_URL for backward compatibility
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return database_url
-
-    # Otherwise construct from MYSQL_* variables
-    db_host = os.getenv("MYSQL_HOST", "localhost")
-    db_port = os.getenv("MYSQL_PORT", "3306")
-    db_user = os.getenv("MYSQL_USER", "root")
-    db_password = os.getenv("MYSQL_PASSWORD")
-    db_name = os.getenv("MYSQL_DATABASE", "alldata")
-
-    if not db_password:
-        raise ValueError(
-            "MYSQL_PASSWORD environment variable is required for database migrations."
-        )
-
-    return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    return os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://root:password@localhost:3306/onedata"
+    )
 
 
 def run_migrations_offline() -> None:
