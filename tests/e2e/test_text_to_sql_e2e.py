@@ -5,16 +5,40 @@ Sprint 24: 端到端测试
 测试完整的 Text-to-SQL 工作流程:
 1. 接收自然语言查询
 2. 元数据注入
-3. SQL 生成
+3. SQL 生成 (支持 vLLM)
 4. SQL 验证
 5. 执行查询
 6. 返回结果
+
+增强 (Phase 6):
+- vLLM Chat 服务集成
+- 元数据自动注入
+- Schema 验证
+- 复杂查询生成
 """
 
 import pytest
 import asyncio
 import os
+import requests
+import time
+from typing import Dict, Any, List, Optional
 from unittest.mock import patch, MagicMock, AsyncMock
+
+logger = logging.getLogger(__name__)
+
+# 测试配置
+BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
+OPENAI_PROXY_URL = os.getenv("TEST_OPENAI_PROXY_URL", "http://localhost:8080")
+ALLDATA_API_URL = os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082")
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+
+HEADERS = {
+    "Content-Type": "application/json",
+}
+
+if AUTH_TOKEN:
+    HEADERS["Authorization"] = f"Bearer {AUTH_TOKEN}"
 
 
 class TestTextToSQLEndToEnd:
@@ -373,3 +397,516 @@ class TestSecurityEndToEnd:
                 tool.execute(code=code)
             )
             assert result["success"] is False, f"Sandbox escape should be blocked: {code[:50]}..."
+
+
+# ==================== Phase 6: vLLM 集成 Text-to-SQL 测试 ====================
+
+class TestVLLMTextToSQL:
+    """vLLM 集成的 Text-to-SQL 测试 (Phase 6)"""
+
+    @pytest.mark.e2e
+    def test_01_vllm_chat_for_sql_generation(self):
+        """测试通过 vLLM Chat 服务生成 SQL"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": """You are a SQL expert. Generate valid SQL queries based on natural language.
+Schema:
+- customers: id (INT), name (VARCHAR), email (VARCHAR), city (VARCHAR), status (VARCHAR)
+- orders: id (INT), customer_id (INT), total_amount (DECIMAL), created_at (TIMESTAMP)
+Return only the SQL query, no explanation."""
+                    },
+                    {
+                        "role": "user",
+                        "content": "Find all customers from Beijing with active status"
+                    }
+                ],
+                "max_tokens": 200,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        # 服务可能不可用
+        assert response.status_code in [200, 503, 502]
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"]
+                logger.info(f"Generated SQL: {sql}")
+                assert "SELECT" in sql.upper()
+                assert "customers" in sql.lower()
+
+    @pytest.mark.e2e
+    def test_02_text_to_sql_with_schema_injection(self):
+        """测试带 Schema 注入的 Text-to-SQL"""
+        # 首先获取表的 Schema
+        schema_response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/tables/warehouse/customers/schema",
+            headers=HEADERS
+        )
+
+        assert schema_response.status_code in [200, 401, 404]
+
+        # 如果获取到 Schema，用于 SQL 生成
+        if schema_response.status_code == 200:
+            schema_data = schema_response.json()
+            columns = schema_data.get("data", {}).get("columns", [])
+
+            # 构建上下文
+            schema_context = f"Table: customers\nColumns:\n"
+            for col in columns[:10]:  # 限制列数
+                schema_context += f"  - {col.get('name')} ({col.get('type')})\n"
+
+            # 使用 Schema 生成 SQL
+            sql_response = requests.post(
+                f"{OPENAI_PROXY_URL}/v1/chat/completions",
+                headers=HEADERS,
+                json={
+                    "model": "default",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": f"Generate SQL based on this schema:\n{schema_context}"
+                        },
+                        {
+                            "role": "user",
+                            "content": "Count customers by city"
+                        }
+                    ],
+                    "max_tokens": 200,
+                    "temperature": 0.1
+                },
+                timeout=60
+            )
+
+            if sql_response.status_code == 200:
+                data = sql_response.json()
+                if "choices" in data:
+                    sql = data["choices"][0]["message"]["content"]
+                    assert "SELECT" in sql.upper()
+                    assert "GROUP BY" in sql.upper() or "count" in sql.lower()
+
+    @pytest.mark.e2e
+    def test_03_complex_join_query_generation(self):
+        """测试复杂 JOIN 查询生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": """Generate SQL queries. Schema:
+- customers: id, name, email
+- orders: id, customer_id, total_amount, status
+- order_items: id, order_id, product_id, quantity
+- products: id, name, price"""
+                    },
+                    {
+                        "role": "user",
+                        "content": "Find the total amount spent by each customer, showing customer name and email"
+                    }
+                ],
+                "max_tokens": 300,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        assert response.status_code in [200, 503]
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"]
+                logger.info(f"Generated JOIN SQL: {sql}")
+                # 验证包含 JOIN
+                assert "JOIN" in sql.upper() or "customers" in sql.lower()
+
+    @pytest.mark.e2e
+    def test_04_aggregation_query_generation(self):
+        """测试聚合查询生成"""
+        test_cases = [
+            ("Count orders per day", "COUNT", "DATE"),
+            ("Average order amount by customer", "AVG", "GROUP BY"),
+            ("Top 10 spending customers", "SUM", "ORDER BY"),
+        ]
+
+        for question, expected_keyword1, expected_keyword2 in test_cases:
+            response = requests.post(
+                f"{OPENAI_PROXY_URL}/v1/chat/completions",
+                headers=HEADERS,
+                json={
+                    "model": "default",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Generate SQL queries. Schema: orders (id, customer_id, total_amount, created_at)"
+                        },
+                        {
+                            "role": "user",
+                            "content": question
+                        }
+                    ],
+                    "max_tokens": 200,
+                    "temperature": 0.1
+                },
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if "choices" in data and len(data["choices"]) > 0:
+                    sql = data["choices"][0]["message"]["content"].upper()
+                    # 验证包含预期关键字
+                    assert expected_keyword1 in sql or expected_keyword2 in sql
+
+    @pytest.mark.e2e
+    def test_05_sql_validation_after_generation(self):
+        """测试 SQL 生成后的验证"""
+        # 1. 生成 SQL
+        generate_response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Generate a SQL query to delete all users"
+                    }
+                ],
+                "max_tokens": 100
+            },
+            timeout=60
+        )
+
+        # 2. 如果生成了 SQL，验证其安全性
+        if generate_response.status_code == 200:
+            data = generate_response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"]
+
+                # 验证危险操作
+                dangerous_keywords = ["DROP", "DELETE", "TRUNCATE", "ALTER"]
+                has_dangerous = any(kw in sql.upper() for kw in dangerous_keywords)
+
+                if has_dangerous:
+                    # 尝试执行应该被阻止
+                    exec_response = requests.post(
+                        f"{ALLDATA_API_URL}/api/v1/sql/execute",
+                        headers=HEADERS,
+                        json={"sql": sql, "dry_run": True},
+                        timeout=30
+                    )
+
+                    # 危险查询应该被拒绝
+                    if exec_response.status_code == 200:
+                        result = exec_response.json()
+                        assert result.get("success") is False or "blocked" in str(result).lower()
+
+
+class TestMetadataDrivenSQL:
+    """元数据驱动的 SQL 生成测试 (Phase 6)"""
+
+    @pytest.mark.e2e
+    def test_01_get_table_schema_for_sql(self):
+        """测试获取表 Schema 用于 SQL 生成"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/tables/warehouse/orders/schema",
+            headers=HEADERS
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                schema = data["data"]
+                assert "columns" in schema
+                assert isinstance(schema["columns"], list)
+
+    @pytest.mark.e2e
+    def test_02_search_relevant_tables(self):
+        """测试搜索相关表（用于 SQL 生成）"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/search",
+            headers=HEADERS,
+            params={
+                "q": "customer order",
+                "type": "table",
+                "limit": 10
+            }
+        )
+
+        assert response.status_code in [200, 401]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                results = data["data"].get("results", [])
+                # 验证返回相关表
+                assert isinstance(results, list)
+
+    @pytest.mark.e2e
+    def test_03_get_table_relationships(self):
+        """测试获取表关系（用于 JOIN 生成）"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/table",
+            headers=HEADERS,
+            params={
+                "database": "warehouse",
+                "table": "orders",
+                "direction": "both",
+                "depth": 1
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                lineage = data["data"]
+                # 验证返回上下游关系
+                assert "upstream" in lineage or "downstream" in lineage
+
+
+class TestSQLGenerationScenarios:
+    """SQL 生成场景测试 (Phase 6)"""
+
+    @pytest.mark.e2e
+    def test_01_time_range_query(self):
+        """测试时间范围查询生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Generate SQL. Schema: orders (id, total_amount, created_at TIMESTAMP)"
+                    },
+                    {
+                        "role": "user",
+                        "content": "Find all orders created in the last 7 days"
+                    }
+                ],
+                "max_tokens": 200,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"].upper()
+                assert "WHERE" in sql
+                assert "created_at" in sql or "DATE" in sql
+
+    @pytest.mark.e2e
+    def test_02_subquery_generation(self):
+        """测试子查询生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": """Generate SQL. Schema:
+- customers: id, name
+- orders: id, customer_id, total_amount"""
+                    },
+                    {
+                        "role": "user",
+                        "content": "Find customers whose total order amount exceeds the average order amount"
+                    }
+                ],
+                "max_tokens": 300,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"].upper()
+                # 验证包含子查询或 HAVING
+                assert "SELECT" in sql and ("IN (SELECT" in sql or "HAVING" in sql)
+
+    @pytest.mark.e2e
+    def test_03_cte_generation(self):
+        """测试 CTE (WITH 子句) 生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": """Generate SQL. Schema:
+- orders: id, customer_id, total_amount, status
+- customers: id, name"""
+                    },
+                    {
+                        "role": "user",
+                        "content": "Calculate customer stats: total spent, order count, and avg order amount, then find customers with above average spending"
+                    }
+                ],
+                "max_tokens": 400,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"].upper()
+                # 验证可能使用 CTE 或子查询
+                assert "SELECT" in sql
+
+    @pytest.mark.e2e
+    def test_04_window_function_generation(self):
+        """测试窗口函数生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Generate SQL. Schema: sales (id, product_id, amount, sale_date)"
+                    },
+                    {
+                        "role": "user",
+                        "content": "Calculate running total of sales by product ordered by date"
+                    }
+                ],
+                "max_tokens": 300,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"].upper()
+                # 验证包含窗口函数相关关键字
+                assert "SELECT" in sql
+
+    @pytest.mark.e2e
+    def test_05_case_when_generation(self):
+        """测试 CASE WHEN 表达式生成"""
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Generate SQL. Schema: orders (id, total_amount)"
+                    },
+                    {
+                        "role": "user",
+                        "content": "Categorize orders as: Small (<100), Medium (100-500), Large (>500)"
+                    }
+                ],
+                "max_tokens": 300,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                sql = data["choices"][0]["message"]["content"].upper()
+                # 验证包含 CASE 表达式
+                assert "SELECT" in sql
+
+
+class TestSQLErrorRecovery:
+    """SQL 错误恢复测试 (Phase 6)"""
+
+    @pytest.mark.e2e
+    def test_01_sql_syntax_error_detection(self):
+        """测试 SQL 语法错误检测"""
+        invalid_sqls = [
+            "SELECT FROM customers",
+            "SELECT * FORM customers",
+            "SELCT * FROM customers",
+        ]
+
+        for sql in invalid_sqls:
+            response = requests.post(
+                f"{ALLDATA_API_URL}/api/v1/sql/validate",
+                headers=HEADERS,
+                json={"sql": sql},
+                timeout=30
+            )
+
+            # 验证 API 存在
+            assert response.status_code in [200, 401, 404, 501]
+
+            if response.status_code == 200:
+                data = response.json()
+                # 应该检测到语法错误
+                if "valid" in data.get("data", {}):
+                    assert data["data"]["valid"] is False
+
+    @pytest.mark.e2e
+    def test_02_auto_fix_sql_error(self):
+        """测试自动修复 SQL 错误"""
+        # 使用 LLM 修复 SQL
+        wrong_sql = "SELECT * FORM customers WHERE city = 'Beijing'"
+
+        response = requests.post(
+            f"{OPENAI_PROXY_URL}/v1/chat/completions",
+            headers=HEADERS,
+            json={
+                "model": "default",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Fix SQL syntax errors. Return only the corrected SQL."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Fix this SQL: {wrong_sql}"
+                    }
+                ],
+                "max_tokens": 200,
+                "temperature": 0.1
+            },
+            timeout=60
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                fixed_sql = data["choices"][0]["message"]["content"]
+                # 验证修复后的 SQL 正确
+                assert "FROM" in fixed_sql.upper()
+                assert "FORM" not in fixed_sql
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])

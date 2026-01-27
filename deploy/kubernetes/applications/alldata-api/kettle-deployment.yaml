@@ -1,0 +1,255 @@
+# Kettle ETL Deployment
+# Pentaho Data Integration (Kettle) on Kubernetes
+
+---
+# Kettle Carte Server Deployment
+# 用于执行远程 ETL 任务
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kettle-carte
+  namespace: one-data-alldata
+  labels:
+    app: kettle-carte
+    component: etl
+spec:
+  replicas: 2  # 可根据 ETL 负载调整
+  selector:
+    matchLabels:
+      app: kettle-carte
+  template:
+    metadata:
+      labels:
+        app: kettle-carte
+        component: etl
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/status"
+    spec:
+      # 优先调度到有持久化存储的节点
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: kettle-carte
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      initContainers:
+      # 初始化: 从 MinIO 拉取作业文件
+      - name: init-jobs
+        image: minio/mc:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
+            ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
+          mc mirror minio/alldata-kettle-jobs/ /opt/kettle/jobs/ || true
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: secret_key
+        volumeMounts:
+        - name: kettle-jobs
+          mountPath: /opt/kettle/jobs
+      containers:
+      - name: carte
+        image: pentaho/kettle:9.4.0.0-343  # 或自定义构建的镜像
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        command:
+        - sh
+        - -c
+        - |
+          # 启动 Carte 服务器
+          cd /opt/kettle
+          ./carte.sh /opt/kettle/carte-config.xml
+        env:
+        - name: CARTE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: CARTE_HOST
+        - name: CARTE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: CARTE_PORT
+        - name: KETTLE_JAVA_HEAP_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: KETTLE_JAVA_HEAP_SIZE
+        - name: OPENLINEAGE_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: OPENLINEAGE_ENABLED
+        - name: OPENLINEAGE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: OPENLINEAGE_API_URL
+        ports:
+        - name: carte
+          containerPort: 8081
+          protocol: TCP
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8081
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: kettle-jobs
+          mountPath: /opt/kettle/jobs
+        - name: kettle-config
+          mountPath: /opt/kettle/carte-config.xml
+          subPath: carte-config.xml
+        - name: kettle-logs
+          mountPath: /opt/kettle/logs
+      volumes:
+      - name: kettle-jobs
+        emptyDir: {}
+      - name: kettle-config
+        configMap:
+          name: kettle-jobs
+      - name: kettle-logs
+        emptyDir: {}
+
+---
+# Kettle Worker Deployment
+# 用于执行独立的 ETL 任务 (Job 模式)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kettle-worker
+  namespace: one-data-alldata
+  labels:
+    app: kettle-worker
+    component: etl
+spec:
+  replicas: 1  # 按需扩展
+  selector:
+    matchLabels:
+      app: kettle-worker
+  template:
+    metadata:
+      labels:
+        app: kettle-worker
+        component: etl
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+      - name: kitchen
+        image: pentaho/kettle:9.4.0.0-343
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        # 默认不启动，通过 Job 触发
+        command:
+        - sh
+        - -c
+        - |
+          echo "Kettle worker ready. Jobs are triggered via Kubernetes Jobs."
+          sleep infinity
+        env:
+        - name: KETTLE_JAVA_HEAP_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: KETTLE_JAVA_HEAP_SIZE
+        - name: OPENLINEAGE_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: OPENLINEAGE_ENABLED
+        - name: OPENLINEAGE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: OPENLINEAGE_API_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: kettle-jobs
+          mountPath: /opt/kettle/jobs
+        - name: kettle-logs
+          mountPath: /opt/kettle/logs
+      volumes:
+      - name: kettle-jobs
+        persistentVolumeClaim:
+          claimName: kettle-jobs-pvc
+      - name: kettle-logs
+        emptyDir: {}
+
+---
+# Kettle Jobs PVC
+# 用于持久化作业文件
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kettle-jobs-pvc
+  namespace: one-data-alldata
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-storage  # 或其他 ReadWriteMany 存储类

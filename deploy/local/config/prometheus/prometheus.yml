@@ -67,6 +67,48 @@ scrape_configs:
         target_label: service
         replacement: 'openai-proxy'
 
+  # ============================================
+  # AI/LLM Services Monitoring
+  # ============================================
+  # vLLM Chat Service (LLM inference)
+  - job_name: 'vllm-chat'
+    static_configs:
+      - targets: ['vllm-chat:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: 'vllm-chat'
+
+  # vLLM Embedding Service
+  - job_name: 'vllm-embed'
+    static_configs:
+      - targets: ['vllm-embed:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: 'vllm-embed'
+
+  # ============================================
+  # ETL Engine Monitoring
+  # ============================================
+  # Kettle/PDI Carte Server
+  - job_name: 'kettle'
+    static_configs:
+      - targets: ['kettle:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: 'kettle'
+
+  # ============================================
+  # Infrastructure Monitoring
+  # ============================================
   # MySQL 监控（需要 mysqld_exporter）
   - job_name: 'mysql'
     static_configs:
@@ -82,6 +124,27 @@ scrape_configs:
     static_configs:
       - targets: ['minio:9000']
     metrics_path: '/minio/v2/metrics/cluster'
+
+  # OpenMetadata 监控
+  - job_name: 'openmetadata'
+    static_configs:
+      - targets: ['openmetadata:8585']
+    metrics_path: '/api/v1/system/metrics'
+    scrape_interval: 30s
+
+  # Elasticsearch 监控
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    metrics_path: '/_prometheus/metrics'
+    scrape_interval: 30s
+
+  # Milvus Vector DB 监控
+  - job_name: 'milvus'
+    static_configs:
+      - targets: ['milvus:9091']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
 
   # Node Exporter（主机监控）
   - job_name: 'node'

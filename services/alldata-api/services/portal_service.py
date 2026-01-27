@@ -755,7 +755,7 @@ class PortalService:
 
         # 简单的搜索匹配
         if query:
-            results = [r for r in results if query.lower() in r["title"].lower() or query.lower() in r["description".lower()]
+            results = [r for r in results if query.lower() in r["title"].lower() or query.lower() in r["description"].lower()]
 
         if categories:
             results = [r for r in results if r.get("category") in categories]

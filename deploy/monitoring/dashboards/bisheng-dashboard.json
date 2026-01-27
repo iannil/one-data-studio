@@ -1,0 +1,401 @@
+{
+  "dashboard": {
+    "title": "ONE-DATA Bisheng API 监控",
+    "tags": ["bisheng", "llmops", "rag", "agent"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "服务概览",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"bisheng-api\"}",
+            "legendFormat": "服务状态"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "0", "text": "DOWN"},
+              {"type": "value", "value": "1", "text": "UP"}
+            ],
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "活跃会话数",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "bisheng_active_sessions",
+            "legendFormat": "会话数"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "今日对话数",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "increase(bisheng_conversations_total[1d])",
+            "legendFormat": "对话数"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "平均响应时间",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(bisheng_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95 延迟"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 2, "color": "yellow"},
+                {"value": 5, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "请求速率",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_requests_total[5m])) by (endpoint)",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "请求/秒"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Token 消耗",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_llm_tokens_total[5m])) by (token_type)",
+            "legendFormat": "{{token_type}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Tokens/秒"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "RAG 检索性能",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(bisheng_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95 检索延迟"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(bisheng_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P50 检索延迟"
+          }
+        ],
+        "yAxes": [
+          {"label": "延迟 (秒)"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "RAG 召回率",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_rag_relevant_documents_total[10m])) / sum(rate(bisheng_rag_retrieved_documents_total[10m]))",
+            "legendFormat": "召回率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.6, "color": "yellow"},
+                {"value": 0.8, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "向量检索数量",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_vector_searches_total[5m]))",
+            "legendFormat": "检索/秒"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Text-to-SQL 统计",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_text2sql_total[5m]))",
+            "legendFormat": "总请求"
+          },
+          {
+            "expr": "sum(rate(bisheng_text2sql_success_total[5m]))",
+            "legendFormat": "成功"
+          },
+          {
+            "expr": "sum(rate(bisheng_text2sql_errors_total[5m]))",
+            "legendFormat": "失败"
+          }
+        ],
+        "yAxes": [
+          {"label": "请求/秒"}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "SQL 执行准确率",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_text2sql_success_total[5m])) / sum(rate(bisheng_text2sql_total[5m]))",
+            "legendFormat": "准确率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.7, "color": "yellow"},
+                {"value": 0.9, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "LLM 调用延迟",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(bisheng_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+            "legendFormat": "{{model}} P95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(bisheng_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+            "legendFormat": "{{model}} P50"
+          }
+        ],
+        "yAxes": [
+          {"label": "延迟 (秒)"}
+        ]
+      },
+      {
+        "id": 13,
+        "title": "LLM 错误率",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_llm_errors_total[5m])) / sum(rate(bisheng_llm_requests_total[5m]))",
+            "legendFormat": "错误率"
+          }
+        ],
+        "yAxes": [
+          {"label": "错误率", "format": "percentunit"}
+        ]
+      },
+      {
+        "id": 14,
+        "title": "模型使用分布",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 28},
+        "targets": [
+          {
+            "expr": "sum by (model) (bisheng_llm_requests_total)",
+            "legendFormat": "{{model}}"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Agent 执行统计",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_agent_steps_total[5m])) by (agent_type)",
+            "legendFormat": "{{agent_type}} 步骤/秒"
+          },
+          {
+            "expr": "sum(rate(bisheng_agent_errors_total[5m])) by (agent_type)",
+            "legendFormat": "{{agent_type}} 错误/秒"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "工作流执行",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "targets": [
+          {
+            "expr": "bisheng_workflow_running",
+            "legendFormat": "运行中"
+          },
+          {
+            "expr": "bisheng_workflow_pending",
+            "legendFormat": "等待中"
+          },
+          {
+            "expr": "sum(rate(bisheng_workflow_completed_total[5m]))",
+            "legendFormat": "完成/秒"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "知识库统计",
+        "type": "table",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "bisheng_knowledgebase_documents",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Prompt 模板使用",
+        "type": "piechart",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 44},
+        "targets": [
+          {
+            "expr": "sum by (template_name) (bisheng_prompt_usage_total)",
+            "legendFormat": "{{template_name}}"
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "会话持续时间",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 54},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_conversation_duration_seconds[5m])) by (bucket)",
+            "legendFormat": "{{le}}"
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "用户活跃度",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 54},
+        "targets": [
+          {
+            "expr": "sum(bisheng_active_users)",
+            "legendFormat": "活跃用户"
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "成本估算",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 62},
+        "targets": [
+          {
+            "expr": "sum(increase(bisheng_llm_tokens_total[1d])) * 0.00002",
+            "legendFormat": "今日成本 ($)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 22,
+        "title": "每 1000 Token 成本",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 8, "x": 8, "y": 62},
+        "targets": [
+          {
+            "expr": "sum(bisheng_llm_cost_per_1k_tokens) by (model)",
+            "legendFormat": "{{model}}"
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "平均对话轮次",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 16, "y": 62},
+        "targets": [
+          {
+            "expr": "sum(rate(bisheng_conversation_turns_total[5m])) / sum(rate(bisheng_conversations_started_total[5m]))",
+            "legendFormat": "平均轮次"
+          }
+        ]
+      }
+    ]
+  }
+}

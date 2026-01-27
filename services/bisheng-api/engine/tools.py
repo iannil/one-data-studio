@@ -276,18 +276,20 @@ class VectorSearchTool(BaseTool):
 
 
 class SQLQueryTool(BaseTool):
-    """SQL 查询工具"""
+    """SQL 查询工具 - Production: 使用 AST 解析的安全验证"""
 
     name = "sql_query"
-    description = "执行 SQL 查询。用于查询数据库中的数据。"
+    description = "执行 SQL 查询。用于查询数据库中的数据。只允许 SELECT 查询，自动添加安全限制。"
     parameters = [
         ToolSchema("sql", "string", "SQL 查询语句", required=True),
         ToolSchema("database", "string", "数据库名称", required=False, default="sales_dw"),
-        ToolSchema("timeout", "integer", "查询超时时间（秒）", required=False, default=30)
+        ToolSchema("timeout", "integer", "查询超时时间（秒）", required=False, default=30),
+        ToolSchema("row_limit", "integer", "返回行数限制", required=False, default=1000)
     ]
 
     # 数据库连接池
     _connection_pools: Dict[str, Any] = {}
+    _sql_validator = None
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
@@ -305,46 +307,57 @@ class SQLQueryTool(BaseTool):
             self.mock_data = self.config.get("mock_data", True)
         self.db_connections = self.config.get("db_connections", {})
 
-    async def execute(self, sql: str, database: str = "sales_dw", timeout: int = 30) -> Dict[str, Any]:
-        """执行 SQL 查询"""
+        # 延迟加载 SQL 验证器
+        if SQLQueryTool._sql_validator is None:
+            try:
+                from ..services.sql_validator import get_sql_validator
+                SQLQueryTool._sql_validator = get_sql_validator(self.config)
+            except ImportError:
+                logger.warning("SQL validator module not available, using fallback validation")
+
+    async def execute(self, sql: str, database: str = "sales_dw", timeout: int = 30,
+                     row_limit: int = 1000) -> Dict[str, Any]:
+        """执行 SQL 查询（带安全验证）"""
         import logging
         logger = logging.getLogger(__name__)
 
         try:
-            # 安全检查：SQL 注入防护
-            sql_upper = sql.upper().strip()
-            dangerous_keywords = ["DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE"]
-            if any(keyword in sql_upper for keyword in dangerous_keywords):
-                logger.warning(f"Dangerous SQL operation blocked: {sql[:100]}")
-                return {
-                    "success": False,
-                    "error": "Dangerous SQL operation not allowed",
-                    "results": []
-                }
+            # 使用增强的 SQL 安全检查器
+            if SQLQueryTool._sql_validator:
+                # 使用新的验证器
+                sanitized_sql, validation_result = SQLQueryTool._sql_validator.sanitize_sql(sql)
 
-            # 检查是否为注释攻击
-            if "--" in sql or "/*" in sql:
-                # 检查可疑的 SQL 注入模式
-                injection_patterns = [
-                    ";--",      # 语句终止后跟注释
-                    "';--",     # 引号后跟语句终止和注释
-                    "1=1",      # 经典的 tautology 攻击
-                    "OR 1=1",   # OR tautology
-                    "1'='1",    # 引号 tautology
-                    "' OR '",   # 引号 OR 注入
-                    "UNION SELECT",  # UNION 注入
-                    "DROP TABLE",    # DDL 攻击
-                    "DELETE FROM",   # 删除攻击
-                    "INSERT INTO",   # 插入攻击
-                ]
-                for pattern in injection_patterns:
-                    if pattern.upper() in sql_upper:
-                        logger.warning(f"SQL injection pattern detected: {sql[:100]}")
-                        return {
-                            "success": False,
-                            "error": "Potential SQL injection detected",
-                            "results": []
-                        }
+                if not validation_result.is_valid:
+                    logger.warning(f"SQL validation failed: {validation_result.errors}")
+                    return {
+                        "success": False,
+                        "error": f"SQL 验证失败: {validation_result.errors[0]}",
+                        "validation_errors": validation_result.errors,
+                        "results": []
+                    }
+
+                if validation_result.warnings:
+                    logger.info(f"SQL validation warnings: {validation_result.warnings}")
+
+                # 使用清理后的 SQL（包含 LIMIT）
+                sql = sanitized_sql
+
+                # 应用请求的行数限制
+                if row_limit < SQLQueryTool._sql_validator.max_row_limit:
+                    sql = SQLQueryTool._sql_validator.add_limit_if_missing(sql, row_limit)
+
+            else:
+                # 回退到基础验证
+                validation_result = self._basic_validation(sql)
+                if not validation_result["is_valid"]:
+                    logger.warning(f"SQL validation failed: {validation_result['error']}")
+                    return {
+                        "success": False,
+                        "error": validation_result["error"],
+                        "results": []
+                    }
+                # 添加基础 LIMIT
+                sql = self._add_limit_basic(sql, row_limit)
 
             if self.mock_data:
                 # Double-check production environment (defense in depth)
@@ -582,6 +595,58 @@ class SQLQueryTool(BaseTool):
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, run_sync)
+
+    def _basic_validation(self, sql: str) -> Dict[str, Any]:
+        """
+        基础 SQL 验证（回退方法）
+
+        当 sqlglot 不可用时使用此方法进行基础验证。
+        """
+        sql_upper = sql.upper().strip()
+
+        # 危险关键词检查
+        dangerous_keywords = [
+            "DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE",
+            "INSERT", "UPDATE", "REPLACE", "GRANT", "REVOKE"
+        ]
+        for keyword in dangerous_keywords:
+            if re.search(r"\b" + keyword + r"\b", sql_upper):
+                return {
+                    "is_valid": False,
+                    "error": f"不允许的操作: {keyword}"
+                }
+
+        # 确保是 SELECT 查询
+        if not re.match(r"^\s*SELECT", sql_upper):
+            return {
+                "is_valid": False,
+                "error": "只允许 SELECT 查询"
+            }
+
+        # 注入模式检查
+        injection_patterns = [
+            r";\s*--", r"';--", r"'\s*OR\s*'.*='", r"1\s*=\s*1\s*OR",
+            r"UNION\s+SELECT"
+        ]
+        for pattern in injection_patterns:
+            if re.search(pattern, sql_upper):
+                return {
+                    "is_valid": False,
+                    "error": "检测到潜在 SQL 注入"
+                }
+
+        return {"is_valid": True}
+
+    def _add_limit_basic(self, sql: str, limit: int) -> str:
+        """基础 LIMIT 添加方法"""
+        # 移除结尾分号
+        sql_clean = sql.rstrip().rstrip(";").strip()
+
+        # 检查是否已有 LIMIT
+        if re.search(r"\bLIMIT\s+\d+", sql_clean, re.IGNORECASE):
+            return sql
+
+        return f"{sql_clean} LIMIT {limit};"
 
 
 class SSRFProtection:

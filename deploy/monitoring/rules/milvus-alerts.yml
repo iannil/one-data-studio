@@ -1,0 +1,298 @@
+# Milvus 监控告警规则
+# 用于向量数据库集群的高可用监控
+
+groups:
+  - name: milvus_cluster_health
+    rules:
+      # Milvus 集群整体状态
+      - alert: MilvusClusterDown
+        expr: up{job="milvus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Milvus 集群不可用"
+          description: "Milvus 代理服务已超过 2 分钟无响应，RAG 功能不可用。"
+
+      # Milvus 数据节点健康
+      - alert: MilvusDataNodeDown
+        expr: |
+          count(up{component="datanode"} == 0) >=
+          count(up{component="datanode"}) / 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "超过半数的 Milvus 数据节点宕机"
+          description: "{{ $value }} 个数据节点不可用，数据持久化可能受影响。"
+
+      # Milvus 查询节点健康
+      - alert: MilvusQueryNodeDown
+        expr: |
+          count(up{component="querynode"} == 0) >=
+          count(up{component="querynode"}) / 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "超过半数的 Milvus 查询节点宕机"
+          description: "{{ $value }} 个查询节点不可用，向量搜索性能下降。"
+
+      # Milvus 索引节点健康
+      - alert: MilvusIndexNodeDown
+        expr: |
+          count(up{component="indexnode"} == 0) >=
+          count(up{component="indexnode"})
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "所有 Milvus 索引节点宕机"
+          description: "索引节点全部不可用，新索引无法构建。"
+
+      # Milvus 协调器健康
+      - alert: MilvusCoordinatorDown
+        expr: |
+          count(up{component=~"rootcoord|datacoord|querycoord|indexcoord"} == 0) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Milvus 协调器组件 {{ $labels.component }} 宕机"
+          description: "协调器 {{ $labels.component }} 已宕机 2 分钟。"
+
+  - name: milvus_performance
+    rules:
+      # 查询延迟过高
+      - alert: MilvusQueryLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            rate(milvus_query_latency_bucket{component="querynode"}[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 查询延迟过高"
+          description: "95th 分位查询延迟为 {{ $value | humanizeDuration }}，超过 5 秒阈值。"
+
+      # 查询 QPS 过高
+      - alert: MilvusHighQPS
+        expr: |
+          sum(rate(milvus_query_request_count[5m])) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Milvus 查询 QPS 过高"
+          description: "当前查询 QPS 为 {{ $value }}，建议扩展查询节点。"
+
+      # 插入速率过低
+      - alert: MilvusInsertRateLow
+        expr: |
+          sum(rate(milvus_insert_request_count[5m])) < 1
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Milvus 插入速率异常低"
+          description: "插入速率为 {{ $value }} rows/sec，可能存在数据摄入问题。"
+
+      # 索引构建积压
+      - alert: MilvusIndexBuildBacklog
+        expr: milvus_index_pending_tasks > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 索引构建积压"
+          description: "{{ $value }} 个索引构建任务待处理，考虑扩展索引节点。"
+
+      # 搜索失败率过高
+      - alert: MilvusSearchFailureRateHigh
+        expr: |
+          (
+            sum(rate(milvus_query_request_count{status="error"}[5m])) /
+            sum(rate(milvus_query_request_count[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 搜索失败率过高"
+          description: "搜索失败率为 {{ $value | humanizePercentage }}，超过 5% 阈值。"
+
+  - name: milvus_resources
+    rules:
+      # 查询节点内存使用过高
+      - alert: MilvusQueryNodeMemoryHigh
+        expr: |
+          (
+            container_memory_working_set_bytes{container="querynode"} /
+            container_spec_memory_limit_bytes{container="querynode"}
+          ) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 查询节点内存使用过高"
+          description: "{{ $labels.pod }} 内存使用率为 {{ $value | humanizePercentage }}。"
+
+      # 数据节点磁盘使用过高
+      - alert: MilvusDataNodeDiskHigh
+        expr: |
+          (
+            1 - (
+              node_filesystem_avail_bytes{mountpoint=~"/var/lib/milvus.*"} /
+              node_filesystem_size_bytes{mountpoint=~"/var/lib/milvus.*"}
+            )
+          ) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 数据节点磁盘使用过高"
+          description: "数据节点磁盘使用率为 {{ $value | humanizePercentage }}。"
+
+      # etcd 存储使用过高
+      - alert: MilvusEtcdDiskHigh
+        expr: |
+          (
+            1 - (
+              etcd_mvcc_db_total_size_in_bytes / etcd_server_quota_backend_bytes
+            )
+          ) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus etcd 存储使用过高"
+          description: "etcd 数据库大小为 {{ $value | humanizePercentage }}。"
+
+      # Pulsar 消息积压
+      - alert: MilvusPulsarBacklog
+        expr: |
+          pulsar_subscription_backlog{namespace="milvus"} > 10000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus Pulsar 消息积压"
+          description: "Pulsar 订阅 {{ $labels.subscription }} 积压 {{ $value }} 条消息。"
+
+  - name: milvus_collections
+    rules:
+      # 集合行数异常
+      - alert: MilvusCollectionRowCountLow
+        expr: milvus_collection_row_count{collection!="test"} < 100
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "Milvus 集合行数异常低"
+          description: "集合 {{ $labels.collection }} 仅有 {{ $value }} 行向量。"
+
+      # 集合索引缺失
+      - alert: MilvusCollectionNoIndex
+        expr: |
+          count(milvus_collection_indexed{indexed="0"}) by (collection) > 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 集合缺少索引"
+          description: "集合 {{ $labels.collection }} 没有索引，搜索性能会受影响。"
+
+      # 集合分区数量过多
+      - alert: MilvusTooManyPartitions
+        expr: |
+          milvus_collection_partition_count > 64
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "Milvus 集合分区数量过多"
+          description: "集合 {{ $labels.collection }} 有 {{ $value }} 个分区。"
+
+  - name: milvus_backup
+    rules:
+      # 备份服务不可用
+      - alert: MilvusBackupDown
+        expr: up{job="milvus-backup"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 备份服务不可用"
+          description: "Milvus 备份服务已宕机 5 分钟。"
+
+      # 备份过期
+      - alert: MilvusBackupStale
+        expr: |
+          time() - milvus_backup_last_success_timestamp > 172800
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 备份已过期"
+          description: "最新备份已超过 48 小时。"
+
+      # 备份失败
+      - alert: MilvusBackupFailed
+        expr: increase(milvus_backup_failed_total[1h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Milvus 备份失败"
+          description: "最近 1 小时内 {{ $value }} 次备份失败。"
+
+  - name: milvus_replication
+    rules:
+      # 副本数不足
+      - alert: MilvusReplicaCountLow
+        expr: |
+          count(up{component="querynode"} == 1) < 2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Milvus 查询节点副本数不足"
+          description: "查询节点副本数少于 2，高可用受影响。"
+
+      # 数据副本不一致
+      - alert: MilvusReplicaLag
+        expr: |
+          milvus_data_replica_lag_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 数据副本延迟过高"
+          description: "数据副本延迟为 {{ $value | humanizeDuration }}。"
+
+  - name: milvus_ddl
+    rules:
+      # DDL 操作失败
+      - alert: MilvusDDLFailureRateHigh
+        expr: |
+          (
+            sum(rate(milvus_ddl_request_count{status="error"}[5m])) /
+            sum(rate(milvus_ddl_request_count[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus DDL 操作失败率过高"
+          description: "DDL 操作失败率为 {{ $value | humanizePercentage }}。"
+
+      # 集合创建失败
+      - alert: MilvusCollectionCreateFailed
+        expr: increase(milvus_collection_create_failed_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Milvus 集合创建失败"
+          description: "最近 10 分钟内 {{ $value }} 次集合创建失败。"

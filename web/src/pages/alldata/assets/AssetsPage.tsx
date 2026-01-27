@@ -18,6 +18,7 @@ import {
   Modal,
   Form,
   message,
+  Tooltip,
 } from 'antd';
 import {
   SearchOutlined,
@@ -31,12 +32,14 @@ import {
   ReloadOutlined,
   PlusOutlined,
   RobotOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import alldata from '@/services/alldata';
-import type { DataAsset } from '@/services/alldata';
+import type { DataAsset, AssetValueLevel } from '@/services/alldata';
 import { AssetAISearch } from '@/components/alldata/AssetAISearch';
+import { AssetValuePanel } from '@/components/alldata/AssetValuePanel';
 
 const { Option } = Select;
 
@@ -116,6 +119,26 @@ function AssetsPage() {
     }
   };
 
+  // 资产价值等级颜色和描述
+  const VALUE_LEVEL_CONFIG: Record<AssetValueLevel, { color: string; label: string; description: string }> = {
+    S: { color: '#722ed1', label: 'S级', description: '战略级资产' },
+    A: { color: '#1890ff', label: 'A级', description: '核心级资产' },
+    B: { color: '#52c41a', label: 'B级', description: '重要级资产' },
+    C: { color: '#999', label: 'C级', description: '基础级资产' },
+  };
+
+  const getValueLevelTag = (level?: AssetValueLevel) => {
+    if (!level) return '-';
+    const config = VALUE_LEVEL_CONFIG[level];
+    return (
+      <Tooltip title={config.description}>
+        <Tag color={config.color} style={{ fontWeight: 'bold' }}>
+          {level}
+        </Tag>
+      </Tooltip>
+    );
+  };
+
   // Filter assets
   const filteredAssets = assetsData?.data?.assets?.filter((asset) => {
     const matchKeyword = !searchKeyword || asset.name.toLowerCase().includes(searchKeyword.toLowerCase());
@@ -189,6 +212,13 @@ function AssetsPage() {
         if (!score) return '-';
         return <Progress percent={score} size="small" status={score >= 80 ? 'success' : score >= 60 ? 'normal' : 'exception'} />;
       },
+    },
+    {
+      title: '价值等级',
+      dataIndex: 'value_level',
+      key: 'value_level',
+      width: 90,
+      render: (level?: AssetValueLevel) => getValueLevelTag(level),
     },
     {
       title: '访问热度',
@@ -400,6 +430,26 @@ function AssetsPage() {
                       size="small"
                     />
                   </Card>
+                ),
+              },
+              {
+                key: 'value-assessment',
+                label: (
+                  <Space>
+                    <TrophyOutlined />
+                    <span>价值评估</span>
+                  </Space>
+                ),
+                children: (
+                  <AssetValuePanel
+                    onAssetSelect={(assetId) => {
+                      const asset = assetsData?.data?.assets?.find(a => a.asset_id === assetId);
+                      if (asset) {
+                        setSelectedAsset(asset);
+                        setIsProfileDrawerOpen(true);
+                      }
+                    }}
+                  />
                 ),
               },
             ]}

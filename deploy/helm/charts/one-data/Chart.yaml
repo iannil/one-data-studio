@@ -35,3 +35,7 @@ dependencies:
     version: "12.x.x"
     repository: https://charts.bitnami.com/bitnami
     condition: minio.enabled
+  - name: elasticsearch
+    version: "19.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: elasticsearch.enabled

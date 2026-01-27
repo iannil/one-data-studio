@@ -1,0 +1,302 @@
+{
+  "dashboard": {
+    "title": "ONE-DATA Alldata API 监控",
+    "tags": ["alldata", "dataops", "governance"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "服务概览",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"alldata-api\"}",
+            "legendFormat": "服务状态"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"type": "value", "value": "0", "text": "DOWN"},
+              {"type": "value", "value": "1", "text": "UP"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "请求速率",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"alldata-api\"}[5m])) by (endpoint)",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "请求/秒"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "请求延迟 (P95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"alldata-api\"}[5m])) by (le, endpoint))",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "延迟 (秒)"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "错误率",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"alldata-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"alldata-api\"}[5m]))",
+            "legendFormat": "5xx 错误率"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{job=\"alldata-api\",status=~\"4..\"}[5m])) / sum(rate(http_requests_total{job=\"alldata-api\"}[5m]))",
+            "legendFormat": "4xx 错误率"
+          }
+        ],
+        "yAxes": [
+          {"label": "错误率", "format": "percentunit"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "数据库连接池",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "alldata_db_connections_active",
+            "legendFormat": "活跃连接"
+          },
+          {
+            "expr": "alldata_db_connections_idle",
+            "legendFormat": "空闲连接"
+          }
+        ],
+        "yAxes": [
+          {"label": "连接数"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "数据扫描统计",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "sum(rate(alldata_scan_total[5m]))",
+            "legendFormat": "扫描速率"
+          },
+          {
+            "expr": "sum(rate(alldata_scan_errors_total[5m]))",
+            "legendFormat": "错误速率"
+          }
+        ],
+        "yAxes": [
+          {"label": "操作/秒"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "元数据同步延迟",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "alldata_metadata_sync_lag_seconds",
+            "legendFormat": "延迟"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "max": 3600,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 300, "color": "yellow"},
+                {"value": 1800, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "资产扫描进度",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 20},
+        "targets": [
+          {
+            "expr": "alldata_assets_scanned_total",
+            "legendFormat": "已扫描资产"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "ETL 作业执行",
+        "type": "table",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "kettle_job_duration_seconds",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "by": ["job_name", "status"]
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Kettle 作业队列",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "kettle_job_queue_length",
+            "legendFormat": "队列长度"
+          },
+          {
+            "expr": "sum(rate(kettle_job_completed_total[5m]))",
+            "legendFormat": "完成速率"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "敏感数据扫描",
+        "type": "piechart",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 38},
+        "targets": [
+          {
+            "expr": "sum by (sensitivity_level) (alldata_sensitivity_findings_total)",
+            "legendFormat": "{{sensitivity_level}}"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "数据脱敏操作",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "sum(rate(alldata_masking_operations_total[5m])) by (masking_type)",
+            "legendFormat": "{{masking_type}}"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "血缘事件处理",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 44},
+        "targets": [
+          {
+            "expr": "rate(openlineage_events_received_total[5m])",
+            "legendFormat": "接收速率"
+          },
+          {
+            "expr": "rate(openlineage_events_persisted_total[5m])",
+            "legendFormat": "持久化速率"
+          },
+          {
+            "expr": "openlineage_event_queue_size",
+            "legendFormat": "队列大小"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "向量写入统计",
+        "type": "graph",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 50},
+        "targets": [
+          {
+            "expr": "sum(rate(alldata_vector_embeddings_generated[5m]))",
+            "legendFormat": "嵌入生成速率"
+          },
+          {
+            "expr": "sum(rate(alldata_vector_documents_indexed[5m]))",
+            "legendFormat": "文档索引速率"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "缓存命中率",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 50},
+        "targets": [
+          {
+            "expr": "alldata_cache_hit_rate",
+            "legendFormat": "命中率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.5, "color": "yellow"},
+                {"value": 0.8, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 16,
+        "title": "资产价值分布",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 18, "x": 18, "y": 50},
+        "targets": [
+          {
+            "expr": "sum by (value_tier, asset_type) (alldata_asset_value_score)",
+            "legendFormat": "{{value_tier}} - {{asset_type}}"
+          }
+        ]
+      }
+    ]
+  }
+}

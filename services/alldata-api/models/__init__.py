@@ -27,6 +27,26 @@ from .sensitivity import (
     SensitivityScanResult,
     SensitivityPattern,
 )
+from .security_audit import (
+    DataSecurityAuditLog,
+    MaskingRule,
+)
+from .asset_value_metrics import (
+    AssetValueMetrics,
+    AssetValueHistory,
+    AssetUsageLog,
+)
+from .oauth2_client import (
+    OAuth2Client,
+    APIKey,
+    TokenRevocation,
+    AuthAuditLog,
+)
+from .approval import (
+    ApprovalTemplate,
+    ApprovalRequest,
+    ApprovalRecord,
+)
 
 __all__ = [
     # Base
@@ -92,4 +112,20 @@ __all__ = [
     "SensitivityScanTask",
     "SensitivityScanResult",
     "SensitivityPattern",
+    # Security Audit models (P1.1)
+    "DataSecurityAuditLog",
+    "MaskingRule",
+    # Asset Value models (P1.1)
+    "AssetValueMetrics",
+    "AssetValueHistory",
+    "AssetUsageLog",
+    # OAuth2 & API Key models (P2)
+    "OAuth2Client",
+    "APIKey",
+    "TokenRevocation",
+    "AuthAuditLog",
+    # Approval Workflow models (P2)
+    "ApprovalTemplate",
+    "ApprovalRequest",
+    "ApprovalRecord",
 ]

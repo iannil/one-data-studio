@@ -20,6 +20,13 @@ data:
   MINIO_DEFAULT_BUCKET: "alldata"
   MINIO_USE_SSL: "false"
 
+  # OpenMetadata 配置
+  OPENMETADATA_HOST: "openmetadata.one-data-infra.svc.cluster.local"
+  OPENMETADATA_PORT: "8585"
+  OPENMETADATA_ENABLED: "true"
+  OPENMETADATA_API_VERSION: "v1"
+  OPENMETADATA_TIMEOUT: "30"
+
 ---
 # Alldata API Deployment
 apiVersion: apps/v1

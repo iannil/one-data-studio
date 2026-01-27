@@ -8,20 +8,26 @@
 - 数据质量规则与检测
 - 数据血缘追踪
 - MinIO 文件存储集成
+- Kettle 编排服务 (Phase 2)
+- 表融合服务 (Phase 3)
+- 元数据变更检测 (Phase 4)
 """
 
 import pytest
 import requests
 import time
 import os
+import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8082")
+ALLDATA_API_URL = os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082")
+CUBE_API_URL = os.getenv("TEST_CUBE_API_URL", "http://localhost:8083")
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {
@@ -575,6 +581,584 @@ class TestErrorHandling:
             )
         except requests.exceptions.Timeout:
             pass  # 预期的超时行为
+
+
+# ==================== Phase 2: Kettle 编排服务测试 ====================
+
+class TestKettleOrchestration:
+    """Kettle 编排服务测试 (Phase 2)"""
+
+    orchestration_id: Optional[str] = None
+
+    @pytest.mark.e2e
+    def test_01_create_orchestration_request(self):
+        """测试创建编排请求"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            headers=HEADERS,
+            json={
+                "name": f"E2E Kettle Orchestration {int(time.time())}",
+                "pipeline_type": "full_etl",
+                "source_database": "source_db",
+                "source_table": "customers",
+                "source_type": "mysql",
+                "source_connection": {
+                    "host": "localhost",
+                    "port": 3306,
+                    "username": "root",
+                    "password": "password"
+                },
+                "target_database": "warehouse",
+                "target_table": "customers_cleaned",
+                "enable_ai_cleaning": True,
+                "enable_ai_masking": True,
+                "enable_ai_imputation": True,
+                "dry_run": True,  # 试运行，不实际执行
+                "auto_execute": False,
+                "created_by": "e2e_test"
+            }
+        )
+
+        assert response.status_code in [201, 200, 401, 404, 501]
+
+        if response.status_code in [201, 200]:
+            data = response.json()
+            if data.get("code") == 0:
+                TestKettleOrchestration.orchestration_id = data["data"].get("request_id")
+                logger.info(f"Created orchestration: {TestKettleOrchestration.orchestration_id}")
+
+    @pytest.mark.e2e
+    def test_02_get_orchestration_status(self):
+        """测试获取编排状态"""
+        if not TestKettleOrchestration.orchestration_id:
+            pytest.skip("No orchestration created")
+
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}",
+            headers=HEADERS
+        )
+
+        assert response.status_code in [200, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                result = data["data"]
+                assert "status" in result
+                assert "columns_analyzed" in result
+
+    @pytest.mark.e2e
+    def test_03_list_orchestrations(self):
+        """测试列出编排任务"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            headers=HEADERS,
+            params={"limit": 10}
+        )
+
+        assert response.status_code in [200, 401]
+
+    @pytest.mark.e2e
+    def test_04_get_transformation_xml(self):
+        """测试获取生成的转换 XML"""
+        if not TestKettleOrchestration.orchestration_id:
+            pytest.skip("No orchestration created")
+
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/xml",
+            headers=HEADERS
+        )
+
+        assert response.status_code in [200, 404]
+
+        if response.status_code == 200:
+            # 验证 XML 格式
+            content = response.text
+            assert "<?xml" in content or "<transformation" in content
+
+    @pytest.mark.e2e
+    def test_05_execute_transformation(self):
+        """测试执行转换（通过 Carte）"""
+        if not TestKettleOrchestration.orchestration_id:
+            pytest.skip("No orchestration created")
+
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/execute",
+            headers=HEADERS,
+            json={"poll_timeout": 60}
+        )
+
+        # 可能返回 501（功能未实现）或 503（Carte 不可用）
+        assert response.status_code in [202, 200, 404, 501, 503]
+
+    @pytest.mark.e2e
+    def test_06_get_quality_report(self):
+        """测试获取数据质量报告"""
+        if not TestKettleOrchestration.orchestration_id:
+            pytest.skip("No orchestration created")
+
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/quality",
+            headers=HEADERS
+        )
+
+        assert response.status_code in [200, 404]
+
+
+# ==================== Phase 3: 表融合服务测试 ====================
+
+class TestTableFusion:
+    """表融合服务测试 (Phase 3)"""
+
+    @pytest.mark.e2e
+    def test_01_detect_join_keys(self):
+        """测试检测 JOIN 关键字"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/detect-joins",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "target_tables": ["customers", "products"],
+                "source_database": "warehouse",
+                "target_database": "warehouse",
+                "sample_size": 1000
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                results = data["data"]
+                assert isinstance(results, dict)
+                # 验证返回的关联键格式
+                for table, join_keys in results.items():
+                    assert isinstance(join_keys, list)
+                    for key in join_keys:
+                        assert "source_column" in key
+                        assert "target_column" in key
+                        assert "confidence" in key
+
+    @pytest.mark.e2e
+    def test_02_validate_join_quality(self):
+        """测试验证 JOIN 质量"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/validate-join",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "source_key": "customer_id",
+                "target_table": "customers",
+                "target_key": "id",
+                "source_database": "warehouse",
+                "target_database": "warehouse",
+                "sample_size": 10000
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                quality = data["data"]
+                assert "match_rate" in quality
+                assert "coverage_rate" in quality
+                assert "overall_score" in quality
+                assert "recommendation" in quality
+
+    @pytest.mark.e2e
+    def test_03_recommend_join_strategy(self):
+        """测试推荐 JOIN 策略"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/recommend-strategy",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "target_table": "customers",
+                "join_keys": [
+                    {
+                        "source_column": "customer_id",
+                        "target_column": "id",
+                        "confidence": 0.95,
+                        "detection_method": "name_match"
+                    }
+                ],
+                "source_database": "warehouse",
+                "target_database": "warehouse"
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                strategy = data["data"]
+                assert "join_type" in strategy
+                assert "sql_template" in strategy
+                assert "estimated_result_count" in strategy
+                assert "index_suggestions" in strategy
+                assert "warnings" in strategy
+
+    @pytest.mark.e2e
+    def test_04_generate_kettle_join_config(self):
+        """测试生成 Kettle JOIN 配置"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/kettle-config",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "target_table": "customers",
+                "join_type": "left",
+                "join_keys": [
+                    {
+                        "source_column": "customer_id",
+                        "target_column": "id",
+                        "confidence": 0.95
+                    }
+                ]
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                config = data["data"]
+                assert "step_type" in config
+                assert "keys_1" in config
+                assert "keys_2" in config
+
+    @pytest.mark.e2e
+    def test_05_detect_multi_table_paths(self):
+        """测试检测多表关联路径"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/multi-table-paths",
+            headers=HEADERS,
+            json={
+                "tables": ["orders", "customers", "products", "categories"],
+                "database": "warehouse",
+                "max_depth": 3
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                paths = data["data"]
+                assert isinstance(paths, list)
+
+
+# ==================== Phase 4: 元数据变更检测测试 ====================
+
+class TestMetadataChangeDetection:
+    """元数据变更检测测试 (Phase 4)"""
+
+    scan_id: Optional[str] = None
+
+    @pytest.mark.e2e
+    def test_01_trigger_metadata_scan(self):
+        """测试触发元数据扫描"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/metadata/scan",
+            headers=HEADERS,
+            json={
+                "database_name": "warehouse",
+                "scan_type": "incremental",
+                "table_filter": ["orders", "customers"],
+                "detect_changes": True
+            }
+        )
+
+        assert response.status_code in [202, 200, 401, 501]
+
+        if response.status_code in [202, 200]:
+            data = response.json()
+            if data.get("code") == 0:
+                TestMetadataChangeDetection.scan_id = data["data"].get("scan_id")
+                logger.info(f"Created scan: {TestMetadataChangeDetection.scan_id}")
+
+    @pytest.mark.e2e
+    def test_02_get_scan_results(self):
+        """测试获取扫描结果"""
+        if not TestMetadataChangeDetection.scan_id:
+            pytest.skip("No scan created")
+
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/scan/{TestMetadataChangeDetection.scan_id}",
+            headers=HEADERS
+        )
+
+        assert response.status_code in [200, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                result = data["data"]
+                assert "tables_scanned" in result
+                assert "columns_discovered" in result
+
+    @pytest.mark.e2e
+    def test_03_get_table_changes(self):
+        """测试获取表变更"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/changes/tables",
+            headers=HEADERS,
+            params={
+                "database": "warehouse",
+                "since_days": 7
+            }
+        )
+
+        assert response.status_code in [200, 401]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                changes = data["data"]
+                assert "added" in changes
+                assert "modified" in changes
+                assert "deleted" in changes
+
+    @pytest.mark.e2e
+    def test_04_get_column_changes(self):
+        """测试获取列变更"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/metadata/changes/columns",
+            headers=HEADERS,
+            params={
+                "table": "orders",
+                "database": "warehouse"
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+    @pytest.mark.e2e
+    def test_05_compare_snapshots(self):
+        """测试快照对比"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/metadata/snapshots/compare",
+            headers=HEADERS,
+            json={
+                "snapshot_id_1": "snapshot_001",
+                "snapshot_id_2": "snapshot_002"
+            }
+        )
+
+        assert response.status_code in [200, 404, 401]
+
+
+# ==================== Phase 5: 数据血缘测试 ====================
+
+class TestOpenLineage:
+    """OpenLineage 集成测试 (Phase 5)"""
+
+    @pytest.mark.e2e
+    def test_01_export_lineage_dag(self):
+        """测试导出血缘 DAG"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            headers=HEADERS,
+            params={
+                "format": "mermaid",
+                "database": "warehouse",
+                "table": "fact_orders"
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            content = response.text
+            # 验证 Mermaid 格式
+            assert "graph" in content or "flowchart" in content
+
+    @pytest.mark.e2e
+    def test_02_export_lineage_json(self):
+        """测试导出血缘 JSON"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            headers=HEADERS,
+            params={
+                "format": "json",
+                "database": "warehouse"
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                dag = data["data"]
+                assert "nodes" in dag
+                assert "edges" in dag
+
+    @pytest.mark.e2e
+    def test_03_get_upstream_lineage(self):
+        """测试获取上游血缘"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/upstream",
+            headers=HEADERS,
+            params={
+                "database": "warehouse",
+                "table": "fact_orders",
+                "depth": 2
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("code") == 0:
+                lineage = data["data"]
+                assert isinstance(lineage, list)
+
+    @pytest.mark.e2e
+    def test_04_get_downstream_lineage(self):
+        """测试获取下游血缘"""
+        response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/downstream",
+            headers=HEADERS,
+            params={
+                "database": "warehouse",
+                "table": "dim_customers",
+                "depth": 2
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+    @pytest.mark.e2e
+    def test_05_trace_data_path(self):
+        """测试追溯数据路径"""
+        response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/lineage/trace",
+            headers=HEADERS,
+            json={
+                "source": {"database": "raw", "table": "customers"},
+                "target": {"database": "warehouse", "table": "fact_orders"},
+                "max_hops": 5
+            }
+        )
+
+        assert response.status_code in [200, 401, 404]
+
+
+# ==================== 综合场景测试 ====================
+
+class TestEndToEndScenarios:
+    """端到端综合场景测试"""
+
+    @pytest.mark.e2e
+    @pytest.mark.slow
+    def test_01_full_data_pipeline(self):
+        """测试完整数据流水线: 元数据扫描 -> ETL -> 质量检测 -> 编目"""
+        # 步骤 1: 扫描源表元数据
+        scan_response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/metadata/scan",
+            headers=HEADERS,
+            json={
+                "database_name": "source_db",
+                "scan_type": "full",
+                "auto_catalog": True
+            }
+        )
+        assert scan_response.status_code in [202, 200, 501]
+
+        # 步骤 2: 创建编排请求
+        orch_response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            headers=HEADERS,
+            json={
+                "name": f"Full Pipeline {int(time.time())}",
+                "pipeline_type": "full_etl",
+                "source_database": "source_db",
+                "source_table": "customers",
+                "target_database": "warehouse",
+                "target_table": "dim_customers",
+                "dry_run": True,
+                "auto_catalog": True,
+                "export_to_minio": False
+            }
+        )
+        assert orch_response.status_code in [201, 200, 501]
+
+        # 步骤 3: 验证数据质量（如果有执行）
+        # 步骤 4: 验证编目（如果有自动编目）
+
+    @pytest.mark.e2e
+    @pytest.mark.slow
+    def test_02_multi_table_fusion_pipeline(self):
+        """测试多表融合流水线"""
+        # 步骤 1: 检测关联键
+        detect_response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/detect-joins",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "target_tables": ["customers", "products", "categories"],
+                "database": "warehouse"
+            }
+        )
+        assert detect_response.status_code in [200, 401]
+
+        # 步骤 2: 验证最佳 JOIN
+        validate_response = requests.post(
+            f"{ALLDATA_API_URL}/api/v1/fusion/validate-join",
+            headers=HEADERS,
+            json={
+                "source_table": "orders",
+                "source_key": "customer_id",
+                "target_table": "customers",
+                "target_key": "id",
+                "database": "warehouse"
+            }
+        )
+        assert validate_response.status_code in [200, 401]
+
+    @pytest.mark.e2e
+    @pytest.mark.slow
+    def test_03_lineage_impact_analysis(self):
+        """测试变更影响分析"""
+        # 步骤 1: 获取表的上游依赖
+        upstream_response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/upstream",
+            headers=HEADERS,
+            params={
+                "database": "warehouse",
+                "table": "fact_orders",
+                "depth": 3
+            }
+        )
+
+        # 步骤 2: 获取表的下游影响
+        downstream_response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/downstream",
+            headers=HEADERS,
+            params={
+                "database": "raw",
+                "table": "customers",
+                "depth": 3
+            }
+        )
+
+        # 步骤 3: 导出完整 DAG
+        dag_response = requests.get(
+            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            headers=HEADERS,
+            params={"format": "json"}
+        )
+
+        assert all(r.status_code in [200, 401, 404]
+                   for r in [upstream_response, downstream_response, dag_response])
 
 
 if __name__ == "__main__":

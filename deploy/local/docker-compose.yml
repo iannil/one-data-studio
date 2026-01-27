@@ -113,6 +113,101 @@ services:
       - one-data-network
 
   # ============================================
+  # Metadata Governance (OpenMetadata)
+  # ============================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: one-data-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'green\\|yellow'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - one-data-network
+
+  openmetadata:
+    image: openmetadata/server:1.3.1
+    container_name: one-data-openmetadata
+    environment:
+      # Database configuration (reuse existing MySQL)
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_SCHEME: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-onedata}
+      DB_USER_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      OM_DATABASE: openmetadata_db
+      # Elasticsearch configuration
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_SCHEME: http
+      # Server configuration
+      SERVER_HOST: openmetadata
+      SERVER_PORT: 8585
+      # Authentication (disabled for development)
+      AUTHENTICATION_PROVIDER: no-auth
+      # Airflow disabled (using external orchestration)
+      PIPELINE_SERVICE_CLIENT_ENABLED: false
+    ports:
+      - "8585:8585"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8585/api/v1/system/version | grep -q 'version'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - one-data-network
+
+  # ============================================
+  # ETL Engine (Pentaho Kettle / Webspoon)
+  # ============================================
+  # Webspoon provides web-based Pentaho Data Integration (Kettle)
+  # with Carte server for remote transformation execution
+  kettle:
+    image: hiromuhota/webspoon:0.9.0.27
+    container_name: one-data-kettle
+    environment:
+      # Carte server configuration for remote execution
+      KETTLE_CARTE_ENABLED: "true"
+      KETTLE_CARTE_PORT: 8181
+      # SECURITY: Carte credentials MUST be set via environment variables
+      KETTLE_CARTE_USER: ${KETTLE_CARTE_USER:-cluster}
+      KETTLE_CARTE_PASSWORD: ${KETTLE_CARTE_PASSWORD:?KETTLE_CARTE_PASSWORD must be set}
+      # Java memory settings
+      JAVA_OPTS: "-Xms512m -Xmx2g"
+      # Database JDBC drivers will be auto-loaded from /jdbc-drivers volume
+    ports:
+      - "8088:8080"   # Webspoon UI
+      - "8181:8181"   # Carte API
+    volumes:
+      - kettle_data:/home/tomcat/.kettle
+      - kettle_jdbc:/jdbc-drivers
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/spoon/spoon || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - one-data-network
+
+  # ============================================
   # Authentication
   # ============================================
   keycloak:
@@ -141,6 +236,99 @@ services:
       - one-data-network
 
   # ============================================
+  # AI/LLM Services (vLLM)
+  # ============================================
+  # vLLM Chat Service - for LLM inference (Text generation, Text-to-SQL, etc.)
+  # Requires NVIDIA GPU with CUDA support
+  # To run without GPU, set VLLM_MOCK_ENABLED=true
+  vllm-chat:
+    image: vllm/vllm-openai:latest
+    container_name: one-data-vllm-chat
+    # GPU configuration - uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    environment:
+      # Model configuration
+      # For development/testing without GPU, use a smaller model or mock mode
+      VLLM_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      # Server configuration
+      VLLM_HOST: 0.0.0.0
+      VLLM_PORT: 8000
+      # GPU memory utilization (0.0-1.0)
+      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.8}
+      # Trust remote code for custom models
+      VLLM_TRUST_REMOTE_CODE: "true"
+      # HuggingFace token for gated models
+      HF_TOKEN: ${HF_TOKEN:-}
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      --host 0.0.0.0
+      --port 8000
+      --trust-remote-code
+      --max-model-len 4096
+    ports:
+      - "8010:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s  # Model loading takes time
+    networks:
+      - one-data-network
+    profiles:
+      - ai  # Only start with: docker-compose --profile ai up
+
+  # vLLM Embedding Service - for text vectorization
+  vllm-embed:
+    image: vllm/vllm-openai:latest
+    container_name: one-data-vllm-embed
+    # GPU configuration - uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    environment:
+      VLLM_MODEL: ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
+      VLLM_HOST: 0.0.0.0
+      VLLM_PORT: 8000
+      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
+      VLLM_TRUST_REMOTE_CODE: "true"
+      HF_TOKEN: ${HF_TOKEN:-}
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
+      --host 0.0.0.0
+      --port 8000
+      --trust-remote-code
+      --max-model-len 512
+    ports:
+      - "8011:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - one-data-network
+    profiles:
+      - ai  # Only start with: docker-compose --profile ai up
+
+  # ============================================
   # Application Services
   # ============================================
   bisheng-api:
@@ -157,9 +345,14 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
-      # Embedding API configuration
+      # LLM API configuration (through openai-proxy or direct vLLM)
       CUBE_API_URL: ${CUBE_API_URL:-http://openai-proxy:8000}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-ada-002}
+      # Direct vLLM endpoints for high-performance scenarios
+      VLLM_CHAT_URL: ${VLLM_CHAT_URL:-http://vllm-chat:8000}
+      VLLM_EMBED_URL: ${VLLM_EMBED_URL:-http://vllm-embed:8000}
+      # Model configuration
+      CHAT_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      EMBEDDING_MODEL: ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
       EMBEDDING_MOCK_ENABLED: ${EMBEDDING_MOCK_ENABLED:-false}
       PORT: 8000
       # Development mode: disable authentication
@@ -192,12 +385,27 @@ services:
       PORT: 8001
       # Development mode: disable authentication
       AUTH_MODE: "false"
+      # OpenMetadata integration
+      OPENMETADATA_HOST: openmetadata
+      OPENMETADATA_PORT: 8585
+      OPENMETADATA_ENABLED: ${OPENMETADATA_ENABLED:-true}
+      # vLLM service for AI features (metadata annotation, sensitivity scan, ETL recommendations)
+      VLLM_CHAT_URL: ${VLLM_CHAT_URL:-http://vllm-chat:8000}
+      VLLM_CHAT_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      AI_FEATURES_ENABLED: ${AI_FEATURES_ENABLED:-true}
+      # Kettle/PDI ETL engine integration
+      KETTLE_CARTE_URL: ${KETTLE_CARTE_URL:-http://kettle:8181}
+      KETTLE_CARTE_USER: ${KETTLE_CARTE_USER:-cluster}
+      KETTLE_CARTE_PASSWORD: ${KETTLE_CARTE_PASSWORD:?KETTLE_CARTE_PASSWORD must be set}
+      KETTLE_ENABLED: ${KETTLE_ENABLED:-true}
     ports:
       - "8001:8001"
     depends_on:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      openmetadata:
         condition: service_healthy
     networks:
       - one-data-network
@@ -212,6 +420,12 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
       # Development mode: disable authentication
       AUTH_MODE: "false"
+      # vLLM service endpoints for model inference
+      VLLM_CHAT_URL: ${VLLM_CHAT_URL:-http://vllm-chat:8000}
+      VLLM_EMBED_URL: ${VLLM_EMBED_URL:-http://vllm-embed:8000}
+      # Default model names (must match vLLM deployed models)
+      DEFAULT_CHAT_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      DEFAULT_EMBED_MODEL: ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
     ports:
       - "8003:8000"
     depends_on:
@@ -315,6 +529,10 @@ volumes:
   minio_data:
   milvus_data:
   etcd_data:
+  elasticsearch_data:
+  vllm_cache:
+  kettle_data:
+  kettle_jdbc:
 
 networks:
   one-data-network:

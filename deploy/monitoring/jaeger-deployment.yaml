@@ -1,0 +1,542 @@
+# Jaeger 分布式追踪部署
+# 用于 ONE-DATA-STUDIO 平台的分布式追踪收集和可视化
+
+---
+# Jaeger Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one-data-observability
+  labels:
+    name: one-data-observability
+    project: one-data-studio
+
+---
+# Jaeger Agent DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: jaeger-agent
+  namespace: one-data-observability
+  labels:
+    app: jaeger-agent
+spec:
+  selector:
+    matchLabels:
+      app: jaeger-agent
+  template:
+    metadata:
+      labels:
+        app: jaeger-agent
+    spec:
+      hostNetwork: true
+      containers:
+      - name: jaeger-agent
+        image: jaegertracing/jaeger-agent:1.50
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: zipkin-thrift
+          containerPort: 5775
+          protocol: UDP
+        - name: compact-thrift
+          containerPort: 6831
+          protocol: UDP
+        - name: grpc
+          containerPort: 6832
+          protocol: UDP
+        - name: admin
+          containerPort: 14271
+          protocol: TCP
+        env:
+        - name: REPORTER_GRPC_HOST_PORT
+          value: "jaeger-collector.one-data-observability.svc:14250"
+        - name: REPORTER_TYPE
+          value: "grpc"
+        - name: SAMPLER_TYPE
+          value: "probabilistic"
+        - name: SAMPLER_PARAM
+          value: "0.1"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
+---
+# Jaeger Collector Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-collector
+  namespace: one-data-observability
+  labels:
+    app: jaeger-collector
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jaeger-collector
+  template:
+    metadata:
+      labels:
+        app: jaeger-collector
+    spec:
+      containers:
+      - name: jaeger-collector
+        image: jaegertracing/jaeger-collector:1.50
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: grpc
+          containerPort: 14250
+          protocol: TCP
+        - name: http-thrift
+          containerPort: 14268
+          protocol: TCP
+        - name: admin
+          containerPort: 14269
+          protocol: TCP
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: "elasticsearch"
+        - name: ES_SERVER_URLS
+          value: "http://elasticsearch-master.one-data-infra.svc:9200"
+        - name: ES_NUM_SHARDS
+          value: "3"
+        - name: ES_NUM_REPLICAS
+          value: "1"
+        - name: ES_INDEX_PREFIX
+          value: "jaeger"
+        - name: COLLECTOR_GRPC_MAX_RECV_MESSAGE_SIZE
+          value: "10485760"  # 10MB
+        - name: COLLECTOR_HTTP_MAX_RECV_MESSAGE_SIZE
+          value: "10485760"
+        - name: LOG_LEVEL
+          value: "info"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/jaeger
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 5
+          periodSeconds: 15
+      volumes:
+      - name: config
+        configMap:
+          name: jaeger-collector-config
+
+---
+# Jaeger Collector ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-collector-config
+  namespace: one-data-observability
+data:
+  sampling.json: |
+    {
+      "default_strategy": {
+        "type": "probabilistic",
+        "param": 0.1
+      },
+      "service_strategies": [
+        {
+          "service": "alldata-api",
+          "type": "probabilistic",
+          "param": 0.1
+        },
+        {
+          "service": "bisheng-api",
+          "type": "probabilistic",
+          "param": 0.1
+        },
+        {
+          "service": "vllm-serving",
+          "type": "probabilistic",
+          "param": 0.05
+        }
+      ]
+    }
+
+---
+# Jaeger Collector Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-collector
+  namespace: one-data-observability
+  labels:
+    app: jaeger-collector
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: 14250
+    targetPort: grpc
+    protocol: TCP
+  - name: http-thrift
+    port: 14268
+    targetPort: http-thrift
+    protocol: TCP
+  - name: admin
+    port: 14269
+    targetPort: admin
+    protocol: TCP
+  selector:
+    app: jaeger-collector
+
+---
+# Jaeger Query Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-query
+  namespace: one-data-observability
+  labels:
+    app: jaeger-query
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger-query
+  template:
+    metadata:
+      labels:
+        app: jaeger-query
+    spec:
+      containers:
+      - name: jaeger-query
+        image: jaegertracing/jaeger-query:1.50
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: query
+          containerPort: 16686
+          protocol: TCP
+        - name: admin
+          containerPort: 16687
+          protocol: TCP
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: "elasticsearch"
+        - name: ES_SERVER_URLS
+          value: "http://elasticsearch-master.one-data-infra.svc:9200"
+        - name: ES_INDEX_PREFIX
+          value: "jaeger"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: QUERY_BASE_PATH
+          value: "/jaeger"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 16687
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 16687
+          initialDelaySeconds: 5
+          periodSeconds: 15
+
+---
+# Jaeger Query Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-query
+  namespace: one-data-observability
+  labels:
+    app: jaeger-query
+spec:
+  type: ClusterIP
+  ports:
+  - name: query
+    port: 16686
+    targetPort: query
+    protocol: TCP
+  - name: admin
+    port: 16687
+    targetPort: admin
+    protocol: TCP
+  selector:
+    app: jaeger-query
+
+---
+# Jaeger Ingester for buffering spans
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-ingester
+  namespace: one-data-observability
+  labels:
+    app: jaeger-ingester
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jaeger-ingester
+  template:
+    metadata:
+      labels:
+        app: jaeger-ingester
+    spec:
+      containers:
+      - name: jaeger-ingester
+        image: jaegertracing/jaeger-ingester:1.50
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: admin
+          containerPort: 14270
+          protocol: TCP
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: "elasticsearch"
+        - name: ES_SERVER_URLS
+          value: "http://elasticsearch-master.one-data-infra.svc:9200"
+        - name: ES_INDEX_PREFIX
+          value: "jaeger"
+        - name: KAFKA_CONSUMER_TOPIC
+          value: "jaeger-spans"
+        - name: KAFKA_CONSUMER_BROKERS
+          value: "kafka.one-data-infra.svc:9092"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DEADLOCK_INTERVAL
+          value: "1m"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+
+---
+# HotROD for generating demo traces
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hotrod
+  namespace: one-data-observability
+  labels:
+    app: hotrod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hotrod
+  template:
+    metadata:
+      labels:
+        app: hotrod
+    spec:
+      containers:
+      - name: hotrod
+        image: jaegertracing/example-hotrod:1.50
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: web
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: JAEGER_AGENT_HOST
+          value: "jaeger-agent"
+        - name: JAEGER_AGENT_PORT
+          value: "6831"
+        command:
+        - ./hotrod
+        args:
+        - --jaeger-agent.host-port=jaeger-agent:6831
+        - --otel-exporter=jaeger
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+# HotROD Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: hotrod
+  namespace: one-data-observability
+  labels:
+    app: hotrod
+spec:
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 8080
+    targetPort: web
+    protocol: TCP
+  selector:
+    app: hotrod
+
+---
+# Ingress for Jaeger UI
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-ingress
+  namespace: one-data-observability
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: jaeger.local
+    http:
+      paths:
+      - path: /jaeger(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: jaeger-query
+            port:
+              number: 16686
+
+---
+# NetworkPolicy for Jaeger
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jaeger-policy
+  namespace: one-data-observability
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from Ingress
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - port: 16686
+      protocol: TCP
+  # Allow from application namespaces for agent
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          project: one-data-studio
+    ports:
+    - port: 6831
+      protocol: UDP
+    - port: 6832
+      protocol: UDP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          project: one-data-studio
+    ports:
+    - port: 14271
+      protocol: TCP
+  # Allow collector traffic
+  - from:
+    - podSelector:
+        matchLabels:
+          app: jaeger-agent
+    ports:
+    - port: 14250
+      protocol: TCP
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - port: 53
+      protocol: UDP
+  # Allow Elasticsearch
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: elasticsearch
+    ports:
+    - port: 9200
+      protocol: TCP
+  # Allow Kafka (if using)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - port: 9092
+      protocol: TCP
+
+---
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jaeger-collector
+  namespace: one-data-observability
+  labels:
+    app: jaeger-collector
+spec:
+  selector:
+    matchLabels:
+      app: jaeger-collector
+  endpoints:
+  - port: admin
+    path: /metrics
+    interval: 30s
+
+---
+# ServiceMonitor for Jaeger Query
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jaeger-query
+  namespace: one-data-observability
+  labels:
+    app: jaeger-query
+spec:
+  selector:
+    matchLabels:
+      app: jaeger-query
+  endpoints:
+  - port: admin
+    path: /metrics
+    interval: 30s

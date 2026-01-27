@@ -423,3 +423,254 @@ class TestStreamingResponse:
 
         data = response.get_data(as_text=True)
         assert 'data: [DONE]' in data
+
+
+class TestVLLMIntegration:
+    """vLLM 集成测试"""
+
+    @pytest.fixture
+    def client(self):
+        """创建测试客户端"""
+        from services.openai_proxy.main import app
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            yield client
+
+    @patch('services.openai_proxy.main.is_vllm_chat_available')
+    @patch('services.openai_proxy.main.is_vllm_embed_available')
+    def test_health_check_shows_vllm_status(self, mock_embed_avail, mock_chat_avail, client):
+        """测试健康检查显示 vLLM 状态"""
+        mock_chat_avail.return_value = True
+        mock_embed_avail.return_value = True
+
+        response = client.get('/health')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+
+        assert 'vllm' in data
+        assert data['vllm']['chat_available'] == True
+        assert data['vllm']['embed_available'] == True
+        assert 'chat_url' in data['vllm']
+        assert 'embed_url' in data['vllm']
+
+    @patch('services.openai_proxy.main.is_vllm_chat_available')
+    @patch('services.openai_proxy.main.get_vllm_chat_client')
+    def test_chat_completions_uses_vllm_when_available(self, mock_get_client, mock_avail, client):
+        """测试 vLLM 可用时使用 vLLM"""
+        mock_avail.return_value = True
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "id": "chatcmpl-vllm-123",
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": "Qwen/Qwen2.5-1.5B-Instruct",
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": "vLLM 响应"},
+                "finish_reason": "stop"
+            }],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
+        }
+
+        async def mock_create(*args, **kwargs):
+            return mock_response
+
+        mock_client.chat.completions.create = mock_create
+
+        response = client.post('/v1/chat/completions', json={
+            "model": "Qwen/Qwen2.5-1.5B-Instruct",
+            "messages": [{"role": "user", "content": "你好"}]
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['backend'] == 'vllm'
+
+    @patch('services.openai_proxy.main.get_vllm_embed_client')
+    @patch('services.openai_proxy.main.get_openai_client')
+    def test_embeddings_uses_vllm_when_available(self, mock_get_openai, mock_get_vllm, client):
+        """测试 vLLM Embedding 可用时使用 vLLM"""
+        mock_vllm_client = MagicMock()
+        mock_get_vllm.return_value = mock_vllm_client
+
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "object": "list",
+            "data": [{
+                "object": "embedding",
+                "embedding": [0.1] * 768,
+                "index": 0
+            }],
+            "model": "BAAI/bge-base-zh-v1.5",
+            "usage": {"prompt_tokens": 10, "total_tokens": 10}
+        }
+
+        async def mock_create(*args, **kwargs):
+            return mock_response
+
+        mock_vllm_client.embeddings.create = mock_create
+
+        response = client.post('/v1/embeddings', json={
+            "model": "BAAI/bge-base-zh-v1.5",
+            "input": "测试文本"
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['backend'] == 'vllm'
+        assert len(data['data']) == 1
+        assert len(data['data'][0]['embedding']) == 768
+
+    @patch('services.openai_proxy.main.is_vllm_chat_available')
+    @patch('services.openai_proxy.main.get_openai_client')
+    def test_chat_fallback_to_openai_when_vllm_unavailable(self, mock_get_openai, mock_avail, client):
+        """测试 vLLM 不可用时降级到 OpenAI"""
+        mock_avail.return_value = False
+        mock_openai_client = MagicMock()
+        mock_get_openai.return_value = mock_openai_client
+
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "id": "chatcmpl-openai-123",
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": "gpt-4o-mini",
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": "OpenAI 响应"},
+                "finish_reason": "stop"
+            }],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
+        }
+
+        async def mock_create(*args, **kwargs):
+            return mock_response
+
+        mock_openai_client.chat.completions.create = mock_create
+
+        response = client.post('/v1/chat/completions', json={
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": "你好"}]
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['backend'] == 'openai'
+
+
+class TestVLLMHealthCheck:
+    """vLLM 健康检查测试"""
+
+    @patch('services.openai_proxy.main.requests.get')
+    def test_vllm_health_check_success(self, mock_get):
+        """测试 vLLM 健康检查成功"""
+        from services.openai_proxy.main import _check_vllm_health
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        result = _check_vllm_health("http://vllm-chat:8000")
+        assert result == True
+
+    @patch('services.openai_proxy.main.requests.get')
+    def test_vllm_health_check_failure(self, mock_get):
+        """测试 vLLM 健康检查失败"""
+        from services.openai_proxy.main import _check_vllm_health
+
+        mock_get.side_effect = Exception("Connection error")
+
+        result = _check_vllm_health("http://vllm-chat:8000")
+        assert result == False
+
+    @patch('services.openai_proxy.main.requests.get')
+    def test_vllm_health_check_uses_cache(self, mock_get):
+        """测试健康检查使用缓存"""
+        from services.openai_proxy.main import _check_vllm_health
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        # 第一次调用
+        result1 = _check_vllm_health("http://vllm-chat:8000")
+        # 第二次调用应该使用缓存
+        result2 = _check_vllm_health("http://vllm-chat:8000")
+
+        assert result1 == True
+        assert result2 == True
+        # 由于缓存，应该只调用一次 requests.get
+        assert mock_get.call_count == 1
+
+
+class TestEmbeddingsEndpoint:
+    """Embeddings 端点测试"""
+
+    @pytest.fixture
+    def client(self):
+        """创建测试客户端"""
+        from services.openai_proxy.main import app
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            yield client
+
+    @patch('services.openai_proxy.main.get_vllm_embed_client')
+    @patch('services.openai_proxy.main.get_openai_client')
+    def test_embeddings_mock_response(self, mock_openai, mock_vllm, client):
+        """测试无客户端时返回 mock 响应"""
+        mock_vllm.return_value = None
+        mock_openai.return_value = None
+
+        response = client.post('/v1/embeddings', json={
+            "model": "BAAI/bge-base-zh-v1.5",
+            "input": "测试文本"
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['object'] == 'list'
+        assert 'data' in data
+        assert len(data['data']) == 1
+        assert len(data['data'][0]['embedding']) == 768
+
+    @patch('services.openai_proxy.main.get_vllm_embed_client')
+    def test_embeddings_batch_input(self, mock_get_client, client):
+        """测试批量嵌入"""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "object": "list",
+            "data": [
+                {
+                    "object": "embedding",
+                    "embedding": [0.1] * 768,
+                    "index": 0
+                },
+                {
+                    "object": "embedding",
+                    "embedding": [0.2] * 768,
+                    "index": 1
+                }
+            ],
+            "model": "BAAI/bge-base-zh-v1.5",
+            "usage": {"prompt_tokens": 20, "total_tokens": 20}
+        }
+
+        async def mock_create(*args, **kwargs):
+            return mock_response
+
+        mock_client.embeddings.create = mock_create
+
+        response = client.post('/v1/embeddings', json={
+            "model": "BAAI/bge-base-zh-v1.5",
+            "input": ["文本1", "文本2"]
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data['data']) == 2

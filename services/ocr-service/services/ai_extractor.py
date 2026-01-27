@@ -1,6 +1,7 @@
 """
 AI信息抽取器
 使用LLM从文档中提取结构化信息
+支持双引擎: LLM (远程API) + PaddleNLP UIE (本地模型)
 """
 
 import os
@@ -10,6 +11,22 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# NLP提取器延迟导入
+_nlp_extractor = None
+
+
+def _get_nlp_extractor():
+    """获取NLP提取器实例（延迟导入，避免启动时加载模型）"""
+    global _nlp_extractor
+    if _nlp_extractor is None:
+        try:
+            from services.nlp_extractor import get_nlp_extractor
+            _nlp_extractor = get_nlp_extractor()
+        except ImportError:
+            logger.info("NLP extractor not available (paddlenlp not installed)")
+            _nlp_extractor = False  # 标记为不可用，避免重复导入
+    return _nlp_extractor if _nlp_extractor is not False else None
 
 
 class AIExtractor:
@@ -361,3 +378,81 @@ class AIExtractor:
         except Exception as e:
             logger.error(f"Template suggestion error: {e}")
             return {"suggested_fields": [], "error": str(e)}
+
+    def extract_with_nlp(
+        self,
+        text: str,
+        document_type: str = "general",
+        use_llm: bool = True,
+        use_nlp: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        双引擎信息抽取（LLM + 本地NLP）
+
+        结合LLM远程API和PaddleNLP本地UIE模型进行互补提取：
+        - LLM: 擅长理解复杂语义和上下文，准确率高但需要API调用
+        - NLP: 本地推理无需网络，擅长结构化实体和关系抽取
+
+        Args:
+            text: 输入文本
+            document_type: 文档类型 (invoice, contract, report, general)
+            use_llm: 是否使用LLM引擎
+            use_nlp: 是否使用本地NLP引擎
+
+        Returns:
+            合并的提取结果
+        """
+        result = {
+            "llm_result": None,
+            "nlp_result": None,
+            "merged": {},
+            "sources": [],
+        }
+
+        # 1. LLM提取
+        if use_llm and self.is_available():
+            try:
+                type_method = {
+                    "invoice": self.extract_invoice,
+                    "contract": self.extract_contract,
+                    "report": self.extract_report,
+                }
+                extractor = type_method.get(document_type)
+                if extractor:
+                    llm_result = extractor(text)
+                else:
+                    llm_result = self.extract_general(text, [])
+                result["llm_result"] = llm_result
+                result["sources"].append("llm")
+                # 合并LLM结果
+                if llm_result.get("extracted"):
+                    result["merged"].update(llm_result["extracted"])
+            except Exception as e:
+                logger.warning(f"LLM extraction failed: {e}")
+
+        # 2. NLP本地提取
+        if use_nlp:
+            nlp = _get_nlp_extractor()
+            if nlp and nlp.is_available:
+                try:
+                    nlp_result = nlp.extract_structured_info(
+                        text,
+                        document_type=document_type,
+                    )
+                    result["nlp_result"] = nlp_result.to_dict()
+                    result["sources"].append("nlp")
+
+                    # 合并NLP实体到结果（不覆盖LLM已提取的字段）
+                    for entity_type, value in nlp_result.key_info.items():
+                        if entity_type not in result["merged"]:
+                            result["merged"][entity_type] = value
+
+                    # 添加文本分类
+                    if nlp_result.text_classification:
+                        result["merged"]["_document_type"] = nlp_result.text_classification.get("label")
+                        result["merged"]["_classification_confidence"] = nlp_result.text_classification.get("confidence")
+
+                except Exception as e:
+                    logger.warning(f"NLP extraction failed: {e}")
+
+        return result

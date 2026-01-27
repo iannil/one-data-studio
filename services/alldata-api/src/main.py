@@ -4062,6 +4062,170 @@ def get_sensitivity_statistics():
         return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
+# ==================== 敏感数据自动扫描 API ====================
+
+@app.route("/api/v1/sensitivity/auto-scan/start", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def start_auto_scan():
+    """启动敏感数据自动扫描"""
+    try:
+        from services.sensitivity_auto_scan_service import (
+            get_sensitivity_auto_scan_service,
+            AutoScanPolicy,
+            AutoScanMode,
+        )
+
+        data = request.get_json() or {}
+        service = get_sensitivity_auto_scan_service()
+
+        if service.is_running:
+            return jsonify({
+                "code": 40900,
+                "message": "自动扫描正在运行中，请等待完成或取消后再试",
+                "data": service.get_progress(),
+            }), 409
+
+        # 构建扫描策略
+        policy = AutoScanPolicy(
+            name=data.get("name", "手动触发扫描"),
+            mode=AutoScanMode(data.get("mode", "incremental")),
+            databases=data.get("databases", []),
+            exclude_databases=data.get("exclude_databases", [
+                "information_schema", "mysql", "performance_schema", "sys"
+            ]),
+            exclude_table_patterns=data.get("exclude_table_patterns", [
+                "tmp_*", "temp_*", "log_*", "backup_*"
+            ]),
+            sample_size=data.get("sample_size", 200),
+            confidence_threshold=data.get("confidence_threshold", 60),
+            auto_update_metadata=data.get("auto_update_metadata", True),
+            auto_generate_masking_rules=data.get("auto_generate_masking_rules", True),
+            created_by=data.get("created_by", "admin"),
+        )
+
+        with db_manager.get_session() as session:
+            progress = service.start_auto_scan(policy=policy, db_session=session)
+
+        return jsonify({
+            "code": 0,
+            "message": "自动扫描已启动",
+            "data": progress.to_dict(),
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error starting auto scan: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/auto-scan/progress", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_auto_scan_progress():
+    """获取自动扫描进度"""
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+
+        service = get_sensitivity_auto_scan_service()
+        progress = service.get_progress()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": progress,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting auto scan progress: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/auto-scan/cancel", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def cancel_auto_scan():
+    """取消自动扫描"""
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+
+        service = get_sensitivity_auto_scan_service()
+        success = service.cancel_scan()
+
+        if not success:
+            return jsonify({
+                "code": 40000,
+                "message": "没有正在运行的扫描任务",
+            }), 400
+
+        return jsonify({
+            "code": 0,
+            "message": "扫描已取消",
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error cancelling auto scan: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/auto-scan/summary", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_auto_scan_summary():
+    """获取自动扫描摘要"""
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+
+        service = get_sensitivity_auto_scan_service()
+        summary = service.get_scan_summary()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": summary,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting auto scan summary: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/auto-scan/quick-check", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def quick_check_sensitivity():
+    """快速检测单列敏感性（无需数据库连接）"""
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+
+        data = request.get_json()
+        column_name = data.get("column_name")
+        sample_values = data.get("sample_values", [])
+        column_type = data.get("column_type", "")
+
+        if not column_name:
+            return jsonify({
+                "code": 40000,
+                "message": "column_name is required",
+            }), 400
+
+        service = get_sensitivity_auto_scan_service()
+        result = service.quick_scan_column(
+            column_name=column_name,
+            sample_values=sample_values,
+            column_type=column_type,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error in quick sensitivity check: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
 # ==================== Kettle ETL API ====================
 
 @app.route("/api/v1/kettle/status", methods=["GET"])
@@ -4130,6 +4294,144 @@ def kettle_get_types():
         })
     except Exception as e:
         logger.error(f"获取 Kettle 类型失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== Kettle 自动化编排 API ====================
+
+@app.route("/api/v1/kettle/orchestrate", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.MANAGE)
+def kettle_orchestrate():
+    """
+    自动化编排：分析元数据 → AI推荐规则 → 生成Kettle转换
+    一键完成从源表到清洗/脱敏/填充的完整ETL流水线生成
+    """
+    try:
+        from services.kettle_orchestration_service import (
+            get_kettle_orchestration_service,
+            OrchestrationRequest,
+            PipelineType,
+        )
+
+        data = request.get_json()
+        service = get_kettle_orchestration_service()
+
+        req = OrchestrationRequest(
+            name=data.get("name", ""),
+            pipeline_type=PipelineType(data.get("pipeline_type", "full_etl")),
+            source_database=data.get("source_database", ""),
+            source_table=data.get("source_table", ""),
+            source_type=data.get("source_type", "mysql"),
+            source_connection=data.get("source_connection", {}),
+            target_database=data.get("target_database", ""),
+            target_table=data.get("target_table", ""),
+            target_connection=data.get("target_connection", {}),
+            enable_ai_cleaning=data.get("enable_ai_cleaning", True),
+            enable_ai_masking=data.get("enable_ai_masking", True),
+            enable_ai_imputation=data.get("enable_ai_imputation", True),
+            column_filter=data.get("column_filter", []),
+            auto_execute=data.get("auto_execute", False),
+            dry_run=data.get("dry_run", True),
+            created_by=data.get("created_by", "admin"),
+        )
+
+        if not req.source_database or not req.source_table:
+            return jsonify({
+                "code": 40000,
+                "message": "source_database and source_table are required",
+            }), 400
+
+        with db_manager.get_session() as session:
+            result = service.orchestrate(req=req, db_session=session)
+
+        return jsonify({
+            "code": 0,
+            "message": "编排完成",
+            "data": result.to_dict(),
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error in Kettle orchestration: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/kettle/orchestrate/<request_id>", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_kettle_orchestration(request_id: str):
+    """获取编排任务状态"""
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+
+        service = get_kettle_orchestration_service()
+        task = service.get_task(request_id)
+
+        if not task:
+            return jsonify({
+                "code": 40400,
+                "message": f"Task {request_id} not found",
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": task,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting orchestration task: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/kettle/orchestrate/list", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def list_kettle_orchestrations():
+    """列出最近的编排任务"""
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+
+        limit = int(request.args.get("limit", 20))
+        service = get_kettle_orchestration_service()
+        tasks = service.list_tasks(limit=limit)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"tasks": tasks, "total": len(tasks)},
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing orchestration tasks: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/kettle/orchestrate/<request_id>/xml", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_kettle_orchestration_xml(request_id: str):
+    """获取编排生成的 Kettle 转换 XML"""
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+
+        service = get_kettle_orchestration_service()
+        xml_str = service.get_transformation_xml(request_id)
+
+        if not xml_str:
+            return jsonify({
+                "code": 40400,
+                "message": f"No transformation XML found for {request_id}",
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"xml": xml_str},
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting orchestration XML: {e}")
         return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
@@ -4253,8 +4555,3152 @@ def get_alert_statistics():
         return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 
+# ==================== 数据安全管理 API ====================
+
+@app.route("/api/v1/data-security/scan", methods=["POST"])
+@require_jwt()
+def create_sensitivity_scan():
+    """
+    创建敏感数据扫描任务
+
+    请求体:
+    {
+        "target_type": "database",
+        "target_id": "db_001",
+        "target_name": "业务数据库",
+        "scan_mode": "full",
+        "sample_rate": 100,
+        "confidence_threshold": 70,
+        "databases": ["db1", "db2"],
+        "tables": ["table1", "table2"],
+        "exclude_patterns": [".*_bak", ".*_temp"],
+        "auto_start": true
+    }
+    """
+    from scan_task import get_scan_manager
+    from models.security_audit import DataSecurityAuditLog
+    import time
+
+    start_time = time.time()
+
+    try:
+        data = request.get_json() or {}
+
+        # 获取用户信息
+        user_id = request.headers.get("X-User-Id", "anonymous")
+        user_name = request.headers.get("X-User-Name", "")
+        ip_address = request.remote_addr
+
+        # 创建扫描任务
+        scan_manager = get_scan_manager()
+        task = scan_manager.create_task(
+            target_type=data.get("target_type", "database"),
+            target_id=data.get("target_id"),
+            target_name=data.get("target_name"),
+            scan_mode=data.get("scan_mode", "full"),
+            sample_rate=data.get("sample_rate", 100),
+            confidence_threshold=data.get("confidence_threshold", 70),
+            databases=data.get("databases"),
+            tables=data.get("tables"),
+            exclude_patterns=data.get("exclude_patterns"),
+            created_by=user_id,
+            auto_start=data.get("auto_start", False),
+        )
+
+        # 记录审计日志
+        duration_ms = int((time.time() - start_time) * 1000)
+        with db_manager.get_session() as session:
+            import uuid
+            audit_log = DataSecurityAuditLog(
+                audit_id=f"audit_{uuid.uuid4().hex[:12]}",
+                operation="scan",
+                operation_status="success",
+                user_id=user_id,
+                user_name=user_name,
+                ip_address=ip_address,
+                resource_type=data.get("target_type", "database"),
+                resource_id=data.get("target_id"),
+                resource_name=data.get("target_name"),
+                details={
+                    "task_id": task.task_id,
+                    "scan_mode": task.scan_mode,
+                    "confidence_threshold": task.confidence_threshold,
+                    "auto_start": data.get("auto_start", False),
+                },
+                duration_ms=duration_ms,
+            )
+            session.add(audit_log)
+            session.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "扫描任务创建成功",
+            "data": task.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"创建扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/scan/<task_id>", methods=["GET"])
+@require_jwt()
+def get_sensitivity_scan(task_id: str):
+    """
+    获取扫描任务状态和结果
+    """
+    from scan_task import get_scan_manager
+
+    try:
+        scan_manager = get_scan_manager()
+        task_status = scan_manager.get_task_status(task_id)
+
+        if not task_status:
+            return jsonify({"code": 40400, "message": "扫描任务不存在"}), 404
+
+        # 获取扫描结果
+        verified_only = request.args.get("verified_only", "false").lower() == "true"
+        limit = int(request.args.get("limit", 100))
+        offset = int(request.args.get("offset", 0))
+
+        results = scan_manager.get_task_results(
+            task_id,
+            verified_only=verified_only,
+            limit=limit,
+            offset=offset
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task": task_status,
+                "results": results,
+                "result_count": len(results),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/scan/<task_id>/start", methods=["POST"])
+@require_jwt()
+def start_sensitivity_scan(task_id: str):
+    """
+    启动扫描任务
+    """
+    from scan_task import get_scan_manager
+
+    try:
+        scan_manager = get_scan_manager()
+        success = scan_manager.start_task(task_id)
+
+        if not success:
+            return jsonify({"code": 40000, "message": "无法启动任务，可能任务不存在或已在运行"}), 400
+
+        return jsonify({
+            "code": 0,
+            "message": "扫描任务已启动",
+            "data": {"task_id": task_id}
+        })
+
+    except Exception as e:
+        logger.error(f"启动扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/scan/<task_id>/cancel", methods=["POST"])
+@require_jwt()
+def cancel_sensitivity_scan(task_id: str):
+    """
+    取消扫描任务
+    """
+    from scan_task import get_scan_manager
+
+    try:
+        scan_manager = get_scan_manager()
+        success = scan_manager.cancel_task(task_id)
+
+        if not success:
+            return jsonify({"code": 40000, "message": "无法取消任务"}), 400
+
+        return jsonify({
+            "code": 0,
+            "message": "扫描任务已取消",
+            "data": {"task_id": task_id}
+        })
+
+    except Exception as e:
+        logger.error(f"取消扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/scan/<task_id>/verify", methods=["POST"])
+@require_jwt()
+def verify_scan_result(task_id: str):
+    """
+    校验扫描结果
+
+    请求体:
+    {
+        "result_id": "res_xxx",
+        "verified_result": "confirmed",  // confirmed, rejected, modified
+        "sensitivity_type": "pii",       // 可选，修正后的类型
+        "sensitivity_level": "restricted" // 可选，修正后的级别
+    }
+    """
+    from scan_task import get_scan_manager
+    from models.security_audit import DataSecurityAuditLog
+
+    try:
+        data = request.get_json() or {}
+        result_id = data.get("result_id")
+
+        if not result_id:
+            return jsonify({"code": 40000, "message": "缺少 result_id 参数"}), 400
+
+        user_id = request.headers.get("X-User-Id", "anonymous")
+        user_name = request.headers.get("X-User-Name", "")
+
+        scan_manager = get_scan_manager()
+        success = scan_manager.verify_result(
+            result_id=result_id,
+            verified_result=data.get("verified_result", "confirmed"),
+            verified_by=user_id,
+            sensitivity_type=data.get("sensitivity_type"),
+            sensitivity_level=data.get("sensitivity_level"),
+        )
+
+        if not success:
+            return jsonify({"code": 40400, "message": "结果不存在"}), 404
+
+        # 记录审计日志
+        with db_manager.get_session() as session:
+            import uuid
+            audit_log = DataSecurityAuditLog(
+                audit_id=f"audit_{uuid.uuid4().hex[:12]}",
+                operation="verify",
+                operation_status="success",
+                user_id=user_id,
+                user_name=user_name,
+                ip_address=request.remote_addr,
+                resource_type="scan_result",
+                resource_id=result_id,
+                details={
+                    "task_id": task_id,
+                    "verified_result": data.get("verified_result"),
+                    "sensitivity_type": data.get("sensitivity_type"),
+                    "sensitivity_level": data.get("sensitivity_level"),
+                },
+            )
+            session.add(audit_log)
+            session.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "校验结果已保存",
+            "data": {"result_id": result_id}
+        })
+
+    except Exception as e:
+        logger.error(f"校验扫描结果失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/apply-masking", methods=["POST"])
+@require_jwt()
+def apply_data_masking():
+    """
+    应用数据脱敏
+
+    请求体:
+    {
+        "data": [{"name": "张三", "phone": "13812345678"}],
+        "column_metadata": {
+            "name": {"sensitivity_type": "pii", "sensitivity_level": "confidential"},
+            "phone": {"sensitivity_type": "pii", "sensitivity_level": "confidential"}
+        },
+        "preview": false  // 是否仅预览
+    }
+    """
+    from data_masking import get_masking_service
+    from models.security_audit import DataSecurityAuditLog
+    import time
+
+    start_time = time.time()
+
+    try:
+        data = request.get_json() or {}
+        input_data = data.get("data", [])
+        column_metadata = data.get("column_metadata", {})
+        preview_only = data.get("preview", False)
+
+        if not input_data:
+            return jsonify({"code": 40000, "message": "缺少数据"}), 400
+
+        user_id = request.headers.get("X-User-Id", "anonymous")
+        user_name = request.headers.get("X-User-Name", "")
+
+        masking_service = get_masking_service()
+
+        if preview_only:
+            # 仅预览
+            result = masking_service.get_masking_preview(
+                sample_data=input_data,
+                column_metadata=column_metadata,
+                max_rows=5
+            )
+            return jsonify({
+                "code": 0,
+                "message": "脱敏预览",
+                "data": result
+            })
+
+        # 执行脱敏
+        masked_data = masking_service.mask_dataframe(input_data, column_metadata)
+
+        # 记录审计日志
+        duration_ms = int((time.time() - start_time) * 1000)
+        sensitivity_types = list(set(
+            m.get("sensitivity_type") for m in column_metadata.values()
+            if m.get("sensitivity_type")
+        ))
+
+        with db_manager.get_session() as session:
+            import uuid
+            audit_log = DataSecurityAuditLog(
+                audit_id=f"audit_{uuid.uuid4().hex[:12]}",
+                operation="mask",
+                operation_status="success",
+                user_id=user_id,
+                user_name=user_name,
+                ip_address=request.remote_addr,
+                resource_type="data",
+                details={
+                    "columns_masked": list(column_metadata.keys()),
+                },
+                affected_rows=len(input_data),
+                affected_columns=len(column_metadata),
+                duration_ms=duration_ms,
+            )
+            audit_log.set_sensitivity_types(sensitivity_types)
+            session.add(audit_log)
+            session.commit()
+
+        return jsonify({
+            "code": 0,
+            "message": "脱敏成功",
+            "data": {
+                "masked_data": masked_data,
+                "rows_processed": len(masked_data),
+                "columns_masked": list(column_metadata.keys()),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"数据脱敏失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/rules", methods=["GET"])
+@require_jwt()
+def list_masking_rules():
+    """
+    获取脱敏规则列表
+    """
+    from models.security_audit import MaskingRule
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        sensitivity_type = request.args.get("sensitivity_type")
+        enabled_only = request.args.get("enabled_only", "false").lower() == "true"
+
+        with db_manager.get_session() as session:
+            query = session.query(MaskingRule)
+
+            if sensitivity_type:
+                query = query.filter(MaskingRule.sensitivity_type == sensitivity_type)
+
+            if enabled_only:
+                query = query.filter(MaskingRule.enabled == 1)
+
+            total = query.count()
+            rules = query.order_by(
+                MaskingRule.priority.desc(),
+                MaskingRule.created_at.desc()
+            ).limit(page_size).offset((page - 1) * page_size).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "rules": [r.to_dict() for r in rules],
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/rules", methods=["POST"])
+@require_jwt()
+def create_masking_rule():
+    """
+    创建脱敏规则
+
+    请求体:
+    {
+        "name": "手机号脱敏",
+        "description": "对手机号进行部分遮蔽",
+        "sensitivity_type": "pii",
+        "sensitivity_level": "confidential",
+        "column_pattern": "(phone|mobile|手机)",
+        "strategy": "partial_mask",
+        "options": {"mask_char": "*", "keep_start": 3, "keep_end": 4},
+        "priority": 10
+    }
+    """
+    from models.security_audit import MaskingRule
+
+    try:
+        data = request.get_json() or {}
+        user_id = request.headers.get("X-User-Id", "anonymous")
+
+        if not data.get("name"):
+            return jsonify({"code": 40000, "message": "规则名称不能为空"}), 400
+
+        if not data.get("strategy"):
+            return jsonify({"code": 40000, "message": "脱敏策略不能为空"}), 400
+
+        with db_manager.get_session() as session:
+            import uuid
+            rule = MaskingRule(
+                rule_id=f"rule_{uuid.uuid4().hex[:12]}",
+                name=data["name"],
+                description=data.get("description"),
+                sensitivity_type=data.get("sensitivity_type", "any"),
+                sensitivity_level=data.get("sensitivity_level", "any"),
+                column_pattern=data.get("column_pattern"),
+                data_type=data.get("data_type"),
+                strategy=data["strategy"],
+                options=data.get("options", {}),
+                enabled=1 if data.get("enabled", True) else 0,
+                priority=data.get("priority", 0),
+                is_system=0,
+                created_by=user_id,
+            )
+
+            session.add(rule)
+            session.commit()
+            session.refresh(rule)
+
+            return jsonify({
+                "code": 0,
+                "message": "规则创建成功",
+                "data": rule.to_dict()
+            })
+
+    except IntegrityError:
+        return jsonify({"code": 40900, "message": "规则已存在"}), 409
+    except Exception as e:
+        logger.error(f"创建脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/rules/<rule_id>", methods=["PUT"])
+@require_jwt()
+def update_masking_rule(rule_id: str):
+    """
+    更新脱敏规则
+    """
+    from models.security_audit import MaskingRule
+
+    try:
+        data = request.get_json() or {}
+
+        with db_manager.get_session() as session:
+            rule = session.query(MaskingRule).filter(
+                MaskingRule.rule_id == rule_id
+            ).first()
+
+            if not rule:
+                return jsonify({"code": 40400, "message": "规则不存在"}), 404
+
+            # 系统预置规则不允许修改
+            if rule.is_system:
+                return jsonify({"code": 40300, "message": "系统预置规则不允许修改"}), 403
+
+            # 更新字段
+            if "name" in data:
+                rule.name = data["name"]
+            if "description" in data:
+                rule.description = data["description"]
+            if "sensitivity_type" in data:
+                rule.sensitivity_type = data["sensitivity_type"]
+            if "sensitivity_level" in data:
+                rule.sensitivity_level = data["sensitivity_level"]
+            if "column_pattern" in data:
+                rule.column_pattern = data["column_pattern"]
+            if "data_type" in data:
+                rule.data_type = data["data_type"]
+            if "strategy" in data:
+                rule.strategy = data["strategy"]
+            if "options" in data:
+                rule.options = data["options"]
+            if "enabled" in data:
+                rule.enabled = 1 if data["enabled"] else 0
+            if "priority" in data:
+                rule.priority = data["priority"]
+
+            session.commit()
+            session.refresh(rule)
+
+            return jsonify({
+                "code": 0,
+                "message": "规则更新成功",
+                "data": rule.to_dict()
+            })
+
+    except Exception as e:
+        logger.error(f"更新脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/rules/<rule_id>", methods=["DELETE"])
+@require_jwt()
+def delete_masking_rule(rule_id: str):
+    """
+    删除脱敏规则
+    """
+    from models.security_audit import MaskingRule
+
+    try:
+        with db_manager.get_session() as session:
+            rule = session.query(MaskingRule).filter(
+                MaskingRule.rule_id == rule_id
+            ).first()
+
+            if not rule:
+                return jsonify({"code": 40400, "message": "规则不存在"}), 404
+
+            # 系统预置规则不允许删除
+            if rule.is_system:
+                return jsonify({"code": 40300, "message": "系统预置规则不允许删除"}), 403
+
+            session.delete(rule)
+            session.commit()
+
+            return jsonify({
+                "code": 0,
+                "message": "规则删除成功"
+            })
+
+    except Exception as e:
+        logger.error(f"删除脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/audit-logs", methods=["GET"])
+@require_jwt()
+def list_security_audit_logs():
+    """
+    获取数据安全审计日志
+    """
+    from models.security_audit import DataSecurityAuditLog
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        operation = request.args.get("operation")
+        user_id = request.args.get("user_id")
+        resource_type = request.args.get("resource_type")
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+
+        with db_manager.get_session() as session:
+            query = session.query(DataSecurityAuditLog)
+
+            if operation:
+                query = query.filter(DataSecurityAuditLog.operation == operation)
+            if user_id:
+                query = query.filter(DataSecurityAuditLog.user_id == user_id)
+            if resource_type:
+                query = query.filter(DataSecurityAuditLog.resource_type == resource_type)
+            if start_date:
+                query = query.filter(DataSecurityAuditLog.created_at >= start_date)
+            if end_date:
+                query = query.filter(DataSecurityAuditLog.created_at <= end_date)
+
+            total = query.count()
+            logs = query.order_by(
+                DataSecurityAuditLog.created_at.desc()
+            ).limit(page_size).offset((page - 1) * page_size).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "logs": [log.to_dict() for log in logs],
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取审计日志失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/data-security/statistics", methods=["GET"])
+@require_jwt()
+def get_security_statistics():
+    """
+    获取数据安全统计信息
+    """
+    from scan_task import get_scan_manager
+    from models.security_audit import DataSecurityAuditLog
+
+    try:
+        scan_manager = get_scan_manager()
+        scan_stats = scan_manager.get_statistics()
+
+        with db_manager.get_session() as session:
+            # 审计日志统计
+            from sqlalchemy import func
+            audit_stats = session.query(
+                DataSecurityAuditLog.operation,
+                func.count(DataSecurityAuditLog.id).label('count')
+            ).group_by(DataSecurityAuditLog.operation).all()
+
+            audit_by_operation = {row[0]: row[1] for row in audit_stats}
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "scan": scan_stats,
+                    "audit": {
+                        "by_operation": audit_by_operation,
+                        "total_logs": sum(audit_by_operation.values()),
+                    }
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取安全统计失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 多表融合API ====================
+
+@app.route("/api/v1/fusion/detect-join-keys", methods=["POST"])
+@require_jwt()
+def detect_join_keys():
+    """
+    检测潜在的JOIN关联键
+
+    Request Body:
+    {
+        "source_table": "表名",
+        "target_tables": ["目标表1", "目标表2"],
+        "source_database": "源数据库名（可选）",
+        "target_database": "目标数据库名（可选）",
+        "sample_size": 1000
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service
+
+    try:
+        data = request.get_json()
+        source_table = data.get("source_table")
+        target_tables = data.get("target_tables", [])
+        source_database = data.get("source_database")
+        target_database = data.get("target_database")
+        sample_size = data.get("sample_size", 1000)
+
+        if not source_table:
+            return jsonify({"code": 40001, "message": "source_table是必需的"}), 400
+
+        if not target_tables:
+            return jsonify({"code": 40002, "message": "target_tables是必需的"}), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            results = fusion_service.detect_potential_join_keys(
+                db=session,
+                source_table=source_table,
+                target_tables=target_tables,
+                source_database=source_database,
+                target_database=target_database,
+                sample_size=sample_size
+            )
+
+            # 转换为可序列化格式
+            serialized_results = {}
+            for table, keys in results.items():
+                serialized_results[table] = [k.to_dict() for k in keys]
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "source_table": source_table,
+                    "join_keys": serialized_results,
+                    "total_candidates": sum(len(keys) for keys in serialized_results.values())
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"检测JOIN关联键失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/fusion/validate-join", methods=["POST"])
+@require_jwt()
+def validate_join_consistency():
+    """
+    验证JOIN数据一致性
+
+    Request Body:
+    {
+        "source_table": "源表名",
+        "source_key": "源表关联键",
+        "target_table": "目标表名",
+        "target_key": "目标表关联键",
+        "source_database": "源数据库名（可选）",
+        "target_database": "目标数据库名（可选）",
+        "sample_size": 10000
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service
+
+    try:
+        data = request.get_json()
+        source_table = data.get("source_table")
+        source_key = data.get("source_key")
+        target_table = data.get("target_table")
+        target_key = data.get("target_key")
+        source_database = data.get("source_database")
+        target_database = data.get("target_database")
+        sample_size = data.get("sample_size", 10000)
+
+        # 参数验证
+        if not all([source_table, source_key, target_table, target_key]):
+            return jsonify({
+                "code": 40001,
+                "message": "source_table, source_key, target_table, target_key 都是必需的"
+            }), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            quality_score = fusion_service.validate_join_consistency(
+                db=session,
+                source_table=source_table,
+                source_key=source_key,
+                target_table=target_table,
+                target_key=target_key,
+                source_database=source_database,
+                target_database=target_database,
+                sample_size=sample_size
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "source_table": source_table,
+                    "source_key": source_key,
+                    "target_table": target_table,
+                    "target_key": target_key,
+                    "quality_score": quality_score.to_dict()
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"验证JOIN一致性失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/fusion/recommend-strategy", methods=["POST"])
+@require_jwt()
+def recommend_join_strategy():
+    """
+    推荐最优JOIN策略
+
+    Request Body:
+    {
+        "source_table": "源表名",
+        "target_table": "目标表名",
+        "join_keys": [
+            {
+                "source_column": "col1",
+                "target_column": "col1",
+                "confidence": 0.95,
+                "detection_method": "name_match"
+            }
+        ],
+        "source_database": "源数据库名（可选）",
+        "target_database": "目标数据库名（可选）"
+    }
+
+    也可以不提供join_keys，系统会自动检测：
+    {
+        "source_table": "源表名",
+        "target_table": "目标表名",
+        "auto_detect": true
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service, JoinKeyPair
+
+    try:
+        data = request.get_json()
+        source_table = data.get("source_table")
+        target_table = data.get("target_table")
+        source_database = data.get("source_database")
+        target_database = data.get("target_database")
+        auto_detect = data.get("auto_detect", False)
+        join_keys_data = data.get("join_keys", [])
+
+        if not source_table or not target_table:
+            return jsonify({
+                "code": 40001,
+                "message": "source_table 和 target_table 是必需的"
+            }), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            # 如果需要自动检测关联键
+            if auto_detect or not join_keys_data:
+                detected = fusion_service.detect_potential_join_keys(
+                    db=session,
+                    source_table=source_table,
+                    target_tables=[target_table],
+                    source_database=source_database,
+                    target_database=target_database
+                )
+                join_keys = detected.get(target_table, [])
+            else:
+                # 转换传入的关联键数据
+                join_keys = []
+                for jk in join_keys_data:
+                    join_keys.append(JoinKeyPair(
+                        source_column=jk.get("source_column"),
+                        target_column=jk.get("target_column"),
+                        source_table=source_table,
+                        target_table=target_table,
+                        confidence=jk.get("confidence", 0.5),
+                        detection_method=jk.get("detection_method", "manual"),
+                        name_similarity=jk.get("name_similarity", 0.0),
+                        value_overlap_rate=jk.get("value_overlap_rate", 0.0),
+                        cardinality_match=jk.get("cardinality_match", True),
+                        is_primary_key=jk.get("is_primary_key", False),
+                        is_foreign_key=jk.get("is_foreign_key", False),
+                    ))
+
+            # 获取策略推荐
+            strategy = fusion_service.recommend_join_strategy(
+                db=session,
+                source_table=source_table,
+                target_table=target_table,
+                join_keys=join_keys,
+                source_database=source_database,
+                target_database=target_database
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": strategy.to_dict()
+            })
+
+    except Exception as e:
+        logger.error(f"推荐JOIN策略失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/fusion/generate-kettle-config", methods=["POST"])
+@require_jwt()
+def generate_kettle_join_config():
+    """
+    生成Kettle JOIN步骤配置
+
+    Request Body:
+    {
+        "source_table": "源表名",
+        "target_table": "目标表名",
+        "source_step_name": "Source",
+        "target_step_name": "Target",
+        "join_keys": [...],   // 可选，不提供则自动检测
+        "source_database": "源数据库名（可选）",
+        "target_database": "目标数据库名（可选）"
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service, JoinKeyPair
+
+    try:
+        data = request.get_json()
+        source_table = data.get("source_table")
+        target_table = data.get("target_table")
+        source_step_name = data.get("source_step_name", "Source")
+        target_step_name = data.get("target_step_name", "Target")
+        source_database = data.get("source_database")
+        target_database = data.get("target_database")
+        join_keys_data = data.get("join_keys", [])
+
+        if not source_table or not target_table:
+            return jsonify({
+                "code": 40001,
+                "message": "source_table 和 target_table 是必需的"
+            }), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            # 检测或使用提供的关联键
+            if not join_keys_data:
+                detected = fusion_service.detect_potential_join_keys(
+                    db=session,
+                    source_table=source_table,
+                    target_tables=[target_table],
+                    source_database=source_database,
+                    target_database=target_database
+                )
+                join_keys = detected.get(target_table, [])
+            else:
+                join_keys = []
+                for jk in join_keys_data:
+                    join_keys.append(JoinKeyPair(
+                        source_column=jk.get("source_column"),
+                        target_column=jk.get("target_column"),
+                        source_table=source_table,
+                        target_table=target_table,
+                        confidence=jk.get("confidence", 0.5),
+                        detection_method=jk.get("detection_method", "manual"),
+                    ))
+
+            # 获取策略推荐
+            strategy = fusion_service.recommend_join_strategy(
+                db=session,
+                source_table=source_table,
+                target_table=target_table,
+                join_keys=join_keys,
+                source_database=source_database,
+                target_database=target_database
+            )
+
+            # 生成Kettle配置
+            kettle_config = fusion_service.generate_kettle_join_config(
+                strategy=strategy,
+                source_step_name=source_step_name,
+                target_step_name=target_step_name
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "kettle_config": kettle_config,
+                    "strategy_summary": {
+                        "join_type": strategy.join_type.value,
+                        "quality_score": strategy.quality_score.overall_score,
+                        "warnings": strategy.warnings
+                    }
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"生成Kettle配置失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/fusion/detect-join-path", methods=["POST"])
+@require_jwt()
+def detect_multi_table_join_path():
+    """
+    检测多表之间的JOIN路径
+
+    用于发现间接关联关系，如 A -> B -> C
+
+    Request Body:
+    {
+        "tables": ["table1", "table2", "table3"],
+        "database": "数据库名（可选）",
+        "max_depth": 3
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service
+
+    try:
+        data = request.get_json()
+        tables = data.get("tables", [])
+        database = data.get("database")
+        max_depth = data.get("max_depth", 3)
+
+        if len(tables) < 2:
+            return jsonify({
+                "code": 40001,
+                "message": "至少需要2个表才能检测关联路径"
+            }), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            paths = fusion_service.detect_multi_table_join_path(
+                db=session,
+                tables=tables,
+                database=database,
+                max_depth=max_depth
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "tables": tables,
+                    "paths": paths,
+                    "total_paths": len(paths)
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"检测多表关联路径失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/fusion/analyze-tables", methods=["POST"])
+@require_jwt()
+def analyze_tables_for_fusion():
+    """
+    综合分析多表融合方案
+
+    一次性返回：
+    - 所有表之间的潜在关联键
+    - 每对关联的质量评分
+    - 推荐的融合顺序和策略
+
+    Request Body:
+    {
+        "tables": ["table1", "table2", "table3"],
+        "database": "数据库名（可选）",
+        "primary_table": "主表名（可选，默认为第一个表）"
+    }
+    """
+    from services.table_fusion_service import get_table_fusion_service
+
+    try:
+        data = request.get_json()
+        tables = data.get("tables", [])
+        database = data.get("database")
+        primary_table = data.get("primary_table")
+
+        if len(tables) < 2:
+            return jsonify({
+                "code": 40001,
+                "message": "至少需要2个表进行融合分析"
+            }), 400
+
+        if not primary_table:
+            primary_table = tables[0]
+
+        if primary_table not in tables:
+            return jsonify({
+                "code": 40002,
+                "message": "primary_table 必须在 tables 列表中"
+            }), 400
+
+        fusion_service = get_table_fusion_service()
+
+        with db_manager.get_session() as session:
+            # 以主表为源，检测与所有其他表的关联
+            other_tables = [t for t in tables if t != primary_table]
+
+            join_keys_result = fusion_service.detect_potential_join_keys(
+                db=session,
+                source_table=primary_table,
+                target_tables=other_tables,
+                source_database=database,
+                target_database=database
+            )
+
+            # 为每个有效关联生成策略推荐
+            fusion_strategies = []
+            for target_table, keys in join_keys_result.items():
+                if keys:
+                    strategy = fusion_service.recommend_join_strategy(
+                        db=session,
+                        source_table=primary_table,
+                        target_table=target_table,
+                        join_keys=keys,
+                        source_database=database,
+                        target_database=database
+                    )
+                    fusion_strategies.append({
+                        "target_table": target_table,
+                        "strategy": strategy.to_dict()
+                    })
+
+            # 按质量评分排序，推荐最优融合顺序
+            fusion_strategies.sort(
+                key=lambda x: x["strategy"]["quality_score"]["overall_score"],
+                reverse=True
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "primary_table": primary_table,
+                    "total_tables": len(tables),
+                    "join_keys": {
+                        table: [k.to_dict() for k in keys]
+                        for table, keys in join_keys_result.items()
+                    },
+                    "fusion_strategies": fusion_strategies,
+                    "recommended_order": [
+                        primary_table
+                    ] + [s["target_table"] for s in fusion_strategies],
+                    "summary": {
+                        "tables_with_joins": len([
+                            t for t, k in join_keys_result.items() if k
+                        ]),
+                        "tables_without_joins": len([
+                            t for t, k in join_keys_result.items() if not k
+                        ]),
+                        "avg_quality_score": (
+                            sum(s["strategy"]["quality_score"]["overall_score"]
+                                for s in fusion_strategies) / len(fusion_strategies)
+                            if fusion_strategies else 0
+                        )
+                    }
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"分析多表融合方案失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 资产价值评估API ====================
+
+@app.route("/api/v1/assets/value/evaluate/<asset_id>", methods=["POST"])
+@require_jwt()
+def evaluate_asset_value(asset_id):
+    """
+    评估单个资产的价值
+
+    Request Body (可选):
+    {
+        "business_config": {
+            "domain_weights": {
+                "finance": 1.0,
+                "marketing": 0.8,
+                "operations": 0.6
+            }
+        },
+        "weights": {
+            "usage": 0.35,
+            "business": 0.30,
+            "quality": 0.20,
+            "governance": 0.15
+        }
+    }
+    """
+    from services.asset_value_calculator import get_asset_value_calculator, AssetValueCalculator
+
+    try:
+        data = request.get_json() or {}
+        business_config = data.get("business_config")
+        weights = data.get("weights")
+
+        # 如果指定了自定义权重，创建新的计算器实例
+        if weights:
+            calculator = AssetValueCalculator(weights=weights)
+        else:
+            calculator = get_asset_value_calculator()
+
+        with db_manager.get_session() as session:
+            breakdown = calculator.evaluate_asset(
+                db=session,
+                asset_id=asset_id,
+                business_config=business_config,
+                save_result=True
+            )
+
+            # 生成改进建议
+            recommendations = calculator.generate_recommendations(breakdown)
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "asset_id": asset_id,
+                    "score_breakdown": breakdown.to_dict(),
+                    "recommendations": recommendations,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"评估资产价值失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/value/batch-evaluate", methods=["POST"])
+@require_jwt()
+def batch_evaluate_asset_values():
+    """
+    批量评估资产价值
+
+    Request Body:
+    {
+        "asset_ids": ["asset1", "asset2", "asset3"],
+        "business_config": {...}  // 可选
+    }
+    """
+    from services.asset_value_calculator import get_asset_value_calculator
+
+    try:
+        data = request.get_json()
+        asset_ids = data.get("asset_ids", [])
+        business_config = data.get("business_config")
+
+        if not asset_ids:
+            return jsonify({"code": 40001, "message": "asset_ids是必需的"}), 400
+
+        calculator = get_asset_value_calculator()
+
+        with db_manager.get_session() as session:
+            results = []
+            for asset_id in asset_ids:
+                try:
+                    breakdown = calculator.evaluate_asset(
+                        db=session,
+                        asset_id=asset_id,
+                        business_config=business_config,
+                        save_result=True
+                    )
+                    results.append({
+                        "asset_id": asset_id,
+                        "status": "success",
+                        "score_breakdown": breakdown.to_dict(),
+                    })
+                except Exception as e:
+                    results.append({
+                        "asset_id": asset_id,
+                        "status": "failed",
+                        "error": str(e),
+                    })
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "total": len(asset_ids),
+                    "success_count": len([r for r in results if r["status"] == "success"]),
+                    "results": results,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"批量评估资产价值失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/ranking", methods=["GET"])
+@require_jwt()
+def get_asset_ranking():
+    """
+    获取资产价值排名
+
+    Query Parameters:
+    - limit: 限制数量 (默认100)
+    - offset: 偏移量 (默认0)
+    - asset_type: 资产类型筛选 (可选)
+    - value_level: 价值等级筛选 (S/A/B/C，可选)
+    """
+    from services.asset_value_calculator import get_asset_value_calculator
+
+    try:
+        limit = request.args.get("limit", 100, type=int)
+        offset = request.args.get("offset", 0, type=int)
+        asset_type = request.args.get("asset_type")
+        value_level = request.args.get("value_level")
+
+        calculator = get_asset_value_calculator()
+
+        with db_manager.get_session() as session:
+            ranking = calculator.get_asset_ranking(
+                db=session,
+                limit=limit,
+                offset=offset,
+                asset_type=asset_type,
+                value_level=value_level
+            )
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "ranking": ranking,
+                    "total": len(ranking),
+                    "filters": {
+                        "asset_type": asset_type,
+                        "value_level": value_level,
+                    },
+                    "pagination": {
+                        "limit": limit,
+                        "offset": offset,
+                    }
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取资产排名失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/<asset_id>/value-analysis", methods=["GET"])
+@require_jwt()
+def get_asset_value_analysis(asset_id):
+    """
+    获取资产价值详细分析
+
+    Query Parameters:
+    - trend_days: 趋势天数 (默认30)
+    """
+    from services.asset_value_calculator import get_asset_value_calculator
+    from models.asset_value_metrics import AssetValueMetrics
+    from models.assets import DataAsset
+
+    try:
+        trend_days = request.args.get("trend_days", 30, type=int)
+
+        calculator = get_asset_value_calculator()
+
+        with db_manager.get_session() as session:
+            # 获取当前指标
+            metrics = session.query(AssetValueMetrics).filter(
+                AssetValueMetrics.asset_id == asset_id
+            ).first()
+
+            # 获取资产信息
+            asset = session.query(DataAsset).filter(
+                DataAsset.asset_id == asset_id
+            ).first()
+
+            if not metrics:
+                # 如果没有指标记录，进行评估
+                breakdown = calculator.evaluate_asset(
+                    db=session,
+                    asset_id=asset_id,
+                    save_result=True
+                )
+                current_metrics = breakdown.to_dict()
+            else:
+                current_metrics = metrics.to_dict()
+
+            # 获取趋势数据
+            trend = calculator.get_value_trend(session, asset_id, trend_days)
+
+            # 生成建议
+            if metrics:
+                from services.asset_value_calculator import ValueScoreBreakdown
+                breakdown = ValueScoreBreakdown(
+                    usage_score=metrics.usage_frequency_score or 0,
+                    business_score=metrics.business_importance_score or 0,
+                    quality_score=metrics.quality_score or 0,
+                    governance_score=metrics.governance_score or 0,
+                    overall_score=metrics.overall_value_score or 0,
+                    value_level=metrics.asset_value_level or "C",
+                    details=metrics.calculation_details or {}
+                )
+                recommendations = calculator.generate_recommendations(breakdown)
+            else:
+                recommendations = []
+
+            # 计算趋势方向
+            trend_direction = "stable"
+            if len(trend) >= 2:
+                latest_score = trend[-1].get("overall_value_score", 0)
+                prev_score = trend[0].get("overall_value_score", 0)
+                if latest_score > prev_score + 5:
+                    trend_direction = "up"
+                elif latest_score < prev_score - 5:
+                    trend_direction = "down"
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "asset_id": asset_id,
+                    "asset_name": asset.name if asset else None,
+                    "asset_type": asset.type if asset else None,
+                    "current_metrics": current_metrics,
+                    "trend": {
+                        "direction": trend_direction,
+                        "history": trend,
+                    },
+                    "recommendations": recommendations,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取资产价值分析失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/value-report", methods=["GET"])
+@require_jwt()
+def get_asset_value_report():
+    """
+    获取资产价值分布报告
+    """
+    from services.asset_value_calculator import get_asset_value_calculator
+    from models.asset_value_metrics import AssetValueMetrics
+    from sqlalchemy import func
+
+    try:
+        calculator = get_asset_value_calculator()
+
+        with db_manager.get_session() as session:
+            # 获取价值等级分布
+            distribution = calculator.get_value_distribution(session)
+
+            # 获取评分统计
+            stats = session.query(
+                func.avg(AssetValueMetrics.overall_value_score).label('avg_score'),
+                func.min(AssetValueMetrics.overall_value_score).label('min_score'),
+                func.max(AssetValueMetrics.overall_value_score).label('max_score'),
+                func.count(AssetValueMetrics.id).label('total_count'),
+            ).first()
+
+            # 获取各维度平均分
+            dimension_stats = session.query(
+                func.avg(AssetValueMetrics.usage_frequency_score).label('avg_usage'),
+                func.avg(AssetValueMetrics.business_importance_score).label('avg_business'),
+                func.avg(AssetValueMetrics.quality_score).label('avg_quality'),
+                func.avg(AssetValueMetrics.governance_score).label('avg_governance'),
+            ).first()
+
+            # 获取Top 10资产
+            top_assets = calculator.get_asset_ranking(session, limit=10)
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "distribution": distribution,
+                    "statistics": {
+                        "average_score": round(stats.avg_score or 0, 2),
+                        "min_score": round(stats.min_score or 0, 2),
+                        "max_score": round(stats.max_score or 0, 2),
+                        "total_assets": stats.total_count or 0,
+                    },
+                    "dimension_averages": {
+                        "usage": round(dimension_stats.avg_usage or 0, 2),
+                        "business": round(dimension_stats.avg_business or 0, 2),
+                        "quality": round(dimension_stats.avg_quality or 0, 2),
+                        "governance": round(dimension_stats.avg_governance or 0, 2),
+                    },
+                    "top_assets": top_assets,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"获取资产价值报告失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/<asset_id>/usage", methods=["POST"])
+@require_jwt()
+def record_asset_usage(asset_id):
+    """
+    记录资产使用情况
+
+    Request Body:
+    {
+        "usage_type": "query",  // query, download, api_call, reference
+        "source_type": "dashboard",  // dashboard, report, etl_job, api, adhoc
+        "source_id": "xxx",  // 可选
+        "source_name": "xxx"  // 可选
+    }
+    """
+    from models.asset_value_metrics import AssetUsageLog
+
+    try:
+        data = request.get_json()
+        usage_type = data.get("usage_type", "query")
+        source_type = data.get("source_type", "adhoc")
+        source_id = data.get("source_id")
+        source_name = data.get("source_name")
+
+        # 获取用户信息
+        user_id = request.headers.get("X-User-ID", "anonymous")
+        user_name = request.headers.get("X-User-Name")
+
+        with db_manager.get_session() as session:
+            usage_log = AssetUsageLog(
+                asset_id=asset_id,
+                usage_type=usage_type,
+                user_id=user_id,
+                user_name=user_name,
+                source_type=source_type,
+                source_id=source_id,
+                source_name=source_name,
+            )
+            session.add(usage_log)
+            session.commit()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "recorded": True,
+                    "asset_id": asset_id,
+                    "usage_type": usage_type,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"记录资产使用失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/<asset_id>/business-config", methods=["PUT"])
+@require_jwt()
+def update_asset_business_config(asset_id):
+    """
+    更新资产业务配置
+
+    Request Body:
+    {
+        "is_core_indicator": true,
+        "sla_level": "gold",  // gold, silver, bronze
+        "business_domain": "finance",
+        "business_owner": "user@example.com"
+    }
+    """
+    from models.asset_value_metrics import AssetValueMetrics
+    import uuid
+
+    try:
+        data = request.get_json()
+
+        with db_manager.get_session() as session:
+            metrics = session.query(AssetValueMetrics).filter(
+                AssetValueMetrics.asset_id == asset_id
+            ).first()
+
+            if not metrics:
+                metrics = AssetValueMetrics(
+                    metrics_id=f"vm_{uuid.uuid4().hex[:12]}",
+                    asset_id=asset_id,
+                )
+                session.add(metrics)
+
+            # 更新业务配置
+            if "is_core_indicator" in data:
+                metrics.is_core_indicator = 1 if data["is_core_indicator"] else 0
+
+            if "sla_level" in data:
+                metrics.sla_level = data["sla_level"]
+
+            if "business_domain" in data:
+                metrics.business_domain = data["business_domain"]
+
+            if "business_owner" in data:
+                metrics.business_owner = data["business_owner"]
+
+            session.commit()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "asset_id": asset_id,
+                    "updated_config": {
+                        "is_core_indicator": bool(metrics.is_core_indicator),
+                        "sla_level": metrics.sla_level,
+                        "business_domain": metrics.business_domain,
+                        "business_owner": metrics.business_owner,
+                    }
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"更新资产业务配置失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 资产自动编目 API ====================
+
+@app.route("/api/v1/assets/auto-catalog", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.WRITE)
+def auto_catalog_from_etl():
+    """
+    ETL完成后自动注册目标表为数据资产
+
+    Request Body:
+    {
+        "source_database": "source_db",
+        "source_table": "source_table",
+        "target_database": "target_db",
+        "target_table": "target_table",
+        "etl_task_id": "task_xxx",
+        "created_by": "user"
+    }
+    """
+    from services.asset_auto_catalog_service import get_asset_auto_catalog_service
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        source_database = data.get("source_database", "")
+        source_table = data.get("source_table", "")
+        target_database = data.get("target_database", "")
+        target_table = data.get("target_table", "")
+
+        if not target_database or not target_table:
+            return jsonify({"code": 40000, "message": "目标数据库和表名不能为空"}), 400
+
+        service = get_asset_auto_catalog_service()
+
+        with db_manager.get_session() as session:
+            result = service.auto_catalog_from_etl(
+                source_database=source_database,
+                source_table=source_table,
+                target_database=target_database,
+                target_table=target_table,
+                etl_task_id=data.get("etl_task_id", ""),
+                created_by=data.get("created_by", "system"),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"自动编目失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/auto-catalog/batch", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.WRITE)
+def batch_catalog_from_metadata():
+    """
+    批量从元数据注册资产（全量同步）
+
+    Request Body:
+    {
+        "database_name": "optional_db_name",
+        "created_by": "user"
+    }
+    """
+    from services.asset_auto_catalog_service import get_asset_auto_catalog_service
+
+    try:
+        data = request.get_json() or {}
+        service = get_asset_auto_catalog_service()
+
+        with db_manager.get_session() as session:
+            result = service.batch_catalog_from_metadata(
+                database_name=data.get("database_name"),
+                created_by=data.get("created_by", "system"),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"批量编目失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/auto-catalog/history", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.DATASET, Operation.READ)
+def get_catalog_history():
+    """获取自动编目历史"""
+    from services.asset_auto_catalog_service import get_asset_auto_catalog_service
+
+    try:
+        limit = int(request.args.get("limit", 50))
+        service = get_asset_auto_catalog_service()
+        history = service.get_catalog_history(limit=limit)
+        return jsonify({"code": 0, "message": "success", "data": history})
+
+    except Exception as e:
+        logger.error(f"获取编目历史失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 元数据自动扫描 API ====================
+
+@app.route("/api/v1/metadata/auto-scan", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.WRITE)
+def metadata_auto_scan():
+    """
+    自动扫描数据库结构并同步到元数据
+
+    Request Body:
+    {
+        "connection_info": {
+            "type": "mysql",
+            "host": "localhost",
+            "port": 3306,
+            "username": "root",
+            "password": "xxx"
+        },
+        "database_name": "my_database",
+        "exclude_tables": ["tmp_xxx"],
+        "ai_annotate": true
+    }
+    """
+    from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        connection_info = data.get("connection_info", {})
+        database_name = data.get("database_name", "")
+
+        if not database_name:
+            return jsonify({"code": 40000, "message": "数据库名不能为空"}), 400
+        if not connection_info:
+            return jsonify({"code": 40000, "message": "连接信息不能为空"}), 400
+
+        engine = get_metadata_auto_scan_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.scan_database(
+                connection_info=connection_info,
+                database_name=database_name,
+                exclude_tables=data.get("exclude_tables"),
+                ai_annotate=data.get("ai_annotate", True),
+                db_session=session,
+            )
+
+        # 扫描完成后同步到 OpenMetadata（非阻塞，失败不影响主流程）
+        if OPENMETADATA_AVAILABLE and data.get("sync_to_openmetadata", True):
+            try:
+                sync_service = get_om_sync_service()
+                if sync_service.is_available():
+                    with db_manager.get_session() as session:
+                        tables = session.query(MetadataTable).options(
+                            joinedload(MetadataTable.database),
+                            joinedload(MetadataTable.columns),
+                        ).join(MetadataDatabase).filter(
+                            MetadataDatabase.name == database_name
+                        ).all()
+                        sync_stats = sync_service.sync_all_metadata(tables)
+                        result["openmetadata_sync"] = sync_stats
+                        logger.info("Auto-scan: synced %d tables to OpenMetadata", sync_stats.get("synced", 0))
+            except Exception as sync_err:
+                logger.warning("Auto-scan: OpenMetadata sync failed (non-blocking): %s", sync_err)
+                result["openmetadata_sync"] = {"error": str(sync_err)}
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"元数据自动扫描失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/metadata/auto-scan/profile", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def metadata_scan_profile():
+    """
+    扫描并生成数据概况（列级统计）
+
+    Request Body:
+    {
+        "connection_info": { ... },
+        "database_name": "my_database",
+        "table_name": "my_table",
+        "sample_size": 1000
+    }
+    """
+    from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        connection_info = data.get("connection_info", {})
+        database_name = data.get("database_name", "")
+        table_name = data.get("table_name", "")
+
+        if not database_name or not table_name:
+            return jsonify({"code": 40000, "message": "数据库名和表名不能为空"}), 400
+
+        engine = get_metadata_auto_scan_engine()
+        result = engine.scan_and_profile(
+            connection_info=connection_info,
+            database_name=database_name,
+            table_name=table_name,
+            sample_size=data.get("sample_size", 1000),
+        )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"数据概况生成失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/metadata/auto-scan/history", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def get_scan_history():
+    """获取元数据扫描历史"""
+    from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+
+    try:
+        limit = int(request.args.get("limit", 20))
+        engine = get_metadata_auto_scan_engine()
+        history = engine.get_scan_history(limit=limit)
+        return jsonify({"code": 0, "message": "success", "data": history})
+
+    except Exception as e:
+        logger.error(f"获取扫描历史失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 统一认证管理 API ====================
+
+@app.route("/api/v1/auth/oauth2/clients", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def register_oauth2_client():
+    """
+    注册 OAuth2 客户端
+
+    Request Body:
+    {
+        "client_name": "my-service",
+        "grant_types": ["client_credentials"],
+        "redirect_uris": [],
+        "scopes": ["read", "write"]
+    }
+    """
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        client_name = data.get("client_name", "")
+        grant_types = data.get("grant_types", [])
+
+        if not client_name or not grant_types:
+            return jsonify({"code": 40000, "message": "client_name 和 grant_types 必填"}), 400
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.register_client(
+                client_name=client_name,
+                grant_types=grant_types,
+                redirect_uris=data.get("redirect_uris"),
+                scopes=data.get("scopes"),
+                owner=g.user if hasattr(g, "user") else "",
+                created_by=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"注册 OAuth2 客户端失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/oauth2/clients", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def list_oauth2_clients():
+    """列出 OAuth2 客户端"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        status = request.args.get("status")
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.list_clients(
+                status=status,
+                page=page,
+                page_size=page_size,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"查询 OAuth2 客户端失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/oauth2/clients/<client_id>/status", methods=["PUT"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def update_oauth2_client_status(client_id):
+    """更新 OAuth2 客户端状态"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.get_json()
+        new_status = data.get("status") if data else None
+        if new_status not in ("active", "suspended", "revoked"):
+            return jsonify({"code": 40000, "message": "状态必须为 active/suspended/revoked"}), 400
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            ok = service.update_client_status(
+                client_id=client_id,
+                status=new_status,
+                operator=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        if ok:
+            return jsonify({"code": 0, "message": "success"})
+        return jsonify({"code": 40400, "message": "客户端不存在"}), 404
+
+    except Exception as e:
+        logger.error(f"更新客户端状态失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/oauth2/token", methods=["POST"])
+def oauth2_token():
+    """
+    OAuth2 Token 端点
+
+    支持:
+    - grant_type=client_credentials: 服务间认证
+    - grant_type=authorization_code: 授权码换Token
+    """
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.form.to_dict() or request.get_json() or {}
+        grant_type = data.get("grant_type", "")
+
+        service = get_unified_auth_service()
+        ip_address = request.remote_addr or ""
+
+        if grant_type == "client_credentials":
+            client_id = data.get("client_id", "")
+            client_secret = data.get("client_secret", "")
+            scope = data.get("scope", "")
+
+            with db_manager.get_session() as session:
+                result = service.client_credentials_authenticate(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    requested_scopes=scope.split() if scope else None,
+                    ip_address=ip_address,
+                    db_session=session,
+                )
+
+            if result["success"]:
+                return jsonify({
+                    "access_token": result["access_token"],
+                    "token_type": result["token_type"],
+                    "expires_in": result["expires_in"],
+                    "scope": result["scope"],
+                })
+            return jsonify({"error": result["error"]}), 401
+
+        elif grant_type == "authorization_code":
+            code = data.get("code", "")
+            client_id = data.get("client_id", "")
+            client_secret = data.get("client_secret", "")
+            redirect_uri = data.get("redirect_uri", "")
+            code_verifier = data.get("code_verifier")
+
+            with db_manager.get_session() as session:
+                result = service.exchange_authorization_code(
+                    code=code,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri,
+                    code_verifier=code_verifier,
+                    ip_address=ip_address,
+                    db_session=session,
+                )
+
+            if result["success"]:
+                return jsonify({
+                    "access_token": result["access_token"],
+                    "refresh_token": result["refresh_token"],
+                    "token_type": result["token_type"],
+                    "expires_in": result["expires_in"],
+                    "scope": result["scope"],
+                })
+            return jsonify({"error": result["error"]}), 401
+
+        else:
+            return jsonify({"error": "unsupported_grant_type"}), 400
+
+    except Exception as e:
+        logger.error(f"OAuth2 Token 端点异常: {e}")
+        return jsonify({"error": "server_error"}), 500
+
+
+@app.route("/api/v1/auth/oauth2/revoke", methods=["POST"])
+@require_jwt()
+def oauth2_revoke_token():
+    """吊销 Token"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.get_json()
+        if not data or not data.get("token_jti"):
+            return jsonify({"code": 40000, "message": "token_jti 必填"}), 400
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            ok = service.revoke_token(
+                token_jti=data["token_jti"],
+                token_type=data.get("token_type", "access"),
+                user_id=g.user_id if hasattr(g, "user_id") else "",
+                reason=data.get("reason", ""),
+                revoked_by=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        if ok:
+            return jsonify({"code": 0, "message": "Token 已吊销"})
+        return jsonify({"code": 50000, "message": "吊销失败"}), 500
+
+    except Exception as e:
+        logger.error(f"Token 吊销失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/api-keys", methods=["POST"])
+@require_jwt()
+def create_api_key():
+    """
+    创建 API Key
+
+    Request Body:
+    {
+        "name": "my-key",
+        "scopes": ["read", "write"],
+        "allowed_ips": ["192.168.1.0/24"],
+        "expires_days": 90,
+        "rate_limit": 1000
+    }
+    """
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.get_json()
+        if not data or not data.get("name"):
+            return jsonify({"code": 40000, "message": "name 必填"}), 400
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.create_api_key(
+                name=data["name"],
+                user_id=g.user_id if hasattr(g, "user_id") else "",
+                scopes=data.get("scopes"),
+                allowed_ips=data.get("allowed_ips"),
+                expires_days=data.get("expires_days"),
+                rate_limit=data.get("rate_limit", 1000),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"创建 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/api-keys", methods=["GET"])
+@require_jwt()
+def list_api_keys():
+    """列出当前用户的 API Key"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.list_api_keys(
+                user_id=g.user_id if hasattr(g, "user_id") else "",
+                page=page,
+                page_size=page_size,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"查询 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/api-keys/<key_id>/revoke", methods=["POST"])
+@require_jwt()
+def revoke_api_key(key_id):
+    """吊销 API Key"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            ok = service.revoke_api_key(
+                key_id=key_id,
+                user_id=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        if ok:
+            return jsonify({"code": 0, "message": "API Key 已吊销"})
+        return jsonify({"code": 40400, "message": "Key 不存在或无权限"}), 404
+
+    except Exception as e:
+        logger.error(f"吊销 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/audit-logs", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def get_auth_audit_logs():
+    """查询认证审计日志"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 50))
+        user_id = request.args.get("user_id")
+        event_type = request.args.get("event_type")
+        event_status = request.args.get("event_status")
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.get_auth_audit_logs(
+                user_id=user_id,
+                event_type=event_type,
+                event_status=event_status,
+                page=page,
+                page_size=page_size,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"查询审计日志失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/statistics", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def get_auth_statistics():
+    """获取认证统计信息"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        days = int(request.args.get("days", 7))
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            stats = service.get_auth_statistics(days=days, db_session=session)
+
+        return jsonify({"code": 0, "message": "success", "data": stats})
+
+    except Exception as e:
+        logger.error(f"获取认证统计失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/sessions", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def get_active_sessions():
+    """查询活跃会话"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        user_id = request.args.get("user_id")
+        service = get_unified_auth_service()
+        sessions = service.get_active_sessions(user_id=user_id)
+        return jsonify({"code": 0, "message": "success", "data": sessions})
+
+    except Exception as e:
+        logger.error(f"查询会话失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/auth/sessions/force-logout", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def force_logout_user():
+    """强制用户下线"""
+    from services.unified_auth_service import get_unified_auth_service
+
+    try:
+        data = request.get_json()
+        if not data or not data.get("user_id"):
+            return jsonify({"code": 40000, "message": "user_id 必填"}), 400
+
+        service = get_unified_auth_service()
+
+        with db_manager.get_session() as session:
+            result = service.force_logout_user(
+                target_user_id=data["user_id"],
+                operator=g.user_id if hasattr(g, "user_id") else "",
+                reason=data.get("reason", ""),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"强制下线失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 审批工作流 API ====================
+
+@app.route("/api/v1/approval/templates", methods=["GET"])
+@require_jwt()
+def list_approval_templates():
+    """列出审批模板"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        business_type = request.args.get("business_type")
+        category = request.args.get("category")
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            engine.initialize_default_templates(db_session=session)
+            templates = engine.list_templates(
+                business_type=business_type,
+                category=category,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": templates})
+
+    except Exception as e:
+        logger.error(f"查询审批模板失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/templates", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def create_approval_template():
+    """
+    创建审批模板
+
+    Request Body:
+    {
+        "name": "自定义审批",
+        "business_type": "data_access",
+        "category": "security",
+        "nodes": [
+            {"name": "部门主管审批", "approver_type": "role", "approver_value": "data_engineer"}
+        ]
+    }
+    """
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        name = data.get("name", "")
+        business_type = data.get("business_type", "")
+        nodes = data.get("nodes", [])
+
+        if not name or not business_type or not nodes:
+            return jsonify({"code": 40000, "message": "name, business_type, nodes 必填"}), 400
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.create_template(
+                name=name,
+                business_type=business_type,
+                nodes=nodes,
+                description=data.get("description", ""),
+                category=data.get("category", "general"),
+                created_by=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"创建审批模板失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/requests", methods=["POST"])
+@require_jwt()
+def submit_approval_request():
+    """
+    提交审批工单
+
+    Request Body:
+    {
+        "template_id": "tpl_data_access",
+        "title": "申请访问用户表",
+        "description": "需要读取用户表进行数据分析",
+        "business_data": {
+            "database": "production",
+            "table": "users",
+            "access_type": "read"
+        },
+        "priority": "normal"
+    }
+    """
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        template_id = data.get("template_id", "")
+        title = data.get("title", "")
+
+        if not template_id or not title:
+            return jsonify({"code": 40000, "message": "template_id 和 title 必填"}), 400
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.submit_request(
+                template_id=template_id,
+                title=title,
+                business_data=data.get("business_data", {}),
+                applicant_id=g.user_id if hasattr(g, "user_id") else "",
+                applicant_name=g.user if hasattr(g, "user") else "",
+                description=data.get("description", ""),
+                priority=data.get("priority", "normal"),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"提交审批工单失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/requests/<request_id>", methods=["GET"])
+@require_jwt()
+def get_approval_request_detail(request_id):
+    """获取工单详情"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            detail = engine.get_request_detail(request_id=request_id, db_session=session)
+
+        if detail:
+            return jsonify({"code": 0, "message": "success", "data": detail})
+        return jsonify({"code": 40400, "message": "工单不存在"}), 404
+
+    except Exception as e:
+        logger.error(f"查询工单详情失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/requests/<request_id>/process", methods=["POST"])
+@require_jwt()
+def process_approval(request_id):
+    """
+    处理审批
+
+    Request Body:
+    {
+        "action": "approve",  // approve, reject, delegate
+        "comment": "同意",
+        "delegate_to": ""     // 仅 delegate 时需要
+    }
+    """
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        data = request.get_json()
+        if not data or not data.get("action"):
+            return jsonify({"code": 40000, "message": "action 必填"}), 400
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.process_approval(
+                request_id=request_id,
+                approver_id=g.user_id if hasattr(g, "user_id") else "",
+                approver_name=g.user if hasattr(g, "user") else "",
+                action=data["action"],
+                comment=data.get("comment", ""),
+                delegate_to=data.get("delegate_to"),
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"处理审批失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/requests/<request_id>/withdraw", methods=["POST"])
+@require_jwt()
+def withdraw_approval_request(request_id):
+    """撤回审批工单"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.withdraw_request(
+                request_id=request_id,
+                applicant_id=g.user_id if hasattr(g, "user_id") else "",
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"撤回失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/pending", methods=["GET"])
+@require_jwt()
+def get_pending_approvals():
+    """获取待审批列表"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+
+        # 从 JWT 中获取角色
+        approver_role = None
+        if hasattr(g, "roles") and g.roles:
+            approver_role = g.roles[0] if isinstance(g.roles, list) else g.roles
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.get_pending_approvals(
+                approver_role=approver_role,
+                page=page,
+                page_size=page_size,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"查询待审批失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/my-requests", methods=["GET"])
+@require_jwt()
+def get_my_approval_requests():
+    """获取我的申请列表"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        status = request.args.get("status")
+
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            result = engine.get_my_requests(
+                applicant_id=g.user_id if hasattr(g, "user_id") else "",
+                status=status,
+                page=page,
+                page_size=page_size,
+                db_session=session,
+            )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"查询我的申请失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/approval/statistics", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.SYSTEM, Operation.MANAGE)
+def get_approval_statistics():
+    """获取审批统计信息"""
+    from services.approval_workflow_engine import get_approval_workflow_engine
+
+    try:
+        engine = get_approval_workflow_engine()
+
+        with db_manager.get_session() as session:
+            stats = engine.get_approval_statistics(db_session=session)
+
+        return jsonify({"code": 0, "message": "success", "data": stats})
+
+    except Exception as e:
+        logger.error(f"获取审批统计失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== OpenMetadata 集成 API ====================
+
+# 尝试导入 OpenMetadata 集成模块
+try:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from integrations.openmetadata.config import get_config as get_om_config, is_enabled as is_om_enabled
+    from integrations.openmetadata.client import get_client as get_om_client
+    from integrations.openmetadata.sync_service import get_sync_service as get_om_sync_service
+    from integrations.openmetadata.lineage_service import get_lineage_service as get_om_lineage_service
+    OPENMETADATA_AVAILABLE = True
+    logger.info("OpenMetadata integration module loaded")
+except ImportError:
+    OPENMETADATA_AVAILABLE = False
+    logger.info("OpenMetadata integration module not available")
+
+
+@app.route("/api/v1/openmetadata/status", methods=["GET"])
+@require_jwt()
+def openmetadata_status():
+    """获取 OpenMetadata 集成状态"""
+    if not OPENMETADATA_AVAILABLE:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "available": False,
+                "enabled": False,
+                "healthy": False,
+                "message": "OpenMetadata integration module not installed",
+            }
+        })
+
+    try:
+        config = get_om_config()
+        client = get_om_client()
+        healthy = client.health_check()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "available": True,
+                "enabled": config.enabled,
+                "healthy": healthy,
+                "host": config.host,
+                "port": config.port,
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 OpenMetadata 状态失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/openmetadata/sync", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.WRITE)
+def openmetadata_sync_metadata():
+    """
+    同步元数据到 OpenMetadata
+
+    Request Body:
+    {
+        "database_name": "my_database",
+        "table_names": ["table1", "table2"]  // 可选，为空则同步全部
+    }
+    """
+    if not OPENMETADATA_AVAILABLE:
+        return jsonify({"code": 40300, "message": "OpenMetadata integration not available"}), 403
+
+    try:
+        data = request.get_json() or {}
+        database_name = data.get("database_name")
+        table_names = data.get("table_names", [])
+
+        sync_service = get_om_sync_service()
+
+        if not sync_service.is_available():
+            return jsonify({
+                "code": 50300,
+                "message": "OpenMetadata service not reachable"
+            }), 503
+
+        with db_manager.get_session() as session:
+            # 查询要同步的元数据表
+            query = session.query(MetadataTable).options(
+                joinedload(MetadataTable.database),
+                joinedload(MetadataTable.columns),
+            )
+
+            if database_name:
+                query = query.join(MetadataDatabase).filter(
+                    MetadataDatabase.name == database_name
+                )
+
+            if table_names:
+                query = query.filter(MetadataTable.name.in_(table_names))
+
+            tables = query.all()
+
+            if not tables:
+                return jsonify({
+                    "code": 0,
+                    "message": "success",
+                    "data": {"synced": 0, "failed": 0, "skipped": 0, "total": 0}
+                })
+
+            stats = sync_service.sync_all_metadata(tables)
+            stats["total"] = len(tables)
+
+        return jsonify({"code": 0, "message": "success", "data": stats})
+
+    except Exception as e:
+        logger.error(f"同步元数据到 OpenMetadata 失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/openmetadata/lineage", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def openmetadata_get_lineage():
+    """
+    从 OpenMetadata 获取表血缘关系
+
+    Query Parameters:
+    - database: 数据库名
+    - table: 表名
+    - upstream_depth: 上游深度 (默认 3)
+    - downstream_depth: 下游深度 (默认 3)
+    """
+    if not OPENMETADATA_AVAILABLE:
+        return jsonify({"code": 40300, "message": "OpenMetadata integration not available"}), 403
+
+    try:
+        database = request.args.get("database")
+        table = request.args.get("table")
+
+        if not database or not table:
+            return jsonify({"code": 40000, "message": "database 和 table 参数必填"}), 400
+
+        upstream_depth = int(request.args.get("upstream_depth", 3))
+        downstream_depth = int(request.args.get("downstream_depth", 3))
+
+        lineage_service = get_om_lineage_service()
+
+        if not lineage_service.is_available():
+            return jsonify({
+                "code": 50300,
+                "message": "OpenMetadata service not reachable"
+            }), 503
+
+        lineage = lineage_service.get_table_lineage(
+            db_name=database,
+            table_name=table,
+            upstream_depth=upstream_depth,
+            downstream_depth=downstream_depth,
+        )
+
+        return jsonify({"code": 0, "message": "success", "data": lineage})
+
+    except Exception as e:
+        logger.error(f"获取血缘关系失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/openmetadata/lineage", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.WRITE)
+def openmetadata_push_lineage():
+    """
+    推送血缘关系到 OpenMetadata
+
+    Request Body:
+    {
+        "source_database": "db1",
+        "source_table": "source_table",
+        "target_database": "db2",
+        "target_table": "target_table",
+        "description": "ETL transformation",
+        "transformation": "SELECT * FROM ..."
+    }
+    """
+    if not OPENMETADATA_AVAILABLE:
+        return jsonify({"code": 40300, "message": "OpenMetadata integration not available"}), 403
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"code": 40000, "message": "请求体不能为空"}), 400
+
+        required_fields = ["source_database", "source_table", "target_database", "target_table"]
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"code": 40000, "message": f"{field} 不能为空"}), 400
+
+        lineage_service = get_om_lineage_service()
+
+        if not lineage_service.is_available():
+            return jsonify({
+                "code": 50300,
+                "message": "OpenMetadata service not reachable"
+            }), 503
+
+        result = lineage_service.push_lineage(
+            source_db=data["source_database"],
+            source_table=data["source_table"],
+            target_db=data["target_database"],
+            target_table=data["target_table"],
+            description=data.get("description"),
+            transformation=data.get("transformation"),
+        )
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"推送血缘关系失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/openmetadata/search", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def openmetadata_search():
+    """
+    通过 OpenMetadata 搜索元数据
+
+    Query Parameters:
+    - q: 搜索关键词
+    - limit: 返回数量 (默认 10)
+    - offset: 偏移量 (默认 0)
+    """
+    if not OPENMETADATA_AVAILABLE:
+        return jsonify({"code": 40300, "message": "OpenMetadata integration not available"}), 403
+
+    try:
+        query = request.args.get("q", "")
+        if not query:
+            return jsonify({"code": 40000, "message": "搜索关键词 q 不能为空"}), 400
+
+        limit = int(request.args.get("limit", 10))
+        offset = int(request.args.get("offset", 0))
+
+        client = get_om_client()
+        if not client.health_check():
+            return jsonify({
+                "code": 50300,
+                "message": "OpenMetadata service not reachable"
+            }), 503
+
+        result = client.search(query=query, limit=limit, offset=offset)
+
+        return jsonify({"code": 0, "message": "success", "data": result})
+
+    except Exception as e:
+        logger.error(f"OpenMetadata 搜索失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 数据血缘事件 API ====================
+
+@app.route("/api/v1/lineage/events", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_events_list():
+    """
+    获取血缘事件列表
+
+    Query Parameters:
+    - limit: 返回数量 (默认 100)
+    - event_type: 事件类型过滤
+    - job_name: 任务名称过滤
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+
+        limit = int(request.args.get("limit", 100))
+        event_type = request.args.get("event_type")
+        job_name = request.args.get("job_name")
+
+        events = service.get_recent_events(
+            limit=limit,
+            event_type=event_type,
+            job_name=job_name,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "events": events,
+                "total": len(events),
+                "stats": service.get_stats(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/events/emit", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.WRITE)
+def lineage_event_emit():
+    """
+    发送血缘事件
+
+    Body:
+    {
+        "event_type": "JOB_STARTED | JOB_COMPLETED | JOB_FAILED",
+        "job_name": "任务名称",
+        "source_tables": ["source_db.table1", ...],
+        "target_tables": ["target_db.table2", ...],
+        "transformation": "转换 SQL (可选)",
+        "run_id": "运行 ID (可选)"
+    }
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+        data = request.get_json()
+
+        event_type = data.get("event_type", "JOB_STARTED")
+        job_name = data.get("job_name")
+        source_tables = data.get("source_tables", [])
+        target_tables = data.get("target_tables", [])
+        transformation = data.get("transformation")
+        run_id = data.get("run_id")
+
+        if not job_name:
+            return jsonify({"code": 40000, "message": "job_name 必填"}), 400
+        if not source_tables and not target_tables:
+            return jsonify({"code": 40000, "message": "source_tables 和 target_tables 至少需要一个"}), 400
+
+        success = service.emit_etl_event(
+            job_name=job_name,
+            source_tables=source_tables,
+            target_tables=target_tables,
+            transformation=transformation,
+            run_id=run_id,
+        )
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": "Event emitted successfully",
+                "data": {"queued": True}
+            })
+        else:
+            return jsonify({
+                "code": 50000,
+                "message": "Failed to queue event"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"发送血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/upstream", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_upstream():
+    """
+    获取数据集上游依赖
+
+    Query Parameters:
+    - namespace: 数据集命名空间 (默认 alldata-service)
+    - name: 数据集名称
+    - max_depth: 最大深度 (默认 3)
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+
+        namespace = request.args.get("namespace", "alldata-service")
+        name = request.args.get("name")
+        max_depth = int(request.args.get("max_depth", 3))
+
+        if not name:
+            return jsonify({"code": 40000, "message": "name 必填"}), 400
+
+        upstream = service.get_upstream(
+            dataset_namespace=namespace,
+            dataset_name=name,
+            max_depth=max_depth,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "dataset": f"{namespace}.{name}",
+                "upstream": upstream,
+                "total": len(upstream),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取上游血缘失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/downstream", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_downstream():
+    """
+    获取数据集下游依赖
+
+    Query Parameters:
+    - namespace: 数据集命名空间 (默认 alldata-service)
+    - name: 数据集名称
+    - max_depth: 最大深度 (默认 3)
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+
+        namespace = request.args.get("namespace", "alldata-service")
+        name = request.args.get("name")
+        max_depth = int(request.args.get("max_depth", 3))
+
+        if not name:
+            return jsonify({"code": 40000, "message": "name 必填"}), 400
+
+        downstream = service.get_downstream(
+            dataset_namespace=namespace,
+            dataset_name=name,
+            max_depth=max_depth,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "dataset": f"{namespace}.{name}",
+                "downstream": downstream,
+                "total": len(downstream),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取下游血缘失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/path", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_path():
+    """
+    获取两个数据集之间的血缘路径
+
+    Query Parameters:
+    - source_namespace: 源数据集命名空间
+    - source_name: 源数据集名称
+    - target_namespace: 目标数据集命名空间
+    - target_name: 目标数据集名称
+    - max_depth: 最大搜索深度 (默认 5)
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+
+        source_namespace = request.args.get("source_namespace", "alldata-service")
+        source_name = request.args.get("source_name")
+        target_namespace = request.args.get("target_namespace", "alldata-service")
+        target_name = request.args.get("target_name")
+        max_depth = int(request.args.get("max_depth", 5))
+
+        if not source_name or not target_name:
+            return jsonify({"code": 40000, "message": "source_name 和 target_name 必填"}), 400
+
+        path = service.get_path(
+            source_namespace=source_namespace,
+            source_name=source_name,
+            target_namespace=target_namespace,
+            target_name=target_name,
+            max_depth=max_depth,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "source": f"{source_namespace}.{source_name}",
+                "target": f"{target_namespace}.{target_name}",
+                "path": path,
+                "path_length": len(path) if path else 0,
+                "exists": path is not None,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取血缘路径失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/impact", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_impact():
+    """
+    影响分析 - 评估数据集变更的影响范围
+
+    Query Parameters:
+    - namespace: 数据集命名空间 (默认 alldata-service)
+    - name: 数据集名称
+    - max_depth: 分析深度 (默认 5)
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+
+        namespace = request.args.get("namespace", "alldata-service")
+        name = request.args.get("name")
+        max_depth = int(request.args.get("max_depth", 5))
+
+        if not name:
+            return jsonify({"code": 40000, "message": "name 必填"}), 400
+
+        impact = service.get_impact_analysis(
+            dataset_namespace=namespace,
+            dataset_name=name,
+            max_depth=max_depth,
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": impact
+        })
+
+    except Exception as e:
+        logger.error(f"影响分析失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/lineage/export", methods=["GET"])
+@require_jwt()
+@require_permission(Resource.METADATA, Operation.READ)
+def lineage_export():
+    """
+    导出血缘事件为 OpenLineage 标准格式
+
+    Query Parameters:
+    - limit: 导出数量 (默认 100)
+    """
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import get_openlineage_event_service
+
+        service = get_openlineage_event_service()
+        limit = int(request.args.get("limit", 100))
+
+        events = service.to_openlineage_events(limit=limit)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "events": events,
+                "total": len(events),
+                "format": "openlineage",
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"导出血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
 # 启动应用
 if __name__ == "__main__":
     initialize_app()
+
+    # 启动 OpenLineage 事件服务
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from services import init_openlineage_event_service
+        init_openlineage_event_service()
+        logger.info("OpenLineage event service initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize OpenLineage event service: {e}")
+
     port = int(os.getenv("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=False)

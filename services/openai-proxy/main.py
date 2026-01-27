@@ -16,6 +16,7 @@ import sys
 import logging
 import json
 import functools
+import requests
 from typing import AsyncGenerator, Optional
 from datetime import datetime
 
@@ -170,14 +171,132 @@ def require_jwt(optional: bool = False):
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
-# OpenAI 客户端
-_client = None
+# ==================== Prometheus 指标 ====================
+
+# 尝试导入共享 Prometheus 指标模块
+try:
+    sys.path.insert(0, '/app/shared')
+    from prometheus_metrics import PrometheusMetrics, init_metrics, track_ai_call
+    metrics = init_metrics(app, service_name="openai-proxy")
+    PROMETHEUS_ENABLED = True
+    logger.info("Prometheus metrics initialized")
+except ImportError:
+    PROMETHEUS_ENABLED = False
+    metrics = None
+    # 创建装饰器占位符
+    def track_ai_call(m, s, mo):
+        def decorator(f):
+            return f
+        return decorator
+    logger.warning("Prometheus metrics not available")
+
+# ==================== vLLM 集成 ====================
+
+# vLLM 服务端点配置
+VLLM_CHAT_URL = os.getenv("VLLM_CHAT_URL", "http://vllm-chat:8000")
+VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL", "http://vllm-embed:8000")
+VLLM_HEALTH_CHECK_TIMEOUT = int(os.getenv("VLLM_HEALTH_CHECK_TIMEOUT", "5"))
+
+# vLLM 健康状态缓存
+_vllm_chat_healthy = None
+_vllm_embed_healthy = None
+_vllm_last_check = 0
+VLLM_HEALTH_CACHE_TTL = 30  # 健康检查缓存30秒
+
+
+def _check_vllm_health(url: str) -> bool:
+    """检查 vLLM 服务健康状态"""
+    global _vllm_last_check, _vllm_chat_healthy, _vllm_embed_healthy
+    try:
+        import time
+        current_time = time.time()
+
+        # 使用缓存避免频繁检查
+        if current_time - _vllm_last_check < VLLM_HEALTH_CACHE_TTL:
+            if url == VLLM_CHAT_URL:
+                return _vllm_chat_healthy if _vllm_chat_healthy is not None else False
+            elif url == VLLM_EMBED_URL:
+                return _vllm_embed_healthy if _vllm_embed_healthy is not None else False
+
+        response = requests.get(
+            f"{url}/health",
+            timeout=VLLM_HEALTH_CHECK_TIMEOUT
+        )
+        is_healthy = response.status_code == 200
+
+        # 更新缓存
+        _vllm_last_check = current_time
+        if url == VLLM_CHAT_URL:
+            _vllm_chat_healthy = is_healthy
+        elif url == VLLM_EMBED_URL:
+            _vllm_embed_healthy = is_healthy
+
+        return is_healthy
+    except Exception as e:
+        logger.debug(f"vLLM health check failed for {url}: {e}")
+        return False
+
+
+def is_vllm_chat_available() -> bool:
+    """检查 vLLM Chat 服务是否可用"""
+    return _check_vllm_health(VLLM_CHAT_URL)
+
+
+def is_vllm_embed_available() -> bool:
+    """检查 vLLM Embedding 服务是否可用"""
+    return _check_vllm_health(VLLM_EMBED_URL)
+
+
+# OpenAI 客户端（外部API备用）
+_openai_client = None
+_vllm_chat_client = None
+_vllm_embed_client = None
+
+
+def get_vllm_chat_client():
+    """获取 vLLM Chat 客户端（优先）"""
+    global _vllm_chat_client
+
+    if not OPENAI_AVAILABLE:
+        logger.warning("OpenAI library not available")
+        return None
+
+    if is_vllm_chat_available():
+        if _vllm_chat_client is None:
+            _vllm_chat_client = AsyncOpenAI(
+                api_key="dummy",  # vLLM不需要真实API key
+                base_url=VLLM_CHAT_URL
+            )
+            logger.info(f"vLLM Chat client initialized: {VLLM_CHAT_URL}")
+        return _vllm_chat_client
+
+    return None
+
+
+def get_vllm_embed_client():
+    """获取 vLLM Embedding 客户端（优先）"""
+    global _vllm_embed_client
+
+    if not OPENAI_AVAILABLE:
+        logger.warning("OpenAI library not available")
+        return None
+
+    if is_vllm_embed_available():
+        if _vllm_embed_client is None:
+            _vllm_embed_client = AsyncOpenAI(
+                api_key="dummy",
+                base_url=VLLM_EMBED_URL
+            )
+            logger.info(f"vLLM Embed client initialized: {VLLM_EMBED_URL}")
+        return _vllm_embed_client
+
+    return None
 
 
 def get_openai_client():
-    """获取 OpenAI 客户端"""
-    global _client
-    if _client is None:
+    """获取 OpenAI 客户端（备用）"""
+    global _openai_client
+    if _openai_client is None:
         if not OPENAI_AVAILABLE:
             logger.warning("OpenAI library not available")
             return None
@@ -188,12 +307,27 @@ def get_openai_client():
             return None
 
         base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
-        _client = AsyncOpenAI(
+        _openai_client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url
         )
         logger.info(f"OpenAI client initialized: {base_url}")
-    return _client
+    return _openai_client
+
+
+def get_chat_client():
+    """获取聊天客户端（优先vLLM，降级OpenAI）"""
+    # 优先使用vLLM
+    client = get_vllm_chat_client()
+    if client:
+        return client, "vllm"
+
+    # 降级到OpenAI
+    client = get_openai_client()
+    if client:
+        return client, "openai"
+
+    return None, None
 
 
 # ==================== Prompt 模板管理 ====================
@@ -232,15 +366,40 @@ def get_prompt_template(template_name: str, **kwargs) -> str:
 @app.route("/health")
 def health():
     """健康检查"""
-    client = get_openai_client()
-    api_configured = client is not None and os.getenv('OPENAI_API_KEY')
+    # 检查vLLM服务
+    vllm_chat_ok = is_vllm_chat_available()
+    vllm_embed_ok = is_vllm_embed_available()
+
+    # 检查OpenAI配置
+    openai_client = get_openai_client()
+    openai_configured = openai_client is not None and os.getenv('OPENAI_API_KEY')
+
+    # 确定使用哪个服务
+    if vllm_chat_ok:
+        backend = "vllm"
+        backend_status = "ok"
+    elif openai_configured:
+        backend = "openai"
+        backend_status = "ok"
+    else:
+        backend = "none"
+        backend_status = "unavailable"
 
     return jsonify({
-        "status": "ok",
+        "status": "ok" if backend_status == "ok" else "degraded",
         "service": "openai-proxy",
         "version": "1.0.0",
-        "openai_configured": api_configured,
-        "base_url": os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+        "backend": backend,
+        "vllm": {
+            "chat_available": vllm_chat_ok,
+            "chat_url": VLLM_CHAT_URL,
+            "embed_available": vllm_embed_ok,
+            "embed_url": VLLM_EMBED_URL
+        },
+        "openai": {
+            "configured": openai_configured,
+            "base_url": os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+        }
     })
 
 
@@ -248,12 +407,12 @@ def health():
 @require_jwt(optional=True)
 def list_models():
     """列出可用模型"""
-    client = get_openai_client()
+    client, backend = get_chat_client()
 
     if not client:
-        # C-03 安全修复: 生产环境必须配置 OpenAI API
+        # C-03 安全修复: 生产环境必须配置 LLM 服务
         if os.getenv("ENVIRONMENT") == "production":
-            logger.error("OpenAI client not available in production for /v1/models")
+            logger.error("No LLM client available in production for /v1/models")
             return jsonify({
                 "error": {
                     "message": "LLM service not configured. Contact administrator.",
@@ -267,31 +426,13 @@ def list_models():
             "object": "list",
             "data": [
                 {
-                    "id": "gpt-4o-mini",
+                    "id": os.getenv("VLLM_CHAT_MODEL", "Qwen/Qwen2.5-1.5B-Instruct"),
                     "object": "model",
                     "created": 1234567890,
-                    "owned_by": "openai"
-                },
-                {
-                    "id": "gpt-4o",
-                    "object": "model",
-                    "created": 1234567890,
-                    "owned_by": "openai"
-                },
-                {
-                    "id": "gpt-4-turbo",
-                    "object": "model",
-                    "created": 1234567890,
-                    "owned_by": "openai"
-                },
-                {
-                    "id": "gpt-3.5-turbo",
-                    "object": "model",
-                    "created": 1234567890,
-                    "owned_by": "openai"
+                    "owned_by": "vllm"
                 }
             ],
-            "_warning": "This is mock data. Configure OPENAI_API_KEY for real model list."
+            "_warning": "This is mock data. Configure VLLM_CHAT_URL or OPENAI_API_KEY for real model list."
         })
 
     try:
@@ -307,6 +448,10 @@ def list_models():
         models_data = loop.run_until_complete(_list())
         loop.close()
 
+        # 添加后端信息
+        if isinstance(models_data, dict) and "data" in models_data:
+            models_data["backend"] = backend
+
         return jsonify(models_data)
 
     except Exception as e:
@@ -315,9 +460,14 @@ def list_models():
         return jsonify({
             "object": "list",
             "data": [
-                {"id": "gpt-4o-mini", "object": "model", "created": 1234567890, "owned_by": "openai"},
-                {"id": "gpt-4o", "object": "model", "created": 1234567890, "owned_by": "openai"}
-            ]
+                {
+                    "id": os.getenv("VLLM_CHAT_MODEL", "Qwen/Qwen2.5-1.5B-Instruct"),
+                    "object": "model",
+                    "created": 1234567890,
+                    "owned_by": backend or "unknown"
+                }
+            ],
+            "backend": backend
         })
 
 
@@ -326,11 +476,11 @@ def list_models():
 @app.route("/v1/chat/completions", methods=["POST"])
 @require_jwt()
 def chat_completions():
-    """OpenAI 兼容的聊天补全接口"""
+    """OpenAI 兼容的聊天补全接口（优先vLLM，降级OpenAI）"""
     data = request.json
 
     # 获取参数
-    model = data.get("model", "gpt-4o-mini")
+    model = data.get("model", os.getenv("VLLM_CHAT_MODEL", "gpt-4o-mini"))
     messages = data.get("messages", [])
     stream = data.get("stream", False)
     temperature = data.get("temperature", 0.7)
@@ -347,14 +497,15 @@ def chat_completions():
         else:
             messages.insert(0, {"role": "system", "content": system_message})
 
-    client = get_openai_client()
+    # 获取聊天客户端（优先vLLM，降级OpenAI）
+    client, backend = get_chat_client()
 
     if not client:
-        # C-03 安全修复: 生产环境必须配置 OpenAI API
+        # C-03 安全修复: 生产环境必须配置 LLM 服务
         if os.getenv("ENVIRONMENT") == "production":
             logger.error(
-                "CRITICAL: OpenAI client not available in production. "
-                "Set OPENAI_API_KEY environment variable."
+                "CRITICAL: No LLM client available in production. "
+                "Configure VLLM_CHAT_URL or OPENAI_API_KEY."
             )
             return jsonify({
                 "error": {
@@ -366,8 +517,8 @@ def chat_completions():
 
         # Mock 响应（仅用于开发/测试）
         logger.warning(
-            "OpenAI client not available, returning mock response. "
-            "Set OPENAI_API_KEY environment variable for production use. "
+            "No LLM client available, returning mock response. "
+            "Configure VLLM_CHAT_URL or OPENAI_API_KEY for production use. "
             "Mock responses are for development/testing only."
         )
         user_message = ""
@@ -427,16 +578,23 @@ def chat_completions():
                 "completion_tokens": 50,
                 "total_tokens": sum(len(m.get("content", "")) for m in messages) + 50
             },
-            "_warning": "This is a mock response. Configure OPENAI_API_KEY for real responses."
+            "_warning": "This is a mock response. Configure VLLM_CHAT_URL or OPENAI_API_KEY for real responses."
         })
 
-    # 真实 OpenAI 调用
+    # 真实 LLM 调用（vLLM 或 OpenAI）
+    import time
+    start_time = time.time()
+    status = "success"
+    prompt_tokens = 0
+    completion_tokens = 0
+
     try:
         import asyncio
 
         if stream:
             # 流式响应
             async def generate_stream():
+                nonlocal status
                 try:
                     stream_response = await client.chat.completions.create(
                         model=model,
@@ -453,9 +611,10 @@ def chat_completions():
                     yield "data: [DONE]\n\n"
 
                 except OpenAIError as e:
-                    logger.error(f"OpenAI stream error: {e}")
+                    status = "error"
+                    logger.error(f"{backend} stream error: {e}")
                     error_data = {
-                        "error": {"message": str(e), "type": "openai_error"}
+                        "error": {"message": str(e), "type": f"{backend}_error"}
                     }
                     yield f"data: {json.dumps(error_data)}\n\n"
 
@@ -488,20 +647,165 @@ def chat_completions():
             finally:
                 loop.close()
 
+            # 添加后端信息
+            result["backend"] = backend
+
+            # 提取 token 使用情况
+            usage = result.get('usage', {})
+            prompt_tokens = usage.get('prompt_tokens', 0)
+            completion_tokens = usage.get('completion_tokens', 0)
+
             # 记录日志
-            logger.info(f"Chat completion: model={model}, tokens={result.get('usage', {}).get('total_tokens', 0)}")
+            logger.info(f"Chat completion: backend={backend}, model={model}, tokens={usage.get('total_tokens', 0)}")
 
             return jsonify(result)
 
     except OpenAIError as e:
-        logger.error(f"OpenAI API error: {e}")
+        status = "error"
+        logger.error(f"{backend} API error: {e}")
         return jsonify({
             "error": {
                 "message": str(e),
-                "type": "openai_error",
-                "code": "openai_error"
+                "type": f"{backend}_error",
+                "code": f"{backend}_error"
             }
         }), 500
+    finally:
+        # 记录 AI 服务调用指标
+        duration = time.time() - start_time
+        if PROMETHEUS_ENABLED and metrics:
+            metrics.record_ai_request(
+                service=backend,
+                model=model,
+                status=status,
+                duration=duration,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens
+            )
+
+
+# ==================== Embeddings ====================
+
+@app.route("/v1/embeddings", methods=["POST"])
+@require_jwt()
+def embeddings():
+    """OpenAI 兼容的嵌入接口（优先vLLM，降级OpenAI）"""
+    data = request.json
+
+    # 获取参数
+    model = data.get("model", os.getenv("VLLM_EMBED_MODEL", "BAAI/bge-base-zh-v1.5"))
+    input_text = data.get("input", [])
+    encoding_format = data.get("encoding_format", "float")
+
+    # 支持 single string 或 array
+    if isinstance(input_text, str):
+        inputs = [input_text]
+    else:
+        inputs = input_text
+
+    # 获取 embedding 客户端（优先vLLM，降级OpenAI）
+    client = get_vllm_embed_client()
+    backend = "vllm" if client else None
+
+    if not client:
+        client = get_openai_client()
+        backend = "openai" if client else None
+
+    if not client:
+        # C-03 安全修复: 生产环境必须配置 LLM 服务
+        if os.getenv("ENVIRONMENT") == "production":
+            logger.error(
+                "CRITICAL: No Embedding client available in production. "
+                "Configure VLLM_EMBED_URL or OPENAI_API_KEY."
+            )
+            return jsonify({
+                "error": {
+                    "message": "Embedding service not configured. Contact administrator.",
+                    "type": "service_unavailable",
+                    "code": "embedding_not_configured"
+                }
+            }), 503
+
+        # Mock 响应（仅用于开发/测试）
+        logger.warning(
+            "No Embedding client available, returning mock response. "
+            "Configure VLLM_EMBED_URL or OPENAI_API_KEY for production use."
+        )
+
+        import numpy as np
+        mock_embeddings = [np.random.rand(768).tolist() for _ in inputs]
+
+        return jsonify({
+            "object": "list",
+            "data": [
+                {
+                    "object": "embedding",
+                    "embedding": emb,
+                    "index": i
+                }
+                for i, emb in enumerate(mock_embeddings)
+            ],
+            "model": model,
+            "usage": {
+                "prompt_tokens": sum(len(text) for text in inputs),
+                "total_tokens": sum(len(text) for text in inputs)
+            },
+            "_warning": "This is a mock response. Configure VLLM_EMBED_URL or OPENAI_API_KEY for real embeddings."
+        })
+
+    # 真实 Embedding 调用
+    import time
+    start_time = time.time()
+    status = "success"
+
+    try:
+        import asyncio
+
+        async def _create_embeddings():
+            # 批量处理（vLLM/OpenAI都支持）
+            response = await client.embeddings.create(
+                model=model,
+                input=inputs
+            )
+            return response.model_dump()
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_create_embeddings())
+        finally:
+            loop.close()
+
+        # 添加后端信息
+        result["backend"] = backend
+
+        # 记录日志
+        logger.info(f"Embeddings: backend={backend}, model={model}, count={len(inputs)}")
+
+        return jsonify(result)
+
+    except OpenAIError as e:
+        status = "error"
+        logger.error(f"{backend} Embedding API error: {e}")
+        return jsonify({
+            "error": {
+                "message": str(e),
+                "type": f"{backend}_error",
+                "code": f"{backend}_error"
+            }
+        }), 500
+    finally:
+        # 记录 AI 服务调用指标
+        duration = time.time() - start_time
+        if PROMETHEUS_ENABLED and metrics:
+            metrics.record_ai_request(
+                service=f"{backend}_embedding",
+                model=model,
+                status=status,
+                duration=duration,
+                prompt_tokens=sum(len(text) for text in inputs),
+                completion_tokens=0
+            )
 
 
 # ==================== Prompt 模板管理 API ====================

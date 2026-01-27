@@ -1,0 +1,854 @@
+# 网络策略配置
+# 实现零信任网络模型，限制 Pod 间通信
+
+---
+# 默认拒绝所有命名空间的入站流量
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-alldata
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-bisheng
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-cube
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: one-data-infra
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Alldata API 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alldata-api-policy
+  namespace: one-data-alldata
+spec:
+  podSelector:
+    matchLabels:
+      app: alldata-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Ingress 控制器的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # 允许访问 MySQL
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+  # 允许访问 Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # 允许访问 MinIO
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: minio
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许访问 OpenMetadata
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: openmetadata
+    ports:
+    - protocol: TCP
+      port: 8585
+  # 允许访问 Milvus
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          component: proxy
+          app: milvus
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # 允许外部 API 调用 (OpenAI, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# Bisheng API 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bisheng-api-policy
+  namespace: one-data-bisheng
+spec:
+  podSelector:
+    matchLabels:
+      app: bisheng-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Ingress 控制器的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8081
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 8081
+  egress:
+  # 允许访问 Alldata API
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许访问 vLLM
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-cube
+      podSelector:
+        matchLabels:
+          app: vllm-serving
+    ports:
+    - protocol: TCP
+      port: 8000
+  # 允许访问 Milvus
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          component: proxy
+          app: milvus
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许访问 Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # 允许外部 API 调用
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# vLLM Serving 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vllm-serving-policy
+  namespace: one-data-cube
+spec:
+  podSelector:
+    matchLabels:
+      app: vllm-serving
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 8000
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # 允许访问 Hugging Face (下载模型)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# MySQL 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-policy
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Alldata API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 3306
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 3306
+  # 允许来自 OpenMetadata 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: openmetadata
+    ports:
+    - protocol: TCP
+      port: 3306
+  egress:
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Milvus 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: milvus-policy
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: milvus
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Alldata API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许 Milvus 组件间通信
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: milvus
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 9091
+  egress:
+  # 允许 Milvus 组件间通信
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: milvus
+    ports:
+    - protocol: TCP
+      port: 19530
+  # 允许访问 etcd
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: etcd
+    ports:
+    - protocol: TCP
+      port: 2379
+  # 允许访问 MinIO
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: minio
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许访问 Pulsar
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: pulsar
+    ports:
+    - protocol: TCP
+      port: 6650
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# MinIO 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: minio-policy
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: minio
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Alldata API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许来自 Milvus 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: milvus
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许来自 Kettle 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: kettle-carte
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许来自 MinIO Console 的外部访问 (通过 Ingress)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 9001
+  egress:
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Redis 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-policy
+  namespace: one-data-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Alldata API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 6379
+  # 允许来自 Bisheng API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-bisheng
+      podSelector:
+        matchLabels:
+          app: bisheng-api
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Kettle 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kettle-policy
+  namespace: one-data-alldata
+spec:
+  podSelector:
+    matchLabels:
+      app: kettle-carte
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Alldata API 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          app: alldata-api
+    ports:
+    - protocol: TCP
+      port: 8081
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 8081
+  egress:
+  # 允许访问 MySQL
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+  # 允许访问 MinIO
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+      podSelector:
+        matchLabels:
+          app: minio
+    ports:
+    - protocol: TCP
+      port: 9000
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # 允许外部数据库访问
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 3306
+    - protocol: TCP
+      port: 5432
+
+---
+# 监控系统网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-policy
+  namespace: one-data-system
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Grafana 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-system
+      podSelector:
+        matchLabels:
+          app: grafana
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # 允许抓取所有命名空间的指标
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8080  # Alldata API
+    - protocol: TCP
+      port: 8081  # Bisheng API
+    - protocol: TCP
+      port: 8000  # vLLM
+    - protocol: TCP
+      port: 9091  # Milvus metrics
+    - protocol: TCP
+      port: 9100  # Node exporter
+  # 允许 DNS 查询
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# 允许 DNS 解析的全局策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: one-data-alldata
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: one-data-bisheng
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: one-data-cube
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: one-data-infra
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: one-data-system
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53

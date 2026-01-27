@@ -7,7 +7,7 @@ Phase 6: Sprint 6.2
 import logging
 import os
 import requests
-from typing import List, Union
+from typing import List, Optional, Union
 
 try:
     from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -153,3 +153,36 @@ class EmbeddingService:
         """同步版本的 embed_texts"""
         import asyncio
         return asyncio.run(self.embed_texts(texts))
+
+    def embed_query(self, query: str) -> List[float]:
+        """
+        嵌入查询文本（同步接口）
+
+        这是 sync_embed_text 的别名，用于兼容性
+        """
+        return self.sync_embed_text(query)
+
+
+# ==================== 全局服务实例 ====================
+
+_embedding_service: Optional[EmbeddingService] = None
+
+
+def get_embedding_service() -> EmbeddingService:
+    """
+    获取全局 Embedding 服务实例（单例模式）
+
+    Returns:
+        EmbeddingService: 全局 Embedding 服务实例
+    """
+    global _embedding_service
+    if _embedding_service is None:
+        _embedding_service = EmbeddingService()
+        logger.info("Embedding service initialized")
+    return _embedding_service
+
+
+def reset_embedding_service() -> None:
+    """重置全局 Embedding 服务（主要用于测试）"""
+    global _embedding_service
+    _embedding_service = None

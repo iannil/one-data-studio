@@ -10,13 +10,15 @@ Phase 1 P2: 基于字段类型和上下文的智能缺失值填充
 
 import json
 import logging
+import math
 import os
 import re
 import requests
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Tuple, Union
 from statistics import mean, median, mode, stdev
 
 logger = logging.getLogger(__name__)
@@ -148,6 +150,10 @@ STRATEGY_TO_KETTLE = {
     ImputationStrategy.FLAG_MISSING: {
         "step_type": "Calculator",
         "description": "添加缺失标记列",
+    },
+    ImputationStrategy.CORRELATION_BASED: {
+        "step_type": "StreamLookup",
+        "description": "基于关联字段进行流查找填充",
     },
 }
 
@@ -338,6 +344,9 @@ class AIImputationService:
                                     "filled": next_val,
                                 })
                             break
+                elif rule.strategy == ImputationStrategy.CORRELATION_BASED:
+                    # 关联填充在此处跳过，使用专用方法
+                    pass
                 else:
                     # 使用计算的填充值
                     row[column_name] = fill_value
@@ -672,6 +681,19 @@ class AIImputationService:
                 reason=f"缺失比例较高({missing_pct:.1f}%)，建议删除含缺失值的行",
             )
 
+        # 如果有高相关性字段，优先推荐关联填充
+        if analysis.correlated_columns:
+            return ImputationRule(
+                column_name=analysis.column_name,
+                strategy=ImputationStrategy.CORRELATION_BASED,
+                confidence=85,
+                reason=f"检测到高关联字段: {analysis.correlated_columns[:3]}，使用关联推断填充",
+                parameters={
+                    "correlated_columns": analysis.correlated_columns[:5],
+                    "k_neighbors": 5,
+                },
+            )
+
         # 数值型
         if column_type == ColumnType.NUMERIC:
             # 块状缺失用插值
@@ -954,6 +976,555 @@ class AIImputationService:
                 "result_field": f"{analysis.column_name}_filled",
                 "offset": 1,
             }
+
+        elif strategy == ImputationStrategy.CORRELATION_BASED:
+            # StreamLookup 步骤配置（基于关联字段查找填充）
+            correlated = analysis.correlated_columns or []
+            rule.kettle_config = {
+                "step_name": f"关联填充_{analysis.column_name}",
+                "target_field": analysis.column_name,
+                "lookup_fields": correlated[:3],  # 最多使用3个关联字段
+                "result_field": analysis.column_name,
+                "default_value": "",
+            }
+
+    # ===== 关联缺失值推断 (CORRELATION_BASED) =====
+
+    def compute_column_correlations(
+        self,
+        data: List[Dict[str, Any]],
+        target_column: str,
+        candidate_columns: List[str] = None,
+        method: str = "auto",
+    ) -> List[Dict[str, Any]]:
+        """
+        计算目标列与其他列的相关性
+
+        Args:
+            data: 数据列表
+            target_column: 目标列名（含缺失值的列）
+            candidate_columns: 候选关联列（None 表示所有其他列）
+            method: 相关性计算方法 (auto, pearson, mutual_info)
+
+        Returns:
+            相关性分析结果列表，按相关性强度降序排列
+        """
+        if not data:
+            return []
+
+        all_columns = list(data[0].keys())
+        if candidate_columns is None:
+            candidate_columns = [c for c in all_columns if c != target_column]
+
+        # 提取有效行（目标列非空的行）
+        valid_rows = [
+            row for row in data
+            if row.get(target_column) is not None and row.get(target_column) != ""
+        ]
+
+        if len(valid_rows) < 5:
+            logger.warning(f"有效行数不足({len(valid_rows)})，无法计算相关性")
+            return []
+
+        correlations = []
+
+        for col in candidate_columns:
+            # 跳过自身和全为空的列
+            col_values = [row.get(col) for row in valid_rows]
+            non_null_count = sum(1 for v in col_values if v is not None and v != "")
+            if non_null_count < len(valid_rows) * 0.5:
+                continue
+
+            # 判断数据类型
+            target_type = self._infer_column_type(
+                [row.get(target_column) for row in valid_rows if row.get(target_column)],
+            )
+            col_type = self._infer_column_type(
+                [v for v in col_values if v is not None and v != ""],
+            )
+
+            # 选择合适的方法
+            if method == "auto":
+                if target_type == ColumnType.NUMERIC and col_type == ColumnType.NUMERIC:
+                    chosen_method = "pearson"
+                else:
+                    chosen_method = "mutual_info"
+            else:
+                chosen_method = method
+
+            try:
+                if chosen_method == "pearson":
+                    corr_value = self._pearson_correlation(
+                        valid_rows, target_column, col
+                    )
+                else:
+                    corr_value = self._mutual_information(
+                        valid_rows, target_column, col
+                    )
+
+                if corr_value is not None and abs(corr_value) > 0.1:
+                    correlations.append({
+                        "column": col,
+                        "correlation": round(corr_value, 4),
+                        "abs_correlation": round(abs(corr_value), 4),
+                        "method": chosen_method,
+                        "target_type": target_type.value,
+                        "column_type": col_type.value,
+                    })
+            except Exception as e:
+                logger.debug(f"计算 {col} 的相关性失败: {e}")
+
+        # 按绝对相关性排序
+        correlations.sort(key=lambda x: x["abs_correlation"], reverse=True)
+        return correlations
+
+    def _pearson_correlation(
+        self,
+        rows: List[Dict[str, Any]],
+        col_a: str,
+        col_b: str,
+    ) -> Optional[float]:
+        """计算 Pearson 相关系数"""
+        pairs = []
+        for row in rows:
+            va, vb = row.get(col_a), row.get(col_b)
+            if va is None or vb is None or va == "" or vb == "":
+                continue
+            try:
+                pairs.append((float(str(va).replace(",", "")),
+                              float(str(vb).replace(",", ""))))
+            except (ValueError, TypeError):
+                continue
+
+        if len(pairs) < 5:
+            return None
+
+        xs, ys = zip(*pairs)
+        n = len(xs)
+        mean_x = sum(xs) / n
+        mean_y = sum(ys) / n
+
+        cov = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+        std_x = math.sqrt(sum((x - mean_x) ** 2 for x in xs))
+        std_y = math.sqrt(sum((y - mean_y) ** 2 for y in ys))
+
+        if std_x == 0 or std_y == 0:
+            return None
+
+        return cov / (std_x * std_y)
+
+    def _mutual_information(
+        self,
+        rows: List[Dict[str, Any]],
+        col_a: str,
+        col_b: str,
+        bins: int = 10,
+    ) -> Optional[float]:
+        """
+        计算互信息（归一化）
+
+        对数值型数据先分箱，对分类型数据直接计算。
+        返回归一化互信息 [0, 1]。
+        """
+        values_a = []
+        values_b = []
+        for row in rows:
+            va, vb = row.get(col_a), row.get(col_b)
+            if va is None or vb is None or va == "" or vb == "":
+                continue
+            values_a.append(str(va))
+            values_b.append(str(vb))
+
+        if len(values_a) < 5:
+            return None
+
+        n = len(values_a)
+
+        # 对数值型进行分箱
+        values_a = self._discretize(values_a, bins)
+        values_b = self._discretize(values_b, bins)
+
+        # 计算联合分布和边际分布
+        joint_counts = Counter(zip(values_a, values_b))
+        margin_a = Counter(values_a)
+        margin_b = Counter(values_b)
+
+        # 计算互信息
+        mi = 0.0
+        for (a, b), count in joint_counts.items():
+            p_ab = count / n
+            p_a = margin_a[a] / n
+            p_b = margin_b[b] / n
+            if p_ab > 0 and p_a > 0 and p_b > 0:
+                mi += p_ab * math.log2(p_ab / (p_a * p_b))
+
+        # 归一化: NMI = MI / sqrt(H(A) * H(B))
+        h_a = -sum((c / n) * math.log2(c / n) for c in margin_a.values() if c > 0)
+        h_b = -sum((c / n) * math.log2(c / n) for c in margin_b.values() if c > 0)
+
+        if h_a == 0 or h_b == 0:
+            return 0.0
+
+        nmi = mi / math.sqrt(h_a * h_b)
+        return min(nmi, 1.0)
+
+    def _discretize(self, values: List[str], bins: int = 10) -> List[str]:
+        """将数值型数据分箱，分类型数据保持不变"""
+        # 尝试转为数值
+        numeric_vals = []
+        for v in values:
+            try:
+                numeric_vals.append(float(v.replace(",", "")))
+            except (ValueError, TypeError):
+                return values  # 不是数值型，直接返回原值
+
+        # 分箱
+        min_val = min(numeric_vals)
+        max_val = max(numeric_vals)
+        if min_val == max_val:
+            return [str(min_val)] * len(values)
+
+        bin_width = (max_val - min_val) / bins
+        return [str(int((v - min_val) / bin_width)) for v in numeric_vals]
+
+    def impute_correlation_based(
+        self,
+        data: List[Dict[str, Any]],
+        target_column: str,
+        k_neighbors: int = 5,
+        correlation_threshold: float = 0.3,
+        max_features: int = 5,
+    ) -> Tuple[List[Dict[str, Any]], ImputationResult]:
+        """
+        基于关联字段的 KNN 缺失值推断
+
+        使用与目标列高相关的字段作为特征，找到最相似的 K 个邻居，
+        用邻居的目标列值加权平均（数值型）或投票（分类型）来填充。
+
+        Args:
+            data: 数据列表
+            target_column: 目标列名
+            k_neighbors: K 近邻数量
+            correlation_threshold: 最低相关性阈值
+            max_features: 最多使用的特征列数
+
+        Returns:
+            (填充后的数据, 填充结果)
+        """
+        filled_data = [row.copy() for row in data]
+        filled_count = 0
+        sample_fills = []
+
+        # 1. 计算列间相关性
+        correlations = self.compute_column_correlations(
+            data, target_column, method="auto"
+        )
+
+        # 过滤低相关性列
+        feature_cols = [
+            c["column"] for c in correlations
+            if c["abs_correlation"] >= correlation_threshold
+        ][:max_features]
+
+        if not feature_cols:
+            logger.warning(f"未找到与 {target_column} 相关性足够高的列（阈值={correlation_threshold}）")
+            return filled_data, ImputationResult(
+                column_name=target_column,
+                original_missing_count=sum(
+                    1 for r in data
+                    if r.get(target_column) is None or r.get(target_column) == ""
+                ),
+                filled_count=0,
+                strategy_used=ImputationStrategy.CORRELATION_BASED,
+                fill_value_summary=f"无高相关性列(阈值={correlation_threshold})",
+            )
+
+        logger.info(f"关联填充 [{target_column}]: 使用特征列 {feature_cols}")
+
+        # 2. 推断目标列类型
+        target_type = self._infer_column_type(
+            [row.get(target_column) for row in data if row.get(target_column)]
+        )
+
+        # 3. 分离有值行和缺失行
+        complete_rows = []
+        missing_indices = []
+        for i, row in enumerate(data):
+            val = row.get(target_column)
+            if val is None or val == "":
+                missing_indices.append(i)
+            else:
+                complete_rows.append((i, row))
+
+        if not complete_rows:
+            return filled_data, ImputationResult(
+                column_name=target_column,
+                original_missing_count=len(missing_indices),
+                filled_count=0,
+                strategy_used=ImputationStrategy.CORRELATION_BASED,
+                fill_value_summary="无完整行可用作参考",
+            )
+
+        # 4. 构建特征向量
+        feature_encoders = self._build_feature_encoders(data, feature_cols)
+
+        complete_vectors = []
+        for idx, row in complete_rows:
+            vec = self._encode_row(row, feature_cols, feature_encoders)
+            if vec is not None:
+                complete_vectors.append((idx, row, vec))
+
+        if not complete_vectors:
+            return filled_data, ImputationResult(
+                column_name=target_column,
+                original_missing_count=len(missing_indices),
+                filled_count=0,
+                strategy_used=ImputationStrategy.CORRELATION_BASED,
+                fill_value_summary="无法构建有效特征向量",
+            )
+
+        # 5. 对每个缺失行执行 KNN 填充
+        for mi in missing_indices:
+            row = filled_data[mi]
+            query_vec = self._encode_row(row, feature_cols, feature_encoders)
+            if query_vec is None:
+                continue
+
+            # 计算距离
+            distances = []
+            for ci, crow, cvec in complete_vectors:
+                dist = self._euclidean_distance(query_vec, cvec)
+                distances.append((dist, crow))
+
+            # 取最近的K个邻居
+            distances.sort(key=lambda x: x[0])
+            neighbors = distances[:k_neighbors]
+
+            if not neighbors:
+                continue
+
+            # 计算填充值
+            if target_type == ColumnType.NUMERIC:
+                # 加权平均（权重 = 1 / (distance + epsilon)）
+                epsilon = 1e-10
+                weighted_sum = 0.0
+                weight_total = 0.0
+                for dist, nrow in neighbors:
+                    try:
+                        nval = float(str(nrow[target_column]).replace(",", ""))
+                        w = 1.0 / (dist + epsilon)
+                        weighted_sum += nval * w
+                        weight_total += w
+                    except (ValueError, TypeError):
+                        continue
+
+                if weight_total > 0:
+                    fill_value = round(weighted_sum / weight_total, 4)
+                    row[target_column] = fill_value
+                    filled_count += 1
+                    if len(sample_fills) < 5:
+                        sample_fills.append({
+                            "row_index": mi,
+                            "original": None,
+                            "filled": fill_value,
+                            "neighbors_used": len(neighbors),
+                        })
+            else:
+                # 投票法（加权投票）
+                epsilon = 1e-10
+                votes = defaultdict(float)
+                for dist, nrow in neighbors:
+                    nval = nrow.get(target_column)
+                    if nval is not None and nval != "":
+                        w = 1.0 / (dist + epsilon)
+                        votes[str(nval)] += w
+
+                if votes:
+                    fill_value = max(votes.items(), key=lambda x: x[1])[0]
+                    row[target_column] = fill_value
+                    filled_count += 1
+                    if len(sample_fills) < 5:
+                        sample_fills.append({
+                            "row_index": mi,
+                            "original": None,
+                            "filled": fill_value,
+                            "neighbors_used": len(neighbors),
+                        })
+
+        result = ImputationResult(
+            column_name=target_column,
+            original_missing_count=len(missing_indices),
+            filled_count=filled_count,
+            strategy_used=ImputationStrategy.CORRELATION_BASED,
+            fill_value_summary=f"KNN(k={k_neighbors}) 基于 {len(feature_cols)} 个关联列: {feature_cols}",
+            sample_fills=sample_fills,
+        )
+
+        return filled_data, result
+
+    def impute_via_lookup_table(
+        self,
+        data: List[Dict[str, Any]],
+        target_column: str,
+        lookup_data: List[Dict[str, Any]],
+        join_keys: List[str],
+        lookup_value_column: str = None,
+    ) -> Tuple[List[Dict[str, Any]], ImputationResult]:
+        """
+        基于查找表的缺失值填充（跨表关联填充）
+
+        从查找表中根据关联键匹配行，用查找表中对应列的值来填充缺失值。
+        类似于 SQL 的 LEFT JOIN 填充或 Kettle 的 Database Lookup 步骤。
+
+        Args:
+            data: 主数据列表
+            target_column: 目标填充列名
+            lookup_data: 查找表数据
+            join_keys: 关联键列表（主数据和查找表共有的列名）
+            lookup_value_column: 查找表中的值列名（None 表示与 target_column 同名）
+
+        Returns:
+            (填充后的数据, 填充结果)
+        """
+        if lookup_value_column is None:
+            lookup_value_column = target_column
+
+        filled_data = [row.copy() for row in data]
+        filled_count = 0
+        sample_fills = []
+
+        # 构建查找索引（多键组合）
+        lookup_index: Dict[tuple, Any] = {}
+        for lrow in lookup_data:
+            key = tuple(str(lrow.get(k, "")) for k in join_keys)
+            val = lrow.get(lookup_value_column)
+            if val is not None and val != "":
+                lookup_index[key] = val
+
+        if not lookup_index:
+            logger.warning(f"查找表中没有可用的 {lookup_value_column} 值")
+            return filled_data, ImputationResult(
+                column_name=target_column,
+                original_missing_count=sum(
+                    1 for r in data
+                    if r.get(target_column) is None or r.get(target_column) == ""
+                ),
+                filled_count=0,
+                strategy_used=ImputationStrategy.CORRELATION_BASED,
+                fill_value_summary="查找表为空",
+            )
+
+        # 对缺失行查找填充
+        missing_count = 0
+        for i, row in enumerate(filled_data):
+            val = row.get(target_column)
+            if val is None or val == "":
+                missing_count += 1
+                key = tuple(str(row.get(k, "")) for k in join_keys)
+                lookup_val = lookup_index.get(key)
+                if lookup_val is not None:
+                    row[target_column] = lookup_val
+                    filled_count += 1
+                    if len(sample_fills) < 5:
+                        sample_fills.append({
+                            "row_index": i,
+                            "original": None,
+                            "filled": lookup_val,
+                            "join_key": dict(zip(join_keys, key)),
+                        })
+
+        result = ImputationResult(
+            column_name=target_column,
+            original_missing_count=missing_count,
+            filled_count=filled_count,
+            strategy_used=ImputationStrategy.CORRELATION_BASED,
+            fill_value_summary=f"查找表关联填充（keys={join_keys}, 命中率={filled_count}/{missing_count}）",
+            sample_fills=sample_fills,
+        )
+
+        return filled_data, result
+
+    def _build_feature_encoders(
+        self,
+        data: List[Dict[str, Any]],
+        feature_cols: List[str],
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        为每个特征列构建编码器（数值型归一化，分类型标签编码）
+        """
+        encoders = {}
+
+        for col in feature_cols:
+            values = [row.get(col) for row in data if row.get(col) is not None and row.get(col) != ""]
+            col_type = self._infer_column_type(values)
+
+            if col_type == ColumnType.NUMERIC:
+                numeric_vals = []
+                for v in values:
+                    try:
+                        numeric_vals.append(float(str(v).replace(",", "")))
+                    except (ValueError, TypeError):
+                        continue
+
+                if numeric_vals:
+                    min_v = min(numeric_vals)
+                    max_v = max(numeric_vals)
+                    encoders[col] = {
+                        "type": "numeric",
+                        "min": min_v,
+                        "max": max_v,
+                        "range": max_v - min_v if max_v != min_v else 1.0,
+                    }
+                else:
+                    encoders[col] = {"type": "skip"}
+            else:
+                # 标签编码
+                unique_vals = sorted(set(str(v) for v in values))
+                label_map = {v: i / max(len(unique_vals) - 1, 1) for i, v in enumerate(unique_vals)}
+                encoders[col] = {
+                    "type": "categorical",
+                    "label_map": label_map,
+                    "default": 0.5,
+                }
+
+        return encoders
+
+    def _encode_row(
+        self,
+        row: Dict[str, Any],
+        feature_cols: List[str],
+        encoders: Dict[str, Dict[str, Any]],
+    ) -> Optional[List[float]]:
+        """将一行数据编码为特征向量"""
+        vector = []
+        for col in feature_cols:
+            enc = encoders.get(col)
+            if enc is None or enc.get("type") == "skip":
+                vector.append(0.5)
+                continue
+
+            val = row.get(col)
+            if val is None or val == "":
+                vector.append(0.5)  # 缺失值用中间值
+                continue
+
+            if enc["type"] == "numeric":
+                try:
+                    num = float(str(val).replace(",", ""))
+                    normalized = (num - enc["min"]) / enc["range"]
+                    vector.append(max(0.0, min(1.0, normalized)))
+                except (ValueError, TypeError):
+                    vector.append(0.5)
+            else:
+                encoded = enc["label_map"].get(str(val), enc["default"])
+                vector.append(encoded)
+
+        return vector
+
+    @staticmethod
+    def _euclidean_distance(vec_a: List[float], vec_b: List[float]) -> float:
+        """计算欧氏距离"""
+        return math.sqrt(sum((a - b) ** 2 for a, b in zip(vec_a, vec_b)))
 
 
 # 创建全局实例

@@ -1,0 +1,137 @@
+# Kettle ETL ConfigMap
+# 配置 Kettle Carte 服务器和 ETL 任务参数
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kettle-config
+  namespace: one-data-alldata
+  labels:
+    app: kettle
+data:
+  # Kettle Carte 服务器配置
+  CARTE_HOST: "0.0.0.0"
+  CARTE_PORT: "8081"
+  CARTE_SSL_ENABLED: "false"
+
+  # Kettle 作业参数
+  KETTLE_JAVA_HEAP_SIZE: "2048m"
+  KETTLE_JAVA_META_SPACE_SIZE: "256m"
+
+  # MinIO 存储配置 (作业仓库)
+  KETTLE_REPO_TYPE: "file"
+  KETTLE_REPO_DIRECTORY: "/opt/kettle/jobs"
+
+  # 日志配置
+  KETTLE_LOG_LEVEL: "Basic"  # Minimal, Basic, Detailed, Debug, Rowlevel
+  KETTLE_LOG_FILE_PATTERN: "/opt/kettle/logs/kettle-${DATE}.log"
+  KETTLE_LOG_MAX_DAYS: "30"
+
+  # OpenLineage 配置
+  OPENLINEAGE_ENABLED: "true"
+  OPENLINEAGE_API_URL: "http://alldata-api.one-data-alldata.svc.cluster.local:8080/api/v1/lineage/events"
+  OPENLINEAGE_NAMESPACE: "alldata"
+
+  # OpenMetadata 集成
+  OPENMETADATA_SYNC_ENABLED: "true"
+  OPENMETADATA_HOST: "openmetadata.one-data-infra.svc.cluster.local"
+  OPENMETADATA_PORT: "8585"
+
+  # AI 增强配置
+  AI_CLEANING_ENABLED: "true"
+  AI_MASKING_ENABLED: "true"
+  AI_IMPUTATION_ENABLED: "true"
+  AI_SERVICE_URL: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+
+---
+# Kettle 示例作业配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kettle-jobs
+  namespace: one-data-alldata
+  labels:
+    app: kettle
+data:
+  # 示例: ETL 作业配置模板 (JSON 格式)
+  # 实际作业文件存储在 MinIO 或 ConfigMap 中
+  job-template.json: |
+    {
+      "job": {
+        "name": "example-etl-job",
+        "description": "示例 ETL 作业配置",
+        "type": "batch",
+        "schedule": "0 2 * * *",
+        "parameters": {
+          "SOURCE_DB": "mysql-one-data",
+          "TARGET_DB": "mysql-one-data",
+          "TABLE_PATTERN": "*"
+        },
+        "transformations": [
+          {
+            "type": "ai_cleaning",
+            "enabled": true,
+            "params": {
+              "algorithm": "isolation_forest"
+            }
+          },
+          {
+            "type": "data_masking",
+            "enabled": true,
+            "params": {
+              "scan_sensitivity": true
+            }
+          },
+          {
+            "type": "ai_imputation",
+            "enabled": true,
+            "params": {
+              "method": "mice"
+            }
+          }
+        ],
+        "lineage": {
+          "emit_events": true,
+          "sync_openmetadata": true
+        }
+      }
+    }
+
+  # Carte 服务器配置模板
+  carte-config.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <carte_config>
+      <slaveserver>
+        <name>slave1</name>
+        <hostname>${env:CARTE_HOST}</hostname>
+        <port>${env:CARTE_PORT}</port>
+        <username>cluster</username>
+        <password>cluster</password>
+        <master>Y</master>
+      </slaveserver>
+    </carte_config>
+
+---
+# Kettle 资源限制配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kettle-resource-config
+  namespace: one-data-alldata
+  labels:
+    app: kettle
+data:
+  # 默认资源请求
+  DEFAULT_CPU_REQUEST: "250m"
+  DEFAULT_MEMORY_REQUEST: "512Mi"
+
+  # 默认资源限制
+  DEFAULT_CPU_LIMIT: "2000m"
+  DEFAULT_MEMORY_LIMIT: "4096Mi"
+
+  # 大型作业资源配置
+  LARGE_CPU_REQUEST: "1000m"
+  LARGE_MEMORY_REQUEST: "2048Mi"
+  LARGE_CPU_LIMIT: "4000m"
+  LARGE_MEMORY_LIMIT: "8192Mi"

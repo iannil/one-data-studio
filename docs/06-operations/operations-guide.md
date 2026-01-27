@@ -132,15 +132,39 @@ kubectl rollout restart deployment/alldata-api -n one-data-system
 
 ### Prometheus 指标
 
-主要监控指标：
+#### 核心 HTTP 指标
 
 | 指标 | 说明 | 告警阈值 |
 |------|------|----------|
 | http_request_duration_seconds | 请求延迟 | P95 > 500ms |
 | http_requests_total | 请求总数 | - |
-| http_request_errors_total | 错误请求数 | 错误率 > 5% |
-| process_cpu_seconds_total | CPU 使用 | > 80% |
-| process_resident_memory_bytes | 内存使用 | > 80% |
+| http_requests_in_progress | 当前进行中的请求 | - |
+| http_response_size_bytes | 响应大小分布 | - |
+
+#### 数据库指标
+
+| 指标 | 说明 | 告警阈值 |
+|------|------|----------|
+| db_connections_total | 数据库连接总数 | - |
+| db_connections_in_use | 当前连接使用数 | > 80% |
+| db_connection_duration_seconds | 连接延迟 | P95 > 100ms |
+
+#### AI 服务指标
+
+| 指标 | 说明 | 告警阈值 |
+|------|------|----------|
+| ai_requests_total | AI 请求总数（按服务/模型/状态） | - |
+| ai_request_duration_seconds | AI 请求延迟 | P95 > 10s |
+| ai_request_tokens_total | Token 使用统计 | - |
+
+#### 业务指标
+
+| 指标 | 说明 | 告警阈值 |
+|------|------|----------|
+| business_operations_total | 业务操作计数 | - |
+| business_operation_duration_seconds | 业务操作延迟 | - |
+| cache_hits_total / cache_misses_total | 缓存命中率 | < 50% |
+| task_queue_size | 任务队列长度 | - |
 
 ### Grafana 仪表板
 
@@ -161,9 +185,14 @@ kubectl rollout restart deployment/alldata-api -n one-data-system
    - 工作流执行数
    - RAG 查询数
 
+4. **AI 服务仪表板** (`deploy/monitoring/grafana/dashboards/ai-services.json`)
+   - vLLM Chat/Embedding 延迟
+   - Token 使用统计
+   - AI 服务可用性
+
 ### 告警规则
 
-关键告警：
+#### 服务健康告警
 
 ```yaml
 # 服务不可用告警
@@ -192,6 +221,72 @@ kubectl rollout restart deployment/alldata-api -n one-data-system
     severity: warning
   annotations:
     summary: "服务 {{ $labels.job }} 错误率超过 5%"
+```
+
+#### RAG 服务告警
+
+```yaml
+# RAG 检索延迟高
+- alert: RAGRetrievalLatencyHigh
+  expr: histogram_quantile(0.95, rate(rag_retrieval_duration_seconds_bucket[5m])) > 3
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "RAG 检索延迟超过 3 秒"
+
+# 向量搜索分数低
+- alert: VectorSearchLowScore
+  expr: avg(vector_search_score{collection!="test"}) < 0.5
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "向量搜索分数低于 0.5"
+```
+
+#### 数据流水线告警
+
+```yaml
+# ETL 任务失败率高
+- alert: ETLJobFailureRateHigh
+  expr: sum(rate(etl_jobs_total{status="failed"}[10m])) / sum(rate(etl_jobs_total[10m])) > 0.1
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "ETL 任务失败率超过 10%"
+
+# 数据质量分数低
+- alert: DataQualityScoreLow
+  expr: data_quality_score < 0.7
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "数据质量分数低于 0.7"
+```
+
+#### ML 训练告警
+
+```yaml
+# 训练任务失败
+- alert: TrainingJobFailed
+  expr: kube_job_status_failed{job_name=~".*training.*"} == 1
+  for: 1m
+  labels:
+    severity: warning
+  annotations:
+    summary: "训练任务 {{ $labels.job_name }} 失败"
+
+# GPU 利用率低
+- alert: LowGPUUtilization
+  expr: nvidia_gpu_utilization < 30
+  for: 15m
+  labels:
+    severity: info
+  annotations:
+    summary: "GPU 利用率低于 30%"
 ```
 
 ---

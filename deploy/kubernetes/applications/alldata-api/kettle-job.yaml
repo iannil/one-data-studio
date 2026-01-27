@@ -1,0 +1,279 @@
+# Kettle ETL Job Template
+# 用于执行一次性或定时的 ETL 任务
+
+---
+# 示例: Kitchen Job 执行模板
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kettle-etl-job-example
+  namespace: one-data-alldata
+  labels:
+    app: kettle-job
+    component: etl
+    job-type: "batch"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 86400  # 24 hours max
+  template:
+    metadata:
+      labels:
+        app: kettle-job
+        component: etl
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      initContainers:
+      # 拉取作业文件
+      - name: pull-job
+        image: minio/mc:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
+            ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
+          mc cp minio/alldata-kettle-jobs/${JOB_FILE} /tmp/job/
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: access_key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              namespace: one-data-infra
+              key: secret_key
+        - name: JOB_FILE
+          value: "example-job.kjb"
+        volumeMounts:
+        - name: job-files
+          mountPath: /tmp/job
+      containers:
+      - name: kitchen
+        image: pentaho/kettle:9.4.0.0-343
+        command:
+        - sh
+        - -c
+        - |
+          cd /opt/pdi
+          ./kitchen.sh \
+            -file=/tmp/job/${JOB_FILE} \
+            -level=${KETTLE_LOG_LEVEL} \
+            -jobParam=SOURCE_DB=${SOURCE_DB} \
+            -jobParam=TARGET_DB=${TARGET_DB} \
+            -jobParam=TABLE_PATTERN=${TABLE_PATTERN} \
+            -jobParam=OPENLINEAGE_URL=${OPENLINEAGE_API_URL} \
+            -jobParam=AI_CLEANING_ENABLED=${AI_CLEANING_ENABLED} \
+            -jobParam=AI_MASKING_ENABLED=${AI_MASKING_ENABLED} \
+            -jobParam=AI_IMPUTATION_ENABLED=${AI_IMPUTATION_ENABLED}
+        env:
+        - name: JOB_FILE
+          value: "example-job.kjb"
+        - name: KETTLE_JAVA_HEAP_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-resource-config
+              key: DEFAULT_MEMORY_LIMIT
+        - name: KETTLE_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: KETTLE_LOG_LEVEL
+        - name: OPENLINEAGE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: OPENLINEAGE_API_URL
+        - name: AI_CLEANING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: AI_CLEANING_ENABLED
+        - name: AI_MASKING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: AI_MASKING_ENABLED
+        - name: AI_IMPUTATION_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kettle-config
+              key: AI_IMPUTATION_ENABLED
+        - name: SOURCE_DB
+          value: "mysql-one-data"
+        - name: TARGET_DB
+          value: "mysql-one-data"
+        - name: TABLE_PATTERN
+          value: "*"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: job-files
+          mountPath: /tmp/job
+        - name: kettle-logs
+          mountPath: /opt/kettle/logs
+      volumes:
+      - name: job-files
+        emptyDir: {}
+      - name: kettle-logs
+        emptyDir: {}
+
+---
+# CronJob 示例: 定时 ETL 任务
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kettle-daily-sync
+  namespace: one-data-alldata
+  labels:
+    app: kettle-cronjob
+    component: etl
+spec:
+  schedule: "0 2 * * *"  # 每天凌晨 2 点执行
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid  # 禁止并发执行
+  jobTemplate:
+    metadata:
+      labels:
+        app: kettle-job
+        component: etl
+        cronjob: "daily-sync"
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400  # 4 hours max
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            fsGroup: 1000
+          initContainers:
+          - name: pull-job
+            image: minio/mc:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
+                ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
+              mc cp minio/alldata-kettle-jobs/daily-sync.kjb /tmp/job/
+            env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  namespace: one-data-infra
+                  key: access_key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  namespace: one-data-infra
+                  key: secret_key
+            volumeMounts:
+            - name: job-files
+              mountPath: /tmp/job
+          containers:
+          - name: kitchen
+            image: pentaho/kettle:9.4.0.0-343
+            command:
+            - sh
+            - -c
+            - |
+              cd /opt/pdi
+              ./kitchen.sh \
+                -file=/tmp/job/daily-sync.kjb \
+                -level=Basic \
+                -jobParam=EXECUTION_DATE=$(date +%Y-%m-%d) \
+                -jobParam=OPENLINEAGE_URL=${OPENLINEAGE_API_URL} \
+                -jobParam=OPENMETADATA_SYNC=true
+            env:
+            - name: OPENLINEAGE_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: kettle-config
+                  key: OPENLINEAGE_API_URL
+            resources:
+              requests:
+                memory: "1024Mi"
+                cpu: "500m"
+              limits:
+                memory: "4096Mi"
+                cpu: "2000m"
+            volumeMounts:
+            - name: job-files
+              mountPath: /tmp/job
+            - name: kettle-logs
+              mountPath: /opt/kettle/logs
+          volumes:
+          - name: job-files
+            emptyDir: {}
+          - name: kettle-logs
+            emptyDir: {}
+
+---
+# Pan Job 示例: 转换执行
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kettle-pan-job-example
+  namespace: one-data-alldata
+  labels:
+    app: kettle-job
+    component: etl
+    job-type: "transformation"
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: kettle-job
+        component: etl
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+      - name: pan
+        image: pentaho/kettle:9.4.0.0-343
+        command:
+        - sh
+        - -c
+        - |
+          cd /opt/pdi
+          ./pan.sh \
+            -file=/tmp/transformation/example-trans.ktr \
+            -level=Basic \
+            -param=INPUT_FILE=${INPUT_FILE} \
+            -param=OUTPUT_TABLE=${OUTPUT_TABLE}
+        env:
+        - name: INPUT_FILE
+          value: "s3a://alldata/input/data.csv"
+        - name: OUTPUT_TABLE
+          value: "target_table"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: kettle-logs
+          mountPath: /opt/kettle/logs
+      volumes:
+      - name: kettle-logs
+        emptyDir: {}

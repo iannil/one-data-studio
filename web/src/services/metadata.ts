@@ -103,6 +103,39 @@ export const metadataApi = {
   getLineage: async (tableId: string) => {
     return api.get(`/alldata/metadata/tables/${tableId}/lineage`);
   },
+
+  /**
+   * 获取 OpenMetadata 集成状态
+   */
+  getOpenMetadataStatus: async () => {
+    return api.get('/alldata/openmetadata/status');
+  },
+
+  /**
+   * 触发 OpenMetadata 元数据同步
+   */
+  syncToOpenMetadata: async (params?: { database_name?: string; table_names?: string[] }) => {
+    return api.post('/alldata/openmetadata/sync', params || {});
+  },
+
+  /**
+   * 通过 OpenMetadata 获取增强血缘
+   */
+  getOpenMetadataLineage: async (params: {
+    database: string;
+    table: string;
+    upstream_depth?: number;
+    downstream_depth?: number;
+  }) => {
+    return api.get('/alldata/openmetadata/lineage', { params });
+  },
+
+  /**
+   * 通过 OpenMetadata 搜索元数据
+   */
+  searchOpenMetadata: async (params: { q: string; limit?: number; offset?: number }) => {
+    return api.get('/alldata/openmetadata/search', { params });
+  },
 };
 
 export default metadataApi;

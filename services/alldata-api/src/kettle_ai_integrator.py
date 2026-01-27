@@ -41,6 +41,8 @@ class KettleAIIntegrator:
     STEP_UNIQUE = "Unique"
     STEP_SORT = "SortRows"
     STEP_JS_VALUE = "ScriptValueMod"  # Modified JavaScript Value
+    STEP_STREAM_LOOKUP = "StreamLookup"  # 流查找（内存关联）
+    STEP_DB_LOOKUP = "DBLookup"          # 数据库查找
 
     def __init__(self):
         self.step_counter = 0
@@ -214,6 +216,38 @@ class KettleAIIntegrator:
                 result_field=kettle_config.get("result_field", f"{column_name}_filled"),
                 function_type=kettle_config.get("function_type", "LAG"),
                 offset=kettle_config.get("offset", 1),
+                position=position,
+            )
+
+        elif kettle_step_type == self.STEP_STREAM_LOOKUP:
+            # 用于关联字段推断（基于流查找）
+            step_element = self._create_stream_lookup_step(
+                name=kettle_config.get("step_name", f"关联填充_{column_name}"),
+                lookup_step=kettle_config.get("lookup_step", "查找数据源"),
+                key_fields=kettle_config.get("lookup_fields", []),
+                value_fields=[{
+                    "lookup_field": kettle_config.get("result_field", column_name),
+                    "rename": column_name,
+                    "default_value": kettle_config.get("default_value", ""),
+                    "value_type": "String",
+                }],
+                position=position,
+            )
+
+        elif kettle_step_type == self.STEP_DB_LOOKUP:
+            # 用于数据库关联查找填充
+            step_element = self._create_db_lookup_step(
+                name=kettle_config.get("step_name", f"数据库查找_{column_name}"),
+                connection=kettle_config.get("connection", "default"),
+                schema=kettle_config.get("schema", ""),
+                table=kettle_config.get("lookup_table", ""),
+                key_fields=kettle_config.get("lookup_fields", []),
+                value_fields=[{
+                    "field": kettle_config.get("result_field", column_name),
+                    "rename": column_name,
+                    "default_value": kettle_config.get("default_value", ""),
+                    "value_type": "String",
+                }],
                 position=position,
             )
 
@@ -682,6 +716,148 @@ if (value != null && value.length >= 12) {{
         ET.SubElement(field, "subject").text = subject_field
         ET.SubElement(field, "type").text = function_type  # LAG or LEAD
         ET.SubElement(field, "valuefield").text = str(offset)
+
+        gui = ET.SubElement(step, "GUI")
+        ET.SubElement(gui, "xloc").text = str(position.x)
+        ET.SubElement(gui, "yloc").text = str(position.y)
+        ET.SubElement(gui, "draw").text = "Y"
+
+        return step
+
+    def _create_stream_lookup_step(
+        self,
+        name: str,
+        lookup_step: str,
+        key_fields: List[str],
+        value_fields: List[Dict[str, str]],
+        position: KettleStepPosition = None,
+    ) -> ET.Element:
+        """
+        创建 StreamLookup 步骤（流查找，用于关联字段推断填充）
+
+        StreamLookup 从另一个流中根据关联键查找匹配行，
+        类似于 SQL 的 LEFT JOIN，用于跨数据流的缺失值填充。
+
+        Args:
+            name: 步骤名称
+            lookup_step: 查找源步骤名称
+            key_fields: 关联键字段列表
+            value_fields: 查找值字段列表，每项包含:
+                - lookup_field: 查找表中的字段名
+                - rename: 结果字段名
+                - default_value: 默认值
+                - value_type: 值类型
+            position: 步骤位置
+        """
+        if position is None:
+            position = KettleStepPosition(300, 200)
+
+        step = ET.Element("step")
+        ET.SubElement(step, "name").text = name
+        ET.SubElement(step, "type").text = "StreamLookup"
+        ET.SubElement(step, "description").text = "基于关联字段的流查找填充"
+        ET.SubElement(step, "distribute").text = "Y"
+        ET.SubElement(step, "custom_distribution")
+        ET.SubElement(step, "copies").text = "1"
+
+        # 查找来源步骤
+        lookup = ET.SubElement(step, "from").text = lookup_step
+
+        ET.SubElement(step, "input_sorted").text = "N"
+        ET.SubElement(step, "preserve_memory").text = "Y"
+
+        # 关联键
+        keys = ET.SubElement(step, "lookup")
+        for key_field in key_fields:
+            key = ET.SubElement(keys, "key")
+            ET.SubElement(key, "name").text = key_field
+            ET.SubElement(key, "field").text = key_field
+
+        # 查找值字段
+        values = ET.SubElement(step, "value")
+        for vf in value_fields:
+            val = ET.SubElement(values, "value")
+            ET.SubElement(val, "name").text = vf.get("lookup_field", "")
+            ET.SubElement(val, "rename").text = vf.get("rename", vf.get("lookup_field", ""))
+            ET.SubElement(val, "default").text = vf.get("default_value", "")
+            ET.SubElement(val, "type").text = vf.get("value_type", "String")
+
+        gui = ET.SubElement(step, "GUI")
+        ET.SubElement(gui, "xloc").text = str(position.x)
+        ET.SubElement(gui, "yloc").text = str(position.y)
+        ET.SubElement(gui, "draw").text = "Y"
+
+        return step
+
+    def _create_db_lookup_step(
+        self,
+        name: str,
+        connection: str,
+        schema: str,
+        table: str,
+        key_fields: List[str],
+        value_fields: List[Dict[str, str]],
+        cache: bool = True,
+        cache_size: int = 5000,
+        position: KettleStepPosition = None,
+    ) -> ET.Element:
+        """
+        创建 DBLookup 步骤（数据库查找，用于跨表关联填充）
+
+        DBLookup 从数据库表中根据关联键查找匹配行，
+        类似于 SQL 的子查询或 Kettle Database Lookup 步骤。
+
+        Args:
+            name: 步骤名称
+            connection: 数据库连接名称
+            schema: 数据库 schema
+            table: 查找表名
+            key_fields: 关联键字段列表
+            value_fields: 返回值字段列表，每项包含:
+                - field: 查找表中的字段名
+                - rename: 结果字段名
+                - default_value: 默认值
+                - value_type: 值类型
+            cache: 是否启用缓存
+            cache_size: 缓存大小
+            position: 步骤位置
+        """
+        if position is None:
+            position = KettleStepPosition(300, 200)
+
+        step = ET.Element("step")
+        ET.SubElement(step, "name").text = name
+        ET.SubElement(step, "type").text = "DBLookup"
+        ET.SubElement(step, "description").text = "数据库查找填充缺失值"
+        ET.SubElement(step, "distribute").text = "Y"
+        ET.SubElement(step, "custom_distribution")
+        ET.SubElement(step, "copies").text = "1"
+
+        # 数据库连接
+        ET.SubElement(step, "connection").text = connection
+        ET.SubElement(step, "schema").text = schema
+        ET.SubElement(step, "table").text = table
+        ET.SubElement(step, "cache").text = "Y" if cache else "N"
+        ET.SubElement(step, "cache_size").text = str(cache_size)
+        ET.SubElement(step, "orderby")
+        ET.SubElement(step, "fail_on_multiple").text = "N"
+        ET.SubElement(step, "eat_row_on_failure").text = "N"
+
+        # 关联键
+        lookup = ET.SubElement(step, "lookup")
+        for key_field in key_fields:
+            key = ET.SubElement(lookup, "key")
+            ET.SubElement(key, "name").text = key_field
+            ET.SubElement(key, "field").text = key_field
+            ET.SubElement(key, "condition").text = "="
+
+        # 返回值字段
+        for vf in value_fields:
+            val = ET.SubElement(lookup, "value")
+            ET.SubElement(val, "name").text = vf.get("field", "")
+            ET.SubElement(val, "rename").text = vf.get("rename", vf.get("field", ""))
+            ET.SubElement(val, "default").text = vf.get("default_value", "")
+            ET.SubElement(val, "type").text = vf.get("value_type", "String")
 
         gui = ET.SubElement(step, "GUI")
         ET.SubElement(gui, "xloc").text = str(position.x)

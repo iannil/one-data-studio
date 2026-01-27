@@ -1,0 +1,330 @@
+# RBAC 策略配置
+# 基于角色的访问控制，实现最小权限原则
+
+---
+# 公共只读角色 (所有用户默认拥有)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: one-data:readonly
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+---
+# 开发者角色
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: one-data:developer
+rules:
+  # 完全访问应用命名空间
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+  # 只读基础设施命名空间
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list"]
+    resourceNames: []
+  - apiGroups: [""]
+    resources: ["pods/log", "pods/portforward"]
+    verbs: ["get", "create"]
+
+---
+# 运维人员角色
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: one-data:ops
+rules:
+  # 完全访问所有命名空间
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+  # 节点访问
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  # 持久卷访问
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  # 命名空间管理
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+
+---
+# 管理员角色
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: one-data:admin
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+
+---
+# Alldata API 服务账户
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alldata-api
+  namespace: one-data-alldata
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alldata-api
+subjects:
+  - kind: ServiceAccount
+    name: alldata-api
+    namespace: one-data-alldata
+
+---
+# Bisheng API 服务账户
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bisheng-api
+  namespace: one-data-bisheng
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bisheng-api
+  namespace: one-data-bisheng
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bisheng-api
+  namespace: one-data-bisheng
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bisheng-api
+subjects:
+  - kind: ServiceAccount
+    name: bisheng-api
+    namespace: one-data-bisheng
+
+---
+# Kettle ETL 服务账户
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kettle
+  namespace: one-data-alldata
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kettle
+  namespace: one-data-alldata
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kettle
+  namespace: one-data-alldata
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kettle
+subjects:
+  - kind: ServiceAccount
+    name: kettle
+    namespace: one-data-alldata
+
+---
+# 监控服务账户
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: one-data-system
+automountServiceAccountToken: false
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "services", "endpoints", "pods", "endpointslices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: one-data-system
+
+---
+# 用户角色绑定示例
+# 开发者用户绑定
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer-binding
+  namespace: one-data-alldata
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: one-data:developer
+subjects:
+  # - kind: User
+  #   name: developer@example.com
+  #   apiGroup: rbac.authorization.k8s.io
+  # - kind: Group
+  #   name: developers
+  #   apiGroup: rbac.authorization.k8s.io
+
+---
+# 运维用户绑定
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ops-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: one-data:ops
+subjects:
+  # - kind: User
+  #   name: ops@example.com
+  #   apiGroup: rbac.authorization.k8s.io
+
+---
+# Pod Security Policy
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: false
+
+---
+# 禁止默认 ServiceAccount 使用自动挂载的 token
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: one-data-alldata
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: one-data-bisheng
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: one-data-cube
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: one-data-infra
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: one-data-system
+automountServiceAccountToken: false

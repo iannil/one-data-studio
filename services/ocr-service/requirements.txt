@@ -36,6 +36,9 @@ openpyxl==3.1.2
 paddleocr==2.7.0.3
 paddlepaddle==2.6.0
 
+# NLP信息提取 (PaddleNLP UIE)
+paddlenlp>=2.6.0
+
 # Tesseract (备用)
 # pytesseract==0.3.10
 

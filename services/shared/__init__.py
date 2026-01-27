@@ -130,3 +130,22 @@ try:
     ]
 except ImportError:
     pass
+
+# Sprint 24: Prometheus 指标
+try:
+    from .prometheus_metrics import (
+        PrometheusMetrics,
+        get_metrics,
+        init_metrics,
+        track_operation,
+        track_ai_call,
+    )
+    __all__ += [
+        "PrometheusMetrics",
+        "get_metrics",
+        "init_metrics",
+        "track_operation",
+        "track_ai_call",
+    ]
+except ImportError:
+    pass

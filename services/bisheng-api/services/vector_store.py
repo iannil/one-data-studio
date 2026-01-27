@@ -6,12 +6,18 @@ Sprint 8: 性能优化
 - 分页支持
 - 搜索结果缓存
 - 索引参数优化
+
+Production: 高可用支持
+- 多主机故障转移
+- 连接池管理
+- 自动重连
 """
 
 import logging
 import os
 import json
 import hashlib
+import time
 from typing import List, Dict, Any, Optional, Tuple
 from functools import lru_cache
 from pymilvus import (
@@ -26,8 +32,24 @@ from pymilvus import (
 logger = logging.getLogger(__name__)
 
 # 配置
-MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
+# 支持多主机配置，逗号分隔: "host1:19530,host2:19530,host3:19530"
+MILVUS_HOSTS = os.getenv("MILVUS_HOSTS", os.getenv("MILVUS_HOST", "localhost"))
 MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
+
+# 解析主机列表
+def _parse_hosts(hosts_str: str, default_port: str) -> List[Tuple[str, str]]:
+    """解析主机列表字符串"""
+    result = []
+    for host in hosts_str.split(","):
+        host = host.strip()
+        if ":" in host:
+            h, p = host.split(":", 1)
+            result.append((h.strip(), p.strip()))
+        else:
+            result.append((host, default_port))
+    return result or [("localhost", default_port)]
+
+MILVUS_ENDPOINTS = _parse_hosts(MILVUS_HOSTS, MILVUS_PORT)
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))  # OpenAI ada-002 维度
 
 # Sprint 8: 索引参数优化
@@ -40,9 +62,22 @@ NPROBE = int(os.getenv("MILVUS_NPROBE", "16"))  # 搜索时探测的聚类中心
 SEARCH_CACHE_SIZE = int(os.getenv("VECTOR_SEARCH_CACHE_SIZE", "1000"))
 SEARCH_CACHE_TTL = int(os.getenv("VECTOR_SEARCH_CACHE_TTL", "60"))  # 秒
 
+# Production: 故障转移配置
+FAILOVER_ENABLED = os.getenv("MILVUS_FAILOVER_ENABLED", "true").lower() == "true"
+FAILOVER_TIMEOUT = int(os.getenv("MILVUS_FAILOVER_TIMEOUT", "5"))  # 秒
+HEALTH_CHECK_INTERVAL = int(os.getenv("MILVUS_HEALTH_CHECK_INTERVAL", "30"))  # 秒
+
 
 class VectorStore:
-    """Milvus 向量存储服务 - Sprint 8: 优化版本"""
+    """
+    Milvus 向量存储服务 - Production: 高可用版本
+
+    功能：
+    - 多主机故障转移
+    - 连接健康检查
+    - 自动重连
+    - 搜索结果缓存 (Sprint 8)
+    """
 
     _connected = False
     _search_cache: Dict[str, Tuple[Any, float]] = {}
@@ -50,27 +85,32 @@ class VectorStore:
     _max_retries = 3
     _retry_delay = 1.0  # 秒
 
+    # Production: 故障转移状态
+    _current_endpoint_index = 0
+    _endpoints = MILVUS_ENDPOINTS
+    _endpoint_health: Dict[str, float] = {}  # endpoint -> last healthy timestamp
+    _last_health_check = 0
+
     def __init__(self):
         """初始化向量存储"""
         if not self._connected:
             self._connect()
             VectorStore._connected = True
 
-    def _connect(self, retry_count: int = 0):
+    def _connect(self, retry_count: int = 0, failover_index: int = 0):
         """
-        连接到 Milvus 服务器
+        连接到 Milvus 服务器 - Production: 支持故障转移
 
         Args:
             retry_count: 当前重试次数
+            failover_index: 故障转移端点索引
 
         功能：
         - 建立 Milvus 连接
-        - 支持连接重试
-        - 连接池管理
+        - 支持多主机故障转移
+        - 连接重试
         - 健康检查
         """
-        import time
-
         try:
             # 检查是否已有活跃连接
             if self._check_connection():
@@ -83,33 +123,47 @@ class VectorStore:
             except Exception:
                 pass
 
+            # Production: 选择端点 (故障转移)
+            if FAILOVER_ENABLED and self._endpoints:
+                host, port = self._endpoints[failover_index % len(self._endpoints)]
+                VectorStore._current_endpoint_index = failover_index % len(self._endpoints)
+            else:
+                host, port = self._endpoints[0] if self._endpoints else ("localhost", "19530")
+
             # 建立新连接
-            logger.info(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
+            logger.info(f"Connecting to Milvus at {host}:{port} (endpoint {failover_index + 1}/{len(self._endpoints)})")
             connections.connect(
                 alias=self._connection_alias,
-                host=MILVUS_HOST,
-                port=MILVUS_PORT,
-                # 连接超时配置
-                timeout=30
+                host=host,
+                port=int(port),
+                timeout=FAILOVER_TIMEOUT
             )
 
             # 验证连接
             if self._check_connection():
-                logger.info(f"Successfully connected to Milvus at {MILVUS_HOST}:{MILVUS_PORT}")
+                logger.info(f"Successfully connected to Milvus at {host}:{port}")
                 VectorStore._connected = True
+                # 标记端点健康
+                self._endpoint_health[f"{host}:{port}"] = time.time()
             else:
                 raise ConnectionError("Connection verification failed")
 
         except Exception as e:
-            logger.error(f"Failed to connect to Milvus (attempt {retry_count + 1}/{self._max_retries}): {e}")
+            logger.error(f"Failed to connect to Milvus at endpoint {failover_index}: {e}")
 
-            if retry_count < self._max_retries - 1:
-                time.sleep(self._retry_delay * (retry_count + 1))  # 指数退避
-                self._connect(retry_count + 1)
+            # Production: 尝试故障转移到下一个端点
+            if FAILOVER_ENABLED and failover_index + 1 < len(self._endpoints):
+                logger.warning(f"Failing over to next endpoint ({failover_index + 2}/{len(self._endpoints)})")
+                time.sleep(self._retry_delay)
+                self._connect(0, failover_index + 1)
+            elif retry_count < self._max_retries - 1:
+                # 端点重试
+                time.sleep(self._retry_delay * (retry_count + 1))
+                self._connect(retry_count + 1, failover_index)
             else:
-                logger.error(f"Max retries ({self._max_retries}) exceeded. Milvus connection failed.")
+                logger.error(f"Max retries ({self._max_retries}) exceeded. All endpoints failed.")
                 VectorStore._connected = False
-                raise ConnectionError(f"Unable to connect to Milvus after {self._max_retries} attempts: {e}")
+                raise ConnectionError(f"Unable to connect to Milvus after trying {len(self._endpoints)} endpoints: {e}")
 
     def _check_connection(self) -> bool:
         """

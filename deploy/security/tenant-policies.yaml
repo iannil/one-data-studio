@@ -1,0 +1,318 @@
+# 多租户网络隔离策略
+# 实现 Kubernetes 级别的租户网络隔离
+
+---
+# 租户网络策略 - 限制跨租户访问
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-isolation-policy
+  namespace: one-data-alldata
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许同租户 Pod 间通信
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-alldata
+      podSelector:
+        matchLabels:
+          tenant_id: "default"  # 通过 Pod 标签识别租户
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许从 Ingress 控制器访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # 允许访问基础设施服务
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: one-data-infra
+    ports:
+    - protocol: TCP
+      port: 3306  # MySQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 9000  # MinIO
+    - protocol: TCP
+      port: 19530 # Milvus
+  # 允许 DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# 租户资源配额 - ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-default-quota
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "8Gi"
+    limits.cpu: "8"
+    limits.memory: "16Gi"
+    persistentvolumeclaims: "10"
+    services: "20"
+    services.loadbalancers: "1"
+    services.nodeports: "0"
+    count/endpoints: "20"
+    count/pods: "50"
+    count/secrets: "20"
+    count/configmaps: "20"
+  scopes:
+  - PriorityClass
+
+---
+# 租户 LimitRange
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-default-limits
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+spec:
+  limits:
+  - default:
+      cpu: "1000m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+  - max:
+      cpu: "2000m"
+      memory: "2Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container
+
+---
+# 租户 Pod 安全策略
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tenant-default-sa
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+automountServiceAccountToken: false
+
+---
+# 租户 RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-default-binding
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+subjects:
+- kind: ServiceAccount
+  name: tenant-default-sa
+  namespace: one-data-alldata
+roleRef:
+  kind: ClusterRole
+  name: one-data:developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# 租户 ConfigMap - 租户特定配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tenant-default-config
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+data:
+  # 租户配额配置
+  quotas.json: |
+    {
+      "max_workflows": 100,
+      "max_documents": 1000,
+      "max_conversations": 500,
+      "max_vector_storage_mb": 10240,
+      "max_api_calls_per_hour": 10000,
+      "max_agents": 50,
+      "max_datasets": 200,
+      "max_users": 100
+    }
+  # 租户功能开关
+  features.json: |
+    {
+      "enable_rag": true,
+      "enable_text2sql": true,
+      "enable_agent": true,
+      "enable_workflow": true,
+      "enable_etl": true,
+      "enable_advanced_analytics": false
+    }
+  # 租户 UI 配置
+  ui.json: |
+    {
+      "theme": "light",
+      "language": "zh-CN",
+      "default_page": "/workflows",
+      "show_tutorials": true
+    }
+
+---
+# 多租户存储类隔离
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: tenant-default-storage
+  labels:
+    tenant: default
+provisioner: rancher.io/local-path
+  volumeBindingMode: WaitForFirstConsumer
+  reclaimPolicy: Delete
+  allowVolumeExpansion: true
+  parameters:
+    pathPrefix: /opt/local-path-provisioner/tenant-default
+
+---
+# 租户 PVC 模板
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tenant-default-data
+  namespace: one-data-alldata
+  labels:
+    tenant: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: tenant-default-storage
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# 租户间网络隔离 (使用 NetworkPolicy + Pod 标签)
+# 通过在 Pod 上注入 tenant_id 标签实现
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-inter-tenant-traffic
+  namespace: one-data-alldata
+  annotations:
+    description: "拒绝不同租户 Pod 之间的直接通信"
+spec:
+  podSelector:
+    matchExpressions:
+    - key: tenant_id
+      operator: Exists
+  policyTypes:
+  - Ingress
+  ingress:
+  # 仅允许同租户流量
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: tenant_id
+          operator: In
+          values:  # 值将在运行时动态注入
+          - placeholder
+
+---
+# 租户监控指标采集规则
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tenant-monitoring-config
+  namespace: one-data-system
+data:
+  tenant-metrics.yml: |
+    # 租户级别指标采集
+    groups:
+      - name: tenant_quotas
+        interval: 30s
+        rules:
+          - record: tenant:resource_usage:ratio
+            expr: |
+              sum(container_memory_working_set_bytes{pod_label_tenant_id!=""}) by (pod_label_tenant_id)
+              /
+              sum(kube_pod_container_resource_limits{resource="memory", pod_label_tenant_id!=""}) by (pod_label_tenant_id)
+
+          - record: tenant:api_requests:rate5m
+            expr: |
+              sum(rate(http_requests_total{pod_label_tenant_id!=""}[5m])) by (pod_label_tenant_id, endpoint)
+
+          - record: tenant:api_errors:rate5m
+            expr: |
+              sum(rate(http_requests_total{status=~"5..", pod_label_tenant_id!=""}[5m])) by (pod_label_tenant_id)
+
+---
+# 租户审计日志配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tenant-audit-config
+  namespace: one-data-system
+data:
+  audit-policy.yaml: |
+    # 租户审计策略
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+      # 记录租户资源操作
+      - level: RequestResponse
+        verbs: ["create", "update", "delete"]
+        resources:
+        - group: ""
+          resources: ["pods", "services", "configmaps", "secrets"]
+        namespaces: ["one-data-alldata", "one-data-bisheng", "one-data-cube"]
+
+      # 记录租户间访问尝试
+      - level: Metadata
+        verbs: ["get", "list"]
+        resources:
+        - group: ""
+          resources: ["pods"]
+        namespaces: ["one-data-alldata", "one-data-bisheng", "one-data-cube"]
+
+---
+# 租户优先级类
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: tenant-default-high-priority
+  namespace: one-data-alldata
+value: 1000
+globalDefault: false
+description: "租户 default 的高优先级工作负载"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: tenant-default-low-priority
+  namespace: one-data-alldata
+value: 100
+globalDefault: false
+description: "租户 default 的低优先级工作负载（如批处理作业）"

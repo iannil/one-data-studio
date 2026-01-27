@@ -136,6 +136,8 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 | Redis | 7.0 | Caching & Session |
 | MinIO | Latest | S3-compatible Object Storage |
 | Milvus | 2.3 | Vector Database |
+| OpenMetadata | 1.3 | Metadata Governance Platform |
+| Elasticsearch | 8.10 | Search Engine (OpenMetadata) |
 
 ### Infrastructure
 
@@ -212,6 +214,7 @@ make forward
 | Cube API | <http://localhost:8002> | Model service API |
 | OpenAI Proxy | <http://localhost:8003> | OpenAI-compatible proxy |
 | Admin API | <http://localhost:8004> | Platform administration API |
+| OpenMetadata | <http://localhost:8585> | Metadata governance platform |
 | Keycloak | <http://localhost:8080> | Identity management |
 | MinIO Console | <http://localhost:9001> | Object storage console |
 | Prometheus | <http://localhost:9090> | Metrics dashboard |
@@ -375,7 +378,7 @@ limitations under the License.
 
 This project builds upon the shoulders of giants:
 
-- [Alldata](https://github.com/Computing-Data/Alldata) - Data governance platform
+- [OpenMetadata](https://open-metadata.org/) - Open source metadata platform (optional integration)
 - [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform
 - [Bisheng](https://github.com/dataelement/bisheng) - LLM application development platform
 

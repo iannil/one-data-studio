@@ -6337,3 +6337,1205 @@ export const completeScheduledTask = (
 ) => {
   return apiClient.post<SchedulerTask>(`/api/v1/scheduler/tasks/${taskId}/complete`, result);
 };
+
+// ============= 资产价值评估类型 =============
+
+export type AssetValueLevel = 'S' | 'A' | 'B' | 'C';
+
+export interface AssetValueScoreBreakdown {
+  usage_score: number;
+  business_score: number;
+  quality_score: number;
+  governance_score: number;
+  overall_score: number;
+  value_level: AssetValueLevel;
+  details: {
+    usage?: {
+      daily_query_count: number;
+      active_users: number;
+      dependent_count: number;
+      reuse_rate: number;
+    };
+    business?: {
+      is_core_indicator: boolean;
+      sla_level: string | null;
+      business_domain: string | null;
+      has_owner: boolean;
+    };
+    quality?: {
+      completeness: number;
+      accuracy: number;
+      consistency: number;
+      timeliness: number;
+      has_quality_reports: boolean;
+    };
+    governance?: {
+      has_owner: boolean;
+      has_description: boolean;
+      has_lineage: boolean;
+      has_quality_rules: boolean;
+      security_level: string | null;
+    };
+    weights?: Record<string, number>;
+  };
+}
+
+export interface AssetValueMetrics {
+  metrics_id: string;
+  asset_id: string;
+  asset_type: string;
+  usage_metrics: {
+    usage_frequency_score: number;
+    daily_query_count: number;
+    weekly_active_users: number;
+    monthly_access_count: number;
+    reuse_rate: number;
+    dependent_asset_count: number;
+    referencing_job_count: number;
+    referencing_report_count: number;
+  };
+  business_metrics: {
+    business_importance_score: number;
+    business_domain: string | null;
+    is_core_indicator: boolean;
+    business_owner: string | null;
+    sla_level: string | null;
+  };
+  quality_metrics: {
+    quality_score: number;
+    completeness_score: number;
+    accuracy_score: number;
+    consistency_score: number;
+    timeliness_score: number;
+  };
+  governance_metrics: {
+    governance_score: number;
+    has_owner: boolean;
+    has_description: boolean;
+    has_lineage: boolean;
+    has_quality_rules: boolean;
+    security_level: string | null;
+  };
+  overall_value_score: number;
+  asset_value_level: AssetValueLevel;
+  weight_config: Record<string, number> | null;
+  calculation_details: Record<string, unknown> | null;
+  calculated_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface AssetValueRanking {
+  rank: number;
+  asset_id: string;
+  asset_name: string;
+  asset_type: string;
+  overall_score: number;
+  value_level: AssetValueLevel;
+  usage_score: number;
+  business_score: number;
+  quality_score: number;
+  governance_score: number;
+  calculated_at: string | null;
+}
+
+export interface AssetValueDistribution {
+  counts: Record<AssetValueLevel, number>;
+  percentages: Record<AssetValueLevel, number>;
+  total: number;
+}
+
+export interface AssetValueReport {
+  distribution: AssetValueDistribution;
+  statistics: {
+    average_score: number;
+    min_score: number;
+    max_score: number;
+    total_assets: number;
+  };
+  dimension_averages: {
+    usage: number;
+    business: number;
+    quality: number;
+    governance: number;
+  };
+  top_assets: AssetValueRanking[];
+}
+
+export interface AssetValueHistory {
+  history_id: string;
+  asset_id: string;
+  overall_value_score: number;
+  asset_value_level: AssetValueLevel;
+  usage_frequency_score: number;
+  business_importance_score: number;
+  quality_score: number;
+  governance_score: number;
+  evaluated_at: string;
+}
+
+export interface AssetValueAnalysis {
+  asset_id: string;
+  asset_name: string | null;
+  asset_type: string | null;
+  current_metrics: AssetValueMetrics;
+  trend: {
+    direction: 'up' | 'down' | 'stable';
+    history: AssetValueHistory[];
+  };
+  recommendations: string[];
+}
+
+// ============= 资产价值评估 API =============
+
+/**
+ * 评估单个资产价值
+ */
+export const evaluateAssetValue = (
+  assetId: string,
+  params?: {
+    business_config?: {
+      domain_weights?: Record<string, number>;
+    };
+    weights?: {
+      usage?: number;
+      business?: number;
+      quality?: number;
+      governance?: number;
+    };
+  }
+) => {
+  return apiClient.post<{
+    asset_id: string;
+    score_breakdown: AssetValueScoreBreakdown;
+    recommendations: string[];
+  }>(`/api/v1/assets/value/evaluate/${assetId}`, params || {});
+};
+
+/**
+ * 批量评估资产价值
+ */
+export const batchEvaluateAssetValues = (params: {
+  asset_ids: string[];
+  business_config?: {
+    domain_weights?: Record<string, number>;
+  };
+}) => {
+  return apiClient.post<{
+    total: number;
+    success_count: number;
+    results: Array<{
+      asset_id: string;
+      status: 'success' | 'failed';
+      score_breakdown?: AssetValueScoreBreakdown;
+      error?: string;
+    }>;
+  }>('/api/v1/assets/value/batch-evaluate', params);
+};
+
+/**
+ * 获取资产价值排名
+ */
+export const getAssetValueRanking = (params?: {
+  limit?: number;
+  offset?: number;
+  asset_type?: string;
+  value_level?: AssetValueLevel;
+}) => {
+  return apiClient.get<{
+    ranking: AssetValueRanking[];
+    total: number;
+    filters: {
+      asset_type: string | null;
+      value_level: AssetValueLevel | null;
+    };
+    pagination: {
+      limit: number;
+      offset: number;
+    };
+  }>('/api/v1/assets/ranking', { params });
+};
+
+/**
+ * 获取资产价值详细分析
+ */
+export const getAssetValueAnalysis = (assetId: string, params?: { trend_days?: number }) => {
+  return apiClient.get<AssetValueAnalysis>(`/api/v1/assets/${assetId}/value-analysis`, { params });
+};
+
+/**
+ * 获取资产价值分布报告
+ */
+export const getAssetValueReport = () => {
+  return apiClient.get<AssetValueReport>('/api/v1/assets/value-report');
+};
+
+/**
+ * 记录资产使用
+ */
+export const recordAssetUsage = (
+  assetId: string,
+  params: {
+    usage_type?: 'query' | 'download' | 'api_call' | 'reference';
+    source_type?: 'dashboard' | 'report' | 'etl_job' | 'api' | 'adhoc';
+    source_id?: string;
+    source_name?: string;
+  }
+) => {
+  return apiClient.post<{
+    recorded: boolean;
+    asset_id: string;
+    usage_type: string;
+  }>(`/api/v1/assets/${assetId}/usage`, params);
+};
+
+/**
+ * 更新资产业务配置
+ */
+export const updateAssetBusinessConfig = (
+  assetId: string,
+  config: {
+    is_core_indicator?: boolean;
+    sla_level?: 'gold' | 'silver' | 'bronze';
+    business_domain?: string;
+    business_owner?: string;
+  }
+) => {
+  return apiClient.put<{
+    asset_id: string;
+    updated_config: {
+      is_core_indicator: boolean;
+      sla_level: string | null;
+      business_domain: string | null;
+      business_owner: string | null;
+    };
+  }>(`/api/v1/assets/${assetId}/business-config`, config);
+};
+
+// ============= 敏感数据自动扫描 API =============
+
+export interface AutoScanProgress {
+  task_id: string;
+  status: string;
+  mode: string;
+  total_databases: number;
+  scanned_databases: number;
+  total_tables: number;
+  scanned_tables: number;
+  total_columns: number;
+  scanned_columns: number;
+  sensitive_found: number;
+  progress_percent: number;
+  started_at: string | null;
+  completed_at: string | null;
+  errors: string[];
+}
+
+export interface AutoScanSummary {
+  total_databases_scanned: number;
+  total_tables_scanned: number;
+  total_columns_scanned: number;
+  sensitive_columns_found: number;
+  by_level: Record<string, number>;
+  by_type: Record<string, number>;
+  masking_rules_generated: number;
+  metadata_updated: number;
+}
+
+export interface QuickCheckResult {
+  column_name: string;
+  is_sensitive: boolean;
+  sensitivity_type: string | null;
+  sensitivity_level: string | null;
+  confidence: number;
+  matched_pattern: string | null;
+}
+
+/**
+ * 启动敏感数据自动扫描
+ */
+export const startSensitivityAutoScan = (params: {
+  name?: string;
+  mode?: 'incremental' | 'full';
+  databases?: string[];
+  exclude_databases?: string[];
+  exclude_table_patterns?: string[];
+  sample_size?: number;
+  confidence_threshold?: number;
+  auto_update_metadata?: boolean;
+  auto_generate_masking_rules?: boolean;
+}) => {
+  return apiClient.post<AutoScanProgress>('/api/v1/sensitivity/auto-scan/start', params);
+};
+
+/**
+ * 获取自动扫描进度
+ */
+export const getSensitivityAutoScanProgress = () => {
+  return apiClient.get<AutoScanProgress>('/api/v1/sensitivity/auto-scan/progress');
+};
+
+/**
+ * 取消自动扫描
+ */
+export const cancelSensitivityAutoScan = () => {
+  return apiClient.post<{ cancelled: boolean }>('/api/v1/sensitivity/auto-scan/cancel', {});
+};
+
+/**
+ * 获取自动扫描结果摘要
+ */
+export const getSensitivityAutoScanSummary = () => {
+  return apiClient.get<AutoScanSummary>('/api/v1/sensitivity/auto-scan/summary');
+};
+
+/**
+ * 快速敏感性检查（单列）
+ */
+export const quickSensitivityCheck = (params: {
+  column_name: string;
+  sample_values?: string[];
+  column_type?: string;
+}) => {
+  return apiClient.post<QuickCheckResult>('/api/v1/sensitivity/auto-scan/quick-check', params);
+};
+
+// ============= Kettle 编排 API =============
+
+export type KettlePipelineType = 'full_etl' | 'extract' | 'transform' | 'load';
+
+export interface OrchestrationResult {
+  request_id: string;
+  status: string;
+  pipeline_type: KettlePipelineType;
+  name: string;
+  source_info: {
+    database: string;
+    table: string;
+    type: string;
+  };
+  target_info: {
+    database: string;
+    table: string;
+  };
+  ai_rules_applied: number;
+  masking_rules_applied: number;
+  kettle_xml_path: string | null;
+  execution_result: Record<string, unknown> | null;
+  created_at: string;
+  completed_at: string | null;
+  error: string | null;
+}
+
+export interface OrchestrationListItem {
+  request_id: string;
+  name: string;
+  pipeline_type: KettlePipelineType;
+  status: string;
+  source_table: string;
+  target_table: string;
+  created_at: string;
+}
+
+/**
+ * 自动编排 Kettle 转换（元数据分析 → AI规则推荐 → 生成Kettle）
+ */
+export const orchestrateKettle = (params: {
+  name?: string;
+  pipeline_type?: KettlePipelineType;
+  source_database: string;
+  source_table: string;
+  source_type?: string;
+  target_database: string;
+  target_table: string;
+  enable_ai_cleaning?: boolean;
+  enable_ai_masking?: boolean;
+  enable_ai_imputation?: boolean;
+  column_filter?: string[];
+  auto_execute?: boolean;
+  dry_run?: boolean;
+}) => {
+  return apiClient.post<OrchestrationResult>('/api/v1/kettle/orchestrate', params);
+};
+
+/**
+ * 获取编排任务状态
+ */
+export const getOrchestrationStatus = (requestId: string) => {
+  return apiClient.get<OrchestrationResult>(`/api/v1/kettle/orchestrate/${requestId}`);
+};
+
+/**
+ * 获取编排任务列表
+ */
+export const listOrchestrations = (params?: { limit?: number }) => {
+  return apiClient.get<{ tasks: OrchestrationListItem[] }>('/api/v1/kettle/orchestrate/list', { params });
+};
+
+/**
+ * 获取生成的 Kettle 转换 XML
+ */
+export const getOrchestrationXML = (requestId: string) => {
+  return apiClient.get<{ xml: string }>(`/api/v1/kettle/orchestrate/${requestId}/xml`);
+};
+
+// ============= 资产自动编目 API =============
+
+export interface AutoCatalogResult {
+  success: boolean;
+  asset_id: string | null;
+  asset_name: string | null;
+  category: string | null;
+  message: string;
+  details: Record<string, unknown>;
+}
+
+export interface BatchCatalogResult {
+  success: boolean;
+  total_discovered: number;
+  total_registered: number;
+  skipped: number;
+  errors: number;
+  details: Array<{
+    table_name: string;
+    status: string;
+    asset_id?: string;
+    error?: string;
+  }>;
+}
+
+export interface CatalogHistoryItem {
+  asset_id: string;
+  asset_name: string;
+  source_table: string;
+  target_table: string;
+  category: string;
+  created_at: string;
+  created_by: string;
+}
+
+/**
+ * ETL完成后自动注册目标表为数据资产
+ */
+export const autoCatalogFromETL = (params: {
+  source_database: string;
+  source_table: string;
+  target_database: string;
+  target_table: string;
+  etl_task_id?: string;
+  created_by?: string;
+}) => {
+  return apiClient.post<AutoCatalogResult>('/api/v1/assets/auto-catalog', params);
+};
+
+/**
+ * 批量从元数据注册资产（全量同步）
+ */
+export const batchAutoCatalog = (params?: {
+  database_name?: string;
+  created_by?: string;
+}) => {
+  return apiClient.post<BatchCatalogResult>('/api/v1/assets/auto-catalog/batch', params || {});
+};
+
+/**
+ * 获取自动编目历史
+ */
+export const getAutoCatalogHistory = (params?: { limit?: number }) => {
+  return apiClient.get<{ history: CatalogHistoryItem[] }>('/api/v1/assets/auto-catalog/history', { params });
+};
+
+// ============= 元数据自动扫描 API =============
+
+export interface MetadataAutoScanResult {
+  success: boolean;
+  database: string;
+  tables_found: number;
+  columns_found: number;
+  tables_synced: number;
+  ai_annotations: number;
+  details: Array<{
+    table_name: string;
+    columns: number;
+    synced: boolean;
+    annotated: boolean;
+  }>;
+}
+
+export interface DataProfileResult {
+  database: string;
+  table: string;
+  row_count: number;
+  columns: Array<{
+    name: string;
+    type: string;
+    null_count: number;
+    null_rate: number;
+    distinct_count: number;
+    min_value: string | null;
+    max_value: string | null;
+    avg_length: number | null;
+    sample_values: string[];
+  }>;
+}
+
+export interface MetadataScanHistoryItem {
+  scan_id: string;
+  database: string;
+  tables_found: number;
+  columns_found: number;
+  ai_annotations: number;
+  scanned_at: string;
+  scanned_by: string;
+}
+
+/**
+ * 自动扫描数据库结构并同步到元数据
+ */
+export const autoScanMetadata = (params: {
+  connection_info: {
+    type: string;
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  };
+  database_name: string;
+  exclude_tables?: string[];
+  ai_annotate?: boolean;
+}) => {
+  return apiClient.post<MetadataAutoScanResult>('/api/v1/metadata/auto-scan', params);
+};
+
+/**
+ * 扫描并生成数据画像（列级统计）
+ */
+export const autoScanDataProfile = (params: {
+  connection_info: {
+    type: string;
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  };
+  database_name: string;
+  table_name: string;
+  sample_size?: number;
+}) => {
+  return apiClient.post<DataProfileResult>('/api/v1/metadata/auto-scan/profile', params);
+};
+
+/**
+ * 获取元数据扫描历史
+ */
+export const getMetadataScanHistory = (params?: { limit?: number }) => {
+  return apiClient.get<{ history: MetadataScanHistoryItem[] }>('/api/v1/metadata/auto-scan/history', { params });
+};
+
+// ============= 统一认证 (OAuth2 / API Key) API =============
+
+export interface OAuth2Client {
+  client_id: string;
+  client_name: string;
+  client_secret?: string;
+  grant_types: string[];
+  redirect_uris: string[];
+  scopes: string[];
+  status: 'active' | 'suspended' | 'revoked';
+  created_at: string;
+  created_by: string;
+}
+
+export interface OAuth2Token {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope?: string;
+}
+
+export interface AuthAPIKey {
+  key_id: string;
+  name: string;
+  key_prefix: string;
+  key_secret?: string;
+  scopes: string[];
+  allowed_ips: string[];
+  rate_limit: number;
+  status: string;
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+}
+
+export interface AuthAuditLog {
+  log_id: string;
+  user_id: string;
+  event_type: string;
+  event_status: string;
+  ip_address: string;
+  user_agent: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AuthStatistics {
+  total_logins: number;
+  successful_logins: number;
+  failed_logins: number;
+  active_sessions: number;
+  api_key_usage: number;
+  oauth2_token_issued: number;
+  by_event_type: Record<string, number>;
+}
+
+export interface ActiveSession {
+  session_id: string;
+  user_id: string;
+  login_time: string;
+  last_active: string;
+  ip_address: string;
+  user_agent: string;
+}
+
+/**
+ * 注册 OAuth2 客户端
+ */
+export const registerOAuth2Client = (params: {
+  client_name: string;
+  grant_types: string[];
+  redirect_uris?: string[];
+  scopes?: string[];
+}) => {
+  return apiClient.post<OAuth2Client>('/api/v1/auth/oauth2/clients', params);
+};
+
+/**
+ * 获取 OAuth2 客户端列表
+ */
+export const listOAuth2Clients = (params?: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+}) => {
+  return apiClient.get<{ clients: OAuth2Client[]; total: number }>('/api/v1/auth/oauth2/clients', { params });
+};
+
+/**
+ * 更新 OAuth2 客户端状态
+ */
+export const updateOAuth2ClientStatus = (clientId: string, status: 'active' | 'suspended' | 'revoked') => {
+  return apiClient.put<{ client_id: string; status: string }>(`/api/v1/auth/oauth2/clients/${clientId}/status`, { status });
+};
+
+/**
+ * OAuth2 Token 端点
+ */
+export const requestOAuth2Token = (params: {
+  grant_type: string;
+  client_id: string;
+  client_secret: string;
+  scope?: string;
+  code?: string;
+  redirect_uri?: string;
+}) => {
+  return apiClient.post<OAuth2Token>('/api/v1/auth/oauth2/token', params);
+};
+
+/**
+ * 撤销 Token
+ */
+export const revokeOAuth2Token = (params: {
+  token_jti: string;
+  token_type?: 'access' | 'refresh';
+}) => {
+  return apiClient.post<{ revoked: boolean }>('/api/v1/auth/oauth2/revoke', params);
+};
+
+/**
+ * 创建 API Key
+ */
+export const createAuthAPIKey = (params: {
+  name: string;
+  scopes?: string[];
+  allowed_ips?: string[];
+  expires_days?: number;
+  rate_limit?: number;
+}) => {
+  return apiClient.post<AuthAPIKey>('/api/v1/auth/api-keys', params);
+};
+
+/**
+ * 获取当前用户 API Key 列表
+ */
+export const listAuthAPIKeys = (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  return apiClient.get<{ keys: AuthAPIKey[]; total: number }>('/api/v1/auth/api-keys', { params });
+};
+
+/**
+ * 撤销 API Key
+ */
+export const revokeAuthAPIKey = (keyId: string) => {
+  return apiClient.post<{ revoked: boolean }>(`/api/v1/auth/api-keys/${keyId}/revoke`, {});
+};
+
+/**
+ * 查询认证审计日志
+ */
+export const getAuthAuditLogs = (params?: {
+  page?: number;
+  page_size?: number;
+  user_id?: string;
+  event_type?: string;
+  event_status?: string;
+}) => {
+  return apiClient.get<{ logs: AuthAuditLog[]; total: number }>('/api/v1/auth/audit-logs', { params });
+};
+
+/**
+ * 获取认证统计
+ */
+export const getAuthStatistics = (params?: { days?: number }) => {
+  return apiClient.get<AuthStatistics>('/api/v1/auth/statistics', { params });
+};
+
+/**
+ * 查询活跃会话
+ */
+export const getActiveSessions = (params?: { user_id?: string }) => {
+  return apiClient.get<{ sessions: ActiveSession[] }>('/api/v1/auth/sessions', { params });
+};
+
+/**
+ * 强制用户登出
+ */
+export const forceLogout = (params: {
+  user_id: string;
+  reason?: string;
+}) => {
+  return apiClient.post<{ logged_out: boolean }>('/api/v1/auth/sessions/force-logout', params);
+};
+
+// ============= 审批工作流 API =============
+
+export type ApprovalStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
+export type ApprovalPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type ApprovalAction = 'approve' | 'reject' | 'delegate';
+
+export interface ApprovalNode {
+  node_id: string;
+  name: string;
+  type: string;
+  approver_type: string;
+  approver_value: string;
+  order: number;
+}
+
+export interface ApprovalTemplate {
+  template_id: string;
+  name: string;
+  description: string;
+  business_type: string;
+  category: string;
+  nodes: ApprovalNode[];
+  auto_approve_timeout_hours: number;
+  allow_withdraw: boolean;
+  status: string;
+  created_at: string | null;
+  created_by: string;
+}
+
+export interface ApprovalRequest {
+  request_id: string;
+  template_id: string;
+  title: string;
+  description: string;
+  business_type: string;
+  business_data: Record<string, unknown>;
+  applicant_id: string;
+  applicant_name: string;
+  status: ApprovalStatus;
+  current_node_id: string;
+  current_node_order: number;
+  total_nodes: number;
+  priority: ApprovalPriority;
+  submitted_at: string | null;
+  completed_at: string | null;
+  final_comment: string | null;
+}
+
+export interface ApprovalRecord {
+  record_id: string;
+  request_id: string;
+  node_id: string;
+  node_order: number;
+  approver_id: string;
+  approver_name: string;
+  action: string;
+  comment: string;
+  delegate_to: string | null;
+  created_at: string | null;
+}
+
+export interface ApprovalRequestDetail extends ApprovalRequest {
+  records: ApprovalRecord[];
+}
+
+export interface ApprovalStatistics {
+  total_requests: number;
+  pending_count: number;
+  approved_count: number;
+  rejected_count: number;
+  withdrawn_count: number;
+  by_business_type: Record<string, number>;
+}
+
+/**
+ * 获取审批模板列表
+ */
+export const listApprovalTemplates = (params?: {
+  business_type?: string;
+  category?: string;
+}) => {
+  return apiClient.get<{ templates: ApprovalTemplate[] }>('/api/v1/approval/templates', { params });
+};
+
+/**
+ * 创建审批模板
+ */
+export const createApprovalTemplate = (params: {
+  name: string;
+  business_type: string;
+  category?: string;
+  nodes: Array<{
+    name: string;
+    type?: string;
+    approver_type: string;
+    approver_value: string;
+  }>;
+  description?: string;
+}) => {
+  return apiClient.post<{ template_id: string; message: string }>('/api/v1/approval/templates', params);
+};
+
+/**
+ * 提交审批工单
+ */
+export const submitApprovalRequest = (params: {
+  template_id: string;
+  title: string;
+  description?: string;
+  business_data?: Record<string, unknown>;
+  priority?: ApprovalPriority;
+}) => {
+  return apiClient.post<{
+    request_id: string;
+    message: string;
+    current_node: string;
+    total_nodes: number;
+  }>('/api/v1/approval/requests', params);
+};
+
+/**
+ * 获取审批工单详情
+ */
+export const getApprovalRequestDetail = (requestId: string) => {
+  return apiClient.get<ApprovalRequestDetail>(`/api/v1/approval/requests/${requestId}`);
+};
+
+/**
+ * 处理审批（审批/驳回/委派）
+ */
+export const processApproval = (
+  requestId: string,
+  params: {
+    action: ApprovalAction;
+    comment?: string;
+    delegate_to?: string;
+  }
+) => {
+  return apiClient.post<{
+    success: boolean;
+    message: string;
+    new_status: string;
+  }>(`/api/v1/approval/requests/${requestId}/process`, params);
+};
+
+/**
+ * 撤回审批工单
+ */
+export const withdrawApprovalRequest = (requestId: string) => {
+  return apiClient.post<{ success: boolean; message: string }>(`/api/v1/approval/requests/${requestId}/withdraw`, {});
+};
+
+/**
+ * 获取待审批列表
+ */
+export const getPendingApprovals = (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  return apiClient.get<{ total: number; items: ApprovalRequest[] }>('/api/v1/approval/pending', { params });
+};
+
+/**
+ * 获取我的申请列表
+ */
+export const getMyApprovalRequests = (params?: {
+  page?: number;
+  page_size?: number;
+  status?: ApprovalStatus;
+}) => {
+  return apiClient.get<{ total: number; items: ApprovalRequest[] }>('/api/v1/approval/my-requests', { params });
+};
+
+/**
+ * 获取审批统计
+ */
+export const getApprovalStatistics = () => {
+  return apiClient.get<ApprovalStatistics>('/api/v1/approval/statistics');
+};
+
+// ============= 表融合 API =============
+
+export type JoinType = 'inner' | 'left' | 'right' | 'full' | 'cross';
+
+export interface JoinKeyPair {
+  source_column: string;
+  target_column: string;
+  confidence: number;
+  match_type: string;
+}
+
+export interface JoinQualityScore {
+  overall_score: number;
+  match_rate: number;
+  null_rate: number;
+  duplicate_rate: number;
+  type_compatibility: boolean;
+  sample_size: number;
+}
+
+export interface JoinStrategyRecommendation {
+  recommended_join_type: JoinType;
+  join_keys: JoinKeyPair[];
+  quality_score: JoinQualityScore;
+  warnings: string[];
+  alternatives: Array<{
+    join_type: JoinType;
+    reason: string;
+  }>;
+}
+
+export interface JoinPathResult {
+  tables: string[];
+  paths: Array<{
+    from_table: string;
+    to_table: string;
+    join_keys: JoinKeyPair[];
+    confidence: number;
+  }>;
+}
+
+export interface TableFusionAnalysis {
+  tables: string[];
+  join_keys: Record<string, JoinKeyPair[]>;
+  quality_scores: Record<string, JoinQualityScore>;
+  recommended_order: string[];
+  recommended_strategy: string;
+  warnings: string[];
+}
+
+/**
+ * 检测潜在 JOIN 关联键
+ */
+export const detectJoinKeys = (params: {
+  source_table: string;
+  target_tables: string[];
+  source_database?: string;
+  target_database?: string;
+  sample_size?: number;
+}) => {
+  return apiClient.post<Record<string, JoinKeyPair[]>>('/api/v1/fusion/detect-join-keys', params);
+};
+
+/**
+ * 校验 JOIN 数据一致性
+ */
+export const validateJoin = (params: {
+  source_table: string;
+  source_key: string;
+  target_table: string;
+  target_key: string;
+  source_database?: string;
+  target_database?: string;
+  sample_size?: number;
+}) => {
+  return apiClient.post<JoinQualityScore>('/api/v1/fusion/validate-join', params);
+};
+
+/**
+ * 推荐最优 JOIN 策略
+ */
+export const recommendJoinStrategy = (params: {
+  source_table: string;
+  target_table: string;
+  join_keys?: JoinKeyPair[];
+  auto_detect?: boolean;
+  source_database?: string;
+  target_database?: string;
+}) => {
+  return apiClient.post<JoinStrategyRecommendation>('/api/v1/fusion/recommend-strategy', params);
+};
+
+/**
+ * 生成 Kettle JOIN 步骤配置
+ */
+export const generateKettleJoinConfig = (params: {
+  source_table: string;
+  target_table: string;
+  source_step_name?: string;
+  target_step_name?: string;
+  join_keys?: JoinKeyPair[];
+  source_database?: string;
+  target_database?: string;
+}) => {
+  return apiClient.post<{ kettle_config: string }>('/api/v1/fusion/generate-kettle-config', params);
+};
+
+/**
+ * 检测多表 JOIN 路径
+ */
+export const detectJoinPath = (params: {
+  tables: string[];
+  database?: string;
+  max_depth?: number;
+}) => {
+  return apiClient.post<JoinPathResult>('/api/v1/fusion/detect-join-path', params);
+};
+
+/**
+ * 综合分析多表融合方案
+ */
+export const analyzeTableFusion = (params: {
+  tables: string[];
+  database?: string;
+  primary_table?: string;
+}) => {
+  return apiClient.post<TableFusionAnalysis>('/api/v1/fusion/analyze-tables', params);
+};
+
+// ============= OpenMetadata 集成 API =============
+
+export interface OpenMetadataStatus {
+  available: boolean;
+  enabled: boolean;
+  host: string;
+  port: number;
+  api_version: string;
+  health: boolean;
+}
+
+export interface OpenMetadataSyncResult {
+  synced: number;
+  failed: number;
+  skipped: number;
+  duration_ms: number;
+}
+
+export interface OpenMetadataLineage {
+  entity: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  upstreamEdges: Array<{
+    fromEntity: {
+      type: string;
+      fqn: string;
+      name: string;
+      description?: string;
+    };
+  }>;
+  downstreamEdges: Array<{
+    toEntity: {
+      type: string;
+      fqn: string;
+      name: string;
+      description?: string;
+    };
+  }>;
+}
+
+export interface OpenMetadataSearchResult {
+  hits: {
+    total: number;
+    hits: Array<{
+      _source: {
+        id: string;
+        name: string;
+        description?: string;
+        fullyQualifiedName: string;
+        tableType?: string;
+        database?: { name: string };
+      };
+    }>;
+  };
+}
+
+/**
+ * 获取 OpenMetadata 集成状态
+ */
+export const getOpenMetadataStatus = () => {
+  return apiClient.get<OpenMetadataStatus>('/api/v1/openmetadata/status');
+};
+
+/**
+ * 触发元数据同步到 OpenMetadata
+ */
+export const syncToOpenMetadata = (params?: {
+  database_name?: string;
+  table_names?: string[];
+}) => {
+  return apiClient.post<OpenMetadataSyncResult>('/api/v1/openmetadata/sync', params || {});
+};
+
+/**
+ * 从 OpenMetadata 获取血缘关系
+ */
+export const getOpenMetadataLineage = (params: {
+  database: string;
+  table: string;
+  upstream_depth?: number;
+  downstream_depth?: number;
+}) => {
+  return apiClient.get<OpenMetadataLineage>('/api/v1/openmetadata/lineage', { params });
+};
+
+/**
+ * 推送血缘关系到 OpenMetadata
+ */
+export const pushOpenMetadataLineage = (params: {
+  source_db: string;
+  source_table: string;
+  target_db: string;
+  target_table: string;
+  description?: string;
+  transformation?: string;
+}) => {
+  return apiClient.post('/api/v1/openmetadata/lineage', params);
+};
+
+/**
+ * 通过 OpenMetadata 搜索
+ */
+export const searchOpenMetadata = (params: {
+  q: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  return apiClient.get<OpenMetadataSearchResult>('/api/v1/openmetadata/search', { params });
+};

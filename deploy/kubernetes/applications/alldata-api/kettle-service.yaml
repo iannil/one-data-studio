@@ -1,0 +1,101 @@
+# Kettle ETL Service
+# 用于暴露 Carte 服务器和内部通信
+
+---
+# Kettle Carte Service
+# 用于内部 API 调用和 ETL 任务提交
+apiVersion: v1
+kind: Service
+metadata:
+  name: kettle-carte
+  namespace: one-data-alldata
+  labels:
+    app: kettle-carte
+    component: etl
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: "/status"
+spec:
+  selector:
+    app: kettle-carte
+  ports:
+  - name: carte
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+
+---
+# Kettle Headless Service
+# 用于 StatefulSet 和直接 Pod 访问
+apiVersion: v1
+kind: Service
+metadata:
+  name: kettle-carte-headless
+  namespace: one-data-alldata
+  labels:
+    app: kettle-carte
+    component: etl
+spec:
+  selector:
+    app: kettle-carte
+  ports:
+  - name: carte
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  clusterIP: None  # Headless service
+  publishNotReadyAddresses: true
+
+---
+# Kettle Worker Service
+# 用于 Worker Pod 间通信
+apiVersion: v1
+kind: Service
+metadata:
+  name: kettle-worker
+  namespace: one-data-alldata
+  labels:
+    app: kettle-worker
+    component: etl
+spec:
+  selector:
+    app: kettle-worker
+  ports:
+  - name: worker
+    port: 8082
+    targetPort: 8082
+    protocol: TCP
+  type: ClusterIP
+
+---
+# Kettle Metrics Service
+# 用于 Prometheus 监控指标采集
+apiVersion: v1
+kind: Service
+metadata:
+  name: kettle-metrics
+  namespace: one-data-alldata
+  labels:
+    app: kettle-carte
+    component: etl
+    monitor: "true"
+spec:
+  selector:
+    app: kettle-carte
+  ports:
+  - name: metrics
+    port: 9091
+    targetPort: 9091
+    protocol: TCP
+  type: ClusterIP

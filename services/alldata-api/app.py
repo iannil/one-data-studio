@@ -125,10 +125,14 @@ except ImportError:
 
 # 尝试导入 Prometheus 指标
 try:
-    from prometheus_flask_exporter import PrometheusMetrics
+    from prometheus_metrics import PrometheusMetrics, init_metrics
     PROMETHEUS_ENABLED = True
 except ImportError:
-    PROMETHEUS_ENABLED = False
+    try:
+        from prometheus_flask_exporter import PrometheusMetrics
+        PROMETHEUS_ENABLED = True
+    except ImportError:
+        PROMETHEUS_ENABLED = False
 
 # 尝试导入 MinIO 存储
 try:
@@ -156,14 +160,29 @@ app.config['JSON_AS_ASCII'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 # 配置 Prometheus 指标
+metrics = None
 if PROMETHEUS_ENABLED:
-    metrics = PrometheusMetrics(
-        app,
-        defaults_prefix='alldata_api',
-        default_label_as_endpoint=True,
-    )
-    # 自定义指标
-    metrics.info('alldata_api_info', 'Alldata API 信息', version='2.0.0')
+    try:
+        # 使用新的共享 PrometheusMetrics 模块
+        sys.path.insert(0, '/app/shared')
+        from prometheus_metrics import PrometheusMetrics, init_metrics
+        metrics = init_metrics(app, service_name="alldata-api")
+        logger = logging.getLogger(__name__)
+        logger.info("Prometheus metrics initialized with shared module")
+    except Exception as e:
+        # 降级到旧的 prometheus_flask_exporter
+        try:
+            metrics = PrometheusMetrics(
+                app,
+                defaults_prefix='alldata_api',
+                default_label_as_endpoint=True,
+            )
+            # 自定义指标
+            metrics.info('alldata_api_info', 'Alldata API 信息', version='2.0.0')
+            logging.getLogger(__name__).warning(f"Using legacy PrometheusMetrics: {e}")
+        except Exception as e2:
+            logging.getLogger(__name__).error(f"Failed to initialize Prometheus metrics: {e2}")
+            metrics = None
 
 # 配置
 ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
