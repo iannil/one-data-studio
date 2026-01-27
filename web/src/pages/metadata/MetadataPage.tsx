@@ -30,6 +30,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DataNode } from 'antd/es/tree';
 import alldata from '@/services/alldata';
 import type { AIAnnotation, SensitivityReport } from '@/services/alldata';
+import AISensitivityScanPanel from '@/pages/alldata/metadata/AISensitivityScanPanel';
 
 const { Search } = Input;
 const { TextArea } = Input;
@@ -47,6 +48,9 @@ function MetadataPage() {
   const [annotationModalOpen, setAnnotationModalOpen] = useState(false);
   const [annotations, setAnnotations] = useState<AIAnnotation[]>([]);
   const [sensitivityReport, setSensitivityReport] = useState<SensitivityReport | null>(null);
+
+  // AI 扫描相关状态
+  const [aiScanModalOpen, setAiScanModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -404,6 +408,15 @@ function MetadataPage() {
                     敏感报告
                   </Button>
                 </Tooltip>
+                <Tooltip title="AI 智能扫描敏感数据">
+                  <Button
+                    type="primary"
+                    icon={<SafetyOutlined />}
+                    onClick={() => setAiScanModalOpen(true)}
+                  >
+                    AI 扫描
+                  </Button>
+                </Tooltip>
               </Space>
             )}
           >
@@ -724,6 +737,21 @@ function MetadataPage() {
           </div>
         )}
       </Modal>
+
+      {/* AI 敏感数据扫描模态框 */}
+      <AISensitivityScanPanel
+        datasetId={`${selectedDatabase}.${selectedTable}`}
+        tableName={selectedTable}
+        databaseName={selectedDatabase}
+        columns={tableDetail?.data?.columns?.map((col: any) => ({
+          name: col.name,
+          type: col.type,
+          description: col.description,
+        })) || []}
+        visible={aiScanModalOpen}
+        onClose={() => setAiScanModalOpen(false)}
+        onMaskingApply={() => queryClient.invalidateQueries({ queryKey: ['tableDetail', selectedDatabase, selectedTable] })}
+      />
     </div>
   );
 }

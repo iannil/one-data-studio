@@ -1,0 +1,201 @@
+{
+  "name": "采购订单模板",
+  "description": "用于提取采购订单的关键信息",
+  "type": "purchase_order",
+  "category": "procurement",
+  "supported_formats": ["pdf", "image", "word", "excel"],
+  "fields": [
+    {
+      "name": "订单编号",
+      "key": "order_number",
+      "required": true,
+      "keywords": ["订单编号", "订单号", "采购单号", "PO编号", "PO No."]
+    },
+    {
+      "name": "订单日期",
+      "key": "order_date",
+      "required": true,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["订单日期", "下单日期", "采购日期"]
+    },
+    {
+      "name": "供应商名称",
+      "key": "supplier_name",
+      "required": true,
+      "keywords": ["供应商", "供方", "卖方", "Vendor", "Supplier"]
+    },
+    {
+      "name": "供应商编码",
+      "key": "supplier_code",
+      "required": false,
+      "keywords": ["供应商编码", "供方编码", "供应商代码"]
+    },
+    {
+      "name": "供应商联系人",
+      "key": "supplier_contact",
+      "required": false,
+      "keywords": ["供应商联系人", "供方联系人"]
+    },
+    {
+      "name": "供应商电话",
+      "key": "supplier_phone",
+      "required": false,
+      "keywords": ["供应商电话", "供方电话"]
+    },
+    {
+      "name": "供应商地址",
+      "key": "supplier_address",
+      "required": false,
+      "keywords": ["供应商地址", "供方地址"]
+    },
+    {
+      "name": "采购方名称",
+      "key": "buyer_name",
+      "required": true,
+      "keywords": ["采购方", "需方", "买方", "收货单位", "Buyer", "Purchaser"]
+    },
+    {
+      "name": "采购部门",
+      "key": "department",
+      "required": false,
+      "keywords": ["采购部门", "申请部门", "需求部门"]
+    },
+    {
+      "name": "采购员",
+      "key": "purchaser",
+      "required": false,
+      "keywords": ["采购员", "采购负责人", "经办人"]
+    },
+    {
+      "name": "交货日期",
+      "key": "delivery_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["交货日期", "交付日期", "预计到货日期"]
+    },
+    {
+      "name": "交货地址",
+      "key": "delivery_address",
+      "required": false,
+      "keywords": ["交货地址", "收货地址", "送货地址"]
+    },
+    {
+      "name": "订单总金额",
+      "key": "total_amount",
+      "required": true,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["订单总金额", "合计", "总计", "金额合计", "Total"]
+    },
+    {
+      "name": "币种",
+      "key": "currency",
+      "default": "CNY",
+      "keywords": ["币种", "货币"]
+    },
+    {
+      "name": "含税标识",
+      "key": "tax_included",
+      "required": false,
+      "keywords": ["含税", "不含税", "含税价"]
+    },
+    {
+      "name": "税率",
+      "key": "tax_rate",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0,
+        "max_value": 1
+      },
+      "keywords": ["税率", "增值税率"]
+    },
+    {
+      "name": "税额",
+      "key": "tax_amount",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["税额", "增值税额"]
+    },
+    {
+      "name": "付款条件",
+      "key": "payment_term",
+      "required": false,
+      "keywords": ["付款条件", "付款方式", "结算方式", "Payment Term"]
+    },
+    {
+      "name": "运输方式",
+      "key": "shipping_method",
+      "required": false,
+      "keywords": ["运输方式", "发货方式", "物流方式"]
+    },
+    {
+      "name": "运费承担方",
+      "key": "freight_bearer",
+      "required": false,
+      "keywords": ["运费承担", "运费支付", " freight"]
+    },
+    {
+      "name": "备注",
+      "key": "remark",
+      "required": false,
+      "keywords": ["备注", "说明", "Remark"]
+    }
+  ],
+  "tables": [
+    {
+      "name": "采购明细",
+      "key": "items",
+      "required": true,
+      "header_keywords": ["序号", "物料", "品名", "数量", "单价", "金额", "Item", "Description"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "物料编码", "key": "item_code"},
+        {"name": "物料名称", "key": "item_name"},
+        {"name": "规格型号", "key": "specification"},
+        {"name": "单位", "key": "unit"},
+        {"name": "订购数量", "key": "quantity", "validation": {"type": "number", "min_value": 0}},
+        {"name": "单价", "key": "unit_price", "validation": {"type": "number", "min_value": 0}},
+        {"name": "金额", "key": "amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "交货日期", "key": "delivery_date", "validation": {"type": "date"}},
+        {"name": "备注", "key": "remark"}
+      ]
+    }
+  ],
+  "cross_field_validation": [
+    {
+      "rule": "total_amount_check",
+      "description": "订单总金额应等于明细合计",
+      "fields": ["total_amount", "items"],
+      "validation": "sum(items.amount) == total_amount",
+      "severity": "error"
+    },
+    {
+      "rule": "delivery_date_check",
+      "description": "交货日期应晚于订单日期",
+      "fields": ["order_date", "delivery_date"],
+      "validation": "order_date <= delivery_date",
+      "severity": "warning"
+    },
+    {
+      "rule": "tax_calculation_check",
+      "description": "税额计算校验",
+      "fields": ["total_amount", "tax_amount", "tax_rate"],
+      "validation": "tax_amount = (total_amount / (1 + tax_rate)) * tax_rate",
+      "severity": "info"
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD",
+    "amount_format": "number"
+  }
+}

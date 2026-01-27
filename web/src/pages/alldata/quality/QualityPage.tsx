@@ -35,6 +35,7 @@ import {
   BellOutlined,
   LineChartOutlined,
   SettingOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -46,6 +47,7 @@ import type {
   QualityAlert,
   QualityDimension,
 } from '@/services/alldata';
+import AICleaningRulesPanel from './AICleaningRulesPanel';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -87,6 +89,7 @@ function QualityPage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isAlertConfigModalOpen, setIsAlertConfigModalOpen] = useState(false);
   const [isReportDetailOpen, setIsReportDetailOpen] = useState(false);
+  const [isAICleaningModalOpen, setIsAICleaningModalOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<QualityRule | null>(null);
   const [selectedReport, setSelectedReport] = useState<QualityReport | null>(null);
 
@@ -906,6 +909,41 @@ function QualityPage() {
                 />
               ),
             },
+            {
+              key: 'ai-assistant',
+              label: (
+                <span>
+                  <RobotOutlined />
+                  AI 助手
+                </span>
+              ),
+              children: (
+                <div>
+                  <Card
+                    title="AI 质量规则助手"
+                    extra={
+                      <Button type="primary" icon={<RobotOutlined />} onClick={() => setIsAICleaningModalOpen(true)}>
+                        打开 AI 助手
+                      </Button>
+                    }
+                  >
+                    <Alert
+                      message="智能分析表结构，自动推荐质量规则"
+                      description="AI 助手可以分析您的表结构，基于列名、数据类型等信息，智能推荐适合的质量规则，并支持一键应用到质量监控。"
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                    <Descriptions column={2} size="small">
+                      <Descriptions.Item label="支持的维度">完整性、准确性、一致性、时效性、有效性、唯一性</Descriptions.Item>
+                      <Descriptions.Item label="规则类型">空值检查、范围检查、正则检查、枚举检查等</Descriptions.Item>
+                      <Descriptions.Item label="智能特性">基于列名自动识别、自动推荐阈值</Descriptions.Item>
+                      <Descriptions.Item label="应用方式">批量应用规则、预览效果</Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                </div>
+              ),
+            },
           ]}
         />
       </Card>
@@ -1095,6 +1133,13 @@ function QualityPage() {
           </div>
         )}
       </Drawer>
+
+      {/* AI 清洗规则模态框 */}
+      <AICleaningRulesPanel
+        visible={isAICleaningModalOpen}
+        onClose={() => setIsAICleaningModalOpen(false)}
+        onRuleApply={() => queryClient.invalidateQueries({ queryKey: ['qualityRules'] })}
+      />
     </div>
   );
 }

@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocr-service
+  namespace: ocr-service
+  labels:
+    app: ocr-service
+    component: api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ocr-service
+      component: api
+  template:
+    metadata:
+      labels:
+        app: ocr-service
+        component: api
+        version: v1
+    spec:
+      serviceAccountName: ocr-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: ocr-service
+        image: onedata-ocr-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8007
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8007"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        # 从ConfigMap加载配置
+        envFrom:
+        - configMapRef:
+            name: ocr-config
+        # 从Secret加载敏感配置
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ocr-secret
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ocr-secret
+              key: REDIS_URL
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ocr-secret
+              key: OPENAI_API_KEY
+              optional: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: temp
+          mountPath: /tmp/ocr
+        - name: models
+          mountPath: /root/.paddleocr
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8007
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8007
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: temp
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: models
+        persistentVolumeClaim:
+          claimName: ocr-models-pvc
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - ocr-service
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ocr-models-pvc
+  namespace: ocr-service
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard

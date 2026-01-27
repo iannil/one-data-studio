@@ -14,6 +14,7 @@ import {
   Descriptions,
   Form,
   Select,
+  Input,
   InputNumber,
   Switch,
   Modal,
@@ -36,11 +37,11 @@ import {
   ThunderboltOutlined,
   InfoCircleOutlined,
   FileTextOutlined,
-  MagicFilled,
+  StarFilled,
   FilterOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '@/services/api';
+import apiClient, { type ApiResponse } from '@/services/api';
 import type { CleaningRecommendation } from '@/services/alldata';
 import './AICleaningRules.css';
 
@@ -91,10 +92,10 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
       }
 
       setAnalyzing(true);
-      const response = await apiClient.post<{
+      const response = await apiClient.post<ApiResponse<{
         recommendations: CleaningRecommendation[];
         total_count: number;
-      }>('/api/v1/quality/analyze-table', {
+      }>>('/api/v1/quality/analyze-table', {
         table_name: tableName,
         database_name: databaseName,
       });
@@ -103,7 +104,7 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
     onSuccess: (data) => {
       setRecommendations(data.recommendations || []);
       setSelectedRecs(new Set());
-      message.success(`分析完成，发现 ${data.issues_found} 个潜在问题`);
+      message.success(`分析完成，发现 ${data.total_count} 个潜在问题`);
     },
     onError: (error: any) => {
       message.error(error.response?.data?.message || '分析失败');
@@ -332,7 +333,7 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
         extra={
           <Space>
             <Button
-              icon={<MagicFilled />}
+              icon={<StarFilled />}
               type="primary"
               loading={analyzing}
               onClick={handleAnalyze}
@@ -428,7 +429,7 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
                 description="点击「开始分析」按钮，AI 将自动检测表中的数据质量问题"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               >
-                <Button type="primary" icon={<MagicFilled />} onClick={handleAnalyze}>
+                <Button type="primary" icon={<StarFilled />} onClick={handleAnalyze}>
                   开始分析
                 </Button>
               </Empty>

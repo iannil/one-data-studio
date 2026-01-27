@@ -1,0 +1,67 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ocr-service-ingress
+  namespace: ocr-service
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ocr.example.com
+    secretName: ocr-service-tls
+  rules:
+  - host: ocr.example.com
+    http:
+      paths:
+      - path: /api/v1/ocr(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: ocr-service
+            port:
+              number: 8007
+      - path: /ocr(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: ocr-service
+            port:
+              number: 8007
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ocr-service-metrics-ingress
+  namespace: ocr-service
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ocr-metrics.example.com
+    secretName: ocr-metrics-tls
+  rules:
+  - host: ocr-metrics.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ocr-service
+            port:
+              number: 8007

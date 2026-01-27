@@ -86,6 +86,15 @@ import type {
 } from '@/services/alldata';
 import './SmartAlerts.css';
 
+// 通道配置接口
+interface AlertChannelConfig {
+  channel_type: AlertChannel;
+  name: string;
+  enabled: boolean;
+  config?: Record<string, unknown>;
+  last_used?: string;
+}
+
 const { TextArea } = Input;
 const { Option } = Select;
 const { Step } = Steps;
@@ -101,7 +110,7 @@ export const SmartAlerts: React.FC<SmartAlertsProps> = ({ tenantId = 'default' }
   const [channelModalVisible, setChannelModalVisible] = useState(false);
   const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
   const [selectedRule, setSelectedRule] = useState<AlertRule | null>(null);
-  const [selectedChannel, setSelectedChannel] = useState<AlertChannel | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<AlertChannelConfig | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<AlertSubscription | null>(null);
 
   const [form] = Form.useForm();
@@ -239,7 +248,7 @@ export const SmartAlerts: React.FC<SmartAlertsProps> = ({ tenantId = 'default' }
 
   const stats = statsData?.data;
   const rules = rulesData?.data?.rules || [];
-  const channels = channelsData?.data?.channels || [];
+  const channels = (channelsData?.data?.channels || []) as unknown as AlertChannelConfig[];
   const history = historyData?.data?.history || [];
   const subscriptions = subscriptionsData?.data?.subscriptions || [];
   const alertTypes = alertTypesData?.data?.types || [];
@@ -283,11 +292,11 @@ export const SmartAlerts: React.FC<SmartAlertsProps> = ({ tenantId = 'default' }
     testChannelMutation.mutate(channelType);
   };
 
-  const handleToggleChannel = (channel: AlertChannel) => {
+  const handleToggleChannel = (channel: AlertChannelConfig) => {
     updateChannel(channel.channel_type, { enabled: !channel.enabled });
   };
 
-  const updateChannel = (channelType: string, updates: Partial<AlertChannel>) => {
+  const updateChannel = (channelType: string, updates: Partial<AlertChannelConfig>) => {
     // Simplified - in production would call the API
     const updatedChannels = channels.map((c) =>
       c.channel_type === channelType ? { ...c, ...updates } : c
@@ -496,7 +505,7 @@ export const SmartAlerts: React.FC<SmartAlertsProps> = ({ tenantId = 'default' }
                   <Button
                     type="primary"
                     icon={<ThunderboltOutlined />}
-                    loading={detectMutation.isLoading}
+                    loading={detectMutation.isPending}
                     onClick={handleDetectAnomalies}
                   >
                     开始检测
@@ -653,7 +662,7 @@ export const SmartAlerts: React.FC<SmartAlertsProps> = ({ tenantId = 'default' }
                       <Button
                         size="small"
                         onClick={() => handleTestChannel(channel.channel_type)}
-                        loading={testChannelMutation.isLoading}
+                        loading={testChannelMutation.isPending}
                       >
                         发送测试
                       </Button>

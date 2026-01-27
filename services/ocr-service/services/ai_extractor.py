@@ -187,6 +187,26 @@ class AIExtractor:
 - 合同金额: 返回数字格式
 - 签订日期: 转换为YYYY-MM-DD格式
 - 有效期: 提取起止日期""",
+            "purchase_order": """采购订单抽取注意事项:
+- 订单编号: 通常包含PO或订单字样
+- 订单日期和交货日期: 转换为YYYY-MM-DD格式
+- 金额: 返回数字格式
+- 明细项: 提取表格中的物料信息""",
+            "delivery_note": """送货单抽取注意事项:
+- 送货单号: 通常在单据顶部
+- 送货日期和验收日期: 转换为YYYY-MM-DD格式
+- 数量字段: 提取订购数量、送货数量、实收数量
+- 表格中的物料明细需要完整提取""",
+            "quotation": """报价单抽取注意事项:
+- 报价单号: 通常在单据顶部
+- 报价日期和有效期: 转换为YYYY-MM-DD格式
+- 金额: 注意区分含税价和不含税价
+- 税率: 返回小数格式，如0.13表示13%""",
+            "receipt": """收据抽取注意事项:
+- 收据编号: 通常在单据顶部
+- 收款日期: 转换为YYYY-MM-DD格式
+- 收款金额和金额大写需要对应
+- 收款方和付款方名称需要准确提取""",
             "report": """报告抽取注意事项:
 - 报告标题: 通常在文档开头
 - 报告日期: 转换为YYYY-MM-DD格式
@@ -247,6 +267,89 @@ class AIExtractor:
                 {"name": "核心指标", "key": "key_metrics", "required": False},
                 {"name": "同比", "key": "yoy_growth", "required": False},
                 {"name": "环比", "key": "mom_growth", "required": False},
+            ]
+        }
+
+        return self.extract_with_template(text, template, image_base64)
+
+    def extract_purchase_order(self, text: str, image_base64: str = None) -> Dict:
+        """提取采购订单信息"""
+        template = {
+            "type": "purchase_order",
+            "fields": [
+                {"name": "订单编号", "key": "order_number", "required": True},
+                {"name": "订单日期", "key": "order_date", "required": True},
+                {"name": "供应商名称", "key": "supplier_name", "required": True},
+                {"name": "供应商联系人", "key": "supplier_contact", "required": False},
+                {"name": "采购方名称", "key": "buyer_name", "required": True},
+                {"name": "采购部门", "key": "department", "required": False},
+                {"name": "交货日期", "key": "delivery_date", "required": False},
+                {"name": "交货地址", "key": "delivery_address", "required": False},
+                {"name": "订单总金额", "key": "total_amount", "required": True},
+                {"name": "币种", "key": "currency", "required": False},
+                {"name": "付款条件", "key": "payment_term", "required": False},
+            ]
+        }
+
+        return self.extract_with_template(text, template, image_base64)
+
+    def extract_delivery_note(self, text: str, image_base64: str = None) -> Dict:
+        """提取送货单信息"""
+        template = {
+            "type": "delivery_note",
+            "fields": [
+                {"name": "送货单号", "key": "delivery_number", "required": True},
+                {"name": "送货日期", "key": "delivery_date", "required": True},
+                {"name": "供应商名称", "key": "supplier_name", "required": True},
+                {"name": "收货单位", "key": "receiver_name", "required": True},
+                {"name": "收货地址", "key": "receiver_address", "required": False},
+                {"name": "收货联系人", "key": "receiver_contact", "required": False},
+                {"name": "运输方式", "key": "shipping_method", "required": False},
+                {"name": "车牌号", "key": "vehicle_number", "required": False},
+                {"name": "订单编号", "key": "order_number", "required": False},
+                {"name": "验收人", "key": "receiver", "required": False},
+                {"name": "验收日期", "key": "receive_date", "required": False},
+            ]
+        }
+
+        return self.extract_with_template(text, template, image_base64)
+
+    def extract_quotation(self, text: str, image_base64: str = None) -> Dict:
+        """提取报价单信息"""
+        template = {
+            "type": "quotation",
+            "fields": [
+                {"name": "报价单号", "key": "quotation_number", "required": True},
+                {"name": "报价日期", "key": "quotation_date", "required": True},
+                {"name": "报价有效期", "key": "valid_until", "required": False},
+                {"name": "报价方名称", "key": "provider_name", "required": True},
+                {"name": "客户名称", "key": "customer_name", "required": True},
+                {"name": "联系人", "key": "contact_person", "required": False},
+                {"name": "联系电话", "key": "contact_phone", "required": False},
+                {"name": "报价总金额", "key": "total_amount", "required": True},
+                {"name": "币种", "key": "currency", "required": False},
+                {"name": "含税标识", "key": "tax_included", "required": False},
+                {"name": "税率", "key": "tax_rate", "required": False},
+                {"name": "付款方式", "key": "payment_term", "required": False},
+            ]
+        }
+
+        return self.extract_with_template(text, template, image_base64)
+
+    def extract_receipt(self, text: str, image_base64: str = None) -> Dict:
+        """提取收据信息"""
+        template = {
+            "type": "receipt",
+            "fields": [
+                {"name": "收据编号", "key": "receipt_number", "required": True},
+                {"name": "收据日期", "key": "receipt_date", "required": True},
+                {"name": "付款方名称", "key": "payer_name", "required": True},
+                {"name": "收款方名称", "key": "payee_name", "required": True},
+                {"name": "收款事由", "key": "payment_reason", "required": False},
+                {"name": "收款金额", "key": "amount", "required": True},
+                {"name": "金额大写", "key": "amount_cn", "required": False},
+                {"name": "收款方式", "key": "payment_method", "required": False},
+                {"name": "经办人", "key": "handler", "required": False},
             ]
         }
 
@@ -415,6 +518,10 @@ class AIExtractor:
                 type_method = {
                     "invoice": self.extract_invoice,
                     "contract": self.extract_contract,
+                    "purchase_order": self.extract_purchase_order,
+                    "delivery_note": self.extract_delivery_note,
+                    "quotation": self.extract_quotation,
+                    "receipt": self.extract_receipt,
                     "report": self.extract_report,
                 }
                 extractor = type_method.get(document_type)

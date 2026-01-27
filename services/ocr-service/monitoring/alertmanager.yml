@@ -1,0 +1,92 @@
+# AlertManager配置
+
+global:
+  # 全局resolve超时
+  resolve_timeout: 5m
+  # SMTP配置
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alerts@example.com'
+  smtp_auth_username: 'alerts@example.com'
+  smtp_auth_password: 'password'
+  smtp_require_tls: true
+
+# 路由配置
+route:
+  # 默认接收器
+  receiver: 'default'
+  # 分组等待时间
+  group_wait: 10s
+  # 分组间隔时间
+  group_interval: 10s
+  # 重复通知间隔
+  repeat_interval: 12h
+  # 路由树
+  routes:
+    # critical级别告警
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 10s
+      repeat_interval: 5m
+
+    # warning级别告警
+    - match:
+        severity: warning
+      receiver: 'warning'
+      group_wait: 30s
+      repeat_interval: 1h
+
+# 接收器配置
+receivers:
+  # 默认接收器
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook'
+        send_resolved: true
+
+  # 严重告警接收器
+  - name: 'critical'
+    email_configs:
+      - to: 'oncall@example.com'
+        headers:
+          Subject: '🚨 [CRITICAL] OCR服务告警'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/critical'
+        send_resolved: true
+    # 钉钉通知 (需要配置钉钉机器人)
+    # wechat_configs:
+    #   - corp_id: 'your-corp-id'
+    #     agent_id: 'your-agent-id'
+    #     api_secret: 'your-api-secret'
+    #     to_user: '@all'
+
+  # 警告告警接收器
+  - name: 'warning'
+    email_configs:
+      - to: 'team@example.com'
+        headers:
+          Subject: '⚠️ [WARNING] OCR服务警告'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/warning'
+        send_resolved: true
+
+# 抑制规则
+inhibit_rules:
+  # 当服务不可用时，抑制其他告警
+  - source_match:
+      severity: 'critical'
+      alertname: 'OCRServiceDown'
+    target_match_re:
+      severity: '(warning|info)'
+    equal: ['job']
+
+  # 当任务失败率过高时，抑制处理时间告警
+  - source_match:
+      alertname: 'HighTaskFailureRate'
+    target_match:
+      alertname: 'HighProcessingTime'
+    equal: ['job']
+
+# 模板配置
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

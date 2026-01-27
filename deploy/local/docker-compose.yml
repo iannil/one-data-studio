@@ -488,6 +488,50 @@ services:
     networks:
       - one-data-network
 
+  # ============================================
+  # OCR Services
+  # ============================================
+  ocr-service:
+    build:
+      context: ../../services/ocr-service
+      dockerfile: Dockerfile
+    container_name: one-data-ocr-service
+    environment:
+      # Database configuration
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      # Redis configuration
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      # OpenAI API for AI extraction
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-http://openai-proxy:8000}
+      # OCR Engine configuration
+      OCR_ENGINE: ${OCR_ENGINE:-paddleocr}
+      MAX_FILE_SIZE: ${OCR_MAX_FILE_SIZE:-52428800}
+      # Storage paths
+      TEMP_DIR: /tmp/ocr
+      # Development mode
+      AUTH_MODE: "false"
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ocr_uploads:/tmp/ocr
+      - ocr_models:/root/.paddleocr
+    ports:
+      - "8007:8007"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8007/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - one-data-network
+
   web-frontend:
     build:
       context: ../../web
@@ -533,6 +577,8 @@ volumes:
   vllm_cache:
   kettle_data:
   kettle_jdbc:
+  ocr_uploads:
+  ocr_models:
 
 networks:
   one-data-network:

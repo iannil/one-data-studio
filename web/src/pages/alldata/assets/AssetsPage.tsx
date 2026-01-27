@@ -40,6 +40,7 @@ import alldata from '@/services/alldata';
 import type { DataAsset, AssetValueLevel } from '@/services/alldata';
 import { AssetAISearch } from '@/components/alldata/AssetAISearch';
 import { AssetValuePanel } from '@/components/alldata/AssetValuePanel';
+import AIAssetValuePanel from './AIAssetValuePanel';
 
 const { Option } = Select;
 
@@ -48,6 +49,7 @@ function AssetsPage() {
   const [selectedAsset, setSelectedAsset] = useState<DataAsset | null>(null);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isAIValueModalOpen, setIsAIValueModalOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -235,6 +237,26 @@ function AssetsPage() {
       dataIndex: 'path',
       key: 'path',
       ellipsis: true,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      render: (_: any, record: DataAsset) => (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<TrophyOutlined />}
+            onClick={() => {
+              setSelectedAsset(record);
+              setIsAIValueModalOpen(true);
+            }}
+          >
+            AI 评估
+          </Button>
+        </Space>
+      ),
     },
   ];
 
@@ -627,6 +649,15 @@ function AssetsPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* AI 价值评估模态框 */}
+      <AIAssetValuePanel
+        assetId={selectedAsset?.asset_id}
+        assetName={selectedAsset?.name}
+        visible={isAIValueModalOpen}
+        onClose={() => setIsAIValueModalOpen(false)}
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['data-assets'] })}
+      />
     </div>
   );
 }

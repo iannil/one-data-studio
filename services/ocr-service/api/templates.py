@@ -5,6 +5,7 @@
 import uuid
 import json
 import logging
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
@@ -376,7 +377,7 @@ def init_preset_templates(db: Session, tenant_id: str = "default"):
             user_id="system",
             name="通用报告模板",
             description="用于提取报告的关键指标",
-            template_type=ExtractionType.REPORT.value,
+            template_type=ExtractionTemplate.REPORT.value,
             category="business",
             supported_formats=["pdf", "word"],
             extraction_rules={
@@ -392,6 +393,133 @@ def init_preset_templates(db: Session, tenant_id: str = "default"):
             version=1
         )
         db.add(report_template)
+
+    # 采购订单模板
+    purchase_order_template = db.query(ExtractionTemplate).filter(
+        ExtractionTemplate.tenant_id == tenant_id,
+        ExtractionTemplate.template_type == ExtractionType.PURCHASE_ORDER.value,
+        ExtractionTemplate.name == "采购订单模板"
+    ).first()
+
+    if not purchase_order_template:
+        purchase_order_template = ExtractionTemplate(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            user_id="system",
+            name="采购订单模板",
+            description="用于提取采购订单的关键信息",
+            template_type=ExtractionType.PURCHASE_ORDER.value,
+            category="procurement",
+            supported_formats=["pdf", "image", "word", "excel"],
+            extraction_rules={
+                "fields": [
+                    {"name": "订单编号", "key": "order_number", "required": True},
+                    {"name": "订单日期", "key": "order_date", "required": True},
+                    {"name": "供应商名称", "key": "supplier_name", "required": True},
+                    {"name": "采购方名称", "key": "buyer_name", "required": True},
+                    {"name": "订单总金额", "key": "total_amount", "required": True},
+                ]
+            },
+            is_active=True,
+            is_public=True,
+            version=1
+        )
+        db.add(purchase_order_template)
+
+    # 送货单模板
+    delivery_note_template = db.query(ExtractionTemplate).filter(
+        ExtractionTemplate.tenant_id == tenant_id,
+        ExtractionTemplate.template_type == ExtractionType.DELIVERY_NOTE.value,
+        ExtractionTemplate.name == "送货单模板"
+    ).first()
+
+    if not delivery_note_template:
+        delivery_note_template = ExtractionTemplate(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            user_id="system",
+            name="送货单模板",
+            description="用于提取送货单的关键信息",
+            template_type=ExtractionType.DELIVERY_NOTE.value,
+            category="logistics",
+            supported_formats=["pdf", "image", "word", "excel"],
+            extraction_rules={
+                "fields": [
+                    {"name": "送货单号", "key": "delivery_number", "required": True},
+                    {"name": "送货日期", "key": "delivery_date", "required": True},
+                    {"name": "供应商名称", "key": "supplier_name", "required": True},
+                    {"name": "收货单位", "key": "receiver_name", "required": True},
+                ]
+            },
+            is_active=True,
+            is_public=True,
+            version=1
+        )
+        db.add(delivery_note_template)
+
+    # 报价单模板
+    quotation_template = db.query(ExtractionTemplate).filter(
+        ExtractionTemplate.tenant_id == tenant_id,
+        ExtractionTemplate.template_type == ExtractionType.QUOTATION.value,
+        ExtractionTemplate.name == "报价单模板"
+    ).first()
+
+    if not quotation_template:
+        quotation_template = ExtractionTemplate(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            user_id="system",
+            name="报价单模板",
+            description="用于提取报价单的关键信息",
+            template_type=ExtractionType.QUOTATION.value,
+            category="sales",
+            supported_formats=["pdf", "image", "word", "excel"],
+            extraction_rules={
+                "fields": [
+                    {"name": "报价单号", "key": "quotation_number", "required": True},
+                    {"name": "报价日期", "key": "quotation_date", "required": True},
+                    {"name": "报价方名称", "key": "provider_name", "required": True},
+                    {"name": "客户名称", "key": "customer_name", "required": True},
+                    {"name": "报价总金额", "key": "total_amount", "required": True},
+                ]
+            },
+            is_active=True,
+            is_public=True,
+            version=1
+        )
+        db.add(quotation_template)
+
+    # 收据模板
+    receipt_template = db.query(ExtractionTemplate).filter(
+        ExtractionTemplate.tenant_id == tenant_id,
+        ExtractionTemplate.template_type == ExtractionType.RECEIPT.value,
+        ExtractionTemplate.name == "收据模板"
+    ).first()
+
+    if not receipt_template:
+        receipt_template = ExtractionTemplate(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            user_id="system",
+            name="收据模板",
+            description="用于提取收据的关键信息",
+            template_type=ExtractionType.RECEIPT.value,
+            category="financial",
+            supported_formats=["pdf", "image"],
+            extraction_rules={
+                "fields": [
+                    {"name": "收据编号", "key": "receipt_number", "required": True},
+                    {"name": "收据日期", "key": "receipt_date", "required": True},
+                    {"name": "付款方名称", "key": "payer_name", "required": True},
+                    {"name": "收款方名称", "key": "payee_name", "required": True},
+                    {"name": "收款金额", "key": "amount", "required": True},
+                ]
+            },
+            is_active=True,
+            is_public=True,
+            version=1
+        )
+        db.add(receipt_template)
 
     db.commit()
     logger.info("Preset templates initialized")

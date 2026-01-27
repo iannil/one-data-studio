@@ -1,0 +1,106 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ocr-service-policy
+  namespace: ocr-service
+spec:
+  podSelector:
+    matchLabels:
+      app: ocr-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自Ingress的HTTP流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8007
+  # 允许来自同一命名空间的流量
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8007
+  # 允许来自特定命名空间的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: web
+    ports:
+    - protocol: TCP
+      port: 8007
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: alldata
+    ports:
+    - protocol: TCP
+      port: 8007
+  egress:
+  # 允许DNS查询
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # 允许访问MySQL
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    podSelector:
+      matchLabels:
+        app: mysql
+    ports:
+    - protocol: TCP
+      port: 3306
+  # 允许访问Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    podSelector:
+      matchLabels:
+        app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # 允许访问外部API（OpenAI等）
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+# 允许Prometheus抓取指标
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ocr-service-metrics
+  namespace: ocr-service
+spec:
+  podSelector:
+    matchLabels:
+      app: ocr-service
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8007

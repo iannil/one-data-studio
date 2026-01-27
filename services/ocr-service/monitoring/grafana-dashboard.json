@@ -1,0 +1,241 @@
+{
+  "dashboard": {
+    "title": "OCR服务监控面板",
+    "description": "OCR文档识别服务性能监控",
+    "tags": ["ocr", "document-processing"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "服务状态",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "up{job=\"ocr-service\"}",
+            "legendFormat": "服务状态"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"value": 0, "text": "DOWN"},
+              {"value": 1, "text": "UP"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "任务总数",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(tasks_total)",
+            "legendFormat": "总任务数"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "任务完成率",
+        "type": "gauge",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(tasks_completed) / sum(tasks_total) * 100",
+            "legendFormat": "完成率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "服务运行时间",
+        "type": "stat",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "ocr_service_uptime_seconds",
+            "legendFormat": "运行时间"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "d",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "任务处理速率 (QPS)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(tasks_completed_total[1m])",
+            "legendFormat": "完成速率"
+          },
+          {
+            "expr": "rate(tasks_failed_total[1m])",
+            "legendFormat": "失败速率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "任务处理时间分布",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(task_processing_seconds_bucket[5m]))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(task_processing_seconds_bucket[5m]))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(task_processing_seconds_bucket[5m]))",
+            "legendFormat": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "各类型任务统计",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (type) (rate(tasks_completed_total{type!=\"\"}[5m]))",
+            "legendFormat": "{{type}} - 完成"
+          },
+          {
+            "expr": "sum by (type) (rate(tasks_failed_total{type!=\"\"}[5m]))",
+            "legendFormat": "{{type}} - 失败"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "提取准确率",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "avg(extraction_confidence)",
+            "legendFormat": "平均准确率"
+          },
+          {
+            "expr": "avg(extraction_confidence{type=\"invoice\"})",
+            "legendFormat": "发票准确率"
+          },
+          {
+            "expr": "avg(extraction_confidence{type=\"contract\"})",
+            "legendFormat": "合同准确率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "系统资源使用",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "system_memory_usage_percent",
+            "legendFormat": "内存使用率"
+          },
+          {
+            "expr": "system_cpu_usage_percent",
+            "legendFormat": "CPU使用率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "任务队列长度",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "system_queue_size",
+            "legendFormat": "队列长度"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "验证错误统计",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(validation_errors_total[5m])",
+            "legendFormat": "错误速率"
+          },
+          {
+            "expr": "rate(validation_warnings_total[5m])",
+            "legendFormat": "警告速率"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "平均提取字段数",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "avg(extraction_fields_count)",
+            "legendFormat": "平均字段数"
+          }
+        ]
+      }
+    ]
+  }
+}

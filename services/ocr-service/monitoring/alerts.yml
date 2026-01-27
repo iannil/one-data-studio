@@ -1,0 +1,124 @@
+# Prometheus告警规则
+
+groups:
+  - name: ocr_service_alerts
+    interval: 30s
+    rules:
+      # 服务可用性告警
+      - alert: OCRServiceDown
+        expr: up{job="ocr-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OCR服务不可用"
+          description: "OCR服务已宕机超过1分钟"
+
+      # 任务失败率告警
+      - alert: HighTaskFailureRate
+        expr: |
+          rate(tasks_failed_total[5m]) / rate(tasks_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "任务失败率过高"
+          description: "过去5分钟内任务失败率超过10%"
+
+      # 平均处理时间告警
+      - alert: HighProcessingTime
+        expr: |
+          histogram_quantile(0.95, rate(task_processing_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "处理时间过长"
+          description: "95%的任务处理时间超过30秒"
+
+      # 队列积压告警
+      - alert: QueueBacklog
+        expr: system_queue_size > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "任务队列积压"
+          description: "队列中待处理任务超过100个"
+
+      # 提取准确率告警
+      - alert: LowExtractionConfidence
+        expr: |
+          avg(extraction_confidence) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "提取准确率下降"
+          description: "平均提取准确率低于80%"
+
+      # 内存使用告警
+      - alert: HighMemoryUsage
+        expr: system_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用率过高"
+          description: "系统内存使用率超过85%"
+
+      # 数据库连接告警
+      - alert: DatabaseConnectionFailure
+        expr: ocr_database_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "数据库连接失败"
+          description: "无法连接到数据库"
+
+      # Redis连接告警
+      - alert: RedisConnectionFailure
+        expr: ocr_redis_up == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis连接失败"
+          description: "无法连接到Redis"
+
+  - name: ocr_service_performance
+    interval: 1m
+    rules:
+      # 吞吐量告警
+      - alert: LowThroughput
+        expr: |
+          rate(tasks_completed_total[5m]) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "吞吐量过低"
+          description: "每分钟完成任务数少于30个"
+
+      # P99延迟告警
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99, rate(task_processing_seconds_bucket[5m])) > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99延迟过高"
+          description: "99%的任务处理时间超过60秒"
+
+      # 验证错误率告警
+      - alert: HighValidationErrorRate
+        expr: |
+          rate(validation_errors_total[5m]) / rate(tasks_completed_total[5m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "验证错误率过高"
+          description: "超过20%的任务有验证错误"

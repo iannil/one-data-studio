@@ -1,0 +1,56 @@
+# OCR服务开发环境配置
+# 使用方法: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  ocr-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # 挂载源码进行热重载
+      - ./api:/app/api
+      - ./services:/app/services
+      - ./models:/app/models
+      - ./templates:/app/templates
+      # 挂载测试数据
+      - ./tests/documents:/app/tests/documents:ro
+    environment:
+      - DEBUG=true
+      - RELOAD=true
+      - LOG_LEVEL=DEBUG
+    ports:
+      - "8007:8007"
+      - "5678:5678"  # Debugpy端口
+    command: uvicorn app:app --host 0.0.0.0 --port 8007 --reload
+
+  # Redis Insight - Redis可视化管理工具
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: ocr-redis-insight
+    ports:
+      - "8001:8001"
+    volumes:
+      - redis-insight:/db
+    networks:
+      - onedata-network
+    restart: unless-stopped
+
+  # Adminer - 数据库管理工具
+  adminer:
+    image: adminer:latest
+    container_name: ocr-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - onedata-network
+    restart: unless-stopped
+
+volumes:
+  redis-insight:
+
+networks:
+  onedata-network:
+    external: true

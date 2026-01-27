@@ -1,0 +1,252 @@
+/* CDC 增量数据采集管理页面样式 */
+
+.cdc-management-page {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.cdc-management-page .ant-typography h2 {
+  margin-bottom: 24px;
+}
+
+/* 错误行样式 */
+.error-row {
+  background-color: #fff1f0 !important;
+}
+
+/* CDC 事件卡片 */
+.cdc-event-card {
+  border-left: 3px solid #1677ff;
+  margin-bottom: 8px;
+}
+
+.event-data {
+  margin: 4px 0;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+/* 源类型选择器 */
+.source-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.source-type-option {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #d9d9d9;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.source-type-option:hover {
+  border-color: #1677ff;
+  background: #e6f7ff;
+}
+
+.source-type-option.selected {
+  border-color: #1677ff;
+  background: #e6f7ff;
+}
+
+.source-type-option-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+/* 事件类型统计 */
+.event-type-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.event-type-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.event-type-stat .count {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 同步延迟指示器 */
+.sync-lag-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lag-bar {
+  width: 100px;
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lag-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.lag-bar-fill.low {
+  background: #52c41a;
+}
+
+.lag-bar-fill.medium {
+  background: #faad14;
+}
+
+.lag-bar-fill.high {
+  background: #ff4d4f;
+}
+
+/* 表选择器 */
+.table-selector {
+  margin-bottom: 16px;
+}
+
+.table-selector .selected-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.table-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 配置预览 */
+.config-preview {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.config-preview-title {
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.config-preview-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.config-preview-item:last-child {
+  border-bottom: none;
+}
+
+.config-preview-label {
+  color: #8c8c8c;
+}
+
+.config-preview-value {
+  font-weight: 500;
+}
+
+/* 连接测试结果 */
+.connection-test-result {
+  margin-top: 12px;
+}
+
+.connection-test-result.success {
+  .ant-alert-message {
+    color: #52c41a;
+  }
+}
+
+.connection-test-result.error {
+  .ant-alert-message {
+    color: #ff4d4f;
+  }
+}
+
+/* Binlog 位置显示 */
+.binlog-position {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+/* 实时指标图表 */
+.metrics-chart {
+  height: 200px;
+  margin-bottom: 16px;
+}
+
+/* 任务状态流 */
+.task-status-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.status-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-step.active {
+  color: #1677ff;
+}
+
+.status-step.completed {
+  color: #52c41a;
+}
+
+.status-step-arrow {
+  color: #8c8c8c;
+}
+
+/* 数据库图标 */
+.db-icon {
+  font-size: 32px;
+}
+
+.db-icon.mysql {
+  color: #00758f;
+}
+
+.db-icon.postgresql {
+  color: #336791;
+}
+
+.db-icon.oracle {
+  color: #c74634;
+}
+
+.db-icon.mongodb {
+  color: #4db33d;
+}

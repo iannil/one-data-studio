@@ -35,19 +35,18 @@ import {
   LoadingOutlined,
   EyeOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   ReloadOutlined,
   ScanOutlined,
   FilePdfOutlined,
   FileImageOutlined,
   FileWordOutlined,
-  TableOutlined,
-  CopyOutlined
+  TableOutlined
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { ocrApi } from '@/services/ocr';
+import { DocumentViewer } from '@/components/alldata/DocumentViewer';
+import { ocrApi, EnhancedOCRResult } from '@/services/ocr';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -101,19 +100,26 @@ const STATUS_CONFIG = {
 const DOCUMENT_TYPES = [
   { value: 'invoice', label: '增值税发票' },
   { value: 'contract', label: '合同' },
+  { value: 'purchase_order', label: '采购订单' },
+  { value: 'delivery_note', label: '送货单' },
+  { value: 'quotation', label: '报价单' },
+  { value: 'receipt', label: '收据' },
   { value: 'report', label: '报告' },
   { value: 'table', label: '表格' },
-  { value: 'general', label: '通用文档' }
+  { value: 'general', label: '通用文档' },
+  { value: 'auto', label: '自动识别' }
 ];
 
 export const OCRPage: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [extractionType, setExtractionType] = useState<string>('general');
+  const [extractionType, setExtractionType] = useState<string>('auto');
   const [templateId, setTemplateId] = useState<string | undefined>();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [enhancedResult, setEnhancedResult] = useState<EnhancedOCRResult | null>(null);
+  const [autoDetectedType, setAutoDetectedType] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -136,11 +142,14 @@ export const OCRPage: React.FC = () => {
     queryFn: () => ocrApi.getTemplates({ is_active: true })
   });
 
-  // 获取任务结果
-  const { data: resultData, isLoading: resultLoading } = useQuery({
-    queryKey: ['ocr-result', selectedTaskId],
-    queryFn: () => ocrApi.getTaskResult(selectedTaskId!),
-    enabled: !!selectedTaskId && resultModalVisible
+  // 获取增强任务结果
+  const { data: enhancedResultData, isLoading: resultLoading } = useQuery({
+    queryKey: ['ocr-enhanced-result', selectedTaskId],
+    queryFn: () => ocrApi.getEnhancedTaskResult(selectedTaskId!),
+    enabled: !!selectedTaskId && resultModalVisible,
+    onSuccess: (data) => {
+      setEnhancedResult(data);
+    }
   });
 
   // 上传处理
@@ -148,8 +157,30 @@ export const OCRPage: React.FC = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
+
+      let finalExtractionType = extractionType;
+
+      // 如果选择自动识别，先进行类型检测
+      if (extractionType === 'auto') {
+        try {
+          const detectionResult = await ocrApi.detectDocumentType(file);
+          finalExtractionType = detectionResult.detected_type;
+          setAutoDetectedType(detectionResult.detected_type);
+          message.info(`自动识别文档类型: ${getDocumentTypeLabel(detectionResult.detected_type)}`);
+
+          // 如果有建议的模板，使用第一个
+          if (detectionResult.suggested_templates.length > 0 && !templateId) {
+            setTemplateId(detectionResult.suggested_templates[0]);
+          }
+        } catch (error) {
+          console.error('文档类型识别失败:', error);
+          finalExtractionType = 'general';
+        }
+      }
+
+      formData.append('file', file);
       return await ocrApi.createTask(formData, {
-        extraction_type: extractionType,
+        extraction_type: finalExtractionType,
         template_id: templateId
       });
     },
@@ -157,6 +188,7 @@ export const OCRPage: React.FC = () => {
       message.success('文档上传成功，正在识别...');
       setFileList([]);
       setActiveTab('tasks');
+      setAutoDetectedType(null);
       queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] });
     },
     onError: (error: any) => {
@@ -232,23 +264,6 @@ export const OCRPage: React.FC = () => {
       content: '删除后任务及所有相关数据将被清除，无法恢复。',
       onOk: () => deleteMutation.mutate(taskId)
     });
-  };
-
-  const handleCopyText = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
-  };
-
-  const handleDownload = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   // 任务列表表格列
@@ -379,6 +394,24 @@ export const OCRPage: React.FC = () => {
     return <FileTextOutlined style={{ color: '#8c8c8c' }} />;
   };
 
+  const getDocumentTypeLabel = (type: string) => {
+    const found = DOCUMENT_TYPES.find(t => t.value === type);
+    return found?.label || type;
+  };
+
+  const handleSaveResult = (data: Record<string, any>) => {
+    // 保存修改后的结果
+    if (selectedTaskId) {
+      ocrApi.verifyTask(selectedTaskId, {
+        corrections: data,
+        verified_by: 'current_user'
+      }).then(() => {
+        message.success('结果已保存');
+        queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] });
+      });
+    }
+  };
+
   // 统计数据
   const stats = {
     total: tasksData?.total || 0,
@@ -472,7 +505,10 @@ export const OCRPage: React.FC = () => {
                   <Select
                     style={{ width: 200 }}
                     value={extractionType}
-                    onChange={setExtractionType}
+                    onChange={(value) => {
+                      setExtractionType(value);
+                      setAutoDetectedType(null);
+                    }}
                   >
                     {DOCUMENT_TYPES.map(type => (
                       <Option key={type.value} value={type.value}>
@@ -480,6 +516,9 @@ export const OCRPage: React.FC = () => {
                       </Option>
                     ))}
                   </Select>
+                  {autoDetectedType && (
+                    <Tag color="blue">自动识别为: {getDocumentTypeLabel(autoDetectedType)}</Tag>
+                  )}
                 </Space>
 
                 {extractionType !== 'general' && templatesData?.length > 0 && (
@@ -567,121 +606,17 @@ export const OCRPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* 结果详情弹窗 */}
-      <Modal
-        title="识别结果"
-        open={resultModalVisible}
-        onCancel={() => setResultModalVisible(false)}
-        width={900}
-        footer={[
-          <Button key="close" onClick={() => setResultModalVisible(false)}>
-            关闭
-          </Button>,
-          <Button
-            key="export"
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={() => {
-              if (resultData) {
-                handleDownload(
-                  JSON.stringify(resultData.structured_data, null, 2),
-                  `ocr_result_${selectedTaskId}.json`
-                );
-              }
-            }}
-          >
-            导出JSON
-          </Button>
-        ]}
-      >
-        {resultLoading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <Spin size="large" />
-            <p style={{ marginTop: 16 }}>加载中...</p>
-          </div>
-        ) : resultData ? (
-          <Tabs defaultActiveKey="structured">
-            <TabPane tab="结构化数据" key="structured">
-              <Descriptions bordered size="small" column={1}>
-                {Object.entries(resultData.structured_data || {}).map(([key, value]) => (
-                  <Descriptions.Item key={key} label={key}>
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                  </Descriptions.Item>
-                ))}
-              </Descriptions>
-              {Object.keys(resultData.structured_data || {}).length === 0 && (
-                <Empty description="未提取到结构化数据" />
-              )}
-            </TabPane>
-
-            <TabPane tab={`表格 (${resultData.tables.length})`} key="tables">
-              {resultData.tables.map((table, index) => (
-                <div key={table.id} style={{ marginBottom: 24 }}>
-                  <Text strong>表格 #{index + 1} (第{table.page_number}页)</Text>
-                  <Table
-                    style={{ marginTop: 8 }}
-                    columns={table.headers.map((h, i) => ({
-                      title: h,
-                      dataIndex: i,
-                      key: i
-                    }))}
-                    dataSource={table.rows.map((row, i) => ({
-                      key: i,
-                      ...row
-                    }))}
-                    pagination={false}
-                    size="small"
-                    bordered
-                    scroll={{ x: true }}
-                  />
-                </div>
-              ))}
-              {resultData.tables.length === 0 && (
-                <Empty description="未识别到表格" />
-              )}
-            </TabPane>
-
-            <TabPane tab="原始文本" key="raw">
-              <div
-                style={{
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  padding: 12,
-                  background: '#f5f5f5',
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'monospace'
-                }}
-              >
-                {resultData.raw_text || '无文本内容'}
-              </div>
-              {resultData.raw_text && (
-                <Button
-                  icon={<CopyOutlined />}
-                  onClick={() => handleCopyText(resultData.raw_text!)}
-                  style={{ marginTop: 8 }}
-                >
-                  复制文本
-                </Button>
-              )}
-            </TabPane>
-
-            {resultData.validation_issues.length > 0 && (
-              <TabPane tab={`验证问题 (${resultData.validation_issues.length})`} key="validation">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  {resultData.validation_issues.map((issue, index) => (
-                    <Alert
-                      key={index}
-                      type={issue.severity === 'error' ? 'error' : 'warning'}
-                      message={issue.field}
-                      description={issue.error}
-                    />
-                  ))}
-                </Space>
-              </TabPane>
-            )}
-          </Tabs>
-        ) : null}
-      </Modal>
+      {/* 结果详情弹窗 - 使用新的 DocumentViewer */}
+      <DocumentViewer
+        visible={resultModalVisible}
+        onClose={() => {
+          setResultModalVisible(false);
+          setEnhancedResult(null);
+        }}
+        result={enhancedResult}
+        loading={resultLoading}
+        onSave={handleSaveResult}
+      />
     </div>
   );
 };

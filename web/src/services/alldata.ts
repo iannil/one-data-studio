@@ -4442,7 +4442,7 @@ export const aiSearchAssets = (query: string, params?: {
     data_level?: string;
   };
 }) => {
-  return apiClient.post<AIAssetSearchResponse>('/api/v1/assets/ai/search', {
+  return apiClient.post<ApiResponse<AIAssetSearchResponse>>('/api/v1/assets/ai/search', {
     query,
     limit: params?.limit || 20,
     filters: params?.filters,
@@ -4460,7 +4460,7 @@ export const aiSemanticSearchAssets = (query: string, params?: {
     data_level?: string;
   };
 }) => {
-  return apiClient.post<AISemanticSearchResponse>('/api/v1/assets/ai/semantic-search', {
+  return apiClient.post<ApiResponse<AISemanticSearchResponse>>('/api/v1/assets/ai/semantic-search', {
     query,
     limit: params?.limit || 20,
     filters: params?.filters,
@@ -4473,7 +4473,7 @@ export const aiSemanticSearchAssets = (query: string, params?: {
 export const aiRecommendAssets = (assetId: string, params?: {
   limit?: number;
 }) => {
-  return apiClient.get<AIRecommendResponse>(`/api/v1/assets/ai/recommend/${assetId}`, {
+  return apiClient.get<ApiResponse<AIRecommendResponse>>(`/api/v1/assets/ai/recommend/${assetId}`, {
     params: { limit: params?.limit || 10 },
   });
 };
@@ -4485,7 +4485,7 @@ export const getTrendingAssets = (params?: {
   days?: number;
   limit?: number;
 }) => {
-  return apiClient.get<TrendingAssetsResponse>('/api/v1/assets/ai/trending', {
+  return apiClient.get<ApiResponse<TrendingAssetsResponse>>('/api/v1/assets/ai/trending', {
     params: { days: params?.days || 7, limit: params?.limit || 10 },
   });
 };
@@ -4496,7 +4496,7 @@ export const getTrendingAssets = (params?: {
 export const getAssetAutocomplete = (prefix: string, params?: {
   limit?: number;
 }) => {
-  return apiClient.get<AutocompleteResponse>('/api/v1/assets/ai/autocomplete', {
+  return apiClient.get<ApiResponse<AutocompleteResponse>>('/api/v1/assets/ai/autocomplete', {
     params: { prefix, limit: params?.limit || 10 },
   });
 };
@@ -7538,4 +7538,597 @@ export const searchOpenMetadata = (params: {
   offset?: number;
 }) => {
   return apiClient.get<OpenMetadataSearchResult>('/api/v1/openmetadata/search', { params });
+};
+
+// ============= AI 能力增强 API =============
+
+// ==================== Quality AI 类型 ====================
+
+export interface QualityIssue {
+  issue_type: string;
+  issue_description: string;
+  rule_type: string;
+  rule_name: string;
+  rule_config: Record<string, unknown>;
+  priority: string;
+  estimated_improvement: number;
+}
+
+export interface QualityAIAnalysisResponse {
+  table_name: string;
+  database_name?: string;
+  issues_found: number;
+  recommendations: QualityIssue[];
+}
+
+export interface QualityRuleTemplate {
+  rule_name: string;
+  rule_type: string;
+  target_column: string;
+  expression: string;
+  description: string;
+  severity: string;
+  priority: number;
+}
+
+export interface QualityRuleTemplatesResponse {
+  table_name: string;
+  rules: QualityRuleTemplate[];
+  total: number;
+  fallback?: boolean;
+}
+
+export interface AlertRule {
+  rule_name: string;
+  metric_name: string;
+  rule_type: string;
+  condition: string;
+  threshold_upper?: number;
+  threshold_lower?: number;
+  threshold_percent?: number;
+  description: string;
+  severity: string;
+}
+
+export interface AlertRulesResponse {
+  metric_name: string;
+  alert_rules: AlertRule[];
+  total: number;
+  statistics?: {
+    count: number;
+    mean: number;
+    min: number;
+    max: number;
+  };
+}
+
+/**
+ * AI 分析表的数据质量问题
+ */
+export const qualityAI = {
+  analyzeTable: (params: {
+    table_name: string;
+    database_name?: string;
+  }) => {
+    return apiClient.post<ApiResponse<QualityAIAnalysisResponse>>(
+      '/api/v1/quality/ai/analyze-table',
+      params
+    );
+  },
+
+  getRuleTemplates: (params: {
+    table_name: string;
+    columns: Array<{ name: string; type: string; description?: string }>;
+  }) => {
+    return apiClient.post<ApiResponse<QualityRuleTemplatesResponse>>(
+      '/api/v1/quality/ai/rule-templates',
+      params
+    );
+  },
+
+  generateAlertRules: (params: {
+    metric_name: string;
+    historical_data: Array<{ value: number; timestamp?: string }>;
+  }) => {
+    return apiClient.post<ApiResponse<AlertRulesResponse>>(
+      '/api/v1/quality/ai/alert-rules',
+      params
+    );
+  },
+};
+
+// ==================== ETL AI 类型 ====================
+
+export interface ColumnPattern {
+  primary_keys: string[];
+  timestamp_columns: string[];
+  status_columns: string[];
+  sensitive_columns: string[];
+}
+
+export interface DataSourceProfile {
+  source_connection_id: string;
+  table_name: string;
+  column_count: number;
+  columns: Record<string, {
+    type: string;
+    nullable: boolean;
+    description?: string;
+    sensitivity_type?: string;
+    has_ai_annotation: boolean;
+  }>;
+  patterns: ColumnPattern;
+  data_quality_score: number;
+  recommendations: string[];
+}
+
+export interface Transformation {
+  source_field: string;
+  target_field: string;
+  source_type: string;
+  target_type: string;
+  needs_conversion: boolean;
+  sql?: string;
+  description: string;
+}
+
+export interface FieldMappingResult {
+  source_field: string;
+  target_field: string;
+  confidence: number;
+  mapping_type: string;
+  transformation: string;
+}
+
+export interface ETLAIResponse {
+  mappings: FieldMappingResult[];
+  source_count: number;
+  target_count: number;
+  mapped_count: number;
+  coverage: number;
+}
+
+/**
+ * ETL AI 能力
+ */
+export const etlAI = {
+  profiling: (params: {
+    source_connection_id: string;
+    table_name?: string;
+    sample_size?: number;
+  }) => {
+    return apiClient.post<ApiResponse<DataSourceProfile>>(
+      '/api/v1/etl/ai/profiling',
+      params
+    );
+  },
+
+  suggestTransformation: (params: {
+    source_columns: Array<{ name: string; type: string }>;
+    target_columns: Array<{ name: string; type: string }>;
+  }) => {
+    return apiClient.post<ApiResponse<{ transformations: Transformation[]; total_count: number }>>(
+      '/api/v1/etl/ai/transformation-suggest',
+      params
+    );
+  },
+
+  suggestFieldMapping: (params: {
+    source_fields: Array<{ name: string; type: string }>;
+    target_fields: Array<{ name: string; type: string }>;
+  }) => {
+    return apiClient.post<ApiResponse<ETLAIResponse>>(
+      '/api/v1/etl/ai/field-mapping',
+      params
+    );
+  },
+};
+
+// ==================== Assets AI 类型 ====================
+
+export interface AssetValueScoreBreakdown {
+  usage_score: number;
+  business_score: number;
+  quality_score: number;
+  governance_score: number;
+  overall_score: number;
+}
+
+export interface AssetValueAssessmentResponse {
+  asset_id: string;
+  asset_name: string;
+  score_breakdown: AssetValueScoreBreakdown;
+  value_level: 'S' | 'A' | 'B' | 'C';
+  level_name: string;
+  details: {
+    usage: Record<string, unknown>;
+    business: Record<string, unknown>;
+    quality: Record<string, unknown>;
+    governance: Record<string, unknown>;
+  };
+  recommendations: string[];
+}
+
+export interface AutoTagResponse {
+  asset_id: string;
+  suggested_tags: string[];
+  confidence: number[];
+  reasons: string[];
+  existing_tags: string[];
+}
+
+/**
+ * Assets AI 能力
+ */
+export const assetsAI = {
+  assessValue: (params: {
+    asset_id: string;
+    metrics?: {
+      lookback_days?: number;
+    };
+  }) => {
+    return apiClient.post<ApiResponse<AssetValueAssessmentResponse>>(
+      '/api/v1/assets/ai/value-assess',
+      params
+    );
+  },
+
+  autoTag: (params: {
+    asset_id: string;
+    context?: Record<string, unknown>;
+  }) => {
+    return apiClient.post<ApiResponse<AutoTagResponse>>(
+      '/api/v1/assets/ai/auto-tag',
+      params
+    );
+  },
+
+  getRecommendations: (params: {
+    asset_id: string;
+    limit?: number;
+  }) => {
+    return apiClient.get<ApiResponse<{ recommendations: DataAsset[] }>>(
+      `/api/v1/assets/ai/recommend/${params.asset_id}`,
+      { params: { limit: params.limit || 10 } }
+    );
+  },
+};
+
+// ==================== Sensitivity AI 类型 ====================
+
+export interface SensitivityColumnResult {
+  column_name: string;
+  is_sensitive: boolean;
+  sensitivity_type: 'pii' | 'financial' | 'health' | 'credential' | 'none';
+  sensitivity_sub_type?: string;
+  sensitivity_level: 'public' | 'internal' | 'confidential' | 'restricted';
+  confidence: number;
+  matched_by: string;
+  masking_strategy?: string;
+  sample_count?: number;
+  ai_reason?: string;
+  error?: string;
+}
+
+export interface SensitivityScanResponse {
+  table_name: string;
+  dataset_id?: string;
+  columns_scanned: number;
+  sensitive_found: number;
+  breakdown: Record<string, number>;
+  results: SensitivityColumnResult[];
+}
+
+export interface SensitivityBatchScanResponse {
+  task_id: string;
+  status: string;
+  tables_count: number;
+  databases_count: number;
+  progress: Record<string, unknown>;
+}
+
+export interface SensitivityScanResultResponse {
+  task_id: string;
+  status: string;
+  progress_percent?: number;
+  total_databases?: number;
+  total_tables?: number;
+  total_columns?: number;
+  scanned_columns?: number;
+  sensitive_found?: number;
+  breakdown?: {
+    pii: number;
+    financial: number;
+    health: number;
+    credential: number;
+  };
+  metadata_updated?: number;
+  masking_rules_created?: number;
+  duration_seconds?: number;
+  started_at?: string;
+  completed_at?: string;
+  error_message?: string;
+  sensitive_columns?: Array<{
+    database: string;
+    table: string;
+    column: string;
+    type: string;
+    sub_type: string;
+    level: string;
+    confidence: number;
+  }>;
+}
+
+/**
+ * Sensitivity AI 能力
+ */
+export const sensitivityAI = {
+  scan: (params: {
+    table_name?: string;
+    dataset_id?: string;
+    columns?: Array<{ name: string; type: string }>;
+    sample_size?: number;
+  }) => {
+    return apiClient.post<ApiResponse<SensitivityScanResponse>>(
+      '/api/v1/sensitivity/ai/scan',
+      params
+    );
+  },
+
+  batchScan: (params: {
+    tables?: string[];
+    databases?: string[];
+    options?: {
+      sample_size?: number;
+      confidence_threshold?: number;
+      auto_update_metadata?: boolean;
+      auto_generate_masking_rules?: boolean;
+    };
+  }) => {
+    return apiClient.post<ApiResponse<SensitivityBatchScanResponse>>(
+      '/api/v1/sensitivity/ai/scan-batch',
+      params
+    );
+  },
+
+  getScanResult: (taskId: string) => {
+    return apiClient.get<ApiResponse<SensitivityScanResultResponse>>(
+      `/api/v1/sensitivity/ai/scan-result/${taskId}`
+    );
+  },
+};
+
+// ============= OCR服务 =============
+
+export interface OCRTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  template_type: string;
+  category?: string;
+  extraction_rules: Record<string, unknown>;
+  is_active: boolean;
+  is_public: boolean;
+  version: number;
+  usage_count: number;
+  success_rate: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  description?: string;
+  template_type: string;
+  category?: string;
+  extraction_rules: Record<string, unknown>;
+  ai_prompt_template?: string;
+  post_processing?: Record<string, unknown>;
+}
+
+export interface UpdateTemplateRequest {
+  name?: string;
+  description?: string;
+  category?: string;
+  extraction_rules?: Record<string, unknown>;
+  ai_prompt_template?: string;
+  post_processing?: Record<string, unknown>;
+  is_active?: boolean;
+}
+
+export interface OCRTaskResponse {
+  id: string;
+  document_name: string;
+  document_type: string;
+  status: string;
+  progress: number;
+  created_at: string;
+  result_summary?: Record<string, unknown>;
+  error_message?: string;
+}
+
+export interface OCRTaskResult {
+  task_id: string;
+  document_type: string;
+  status: string;
+  structured_data: Record<string, unknown>;
+  raw_text?: string;
+  tables: unknown[];
+  confidence_score: number;
+  validation_issues: unknown[];
+  cross_field_validation?: {
+    valid: boolean;
+    errors?: Array<{
+      rule: string;
+      description: string;
+      expected?: unknown;
+      actual?: unknown;
+    }>;
+    warnings?: Array<{
+      rule: string;
+      description: string;
+      expected?: unknown;
+      actual?: unknown;
+    }>;
+  };
+  layout_info?: {
+    has_signatures: boolean;
+    has_seals: boolean;
+    signature_regions?: Array<{
+      label: string;
+      page?: number;
+      bbox?: number[];
+    }>;
+    seal_regions?: Array<{
+      label: string;
+      page?: number;
+      bbox?: number[];
+    }>;
+  };
+  completeness?: {
+    valid: boolean;
+    completeness_rate: number;
+    missing_required?: Array<{
+      name: string;
+      key: string;
+    }>;
+  };
+}
+
+export const ocrService = {
+  // 获取模板列表
+  listTemplates: (params?: {
+    template_type?: string;
+    category?: string;
+    is_active?: boolean;
+    include_public?: boolean;
+  }) => {
+    return apiClient.get<OCRTemplate[]>('/api/v1/ocr/templates', { params });
+  },
+
+  // 获取模板详情
+  getTemplate: (templateId: string) => {
+    return apiClient.get<OCRTemplate>(`/api/v1/ocr/templates/${templateId}`);
+  },
+
+  // 创建模板
+  createTemplate: (data: CreateTemplateRequest) => {
+    return apiClient.post<OCRTemplate>('/api/v1/ocr/templates', data);
+  },
+
+  // 更新模板
+  updateTemplate: (templateId: string, data: UpdateTemplateRequest) => {
+    return apiClient.put<OCRTemplate>(`/api/v1/ocr/templates/${templateId}`, data);
+  },
+
+  // 删除模板
+  deleteTemplate: (templateId: string) => {
+    return apiClient.delete<{ message: string }>(`/api/v1/ocr/templates/${templateId}`);
+  },
+
+  // 加载默认模板
+  loadDefaultTemplates: () => {
+    return apiClient.post<{ message: string }>('/api/v1/ocr/templates/load-defaults');
+  },
+
+  // 获取支持的文档类型
+  getDocumentTypes: () => {
+    return apiClient.get<Record<string, string>>('/api/v1/ocr/templates/types');
+  },
+
+  // 创建OCR任务
+  createTask: (data: {
+    file: File;
+    extraction_type?: string;
+    template_id?: string;
+    extraction_config?: Record<string, unknown>;
+  }) => {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    if (data.extraction_type) {
+      formData.append('extraction_type', data.extraction_type);
+    }
+    if (data.template_id) {
+      formData.append('template_id', data.template_id);
+    }
+    if (data.extraction_config) {
+      formData.append('extraction_config', JSON.stringify(data.extraction_config));
+    }
+
+    return apiClient.post<OCRTaskResponse>('/api/v1/ocr/tasks', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // 批量创建任务
+  createBatchTasks: (files: File[], extraction_type: string = 'auto') => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+    formData.append('extraction_type', extraction_type);
+
+    return apiClient.post<{ task_ids: string[] }>('/api/v1/ocr/tasks/batch', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // 获取任务列表
+  getTasks: (params?: {
+    status?: string;
+    document_type?: string;
+    page?: number;
+    page_size?: number;
+  }) => {
+    return apiClient.get<{ total: number; tasks: OCRTaskResponse[] }>('/api/v1/ocr/tasks', { params });
+  },
+
+  // 获取任务详情
+  getTask: (taskId: string) => {
+    return apiClient.get<OCRTaskResponse>(`/api/v1/ocr/tasks/${taskId}`);
+  },
+
+  // 获取任务结果
+  getTaskResult: (taskId: string) => {
+    return apiClient.get<OCRTaskResult>(`/api/v1/ocr/tasks/${taskId}/result`);
+  },
+
+  // 获取增强结果
+  getEnhancedResult: (taskId: string) => {
+    return apiClient.get<OCRTaskResult>(`/api/v1/ocr/tasks/${taskId}/result/enhanced`);
+  },
+
+  // 检测文档类型
+  detectDocumentType: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient.post<{
+      type: string;
+      confidence: number;
+      alternatives?: Array<{ type: string; confidence: number }>;
+    }>('/api/v1/ocr/detect-type', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // 预览模板提取
+  previewWithTemplate: (file: File, templateConfig: Record<string, unknown>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('template_config', JSON.stringify(templateConfig));
+
+    return apiClient.post<OCRTaskResult>('/api/v1/ocr/templates/preview', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };

@@ -35,11 +35,13 @@ import {
   ApiOutlined,
   SettingOutlined,
   ExperimentOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import alldata from '@/services/alldata';
 import type { ETLTask, CreateETLTaskRequest, ETLTaskStatus, ETLTaskType, KettleStatus } from '@/services/alldata';
+import AIFieldMappingPanel from './AIFieldMappingPanel';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -54,9 +56,12 @@ function ETLPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [isAIFieldMappingOpen, setIsAIFieldMappingOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ETLTask | null>(null);
   const [taskLogs, setTaskLogs] = useState<string>('');
   const [engineType, setEngineType] = useState<string>('builtin');
+  const [sourceFields, setSourceFields] = useState<Array<{ name: string; type: string; description?: string }>>([]);
+  const [targetFields, setTargetFields] = useState<Array<{ name: string; type: string; description?: string }>>([]);
 
   const [form] = Form.useForm();
 
@@ -601,6 +606,16 @@ function ETLPage() {
                 <Option value="merge">合并</Option>
               </Select>
             </Form.Item>
+            <Form.Item label=" ">
+              <Button
+                type="dashed"
+                icon={<RobotOutlined />}
+                onClick={() => setIsAIFieldMappingOpen(true)}
+                block
+              >
+                AI 字段映射助手
+              </Button>
+            </Form.Item>
           </Card>
 
           <Card size="small" title="执行引擎配置" style={{ marginBottom: 16 }}>
@@ -911,6 +926,21 @@ function ETLPage() {
           </div>
         )}
       </Drawer>
+
+      {/* AI 字段映射模态框 */}
+      <AIFieldMappingPanel
+        sourceFields={sourceFields}
+        targetFields={targetFields}
+        sourceTable={form.getFieldValue('source_table')}
+        targetTable={form.getFieldValue('target_table')}
+        visible={isAIFieldMappingOpen}
+        onClose={() => setIsAIFieldMappingOpen(false)}
+        onMappingApply={(mappings) => {
+          console.log('Applied mappings:', mappings);
+          // 这里可以处理映射应用逻辑
+          message.success(`已应用 ${mappings.length} 个字段映射`);
+        }}
+      />
     </div>
   );
 }

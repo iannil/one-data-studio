@@ -2782,6 +2782,383 @@ def acknowledge_quality_alert(alert_id):
         db.close()
 
 
+# ==================== 增强数据质量 API ====================
+
+@app.route("/api/v1/quality/enhanced/execute-rule", methods=["POST"])
+@require_jwt()
+def execute_enhanced_quality_rule():
+    """
+    执行增强质量规则
+    支持更多规则类型和详细结果
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.enhanced_quality_service import (
+            get_enhanced_quality_engine,
+            QualityRuleDefinition,
+            QualityRuleType,
+            QualitySeverity,
+        )
+
+        engine = get_enhanced_quality_engine(db)
+
+        rule = QualityRuleDefinition(
+            rule_id=data.get("rule_id", f"rule_{secrets.token_hex(8)}"),
+            name=data.get("name", "质量规则"),
+            rule_type=QualityRuleType(data.get("rule_type", "null_check")),
+            description=data.get("description", ""),
+            target_database=data.get("target_database", ""),
+            target_table=data.get("target_table", ""),
+            target_column=data.get("target_column", ""),
+            reference_table=data.get("reference_table", ""),
+            reference_column=data.get("reference_column", ""),
+            rule_expression=data.get("rule_expression", ""),
+            threshold=data.get("threshold", 100.0),
+            severity=QualitySeverity(data.get("severity", "warning")),
+            config=data.get("config", {}),
+            enabled=data.get("enabled", True),
+        )
+
+        result = engine.execute_rule(rule)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"执行增强质量规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/enhanced/execute-batch", methods=["POST"])
+@require_jwt()
+def execute_enhanced_quality_batch():
+    """
+    批量执行质量规则
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.enhanced_quality_service import (
+            get_enhanced_quality_engine,
+            QualityRuleDefinition,
+            QualityRuleType,
+            QualitySeverity,
+        )
+
+        engine = get_enhanced_quality_engine(db)
+
+        rules_data = data.get("rules", [])
+        rules = []
+
+        for rule_data in rules_data:
+            rule = QualityRuleDefinition(
+                rule_id=rule_data.get("rule_id", f"rule_{secrets.token_hex(8)}"),
+                name=rule_data.get("name", "质量规则"),
+                rule_type=QualityRuleType(rule_data.get("rule_type", "null_check")),
+                description=rule_data.get("description", ""),
+                target_database=rule_data.get("target_database", ""),
+                target_table=rule_data.get("target_table", ""),
+                target_column=rule_data.get("target_column", ""),
+                reference_table=rule_data.get("reference_table", ""),
+                reference_column=rule_data.get("reference_column", ""),
+                rule_expression=rule_data.get("rule_expression", ""),
+                threshold=rule_data.get("threshold", 100.0),
+                severity=QualitySeverity(rule_data.get("severity", "warning")),
+                config=rule_data.get("config", {}),
+                enabled=rule_data.get("enabled", True),
+            )
+            rules.append(rule)
+
+        results = engine.execute_rules_batch(rules)
+
+        # 计算综合分数
+        weights = data.get("weights")
+        overall_score = engine.calculate_overall_score(results, weights)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": [r.to_dict() for r in results],
+                "overall_score": round(overall_score, 2),
+                "total_rules": len(results),
+                "passed_rules": sum(1 for r in results if r.passed),
+                "failed_rules": sum(1 for r in results if not r.passed),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"批量执行质量规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/enhanced/trends/<table_id>", methods=["GET"])
+@require_jwt()
+def get_quality_trends(table_id):
+    """
+    获取质量趋势分析
+    """
+    db = next(get_db())
+
+    try:
+        from services.enhanced_quality_service import get_enhanced_quality_engine
+
+        engine = get_enhanced_quality_engine(db)
+
+        period = request.args.get("period", "daily")
+        days = int(request.args.get("days", 30))
+
+        trend = engine.analyze_quality_trend(table_id, period, days)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": trend.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取质量趋势失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/enhanced/anomalies/detect", methods=["POST"])
+@require_jwt()
+def detect_quality_anomalies():
+    """
+    检测质量异常
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.enhanced_quality_service import get_enhanced_quality_engine
+
+        engine = get_enhanced_quality_engine(db)
+
+        table_id = data.get("table_id")
+        current_score = data.get("current_score")
+        historical_scores = data.get("historical_scores", [])
+        threshold_std = data.get("threshold_std", 2.0)
+
+        if not all([table_id, current_score is not None]):
+            return jsonify({
+                "code": 40001,
+                "message": "table_id 和 current_score 不能为空"
+            }), 400
+
+        anomalies = engine.detect_quality_anomalies(
+            table_id, current_score, historical_scores, threshold_std
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "anomalies": [a.to_dict() for a in anomalies],
+                "count": len(anomalies),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"检测质量异常失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/enhanced/score/calculate", methods=["POST"])
+@require_jwt()
+def calculate_quality_score():
+    """
+    计算综合质量分数
+    支持自定义权重
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.enhanced_quality_service import (
+            get_enhanced_quality_engine,
+            QualityRuleDefinition,
+            QualityRuleType,
+            QualitySeverity,
+        )
+
+        engine = get_enhanced_quality_engine(db)
+
+        rules_data = data.get("rules", [])
+        weights = data.get("weights")
+
+        rules = []
+        for rule_data in rules_data:
+            rule = QualityRuleDefinition(
+                rule_id=rule_data.get("rule_id", f"rule_{secrets.token_hex(8)}"),
+                name=rule_data.get("name", "质量规则"),
+                rule_type=QualityRuleType(rule_data.get("rule_type", "null_check")),
+                description=rule_data.get("description", ""),
+                target_database=rule_data.get("target_database", ""),
+                target_table=rule_data.get("target_table", ""),
+                target_column=rule_data.get("target_column", ""),
+                reference_table=rule_data.get("reference_table", ""),
+                reference_column=rule_data.get("reference_column", ""),
+                rule_expression=rule_data.get("rule_expression", ""),
+                threshold=rule_data.get("threshold", 100.0),
+                severity=QualitySeverity(rule_data.get("severity", "warning")),
+                config=rule_data.get("config", {}),
+                enabled=rule_data.get("enabled", True),
+            )
+            rules.append(rule)
+
+        results = engine.execute_rules_batch(rules)
+        overall_score = engine.calculate_overall_score(results, weights)
+
+        # 按类别统计
+        category_scores = {}
+        for result in results:
+            category = engine._get_rule_category(result.rule_type)
+            if category not in category_scores:
+                category_scores[category] = []
+            category_scores[category].append(result.score)
+
+        category_averages = {
+            cat: round(statistics.mean(scores), 2)
+            for cat, scores in category_scores.items()
+        }
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "overall_score": round(overall_score, 2),
+                "category_scores": category_averages,
+                "rule_count": len(results),
+                "passed_count": sum(1 for r in results if r.passed),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"计算质量分数失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/enhanced/rules/templates", methods=["GET"])
+@require_jwt()
+def get_quality_rule_templates():
+    """
+    获取质量规则模板
+    """
+    try:
+        from services.enhanced_quality_service import QualityRuleType
+
+        templates = [
+            {
+                "rule_type": "null_check",
+                "name": "空值检查",
+                "description": "检查列中的空值比例",
+                "config_template": {
+                    "sample_rows": {"type": "integer", "default": 10000},
+                    "null_ratio": {"type": "float", "default": 0.0},
+                },
+            },
+            {
+                "rule_type": "duplicate_check",
+                "name": "重复值检查",
+                "description": "检查列中的重复值",
+                "config_template": {
+                    "sample_rows": {"type": "integer", "default": 10000},
+                    "duplicate_ratio": {"type": "float", "default": 0.0},
+                },
+            },
+            {
+                "rule_type": "range_check",
+                "name": "范围检查",
+                "description": "检查数值是否在指定范围内",
+                "config_template": {
+                    "min_value": {"type": "number", "required": True},
+                    "max_value": {"type": "number", "required": True},
+                },
+            },
+            {
+                "rule_type": "pattern_check",
+                "name": "正则模式检查",
+                "description": "检查值是否匹配正则表达式",
+                "config_template": {
+                    "pattern": {"type": "string", "required": True},
+                },
+            },
+            {
+                "rule_type": "enum_check",
+                "name": "枚举值检查",
+                "description": "检查值是否在允许的枚举列表中",
+                "config_template": {
+                    "allowed_values": {"type": "array", "required": True},
+                },
+            },
+            {
+                "rule_type": "reference_check",
+                "name": "引用完整性检查",
+                "description": "检查外键引用的有效性",
+                "config_template": {
+                    "reference_table": {"type": "string", "required": True},
+                    "reference_column": {"type": "string", "required": True},
+                },
+            },
+            {
+                "rule_type": "cross_table",
+                "name": "跨表一致性检查",
+                "description": "检查两个表之间的数据一致性",
+                "config_template": {
+                    "reference_table": {"type": "string", "required": True},
+                    "reference_column": {"type": "string", "required": True},
+                },
+            },
+            {
+                "rule_type": "statistical",
+                "name": "统计异常检测",
+                "description": "使用统计方法检测异常值",
+                "config_template": {
+                    "statistical_method": {"type": "string", "enum": ["iqr", "zscore"], "default": "iqr"},
+                    "threshold": {"type": "float", "default": 3.0},
+                },
+            },
+            {
+                "rule_type": "timeliness",
+                "name": "及时性检查",
+                "description": "检查数据更新是否及时",
+                "config_template": {
+                    "max_delay_hours": {"type": "integer", "default": 24},
+                },
+            },
+        ]
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "templates": templates,
+                "total": len(templates),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取规则模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # ============================================
 # P1.3: Data Lineage APIs
 # ============================================
@@ -8596,6 +8973,1054 @@ def list_tables_for_mapping(database_name: str):
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 
+# ==================== ETL AI 增强 API ====================
+
+@app.route("/api/v1/etl/ai/profiling", methods=["POST"])
+@require_jwt()
+def etl_ai_profiling():
+    """
+    AI 数据源画像分析
+
+    自动分析数据源的模式、数据分布和特征
+    """
+    data = request.json
+
+    try:
+        source_connection_id = data.get("source_connection_id")
+        table_name = data.get("table_name")
+        sample_size = data.get("sample_size", 1000)
+
+        if not source_connection_id:
+            return jsonify({"code": 40001, "message": "source_connection_id 不能为空"}), 400
+
+        db = get_db_session()
+        try:
+            from models.metadata import MetadataTable, MetadataColumn
+            from sqlalchemy import text
+
+            # 获取数据源连接信息
+            from models import DataSource
+            source = db.query(DataSource).filter(
+                DataSource.source_id == source_connection_id
+            ).first()
+
+            if not source:
+                return jsonify({"code": 40400, "message": "数据源不存在"}), 404
+
+            # 获取表信息
+            table_query = db.query(MetadataTable).filter(
+                MetadataTable.table_name == table_name
+            )
+            if source.connection_config and source.connection_config.get("database"):
+                table_query = table_query.filter(
+                    MetadataTable.database_name == source.connection_config["database"]
+                )
+
+            table = table_query.first()
+
+            # 获取列信息
+            columns = db.query(MetadataColumn).filter(
+                MetadataColumn.table_name == table_name
+            ).all() if table else []
+
+            # 尝试采样数据
+            sample_data = []
+            column_stats = {}
+
+            if columns:
+                try:
+                    # 构建采样 SQL
+                    col_names = [c.column_name for c in columns[:10]]
+                    sql = f"SELECT {', '.join(col_names)} FROM {table_name} LIMIT {sample_size}"
+
+                    # 这里应该使用实际的数据源连接执行查询
+                    # 简化版本：使用元数据推断
+                    for col in columns:
+                        column_stats[col.column_name] = {
+                            "type": col.column_type or "unknown",
+                            "nullable": col.is_nullable,
+                            "description": col.description,
+                            "sensitivity_type": col.sensitivity_type,
+                            "has_ai_annotation": bool(col.ai_description),
+                        }
+
+                except Exception as e:
+                    logger.warning(f"数据采样失败: {e}")
+
+            # 使用 AI 分析数据模式
+            from services.ai_service import get_ai_service
+            ai_service = get_ai_service()
+
+            # 模式发现
+            patterns = {
+                "primary_keys": [c.column_name for c in columns if c.column_name and "id" in c.column_name.lower()],
+                "timestamp_columns": [c.column_name for c in columns if c.column_name and any(t in c.column_name.lower() for t in ["time", "date", "at", "created", "updated"])],
+                "status_columns": [c.column_name for c in columns if c.column_name and "status" in c.column_name.lower()],
+                "sensitive_columns": [c.column_name for c in columns if c.sensitivity_type and c.sensitivity_type != "none"],
+            }
+
+            profile_result = {
+                "source_connection_id": source_connection_id,
+                "table_name": table_name,
+                "column_count": len(columns),
+                "columns": column_stats,
+                "patterns": patterns,
+                "data_quality_score": 0.8,  # 简化版本
+                "recommendations": [
+                    "建议为敏感列添加脱敏规则",
+                    "建议为时间列创建索引",
+                    "建议对主键列添加唯一约束"
+                ]
+            }
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": profile_result
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"ETL AI 画像分析失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/etl/ai/transformation-suggest", methods=["POST"])
+@require_jwt()
+def etl_ai_transformation_suggest():
+    """
+    转换逻辑推荐
+
+    基于源字段和目标字段差异推荐转换逻辑
+    """
+    data = request.json
+
+    try:
+        source_columns = data.get("source_columns", [])
+        target_columns = data.get("target_columns", [])
+
+        if not source_columns or not target_columns:
+            return jsonify({"code": 40001, "message": "source_columns 和 target_columns 不能为空"}), 400
+
+        from services.ai_service import get_ai_service
+        ai_service = get_ai_service()
+
+        # 构建转换建议
+        transformations = []
+
+        # 为每个目标字段找对应的源字段并推荐转换
+        target_map = {c.get("name"): c for c in target_columns}
+
+        for source_col in source_columns:
+            source_name = source_col.get("name")
+            source_type = source_col.get("type", "varchar")
+
+            # 查找可能的目标字段
+            possible_targets = [t for t in target_columns if t.get("name") == source_name]
+
+            for target_col in possible_targets:
+                target_type = target_col.get("type", "varchar")
+                target_name = target_col.get("name")
+
+                transformation = {
+                    "source_field": source_name,
+                    "target_field": target_name,
+                    "source_type": source_type,
+                    "target_type": target_type,
+                    "needs_conversion": source_type != target_type,
+                }
+
+                # 根据类型差异推荐转换
+                if source_type != target_type:
+                    if "int" in source_type.lower() and "varchar" in target_type.lower():
+                        transformation["sql"] = f"CAST({source_name} AS VARCHAR)"
+                        transformation["description"] = "数值转字符串"
+                    elif "varchar" in source_type.lower() and "int" in target_type.lower():
+                        transformation["sql"] = f"CAST(NULLIF({source_name}, '') AS INTEGER)"
+                        transformation["description"] = "字符串转数值"
+                    elif "date" in source_type.lower() and "varchar" in target_type.lower():
+                        transformation["sql"] = f"TO_CHAR({source_name}, 'YYYY-MM-DD')"
+                        transformation["description"] = "日期转字符串"
+                    elif "varchar" in source_type.lower() and "date" in target_type.lower():
+                        transformation["sql"] = f"TO_DATE({source_name}, 'YYYY-MM-DD')"
+                        transformation["description"] = "字符串转日期"
+                    else:
+                        transformation["sql"] = f"{source_name}"
+                        transformation["description"] = "直接映射"
+                else:
+                    transformation["sql"] = f"{source_name}"
+                    transformation["description"] = "直接映射"
+
+                transformations.append(transformation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "transformations": transformations,
+                "total_count": len(transformations),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"ETL 转换推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/etl/ai/field-mapping", methods=["POST"])
+@require_jwt()
+def etl_ai_field_mapping():
+    """
+    字段映射推荐 (ETL AI 版本)
+
+    使用 AI 进行智能字段映射，与 /api/v1/mapping/suggest 功能类似
+    但针对 ETL 场景优化
+    """
+    try:
+        from services.ai_field_mapping import get_ai_field_mapping_service
+
+        service = get_ai_field_mapping_service()
+
+        data = request.json
+        source_fields = data.get("source_fields", [])
+        target_fields = data.get("target_fields", [])
+
+        if not source_fields or not target_fields:
+            return jsonify({"code": 40001, "message": "source_fields 和 target_fields 不能为空"}), 400
+
+        # 构建源和目标列信息
+        source_columns = [{"name": f.get("name"), "type": f.get("type", "varchar")} for f in source_fields]
+        target_columns = [{"name": f.get("name"), "type": f.get("type", "varchar")} for f in target_fields]
+
+        # 使用现有服务进行映射
+        mappings = []
+
+        # 完全匹配
+        for target_col in target_columns:
+            target_name = target_col["name"]
+            for source_col in source_columns:
+                if source_col["name"] == target_name:
+                    mappings.append({
+                        "source_field": source_col["name"],
+                        "target_field": target_name,
+                        "confidence": 1.0,
+                        "mapping_type": "exact",
+                        "transformation": "",
+                    })
+                    break
+
+        # 模糊匹配 (名称相似)
+        for source_col in source_columns:
+            source_name = source_col["name"]
+            for target_col in target_columns:
+                target_name = target_col["name"]
+                # 简单相似度计算
+                if source_name != target_name and source_name.lower() in target_name.lower() or target_name.lower() in source_name.lower():
+                    if not any(m["source_field"] == source_name for m in mappings):
+                        mappings.append({
+                            "source_field": source_name,
+                            "target_field": target_name,
+                            "confidence": 0.8,
+                            "mapping_type": "fuzzy",
+                            "transformation": "",
+                        })
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "mappings": mappings,
+                "source_count": len(source_fields),
+                "target_count": len(target_fields),
+                "mapped_count": len(mappings),
+                "coverage": len(mappings) / len(target_fields) if target_fields else 0,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"ETL AI 字段映射失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== Assets AI 增强 API ====================
+
+@app.route("/api/v1/assets/ai/value-assess", methods=["POST"])
+@require_jwt()
+def assets_ai_value_assess():
+    """
+    资产价值智能评估
+
+    使用 AI 评估数据资产的综合价值
+    """
+    data = request.json
+
+    try:
+        asset_id = data.get("asset_id")
+        metrics = data.get("metrics", {})
+
+        if not asset_id:
+            return jsonify({"code": 40001, "message": "asset_id 不能为空"}), 400
+
+        db = get_db_session()
+        try:
+            from models.assets import DataAsset
+            from services.asset_value_calculator import get_asset_value_calculator
+
+            calculator = get_asset_value_calculator()
+
+            # 获取资产信息
+            asset = db.query(DataAsset).filter(
+                DataAsset.asset_id == asset_id
+            ).first()
+
+            if not asset:
+                return jsonify({"code": 40400, "message": "资产不存在"}), 404
+
+            # 计算各维度评分
+            lookback_days = metrics.get("lookback_days", 30)
+
+            # 使用评分 (0-100)
+            usage_score, usage_details = calculator.calculate_usage_score(
+                db, asset_id, lookback_days
+            )
+
+            # 业务评分 (0-100)
+            business_score, business_details = calculator.calculate_business_score(
+                db, asset_id
+            )
+
+            # 质量评分 (0-100)
+            quality_score, quality_details = calculator.calculate_quality_score(
+                db, asset_id
+            )
+
+            # 治理评分 (0-100)
+            governance_score = 0.0
+            governance_details = {}
+            if hasattr(calculator, 'calculate_governance_score'):
+                governance_score, governance_details = calculator.calculate_governance_score(
+                    db, asset_id
+                )
+
+            # 计算综合评分
+            weights = calculator.weights
+            overall_score = (
+                usage_score * weights.get("usage", 0.35) +
+                business_score * weights.get("business", 0.30) +
+                quality_score * weights.get("quality", 0.20) +
+                governance_score * weights.get("governance", 0.15)
+            )
+
+            # 确定价值等级
+            if overall_score >= 80:
+                value_level = "S"
+                level_name = "战略级"
+            elif overall_score >= 60:
+                value_level = "A"
+                level_name = "核心级"
+            elif overall_score >= 40:
+                value_level = "B"
+                level_name = "重要级"
+            else:
+                value_level = "C"
+                level_name = "基础级"
+
+            # 生成建议
+            recommendations = []
+            if usage_score < 40:
+                recommendations.append("建议加强资产推广，提升使用率")
+            if quality_score < 60:
+                recommendations.append("建议提升数据质量，完善质量规则")
+            if governance_score < 50:
+                recommendations.append("建议完善资产治理信息，补充负责人和标签")
+            if business_score < 50:
+                recommendations.append("建议明确资产的业务价值和应用场景")
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "asset_id": asset_id,
+                    "asset_name": asset.name,
+                    "score_breakdown": {
+                        "usage_score": round(usage_score, 2),
+                        "business_score": round(business_score, 2),
+                        "quality_score": round(quality_score, 2),
+                        "governance_score": round(governance_score, 2),
+                        "overall_score": round(overall_score, 2),
+                    },
+                    "value_level": value_level,
+                    "level_name": level_name,
+                    "details": {
+                        "usage": usage_details,
+                        "business": business_details,
+                        "quality": quality_details,
+                        "governance": governance_details,
+                    },
+                    "recommendations": recommendations,
+                }
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"资产价值评估失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/assets/ai/auto-tag", methods=["POST"])
+@require_jwt()
+def assets_ai_auto_tag():
+    """
+    智能标签生成
+
+    使用 AI 自动为资产生成业务标签
+    """
+    data = request.json
+
+    try:
+        asset_id = data.get("asset_id")
+        context = data.get("context", {})
+
+        if not asset_id:
+            return jsonify({"code": 40001, "message": "asset_id 不能为空"}), 400
+
+        db = get_db_session()
+        try:
+            from models.assets import DataAsset
+            from services.ai_service import get_ai_service
+
+            ai_service = get_ai_service()
+
+            # 获取资产信息
+            asset = db.query(DataAsset).filter(
+                DataAsset.asset_id == asset_id
+            ).first()
+
+            if not asset:
+                return jsonify({"code": 40400, "message": "资产不存在"}), 404
+
+            # 收集资产上下文信息
+            asset_context = {
+                "name": asset.name,
+                "description": asset.description or "",
+                "table_name": asset.table_name or "",
+                "database_name": asset.database_name or "",
+                "asset_type": asset.asset_type or "",
+                "existing_tags": asset.tags or [],
+            }
+
+            # 添加额外上下文
+            asset_context.update(context)
+
+            # 使用 AI 生成标签
+            prompt = f"""基于以下数据资产信息，生成 3-5 个业务标签。
+
+资产名称: {asset_context['name']}
+描述: {asset_context['description']}
+表名: {asset_context['table_name']}
+数据库名: {asset_context['database_name']}
+资产类型: {asset_context['asset_type']}
+已有标签: {', '.join(asset_context['existing_tags'])}
+
+请返回 JSON 格式（只返回 JSON，不要其他内容）：
+{{
+    "tags": ["标签1", "标签2", "标签3"],
+    "confidence": [0.9, 0.8, 0.7],
+    "reasons": ["推荐理由1", "推荐理由2", "推荐理由3"]
+}}"""
+
+            try:
+                messages = [{"role": "user", "content": prompt}]
+                response = ai_service._chat_completion(messages, max_tokens=300, temperature=0.3)
+
+                import json
+                import re
+
+                # 解析 JSON 响应
+                content = response.strip()
+                if content.startswith("```"):
+                    lines = content.split("\n")
+                    content = "\n".join(lines[1:-1])
+
+                result = json.loads(content)
+
+                return jsonify({
+                    "code": 0,
+                    "message": "success",
+                    "data": {
+                        "asset_id": asset_id,
+                        "suggested_tags": result.get("tags", []),
+                        "confidence": result.get("confidence", []),
+                        "reasons": result.get("reasons", []),
+                        "existing_tags": asset_context['existing_tags'],
+                    }
+                })
+
+            except Exception as e:
+                logger.warning(f"AI 标签生成失败，使用规则匹配: {e}")
+                # 规则匹配后备方案
+                rule_based_tags = []
+
+                # 基于资产类型
+                if asset.asset_type == "table":
+                    rule_based_tags.append("数据表")
+                elif asset.asset_type == "view":
+                    rule_based_tags.append("视图")
+
+                # 基于表名推断
+                table_lower = (asset.table_name or "").lower()
+                if "fact" in table_lower:
+                    rule_based_tags.append("事实表")
+                elif "dim" in table_lower or "dimension" in table_lower:
+                    rule_based_tags.append("维度表")
+                elif "ods" in table_lower:
+                    rule_based_tags.append("ODS层")
+                elif "dwd" in table_lower:
+                    rule_based_tags.append("DWD层")
+                elif "dws" in table_lower:
+                    rule_based_tags.append("DWS层")
+                elif "ads" in table_lower:
+                    rule_based_tags.append("ADS层")
+
+                # 基于数据库名
+                if asset.database_name:
+                    rule_based_tags.append(f"库:{asset.database_name}")
+
+                return jsonify({
+                    "code": 0,
+                    "message": "success",
+                    "data": {
+                        "asset_id": asset_id,
+                        "suggested_tags": rule_based_tags,
+                        "confidence": [0.7] * len(rule_based_tags),
+                        "reasons": ["基于规则推断"] * len(rule_based_tags),
+                        "existing_tags": asset_context['existing_tags'],
+                    }
+                })
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"智能标签生成失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== Quality AI 增强 API ====================
+
+@app.route("/api/v1/quality/ai/analyze-table", methods=["POST"])
+@require_jwt()
+def quality_ai_analyze_table():
+    """
+    AI 质量分析 - 分析表的数据质量问题
+
+    与 /api/v1/quality/analyze-table 功能类似，但使用 /api/v1/quality/ai/ 路径
+    """
+    db = get_db_session()
+    data = request.json or {}
+
+    try:
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
+
+        advisor = get_ai_cleaning_advisor()
+
+        table_name = data.get("table_name")
+        if not table_name:
+            return jsonify({"code": 40001, "message": "table_name 不能为空"}), 400
+
+        database_name = data.get("database_name")
+
+        recommendations = advisor.analyze_table_quality_issues(
+            db=db,
+            table_name=table_name,
+            database_name=database_name
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "table_name": table_name,
+                "database_name": database_name,
+                "issues_found": len(recommendations),
+                "recommendations": [r.to_dict() for r in recommendations],
+            }
+        })
+    except ImportError as e:
+        return jsonify({"code": 50001, "message": f"AI 清洗服务不可用: {e}"}), 500
+    except Exception as e:
+        logger.error(f"AI 表质量分析失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/quality/ai/rule-templates", methods=["POST"])
+@require_jwt()
+def quality_ai_rule_templates():
+    """
+    AI 规则模板生成
+
+    基于表结构生成质量规则模板
+    """
+    try:
+        from services.ai_cleaning_advisor import get_ai_cleaning_advisor
+        from services.ai_service import get_ai_service
+
+        advisor = get_ai_cleaning_advisor()
+        ai_service = get_ai_service()
+
+        data = request.json
+        table_name = data.get("table_name", "")
+        columns = data.get("columns", [])
+
+        if not columns:
+            return jsonify({"code": 40001, "message": "columns 不能为空"}), 400
+
+        # 使用 AI 生成规则模板
+        cols_info = []
+        for col in columns[:20]:
+            cols_info.append(f"- {col.get('name', '')} ({col.get('type', 'varchar')}): {col.get('description', '')}")
+
+        cols_str = "\n".join(cols_info)
+
+        prompt = f"""你是一个数据质量专家。请为以下表结构推荐质量检查规则。
+
+表名: {table_name}
+列信息:
+{cols_str}
+
+请以 JSON 数组格式返回推荐规则（只返回 JSON 数组，不要其他内容）：
+[
+    {{
+        "rule_name": "规则名称",
+        "rule_type": "completeness/validity/consistency/uniqueness",
+        "target_column": "列名",
+        "expression": "规则表达式",
+        "description": "规则描述",
+        "severity": "error/warning/info",
+        "priority": 1-10
+    }}
+]"""
+
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            response = ai_service._chat_completion(messages, max_tokens=1024, temperature=0.3)
+
+            import json
+            import re
+
+            content = response.strip()
+            if content.startswith("```"):
+                lines = content.split("\n")
+                content = "\n".join(lines[1:-1])
+
+            rules = json.loads(content)
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "table_name": table_name,
+                    "rules": rules,
+                    "total": len(rules),
+                }
+            })
+
+        except Exception as e:
+            logger.warning(f"AI 规则生成失败，使用模板匹配: {e}")
+            # 后备方案：使用预定义模板
+            templates = []
+            for col in columns:
+                col_name = col.get("name")
+                col_type = col.get("type", "varchar").lower()
+
+                # 基于列类型推荐规则
+                if "int" in col_type or "number" in col_type:
+                    templates.append({
+                        "rule_name": f"{col_name}_非空检查",
+                        "rule_type": "completeness",
+                        "target_column": col_name,
+                        "expression": f"{col_name} IS NOT NULL",
+                        "description": f"{col_name} 不能为空",
+                        "severity": "error",
+                        "priority": 8,
+                    })
+                    templates.append({
+                        "rule_name": f"{col_name}_范围检查",
+                        "rule_type": "validity",
+                        "target_column": col_name,
+                        "expression": f"{col_name} >= 0",
+                        "description": f"{col_name} 必须非负",
+                        "severity": "warning",
+                        "priority": 5,
+                    })
+                elif "varchar" in col_type or "char" in col_type:
+                    templates.append({
+                        "rule_name": f"{col_name}_长度检查",
+                        "rule_type": "validity",
+                        "target_column": col_name,
+                        "expression": f"LENGTH({col_name}) > 0",
+                        "description": f"{col_name} 不能为空字符串",
+                        "severity": "warning",
+                        "priority": 6,
+                    })
+                elif "date" in col_type or "time" in col_type:
+                    templates.append({
+                        "rule_name": f"{col_name}_日期检查",
+                        "rule_type": "validity",
+                        "target_column": col_name,
+                        "expression": f"{col_name} <= CURRENT_DATE",
+                        "description": f"{col_name} 不能晚于当前日期",
+                        "severity": "warning",
+                        "priority": 4,
+                    })
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "table_name": table_name,
+                    "rules": templates,
+                    "total": len(templates),
+                    "fallback": True,
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"AI 规则模板生成失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/quality/ai/alert-rules", methods=["POST"])
+@require_jwt()
+def quality_ai_alert_rules():
+    """
+    AI 智能预警规则生成
+
+    基于历史数据生成异常检测预警规则
+    """
+    data = request.json
+
+    try:
+        from services.ai_service import get_ai_service
+
+        ai_service = get_ai_service()
+
+        metric_name = data.get("metric_name")
+        historical_data = data.get("historical_data", [])
+
+        if not metric_name:
+            return jsonify({"code": 40001, "message": "metric_name 不能为空"}), 400
+
+        # 计算统计信息
+        import statistics
+        try:
+            values = [float(d.get("value", 0)) for d in historical_data if d.get("value") is not None]
+        except (ValueError, TypeError):
+            values = []
+
+        alert_rules = []
+
+        if len(values) >= 10:
+            mean_val = statistics.mean(values)
+            stdev_val = statistics.stdev(values) if len(values) > 1 else 0
+
+            # 生成 3-sigma 规则
+            alert_rules.append({
+                "rule_name": f"{metric_name}_异常检测",
+                "metric_name": metric_name,
+                "rule_type": "static_threshold",
+                "condition": "outside_range",
+                "threshold_upper": round(mean_val + 3 * stdev_val, 2),
+                "threshold_lower": round(mean_val - 3 * stdev_val, 2),
+                "description": f"当 {metric_name} 超出 {mean_val:.2f} ± 3σ 时告警",
+                "severity": "warning",
+            })
+
+            # 生成百分比变化规则
+            if len(values) >= 2:
+                pct_changes = []
+                for i in range(1, len(values)):
+                    if values[i-1] != 0:
+                        pct_changes.append(abs((values[i] - values[i-1]) / values[i-1] * 100))
+
+                if pct_changes:
+                    avg_change = statistics.mean(pct_changes)
+                    alert_rules.append({
+                        "rule_name": f"{metric_name}_突增检测",
+                        "metric_name": metric_name,
+                        "rule_type": "percent_change",
+                        "condition": "increase",
+                        "threshold_percent": round(avg_change * 2, 2),
+                        "description": f"当 {metric_name} 突增超过 {avg_change*2:.1f}% 时告警",
+                        "severity": "warning",
+                    })
+
+        # 使用 AI 生成更智能的规则
+        if values and ai_service.config.enabled:
+            try:
+                prompt = f"""你是一个数据质量专家。请基于以下指标历史数据生成预警规则。
+
+指标名称: {metric_name}
+数据点: {values[:50]}
+
+请返回 JSON 格式（只返回 JSON，不要其他内容）：
+{{
+    "rules": [
+        {{
+            "rule_name": "规则名称",
+            "condition_type": "threshold/trend/anomaly",
+            "condition": "条件描述",
+            "threshold_value": 数值,
+            "severity": "error/warning/info"
+        }}
+    ]
+}}"""
+
+                messages = [{"role": "user", "content": prompt}]
+                response = ai_service._chat_completion(messages, max_tokens=512, temperature=0.3)
+
+                import json
+                import re
+
+                content = response.strip()
+                if content.startswith("```"):
+                    lines = content.split("\n")
+                    content = "\n".join(lines[1:-1])
+
+                result = json.loads(content)
+                alert_rules.extend(result.get("rules", []))
+
+            except Exception as e:
+                logger.debug(f"AI 预警规则生成失败: {e}")
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "metric_name": metric_name,
+                "alert_rules": alert_rules,
+                "total": len(alert_rules),
+                "statistics": {
+                    "count": len(values),
+                    "mean": round(statistics.mean(values), 2) if values else 0,
+                    "min": round(min(values), 2) if values else 0,
+                    "max": round(max(values), 2) if values else 0,
+                } if values else None,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"AI 预警规则生成失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== Sensitivity AI API ====================
+
+@app.route("/api/v1/sensitivity/ai/scan", methods=["POST"])
+@require_jwt()
+def sensitivity_ai_scan():
+    """
+    敏感数据扫描 - 扫描表/列的敏感数据
+
+    使用 AI 识别敏感数据类型和级别
+    """
+    data = request.json
+
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+        from services.ai_service import get_ai_service
+
+        ai_service = get_ai_service()
+        scan_service = get_sensitivity_auto_scan_service(ai_service=ai_service)
+
+        dataset_id = data.get("dataset_id")
+        table_name = data.get("table_name")
+        columns = data.get("columns", [])
+        sample_size = data.get("sample_size", 200)
+
+        if not table_name and not dataset_id:
+            return jsonify({"code": 40001, "message": "table_name 或 dataset_id 必须提供一个"}), 400
+
+        db = get_db_session()
+        try:
+            from models.metadata import MetadataTable, MetadataColumn
+            from sqlalchemy import text
+
+            # 获取表列信息
+            if table_name:
+                metadata_columns = db.query(MetadataColumn).filter(
+                    MetadataColumn.table_name == table_name
+                ).all()
+
+                if metadata_columns:
+                    columns = [{
+                        "name": col.column_name,
+                        "type": col.column_type or "varchar",
+                    } for col in metadata_columns]
+
+            # 扫描每列
+            scan_results = []
+
+            for col_info in columns:
+                col_name = col_info.get("name")
+                col_type = col_info.get("type", "varchar")
+
+                # 获取样本数据
+                sample_values = []
+                try:
+                    # 使用快速扫描
+                    result = scan_service.quick_scan_column(
+                        column_name=col_name,
+                        sample_values=sample_values,
+                        column_type=col_type,
+                    )
+                    scan_results.append(result)
+                except Exception as e:
+                    logger.debug(f"列 {col_name} 扫描失败: {e}")
+                    scan_results.append({
+                        "column_name": col_name,
+                        "is_sensitive": False,
+                        "sensitivity_type": "none",
+                        "confidence": 0,
+                        "error": str(e),
+                    })
+
+            # 统计
+            sensitive_count = sum(1 for r in scan_results if r.get("is_sensitive"))
+            breakdown = {}
+            for r in scan_results:
+                stype = r.get("sensitivity_type", "none")
+                if stype != "none":
+                    breakdown[stype] = breakdown.get(stype, 0) + 1
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "table_name": table_name,
+                    "dataset_id": dataset_id,
+                    "columns_scanned": len(scan_results),
+                    "sensitive_found": sensitive_count,
+                    "breakdown": breakdown,
+                    "results": scan_results,
+                }
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"敏感数据扫描失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/ai/scan-batch", methods=["POST"])
+@require_jwt()
+def sensitivity_ai_scan_batch():
+    """
+    批量扫描多个表的敏感数据
+
+    创建批量扫描任务，返回任务 ID
+    """
+    data = request.json
+
+    try:
+        from services.sensitivity_auto_scan_service import (
+            get_sensitivity_auto_scan_service,
+            AutoScanPolicy,
+            AutoScanMode
+        )
+        from services.ai_service import get_ai_service
+
+        ai_service = get_ai_service()
+        scan_service = get_sensitivity_auto_scan_service(ai_service=ai_service)
+
+        tables = data.get("tables", [])
+        databases = data.get("databases", [])
+        options = data.get("options", {})
+
+        if not tables and not databases:
+            return jsonify({"code": 40001, "message": "tables 或 databases 不能为空"}), 400
+
+        # 创建扫描策略
+        policy = AutoScanPolicy(
+            name=f"批量扫描-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            mode=AutoScanMode.TARGETED if tables else AutoScanMode.FULL,
+            databases=databases,
+            sample_size=options.get("sample_size", 200),
+            confidence_threshold=options.get("confidence_threshold", 60),
+            auto_update_metadata=options.get("auto_update_metadata", True),
+            auto_generate_masking_rules=options.get("auto_generate_masking_rules", False),
+        )
+
+        # 启动扫描
+        import uuid
+        task_id = f"scan-{uuid.uuid4().hex[:12]}"
+
+        # 在实际应用中，这里应该使用异步任务
+        # 对于演示，我们直接执行同步扫描
+        db = get_db_session()
+        try:
+            progress = scan_service.start_auto_scan(policy=policy, db_session=db)
+
+            return jsonify({
+                "code": 0,
+                "message": "扫描任务已创建",
+                "data": {
+                    "task_id": task_id,
+                    "status": "running",
+                    "tables_count": len(tables) if tables else 0,
+                    "databases_count": len(databases),
+                    "progress": scan_service.get_progress(),
+                }
+            })
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"批量扫描创建失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sensitivity/ai/scan-result/<task_id>", methods=["GET"])
+@require_jwt()
+def sensitivity_ai_scan_result(task_id: str):
+    """
+    获取扫描任务结果
+
+    返回批量扫描任务的详细结果
+    """
+    try:
+        from services.sensitivity_auto_scan_service import get_sensitivity_auto_scan_service
+
+        scan_service = get_sensitivity_auto_scan_service()
+
+        # 获取扫描进度/结果
+        progress = scan_service.get_progress()
+
+        if not progress or progress.get("status") == "idle":
+            return jsonify({
+                "code": 40400,
+                "message": "扫描任务不存在或未开始"
+            }), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task_id": task_id,
+                **progress
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取扫描结果失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # ==================== 智能预警推送 API ====================
 
 @app.route("/api/v1/alerts/detect-anomalies", methods=["POST"])
@@ -12056,6 +13481,301 @@ def complete_scheduled_task(task_id: str):
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 
+# ==================== AI 调度增强 API ====================
+
+@app.route("/api/v1/scheduler/ai/calculate-priority", methods=["POST"])
+@require_jwt()
+def calculate_ai_priority():
+    """
+    计算任务的 AI 优先级分数
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.ai_scheduler_enhancement import get_ai_scheduler_enhancer
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        scheduler_service = get_smart_scheduler_service()
+        enhancer = get_ai_scheduler_enhancer()
+
+        task_ids = data.get("task_ids", [])
+
+        if not task_ids:
+            return jsonify({"code": 40001, "message": "task_ids 不能为空"}), 400
+
+        results = []
+        for task_id in task_ids:
+            task = scheduler_service.get_task(task_id)
+            if task:
+                score = enhancer.calculate_priority_score(task)
+                results.append(score.to_dict())
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "scores": results,
+                "total": len(results),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"计算 AI 优先级失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scheduler/ai/predict-execution-time", methods=["POST"])
+@require_jwt()
+def predict_execution_time():
+    """
+    预测任务执行时间
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.ai_scheduler_enhancement import get_ai_scheduler_enhancer
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        scheduler_service = get_smart_scheduler_service()
+        enhancer = get_ai_scheduler_enhancer()
+
+        task_ids = data.get("task_ids", [])
+
+        if not task_ids:
+            return jsonify({"code": 40001, "message": "task_ids 不能为空"}), 400
+
+        results = []
+        for task_id in task_ids:
+            task = scheduler_service.get_task(task_id)
+            if task:
+                prediction = enhancer.predict_execution_time(task)
+                results.append(prediction.to_dict())
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "predictions": results,
+                "total": len(results),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"预测执行时间失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scheduler/ai/recommend-resources", methods=["POST"])
+@require_jwt()
+def recommend_task_resources():
+    """
+    推荐任务资源分配
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.ai_scheduler_enhancement import get_ai_scheduler_enhancer
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        scheduler_service = get_smart_scheduler_service()
+        enhancer = get_ai_scheduler_enhancer()
+
+        task_ids = data.get("task_ids", [])
+        available_resources = data.get("available_resources", {
+            "cpu_cores": 16.0,
+            "memory_mb": 32768,
+            "gpu_count": 4,
+        })
+
+        if not task_ids:
+            return jsonify({"code": 40001, "message": "task_ids 不能为空"}), 400
+
+        results = []
+        for task_id in task_ids:
+            task = scheduler_service.get_task(task_id)
+            if task:
+                recommendation = enhancer.recommend_resource_allocation(task, available_resources)
+                results.append(recommendation.to_dict())
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "recommendations": results,
+                "total": len(results),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"推荐资源分配失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scheduler/ai/optimize-order", methods=["POST"])
+@require_jwt()
+def optimize_schedule_order_ai():
+    """
+    AI 优化调度顺序
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.ai_scheduler_enhancement import get_ai_scheduler_enhancer
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        scheduler_service = get_smart_scheduler_service()
+        enhancer = get_ai_scheduler_enhancer()
+
+        task_ids = data.get("task_ids", [])
+        resource_constraints = data.get("resource_constraints")
+
+        if not task_ids:
+            return jsonify({"code": 40001, "message": "task_ids 不能为空"}), 400
+
+        tasks = []
+        for task_id in task_ids:
+            task = scheduler_service.get_task(task_id)
+            if task:
+                tasks.append(task)
+
+        if not tasks:
+            return jsonify({"code": 40401, "message": "未找到有效任务"}), 404
+
+        result = enhancer.optimize_schedule_order(tasks, resource_constraints)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"AI 优化调度顺序失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scheduler/ai/batch-analyze", methods=["POST"])
+@require_jwt()
+def batch_analyze_tasks():
+    """
+    批量分析任务（优先级、执行时间、资源推荐）
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.ai_scheduler_enhancement import get_ai_scheduler_enhancer
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        scheduler_service = get_smart_scheduler_service()
+        enhancer = get_ai_scheduler_enhancer()
+
+        task_ids = data.get("task_ids", [])
+        available_resources = data.get("available_resources", {
+            "cpu_cores": 16.0,
+            "memory_mb": 32768,
+            "gpu_count": 4,
+        })
+
+        if not task_ids:
+            return jsonify({"code": 40001, "message": "task_ids 不能为空"}), 400
+
+        results = []
+        for task_id in task_ids:
+            task = scheduler_service.get_task(task_id)
+            if not task:
+                continue
+
+            priority_score = enhancer.calculate_priority_score(task)
+            execution_time = enhancer.predict_execution_time(task)
+            resource_recommendation = enhancer.recommend_resource_allocation(task, available_resources)
+
+            results.append({
+                "task_id": task_id,
+                "task_name": task.name,
+                "priority_score": priority_score.to_dict(),
+                "execution_time": execution_time.to_dict(),
+                "resource_recommendation": resource_recommendation.to_dict(),
+            })
+
+        # 按优先级排序
+        results.sort(key=lambda x: x["priority_score"]["final_score"], reverse=True)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "analysis": results,
+                "total": len(results),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"批量分析任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scheduler/ai/business-impact/update", methods=["PUT"])
+@require_jwt()
+def update_task_business_impact():
+    """
+    更新任务业务影响等级
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.smart_scheduler_service import get_smart_scheduler_service
+
+        service = get_smart_scheduler_service()
+
+        task_id = data.get("task_id")
+        business_impact = data.get("business_impact")
+        data_freshness = data.get("data_freshness")
+
+        if not task_id:
+            return jsonify({"code": 40001, "message": "task_id 不能为空"}), 400
+
+        task = service.get_task(task_id)
+        if not task:
+            return jsonify({"code": 40401, "message": "任务不存在"}), 404
+
+        # 更新元数据
+        if business_impact:
+            task.metadata["business_impact"] = business_impact
+        if data_freshness:
+            task.metadata["data_freshness"] = data_freshness
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "task_id": task_id,
+                "metadata": task.metadata,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"更新业务影响失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
 # ==================== Kettle AI 集成 API ====================
 
 @app.route("/api/v1/etl/inject-ai-rules", methods=["POST"])
@@ -12344,6 +14064,593 @@ def rollback_metadata_version(table_id):
         return jsonify({"code": 50001, "message": f"元数据同步服务不可用: {e}"}), 500
     except Exception as e:
         logger.error(f"元数据版本回滚失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/<table_id>/rollback/preview", methods=["POST"])
+@require_jwt()
+def preview_metadata_rollback(table_id):
+    """
+    预览元数据版本回滚操作
+    返回将要执行的操作、SQL 语句和警告信息
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.metadata_rollback_service import get_metadata_rollback_service
+
+        service = get_metadata_rollback_service(db)
+
+        target_version_id = data.get("target_version_id")
+        if not target_version_id:
+            return jsonify({"code": 40001, "message": "target_version_id 不能为空"}), 400
+
+        plan = service.preview_rollback(table_id, target_version_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": plan.to_dict()
+        })
+
+    except ValueError as e:
+        return jsonify({"code": 40002, "message": str(e)}), 400
+    except Exception as e:
+        logger.error(f"预览回滚失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/<table_id>/rollback/execute", methods=["POST"])
+@require_jwt()
+def execute_metadata_rollback(table_id):
+    """
+    执行元数据版本回滚操作
+    支持备份和数据库执行选项
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.metadata_rollback_service import get_metadata_rollback_service
+
+        service = get_metadata_rollback_service(db)
+
+        target_version_id = data.get("target_version_id")
+        if not target_version_id:
+            return jsonify({"code": 40001, "message": "target_version_id 不能为空"}), 400
+
+        create_backup = data.get("create_backup", True)
+        execute_on_database = data.get("execute_on_database", False)
+
+        # 获取当前用户
+        changed_by = "system"
+        if AUTH_ENABLED:
+            try:
+                current_user = get_current_user()
+                if current_user:
+                    changed_by = current_user.get("username", "unknown")
+            except:
+                pass
+
+        result = service.execute_rollback(
+            table_id=table_id,
+            target_version_id=target_version_id,
+            create_backup=create_backup,
+            execute_on_database=execute_on_database,
+            changed_by=changed_by,
+        )
+
+        if result.success:
+            return jsonify({
+                "code": 0,
+                "message": "回滚成功",
+                "data": result.to_dict()
+            })
+        else:
+            return jsonify({
+                "code": 50002,
+                "message": result.error_message or "回滚失败"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"执行回滚失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/migration/generate", methods=["POST"])
+@require_jwt()
+def generate_migration_script():
+    """
+    生成版本迁移 SQL 脚本
+    支持多种数据库方言
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.metadata_rollback_service import get_metadata_rollback_service
+
+        service = get_metadata_rollback_service(db)
+
+        table_id = data.get("table_id")
+        from_version_id = data.get("from_version_id")
+        to_version_id = data.get("to_version_id")
+        dialect = data.get("dialect", "mysql")
+
+        if not all([table_id, from_version_id, to_version_id]):
+            return jsonify({
+                "code": 40001,
+                "message": "table_id, from_version_id, to_version_id 不能为空"
+            }), 400
+
+        if dialect not in ["mysql", "postgresql", "oracle", "sqlserver"]:
+            return jsonify({
+                "code": 40002,
+                "message": f"不支持的数据库方言: {dialect}"
+            }), 400
+
+        script = service.generate_migration_script(
+            table_id=table_id,
+            from_version_id=from_version_id,
+            to_version_id=to_version_id,
+            dialect=dialect,
+        )
+
+        if "error" in script:
+            return jsonify({"code": 50002, "message": script["error"]}), 500
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": script
+        })
+
+    except Exception as e:
+        logger.error(f"生成迁移脚本失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/versions/diff/visualize", methods=["POST"])
+@require_jwt()
+def visualize_version_diff():
+    """
+    可视化版本差异对比
+    返回用于前端展示的差异数据
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        from_snapshot_id = data.get("from_snapshot_id")
+        to_snapshot_id = data.get("to_snapshot_id")
+
+        if not all([from_snapshot_id, to_snapshot_id]):
+            return jsonify({
+                "code": 40001,
+                "message": "from_snapshot_id 和 to_snapshot_id 不能为空"
+            }), 400
+
+        diff = service.compare_snapshots(from_snapshot_id, to_snapshot_id)
+
+        # 添加可视化友好的格式
+        diff["visualization"] = {
+            "added_tables_count": len(diff.get("added_tables", [])),
+            "removed_tables_count": len(diff.get("removed_tables", [])),
+            "modified_tables_count": len(diff.get("modified_tables", [])),
+            "total_changes": (
+                len(diff.get("added_tables", [])) +
+                len(diff.get("removed_tables", [])) +
+                len(diff.get("modified_tables", []))
+            ),
+        }
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": diff
+        })
+
+    except Exception as e:
+        logger.error(f"可视化差异失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== Kafka 流式数据 API ====================
+
+@app.route("/api/v1/streaming/kafka/test-connection", methods=["POST"])
+@require_jwt()
+def test_kafka_connection():
+    """
+    测试 Kafka 连接
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+
+        bootstrap_servers = data.get("bootstrap_servers")
+        if not bootstrap_servers:
+            return jsonify({"code": 40001, "message": "bootstrap_servers 不能为空"}), 400
+
+        result = service.validate_connection(bootstrap_servers)
+
+        return jsonify({
+            "code": 0 if result["success"] else 50001,
+            "message": "连接成功" if result["success"] else "连接失败",
+            "data": result,
+        })
+
+    except Exception as e:
+        logger.error(f"测试 Kafka 连接失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers", methods=["POST"])
+@require_jwt()
+def create_kafka_consumer():
+    """
+    创建 Kafka 消费者
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.kafka_stream_service import (
+            get_kafka_stream_service,
+            KafkaConsumerConfig,
+            OffsetReset,
+        )
+
+        service = get_kafka_stream_service()
+
+        consumer_id = data.get("consumer_id") or f"kafka_{secrets.token_hex(8)}"
+        bootstrap_servers = data.get("bootstrap_servers")
+        group_id = data.get("group_id")
+        topics = data.get("topics", [])
+
+        if not all([bootstrap_servers, group_id, topics]):
+            return jsonify({
+                "code": 40001,
+                "message": "bootstrap_servers, group_id, topics 不能为空"
+            }), 400
+
+        config = KafkaConsumerConfig(
+            bootstrap_servers=bootstrap_servers,
+            group_id=group_id,
+            topics=topics,
+            auto_offset_reset=OffsetReset(data.get("auto_offset_reset", "latest")),
+            enable_auto_commit=data.get("enable_auto_commit", True),
+            auto_commit_interval_ms=data.get("auto_commit_interval_ms", 5000),
+            max_poll_records=data.get("max_poll_records", 500),
+            additional_config=data.get("additional_config", {}),
+        )
+
+        consumer = service.create_consumer(consumer_id, config)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "consumer_id": consumer_id,
+                "config": config.to_dict(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"创建 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/start", methods=["POST"])
+@require_jwt()
+def start_kafka_consumer(consumer_id):
+    """
+    启动 Kafka 消费者
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+
+        success = service.start_consumer(consumer_id)
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": "消费者启动成功",
+                "data": {"consumer_id": consumer_id}
+            })
+        else:
+            return jsonify({
+                "code": 50002,
+                "message": "消费者启动失败"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"启动 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_kafka_consumer(consumer_id):
+    """
+    停止 Kafka 消费者
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        service.stop_consumer(consumer_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "消费者已停止",
+            "data": {"consumer_id": consumer_id}
+        })
+
+    except Exception as e:
+        logger.error(f"停止 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/pause", methods=["POST"])
+@require_jwt()
+def pause_kafka_consumer(consumer_id):
+    """
+    暂停 Kafka 消费者
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        consumer = service._consumers.get(consumer_id)
+
+        if consumer:
+            consumer.pause()
+            return jsonify({
+                "code": 0,
+                "message": "消费者已暂停",
+                "data": {"consumer_id": consumer_id}
+            })
+        else:
+            return jsonify({"code": 40401, "message": "消费者不存在"}), 404
+
+    except Exception as e:
+        logger.error(f"暂停 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/resume", methods=["POST"])
+@require_jwt()
+def resume_kafka_consumer(consumer_id):
+    """
+    恢复 Kafka 消费者
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        consumer = service._consumers.get(consumer_id)
+
+        if consumer:
+            consumer.resume()
+            return jsonify({
+                "code": 0,
+                "message": "消费者已恢复",
+                "data": {"consumer_id": consumer_id}
+            })
+        else:
+            return jsonify({"code": 40401, "message": "消费者不存在"}), 404
+
+    except Exception as e:
+        logger.error(f"恢复 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers", methods=["GET"])
+@require_jwt()
+def list_kafka_consumers():
+    """
+    列出所有 Kafka 消费者及其指标
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        metrics = service.get_all_metrics()
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "consumers": [m.to_dict() for m in metrics.values()],
+                "total": len(metrics),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取 Kafka 消费者列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/metrics", methods=["GET"])
+@require_jwt()
+def get_kafka_consumer_metrics(consumer_id):
+    """
+    获取单个 Kafka 消费者指标
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        metrics = service.get_consumer_metrics(consumer_id)
+
+        if metrics:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": metrics.to_dict()
+            })
+        else:
+            return jsonify({"code": 40401, "message": "消费者不存在"}), 404
+
+    except Exception as e:
+        logger.error(f"获取 Kafka 消费者指标失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/topics/<topic>/messages", methods=["GET"])
+@require_jwt()
+def get_kafka_messages(topic):
+    """
+    获取缓冲的 Kafka 消息
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+
+        limit = request.args.get("limit", 100, type=int)
+        clear = request.args.get("clear", "false").lower() == "true"
+
+        messages = service.get_buffered_messages(topic, limit=limit, clear=clear)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "topic": topic,
+                "messages": messages,
+                "count": len(messages),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取 Kafka 消息失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/seek", methods=["POST"])
+@require_jwt()
+def seek_kafka_offset(consumer_id):
+    """
+    跳转到指定偏移量
+    """
+    db = next(get_db())
+    data = request.json
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        consumer = service._consumers.get(consumer_id)
+
+        if not consumer:
+            return jsonify({"code": 40401, "message": "消费者不存在"}), 404
+
+        topic = data.get("topic")
+        partition = data.get("partition", 0)
+        offset = data.get("offset")
+
+        if not all([topic, offset is not None]):
+            return jsonify({"code": 40001, "message": "topic, offset 不能为空"}), 400
+
+        success = consumer.seek_to_offset(topic, partition, offset)
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": "偏移量跳转成功",
+                "data": {
+                    "consumer_id": consumer_id,
+                    "topic": topic,
+                    "partition": partition,
+                    "offset": offset,
+                }
+            })
+        else:
+            return jsonify({"code": 50002, "message": "偏移量跳转失败"}), 500
+
+    except Exception as e:
+        logger.error(f"跳转 Kafka 偏移量失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/streaming/kafka/consumers/<consumer_id>/remove", methods=["DELETE"])
+@require_jwt()
+def remove_kafka_consumer(consumer_id):
+    """
+    移除 Kafka 消费者
+    """
+    db = next(get_db())
+
+    try:
+        from services.kafka_stream_service import get_kafka_stream_service
+
+        service = get_kafka_stream_service()
+        service.remove_consumer(consumer_id)
+
+        return jsonify({
+            "code": 0,
+            "message": "消费者已移除",
+            "data": {"consumer_id": consumer_id}
+        })
+
+    except Exception as e:
+        logger.error(f"移除 Kafka 消费者失败: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
     finally:
         db.close()

@@ -44,6 +44,61 @@ export interface OCRResult {
   }>;
 }
 
+export interface EnhancedOCRResult {
+  task_id: string;
+  structured_data: Record<string, any>;
+  raw_text?: string;
+  tables: Array<{
+    id: string;
+    table_index: number;
+    page_number: number;
+    headers: string[];
+    rows: string[][];
+    confidence: number;
+  }>;
+  confidence_score: number;
+  validation_issues: Array<{
+    field: string;
+    error: string;
+    severity: 'error' | 'warning';
+  }>;
+  cross_field_validation: {
+    valid: boolean;
+    errors: Array<{
+      rule: string;
+      description: string;
+      expected: any;
+      actual: any;
+    }>;
+    warnings: Array<{
+      rule: string;
+      description: string;
+      expected: any;
+      actual: any;
+    }>;
+  };
+  layout_info: {
+    signature_regions: Array<{
+      label: string;
+      page: number;
+    }>;
+    seal_regions: Array<{
+      label: string;
+      page: number;
+    }>;
+    has_signatures: boolean;
+    has_seals: boolean;
+  };
+  completeness: {
+    valid: boolean;
+    missing_required: Array<{
+      key: string;
+      name: string;
+    }>;
+    completeness_rate: number;
+  };
+}
+
 export interface ExtractionTemplate {
   id: string;
   tenant_id: string;
@@ -59,6 +114,32 @@ export interface ExtractionTemplate {
   success_rate: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface DocumentTypeDetection {
+  detected_type: string;
+  confidence: number;
+  suggested_templates: string[];
+  metadata: {
+    file_name: string;
+    file_size: number;
+    page_count: number;
+    text_length: number;
+  };
+}
+
+export interface BatchTaskResult {
+  batch_id: string;
+  total_files: number;
+  tasks: string[];
+  status: string;
+}
+
+export interface DocumentTypeInfo {
+  type: string;
+  name: string;
+  category: string;
+  supported_formats: string[];
 }
 
 const OCR_BASE_URL = process.env.REACT_APP_OCR_API_URL || '/api/v1/ocr';
@@ -195,5 +276,118 @@ export const ocrApi = {
    */
   previewTemplate: (templateId: string) => {
     return apiClient.get(`${OCR_BASE_URL}/templates/${templateId}/preview`);
+  },
+
+  // ==================== 新增API ====================
+
+  /**
+   * 批量创建OCR任务
+   */
+  createBatchTasks: (
+    files: File[],
+    params?: {
+      extraction_type?: string;
+      template_id?: string;
+      tenant_id?: string;
+      user_id?: string;
+    }
+  ) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const queryParams = new URLSearchParams();
+    if (params?.extraction_type) queryParams.append('extraction_type', params.extraction_type);
+    if (params?.template_id) queryParams.append('template_id', params.template_id);
+    if (params?.tenant_id) queryParams.append('tenant_id', params.tenant_id);
+    if (params?.user_id) queryParams.append('user_id', params.user_id);
+
+    return apiClient.post<BatchTaskResult>(
+      `${OCR_BASE_URL}/tasks/batch?${queryParams.toString()}`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000
+      }
+    );
+  },
+
+  /**
+   * 自动识别文档类型
+   */
+  detectDocumentType: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient.post<DocumentTypeDetection>(
+      `${OCR_BASE_URL}/detect-type`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000
+      }
+    );
+  },
+
+  /**
+   * 获取增强的OCR任务结果（包含跨字段校验和布局分析）
+   */
+  getEnhancedTaskResult: (taskId: string, params?: {
+    include_validation?: boolean;
+    include_layout?: boolean;
+  }) => {
+    return apiClient.get<EnhancedOCRResult>(
+      `${OCR_BASE_URL}/tasks/${taskId}/result/enhanced`,
+      { params }
+    );
+  },
+
+  /**
+   * 使用模板预览提取结果
+   */
+  previewWithTemplate: (file: File, templateConfig: Record<string, any>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('request', JSON.stringify({ template_config: templateConfig }));
+
+    return apiClient.post<{
+      extracted_fields: Record<string, any>;
+      detected_tables: Array<{
+        index: number;
+        headers: string[];
+        rows: string[][];
+        row_count: number;
+      }>;
+      validation_result: Record<string, any>;
+      confidence_score: number;
+    }>(
+      `${OCR_BASE_URL}/templates/preview`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000
+      }
+    );
+  },
+
+  /**
+   * 获取支持的文档类型列表
+   */
+  getDocumentTypes: () => {
+    return apiClient.get<{ document_types: DocumentTypeInfo[] }>(`${OCR_BASE_URL}/templates/types`);
+  },
+
+  /**
+   * 加载默认模板到数据库
+   */
+  loadDefaultTemplates: (params?: { tenant_id?: string }) => {
+    return apiClient.post<{
+      message: string;
+      templates: Array<{
+        name: string;
+        type: string;
+        action: string;
+      }>;
+      count: number;
+    }>(`${OCR_BASE_URL}/templates/load-defaults`, undefined, { params });
   }
 };

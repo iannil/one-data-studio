@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocr-config
+  namespace: ocr-service
+data:
+  # OCR引擎配置
+  OCR_ENGINE: "paddleocr"
+  MAX_FILE_SIZE: "52428800"
+  TEMP_DIR: "/tmp/ocr"
+
+  # 数据库配置（连接字符串从Secret获取）
+  DB_NAME: "alldata"
+
+  # Redis配置
+  REDIS_DB: "0"
+
+  # 日志配置
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+
+  # 服务配置
+  WORKER_COUNT: "4"
+  MAX_CONCURRENT_TASKS: "10"
+
+  # 缓存配置
+  CACHE_TTL: "3600"
+  CACHE_BACKEND: "redis"
+
+  # 速率限制配置
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_PER_MINUTE: "100"
+  RATE_LIMIT_CONCURRENT: "10"

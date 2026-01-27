@@ -1,0 +1,249 @@
+/**
+ * OCR模板管理器样式
+ */
+
+.template-list {
+  padding: 16px 0;
+}
+
+.template-list-header {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.template-editor {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.template-editor .ant-form {
+  margin-bottom: 16px;
+}
+
+.template-preview {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.template-preview h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.template-field-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.template-field-item {
+  padding: 12px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.template-field-item .field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.template-field-item .field-name {
+  font-weight: 500;
+}
+
+.template-field-item .field-required {
+  color: #ff4d4f;
+}
+
+.template-field-item .field-type {
+  font-size: 12px;
+  color: #999;
+}
+
+.template-validation-list {
+  margin-top: 16px;
+}
+
+.template-validation-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.template-validation-item .validation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.template-table-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-left: 3px solid #1890ff;
+  border-radius: 6px;
+}
+
+.template-table-item .table-name {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.template-table-item .table-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.template-table-item .table-fields span {
+  padding: 2px 8px;
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* JSON编辑器样式 */
+.json-editor {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  min-height: 200px;
+}
+
+/* 模板卡片 */
+.template-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.3s;
+}
+
+.template-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+}
+
+.template-card .template-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.template-card .template-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.template-card .template-meta {
+  display: flex;
+  gap: 8px;
+}
+
+.template-card .template-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.template-card .stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.template-card .stat-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.template-card .stat-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1890ff;
+}
+
+/* 字段配置表格 */
+.fields-table .ant-table-cell {
+  padding: 8px 12px;
+}
+
+.fields-table .field-required {
+  color: #ff4d4f;
+}
+
+.fields-table .field-optional {
+  color: #52c41a;
+}
+
+/* 拖拽区域 */
+.upload-zone {
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.upload-zone:hover {
+  border-color: #1890ff;
+  background: #f0f5ff;
+}
+
+.upload-zone.dragover {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+/* 验证规则卡片 */
+.validation-rule-card {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.validation-rule-card.passed {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.validation-rule-card.failed {
+  background: #fff2f0;
+  border-color: #ffccc7;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .template-list-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .template-field-list {
+    grid-template-columns: 1fr;
+  }
+
+  .template-card .template-stats {
+    flex-wrap: wrap;
+  }
+}

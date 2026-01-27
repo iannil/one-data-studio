@@ -1,0 +1,208 @@
+{
+  "name": "报价单模板",
+  "description": "用于提取报价单的关键信息",
+  "type": "quotation",
+  "category": "sales",
+  "supported_formats": ["pdf", "image", "word", "excel"],
+  "fields": [
+    {
+      "name": "报价单号",
+      "key": "quotation_number",
+      "required": true,
+      "keywords": ["报价单号", "报价编号", "Quote No.", "QT"]
+    },
+    {
+      "name": "报价日期",
+      "key": "quotation_date",
+      "required": true,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["报价日期", "报价日期", "开单日期"]
+    },
+    {
+      "name": "报价有效期",
+      "key": "valid_until",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["报价有效期", "有效至", "有效期截止", "Valid Until"]
+    },
+    {
+      "name": "报价方名称",
+      "key": "provider_name",
+      "required": true,
+      "keywords": ["报价方", "供应商", "卖方", "公司名称", "Provider", "Seller"]
+    },
+    {
+      "name": "报价方地址",
+      "key": "provider_address",
+      "required": false,
+      "keywords": ["报价方地址", "供应商地址"]
+    },
+    {
+      "name": "报价方联系人",
+      "key": "provider_contact",
+      "required": false,
+      "keywords": ["报价联系人", "销售代表", "联系人"]
+    },
+    {
+      "name": "报价方电话",
+      "key": "provider_phone",
+      "required": false,
+      "keywords": ["报价电话", "联系电话", "销售电话"]
+    },
+    {
+      "name": "客户名称",
+      "key": "customer_name",
+      "required": true,
+      "keywords": ["客户", "买方", "采购方", "Customer", "Buyer"]
+    },
+    {
+      "name": "客户地址",
+      "key": "customer_address",
+      "required": false,
+      "keywords": ["客户地址", "收货地址"]
+    },
+    {
+      "name": "联系人",
+      "key": "contact_person",
+      "required": false,
+      "keywords": ["客户联系人", "买方联系人"]
+    },
+    {
+      "name": "联系电话",
+      "key": "contact_phone",
+      "required": false,
+      "keywords": ["客户电话", "买方电话"]
+    },
+    {
+      "name": "报价总金额",
+      "key": "total_amount",
+      "required": true,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["报价总金额", "合计", "总计", "Total Amount"]
+    },
+    {
+      "name": "币种",
+      "key": "currency",
+      "default": "CNY",
+      "keywords": ["币种", "货币", "Currency"]
+    },
+    {
+      "name": "含税标识",
+      "key": "tax_included",
+      "required": false,
+      "keywords": ["含税", "不含税", "含税价", "未税价"]
+    },
+    {
+      "name": "税率",
+      "key": "tax_rate",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0,
+        "max_value": 1
+      },
+      "keywords": ["税率", "增值税率"]
+    },
+    {
+      "name": "税额",
+      "key": "tax_amount",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["税额", "增值税"]
+    },
+    {
+      "name": "未税金额",
+      "key": "net_amount",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["未税金额", "不含税金额", "净额"]
+    },
+    {
+      "name": "付款方式",
+      "key": "payment_term",
+      "required": false,
+      "keywords": ["付款方式", "结算方式", "Payment Term"]
+    },
+    {
+      "name": "交货期",
+      "key": "delivery_term",
+      "required": false,
+      "keywords": ["交货期", "交付周期", "Delivery Term"]
+    },
+    {
+      "name": "报价条款",
+      "key": "terms",
+      "required": false,
+      "keywords": ["报价条款", "商务条款", "Terms"]
+    },
+    {
+      "name": "备注",
+      "key": "remark",
+      "required": false,
+      "keywords": ["备注", "说明", "Remark"]
+    }
+  ],
+  "tables": [
+    {
+      "name": "报价明细",
+      "key": "items",
+      "required": true,
+      "header_keywords": ["序号", "产品", "规格", "数量", "单价", "金额", "Item", "Description", "Price"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "产品编码", "key": "product_code"},
+        {"name": "产品名称", "key": "product_name"},
+        {"name": "规格型号", "key": "specification"},
+        {"name": "品牌", "key": "brand"},
+        {"name": "单位", "key": "unit"},
+        {"name": "数量", "key": "quantity", "validation": {"type": "number", "min_value": 0}},
+        {"name": "单价", "key": "unit_price", "validation": {"type": "number", "min_value": 0}},
+        {"name": "金额", "key": "amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "折扣率(%)", "key": "discount_rate", "validation": {"type": "number", "min_value": 0, "max_value": 100}},
+        {"name": "折扣后金额", "key": "discounted_amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "交货期", "key": "delivery_period"},
+        {"name": "备注", "key": "remark"}
+      ]
+    }
+  ],
+  "cross_field_validation": [
+    {
+      "rule": "total_amount_check",
+      "description": "报价总金额应等于明细合计",
+      "fields": ["total_amount", "items"],
+      "validation": "sum(items.amount) == total_amount or sum(items.discounted_amount) == total_amount",
+      "severity": "error"
+    },
+    {
+      "rule": "validity_check",
+      "description": "报价有效期应晚于报价日期",
+      "fields": ["quotation_date", "valid_until"],
+      "validation": "quotation_date < valid_until",
+      "severity": "warning"
+    },
+    {
+      "rule": "tax_calculation_check",
+      "description": "税额计算校验",
+      "fields": ["net_amount", "tax_amount", "total_amount", "tax_rate"],
+      "validation": "total_amount = net_amount + tax_amount and tax_amount = net_amount * tax_rate",
+      "severity": "info"
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD",
+    "amount_format": "number"
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "name": "增强报告模板",
+  "description": "用于提取业务报告的关键指标和结论，支持多维度数据分析",
+  "type": "report",
+  "category": "business",
+  "supported_formats": ["pdf", "word", "excel"],
+  "fields": [
+    {
+      "name": "报告标题",
+      "key": "report_title",
+      "required": true,
+      "keywords": ["报告", "总结", "分析", "年报", "月报", "季报"]
+    },
+    {
+      "name": "报告类型",
+      "key": "report_type",
+      "required": false,
+      "keywords": ["年报", "季报", "月报", "周报", "专项报告"]
+    },
+    {
+      "name": "报告日期",
+      "key": "report_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["报告日期", "编制日期", "发布日期"]
+    },
+    {
+      "name": "报告期",
+      "key": "report_period",
+      "required": false,
+      "keywords": ["报告期", "统计期", "期间", "周期", "年度", "季度", "月份"]
+    },
+    {
+      "name": "编制单位",
+      "key": "author",
+      "required": false,
+      "keywords": ["编制", "作者", "单位", "部门", "机构"]
+    },
+    {
+      "name": "报告对象",
+      "key": "report_target",
+      "required": false,
+      "keywords": ["致", "呈报", "报送"]
+    },
+    {
+      "name": "关键指标汇总",
+      "key": "key_metrics",
+      "required": false,
+      "keywords": ["关键指标", "核心指标", "主要指标", "KPI"]
+    },
+    {
+      "name": "营收数据",
+      "key": "revenue",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["营收", "收入", "营业收入"]
+    },
+    {
+      "name": "利润数据",
+      "key": "profit",
+      "required": false,
+      "validation": {
+        "type": "number"
+      },
+      "keywords": ["利润", "净利润", "毛利"]
+    },
+    {
+      "name": "同比增长率",
+      "key": "yoy_growth",
+      "required": false,
+      "keywords": ["同比", "同比增长", "较上年"]
+    },
+    {
+      "name": "环比增长率",
+      "key": "mom_growth",
+      "required": false,
+      "keywords": ["环比", "环比增长", "较上期"]
+    },
+    {
+      "name": "主要风险",
+      "key": "risks",
+      "required": false,
+      "keywords": ["风险", "挑战", "问题"]
+    },
+    {
+      "name": "主要结论",
+      "key": "main_conclusion",
+      "required": false,
+      "keywords": ["结论", "总结", "综述"]
+    },
+    {
+      "name": "建议措施",
+      "key": "recommendations",
+      "required": false,
+      "keywords": ["建议", "措施", "计划", "行动"]
+    },
+    {
+      "name": "报告页数",
+      "key": "total_pages",
+      "required": false
+    },
+    {
+      "name": "附件数量",
+      "key": "attachment_count",
+      "required": false
+    }
+  ],
+  "tables": [
+    {
+      "name": "核心指标表",
+      "key": "key_metrics_table",
+      "required": false,
+      "header_keywords": ["指标", "数值", "单位", "同比", "环比", "本期", "同期"],
+      "fields": [
+        {"name": "指标名称", "key": "metric_name"},
+        {"name": "本期数值", "key": "current_value"},
+        {"name": "上期数值", "key": "previous_value"},
+        {"name": "单位", "key": "unit"},
+        {"name": "同比增长率(%)", "key": "yoy_change"},
+        {"name": "环比增长率(%)", "key": "mom_change"}
+      ]
+    },
+    {
+      "name": "分类数据表",
+      "key": "category_data",
+      "required": false,
+      "header_keywords": ["类别", "项目", "金额", "占比", "同比"],
+      "fields": [
+        {"name": "类别", "key": "category"},
+        {"name": "项目", "key": "item"},
+        {"name": "金额", "key": "amount"},
+        {"name": "占比(%)", "key": "percentage"},
+        {"name": "同比变化(%)", "key": "yoy_change"}
+      ]
+    },
+    {
+      "name": "趋势数据表",
+      "key": "trend_data",
+      "required": false,
+      "header_keywords": ["时间", "日期", "指标", "数值"],
+      "fields": [
+        {"name": "时间/日期", "key": "period"},
+        {"name": "指标1", "key": "metric_1"},
+        {"name": "指标2", "key": "metric_2"},
+        {"name": "指标3", "key": "metric_3"}
+      ]
+    }
+  ],
+  "layout_detection": {
+    "page_type_detection": {
+      "cover_keywords": ["报告", "年报", "月报", "季报"],
+      "signature_keywords": ["签发", "审核", "编制"]
+    }
+  },
+  "cross_field_validation": [
+    {
+      "rule": "growth_consistency_check",
+      "description": "同比增长率与本期/上期数据应一致",
+      "fields": ["revenue", "yoy_growth"],
+      "severity": "warning"
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD",
+    "number_format": "number",
+    "percentage_format": "percent"
+  }
+}

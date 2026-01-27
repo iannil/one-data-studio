@@ -22,6 +22,7 @@ from services.document_parser import DocumentParser
 from services.table_extractor import TableExtractor
 from services.ai_extractor import AIExtractor
 from services.validator import DataValidator
+from services.metrics import metrics, get_metrics_summary
 from api.ocr_tasks import router as ocr_tasks_router
 from api.templates import router as templates_router
 
@@ -141,6 +142,28 @@ def check_redis():
         return redis_client.ping()
     except Exception:
         return False
+
+
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus格式指标"""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        content=metrics.export_prometheus(),
+        media_type="text/plain"
+    )
+
+
+@app.get("/api/v1/metrics")
+async def get_metrics_json():
+    """JSON格式指标"""
+    return get_metrics_summary()
+
+
+@app.get("/api/v1/metrics/raw")
+async def get_metrics_raw():
+    """原始指标数据"""
+    return metrics.export_json()
 
 
 if __name__ == "__main__":

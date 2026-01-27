@@ -478,7 +478,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                 <Button
                   type="primary"
                   icon={<ThunderboltOutlined />}
-                  loading={suggestMutation.isLoading}
+                  loading={suggestMutation.isPending}
                   onClick={handleSuggest}
                   disabled={!sourceTable || !targetTable}
                   size="large"
@@ -592,7 +592,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
             )}
 
             {/* 空状态 */}
-            {mappings.length === 0 && !suggestMutation.isLoading && (
+            {mappings.length === 0 && !suggestMutation.isPending && (
               <Empty
                 description="选择源表和目标表，点击「开始智能映射」按钮"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -600,7 +600,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
             )}
 
             {/* 加载状态 */}
-            {suggestMutation.isLoading && (
+            {suggestMutation.isPending && (
               <div style={{ textAlign: 'center', padding: 40 }}>
                 <Spin size="large" tip="AI 正在分析字段映射..." />
               </div>

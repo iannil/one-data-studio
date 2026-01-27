@@ -1,0 +1,24 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ocr-service-pdb
+  namespace: ocr-service
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: ocr-service
+      component: api
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ocr-service-budget
+  namespace: ocr-service
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ocr-service
+      component: api

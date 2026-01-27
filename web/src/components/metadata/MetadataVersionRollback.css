@@ -1,0 +1,185 @@
+/* 元数据版本回滚组件样式 */
+
+.metadata-version-rollback {
+  width: 100%;
+}
+
+/* 版本时间轴卡片 */
+.version-timeline-card {
+  border-left: 3px solid #1677ff;
+  transition: all 0.3s;
+}
+
+.version-timeline-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 回滚操作项 */
+.rollback-action-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rollback-action-item:last-child {
+  border-bottom: none;
+}
+
+.action-index {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+/* SQL 预览块 */
+.sql-preview-block {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.sql-preview-block code {
+  color: inherit;
+}
+
+/* Descriptions 组件样式 */
+.descriptions {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.descriptions-item {
+  display: flex;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.descriptions-item:last-child {
+  border-bottom: none;
+}
+
+.descriptions-item .label {
+  padding: 12px 16px;
+  background: #fafafa;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.descriptions-item .content {
+  padding: 12px 16px;
+  flex: 1;
+}
+
+/* 步骤样式 */
+.rollback-step-select-version,
+.rollback-step-preview,
+.rollback-step-confirm {
+  padding: 16px 0;
+}
+
+/* 回滚步骤统计卡片 */
+.rollback-stats-card {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+/* 高风险警告 */
+.high-risk-warning {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.high-risk-warning .warning-icon {
+  color: #ff4d4f;
+  margin-right: 8px;
+}
+
+/* 动画效果 */
+@keyframes highlight {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #e6f7ff;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.rollback-action-item.highlight {
+  animation: highlight 1.5s ease-in-out;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .descriptions-item {
+    flex-direction: column;
+  }
+
+  .descriptions-item .label {
+    width: 100%;
+    border-bottom: 1px solid #f0f0f0;
+  }
+}
+
+/* 版本对比样式 */
+.version-comparison {
+  display: flex;
+  gap: 16px;
+}
+
+.version-comparison-panel {
+  flex: 1;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.version-comparison-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 差异标记 */
+.diff-marker {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.diff-marker.added {
+  background: #52c41a;
+}
+
+.diff-marker.removed {
+  background: #ff4d4f;
+}
+
+.diff-marker.modified {
+  background: #1677ff;
+}

@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ocr-service
+  namespace: ocr-service
+  labels:
+    app: ocr-service
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ocr-service
+  namespace: ocr-service
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  verbs:
+  - get
+  - list
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ocr-service
+  namespace: ocr-service
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ocr-service
+subjects:
+- kind: ServiceAccount
+  name: ocr-service
+  namespace: ocr-service
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ocr-service-ingress
+  namespace: ingress-nginx

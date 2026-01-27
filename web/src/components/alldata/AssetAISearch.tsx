@@ -41,7 +41,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<AIAssetSearchResult[]>([]);
   const [searchIntent, setSearchIntent] = useState<QueryIntent | null>(null);
-  const [autocompleteOptions, setAutocompleteOptions] = useState<{ value: string; label: string }[]>([]);
+  const [autocompleteOptions, setAutocompleteOptions] = useState<Array<{ value: string; label: string | React.ReactNode }>>([]);
   const [showTrendingPanel, setShowTrendingPanel] = useState(false);
 
   const searchInputRef = useRef<any>(null);
@@ -342,7 +342,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
                         <Space size={4}>
                           <span style={{ color: '#999', fontSize: 12 }}>匹配:</span>
                           {result.matched_fields.map(field => (
-                            <Tag key={field} size="small" color="cyan">
+                            <Tag key={field} color="cyan" style={{ fontSize: '12px' }}>
                               {field === 'name' && '名称'}
                               {field === 'description' && '描述'}
                               {field === 'table_name' && '表名'}

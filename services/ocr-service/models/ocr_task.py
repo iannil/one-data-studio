@@ -31,11 +31,15 @@ class DocumentType(str, enum.Enum):
 
 class ExtractionType(str, enum.Enum):
     """提取类型枚举"""
-    INVOICE = "invoice"           # 发票
-    CONTRACT = "contract"         # 合同
-    REPORT = "report"             # 报告
-    TABLE = "table"               # 表格
-    GENERAL = "general"           # 通用文档
+    INVOICE = "invoice"               # 发票
+    CONTRACT = "contract"             # 合同
+    PURCHASE_ORDER = "purchase_order" # 采购订单
+    DELIVERY_NOTE = "delivery_note"   # 送货单
+    QUOTATION = "quotation"           # 报价单
+    RECEIPT = "receipt"               # 收据
+    REPORT = "report"                 # 报告
+    TABLE = "table"                   # 表格
+    GENERAL = "general"               # 通用文档
 
 
 class OCRTask(Base):

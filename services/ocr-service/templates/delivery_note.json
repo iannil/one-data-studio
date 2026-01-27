@@ -1,0 +1,168 @@
+{
+  "name": "送货单模板",
+  "description": "用于提取送货单的关键信息",
+  "type": "delivery_note",
+  "category": "logistics",
+  "supported_formats": ["pdf", "image", "word", "excel"],
+  "fields": [
+    {
+      "name": "送货单号",
+      "key": "delivery_number",
+      "required": true,
+      "keywords": ["送货单号", "送货编号", "发货单号", "Delivery No.", "DN"]
+    },
+    {
+      "name": "送货日期",
+      "key": "delivery_date",
+      "required": true,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["送货日期", "发货日期", "出库日期"]
+    },
+    {
+      "name": "供应商名称",
+      "key": "supplier_name",
+      "required": true,
+      "keywords": ["供应商", "供方", "发货方", "送货单位"]
+    },
+    {
+      "name": "供应商联系人",
+      "key": "supplier_contact",
+      "required": false,
+      "keywords": ["供应商联系人", "发货联系人"]
+    },
+    {
+      "name": "收货单位",
+      "key": "receiver_name",
+      "required": true,
+      "keywords": ["收货单位", "需方", "买方", "客户"]
+    },
+    {
+      "name": "收货地址",
+      "key": "receiver_address",
+      "required": false,
+      "keywords": ["收货地址", "送货地址", "交货地址"]
+    },
+    {
+      "name": "收货联系人",
+      "key": "receiver_contact",
+      "required": false,
+      "keywords": ["收货联系人", "收货人"]
+    },
+    {
+      "name": "收货电话",
+      "key": "receiver_phone",
+      "required": false,
+      "keywords": ["收货电话", "联系电话"]
+    },
+    {
+      "name": "运输方式",
+      "key": "shipping_method",
+      "required": false,
+      "keywords": ["运输方式", "发货方式", "配送方式"]
+    },
+    {
+      "name": "车牌号",
+      "key": "vehicle_number",
+      "required": false,
+      "keywords": ["车牌号", "车辆牌照", "车号"]
+    },
+    {
+      "name": "司机姓名",
+      "key": "driver_name",
+      "required": false,
+      "keywords": ["司机", "驾驶员", "承运司机"]
+    },
+    {
+      "name": "司机电话",
+      "key": "driver_phone",
+      "required": false,
+      "keywords": ["司机电话", "驾驶员电话"]
+    },
+    {
+      "name": "订单编号",
+      "key": "order_number",
+      "required": false,
+      "keywords": ["订单编号", "采购单号", "对应订单"]
+    },
+    {
+      "name": "制单人",
+      "key": "creator",
+      "required": false,
+      "keywords": ["制单人", "制单", "制作人"]
+    },
+    {
+      "name": "验收人",
+      "key": "receiver",
+      "required": false,
+      "keywords": ["验收人", "收货人", "签收人"]
+    },
+    {
+      "name": "验收日期",
+      "key": "receive_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["验收日期", "签收日期", "收货日期"]
+    },
+    {
+      "name": "备注",
+      "key": "remark",
+      "required": false,
+      "keywords": ["备注", "说明"]
+    }
+  ],
+  "tables": [
+    {
+      "name": "送货明细",
+      "key": "items",
+      "required": true,
+      "header_keywords": ["序号", "品名", "规格", "数量", "单位", "Item", "Quantity"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "物料编码", "key": "item_code"},
+        {"name": "物料名称", "key": "item_name"},
+        {"name": "规格型号", "key": "specification"},
+        {"name": "单位", "key": "unit"},
+        {"name": "订购数量", "key": "ordered_qty", "validation": {"type": "number", "min_value": 0}},
+        {"name": "送货数量", "key": "delivered_qty", "validation": {"type": "number", "min_value": 0}},
+        {"name": "实收数量", "key": "received_qty", "validation": {"type": "number", "min_value": 0}},
+        {"name": "单价", "key": "unit_price", "validation": {"type": "number", "min_value": 0}},
+        {"name": "金额", "key": "amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "批次号", "key": "batch_number"},
+        {"name": "生产日期", "key": "production_date", "validation": {"type": "date"}},
+        {"name": "有效期",      "key": "expiry_date", "validation": {"type": "date"}},
+        {"name": "备注", "key": "remark"}
+      ]
+    }
+  ],
+  "cross_field_validation": [
+    {
+      "rule": "delivery_receive_check",
+      "description": "实收数量不应超过送货数量",
+      "fields": ["items"],
+      "validation": "received_qty <= delivered_qty",
+      "severity": "warning"
+    },
+    {
+      "rule": "receive_after_delivery_check",
+      "description": "验收日期应不早于送货日期",
+      "fields": ["delivery_date", "receive_date"],
+      "validation": "delivery_date <= receive_date",
+      "severity": "warning"
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD",
+    "amount_format": "number"
+  },
+  "layout_detection": {
+    "signature_regions": [
+      {"keywords": ["送货人签字", "发货人", "制单人"], "label": "sender_signature"},
+      {"keywords": ["收货人签字", "验收人", "签收人"], "label": "receiver_signature"},
+      {"keywords": ["日期", "年", "月", "日"], "label": "date_field"}
+    ]
+  }
+}

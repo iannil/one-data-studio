@@ -1,0 +1,361 @@
+{
+  "name": "增强合同模板",
+  "description": "支持价格明细、付款计划、交付清单等表格提取，包含签名/印章区域识别和跨字段校验",
+  "type": "contract",
+  "category": "legal",
+  "supported_formats": ["pdf", "word"],
+  "fields": [
+    {
+      "name": "合同编号",
+      "key": "contract_number",
+      "required": false,
+      "keywords": ["合同编号", "协议编号", "合同号", "协议号"]
+    },
+    {
+      "name": "合同名称",
+      "key": "contract_name",
+      "required": true,
+      "keywords": ["合同名称", "协议名称", "标题"]
+    },
+    {
+      "name": "合同类型",
+      "key": "contract_type",
+      "required": false,
+      "keywords": ["合同类型", "协议类型", "采购合同", "销售合同", "服务合同"]
+    },
+    {
+      "name": "甲方",
+      "key": "party_a",
+      "required": true,
+      "keywords": ["甲方", "委托方", "采购方", "需方", "买方"]
+    },
+    {
+      "name": "甲方地址",
+      "key": "party_a_address",
+      "required": false,
+      "keywords": ["甲方地址", "委托方地址"]
+    },
+    {
+      "name": "甲方联系人",
+      "key": "party_a_contact",
+      "required": false,
+      "keywords": ["甲方联系人", "委托方联系人"]
+    },
+    {
+      "name": "甲方电话",
+      "key": "party_a_phone",
+      "required": false,
+      "keywords": ["甲方电话", "委托方电话"]
+    },
+    {
+      "name": "甲方开户行",
+      "key": "party_a_bank",
+      "required": false,
+      "keywords": ["甲方开户行", "委托方开户行"]
+    },
+    {
+      "name": "甲方账号",
+      "key": "party_a_account",
+      "required": false,
+      "keywords": ["甲方账号", "委托方账号"]
+    },
+    {
+      "name": "乙方",
+      "key": "party_b",
+      "required": true,
+      "keywords": ["乙方", "受托方", "供应方", "供方", "卖方"]
+    },
+    {
+      "name": "乙方地址",
+      "key": "party_b_address",
+      "required": false,
+      "keywords": ["乙方地址", "受托方地址"]
+    },
+    {
+      "name": "乙方联系人",
+      "key": "party_b_contact",
+      "required": false,
+      "keywords": ["乙方联系人", "受托方联系人"]
+    },
+    {
+      "name": "乙方电话",
+      "key": "party_b_phone",
+      "required": false,
+      "keywords": ["乙方电话", "受托方电话"]
+    },
+    {
+      "name": "乙方开户行",
+      "key": "party_b_bank",
+      "required": false,
+      "keywords": ["乙方开户行", "受托方开户行"]
+    },
+    {
+      "name": "乙方账号",
+      "key": "party_b_account",
+      "required": false,
+      "keywords": ["乙方账号", "受托方账号"]
+    },
+    {
+      "name": "合同金额",
+      "key": "contract_amount",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0
+      },
+      "keywords": ["合同金额", "协议金额", "总金额", "价款", "合同总价"]
+    },
+    {
+      "name": "币种",
+      "key": "currency",
+      "required": false,
+      "default": "CNY",
+      "keywords": ["币种", "货币"]
+    },
+    {
+      "name": "金额大写",
+      "key": "amount_cn",
+      "required": false,
+      "keywords": ["金额大写", "大写金额"]
+    },
+    {
+      "name": "含税标识",
+      "key": "tax_included",
+      "required": false,
+      "keywords": ["含税", "不含税", "含税价", "不含税价"]
+    },
+    {
+      "name": "税率",
+      "key": "tax_rate",
+      "required": false,
+      "validation": {
+        "type": "number",
+        "min_value": 0,
+        "max_value": 1
+      },
+      "keywords": ["税率", "增值税率"]
+    },
+    {
+      "name": "签订日期",
+      "key": "signing_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["签订日期", "签署日期", "签约日期"]
+    },
+    {
+      "name": "生效日期",
+      "key": "effective_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["生效日期", "起始日期", "开始日期"]
+    },
+    {
+      "name": "截止日期",
+      "key": "expiry_date",
+      "required": false,
+      "validation": {
+        "type": "date"
+      },
+      "keywords": ["截止日期", "终止日期", "结束日期", "到期日期"]
+    },
+    {
+      "name": "合同期限",
+      "key": "contract_period",
+      "required": false,
+      "keywords": ["合同期限", "有效期", "服务期限"]
+    },
+    {
+      "name": "付款方式",
+      "key": "payment_method",
+      "required": false,
+      "keywords": ["付款方式", "结算方式", "支付方式"]
+    },
+    {
+      "name": "付款期限",
+      "key": "payment_term",
+      "required": false,
+      "keywords": ["付款期限", "付款时间", "结算期限"]
+    },
+    {
+      "name": "交付方式",
+      "key": "delivery_method",
+      "required": false,
+      "keywords": ["交付方式", "交货方式", "运输方式"]
+    },
+    {
+      "name": "交付地点",
+      "key": "delivery_place",
+      "required": false,
+      "keywords": ["交付地点", "交货地点", "收货地址"]
+    },
+    {
+      "name": "违约责任",
+      "key": "breach_liability",
+      "required": false,
+      "keywords": ["违约责任", "违约条款"]
+    },
+    {
+      "name": "争议解决方式",
+      "key": "dispute_resolution",
+      "required": false,
+      "keywords": ["争议解决", "争议处理", "纠纷解决"]
+    },
+    {
+      "name": "合同总页数",
+      "key": "total_pages",
+      "required": false
+    },
+    {
+      "name": "附件数量",
+      "key": "attachment_count",
+      "required": false,
+      "keywords": ["附件", "附录"]
+    },
+    {
+      "name": "其他条款",
+      "key": "other_terms",
+      "required": false
+    }
+  ],
+  "tables": [
+    {
+      "name": "价格明细表",
+      "key": "price_details",
+      "required": false,
+      "header_keywords": ["价格", "明细", "项目", "金额", "单价", "数量", "规格"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "项目名称", "key": "item_name"},
+        {"name": "规格型号", "key": "specification"},
+        {"name": "单位", "key": "unit"},
+        {"name": "数量", "key": "quantity", "validation": {"type": "number", "min_value": 0}},
+        {"name": "单价", "key": "unit_price", "validation": {"type": "number", "min_value": 0}},
+        {"name": "金额", "key": "amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "备注", "key": "remark"}
+      ]
+    },
+    {
+      "name": "付款计划表",
+      "key": "payment_schedule",
+      "required": false,
+      "header_keywords": ["付款", "阶段", "计划", "比例", "时间", "期数"],
+      "fields": [
+        {"name": "期数", "key": "installment"},
+        {"name": "付款阶段", "key": "stage"},
+        {"name": "付款比例(%)", "key": "percentage", "validation": {"type": "number", "min_value": 0, "max_value": 100}},
+        {"name": "付款金额", "key": "amount", "validation": {"type": "number", "min_value": 0}},
+        {"name": "付款条件", "key": "condition"},
+        {"name": "计划付款日期", "key": "planned_date", "validation": {"type": "date"}},
+        {"name": "备注", "key": "remark"}
+      ]
+    },
+    {
+      "name": "交付清单表",
+      "key": "delivery_list",
+      "required": false,
+      "header_keywords": ["交付", "清单", "货物", "数量", "时间", "品名"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "交付物名称", "key": "item_name"},
+        {"name": "规格型号", "key": "specification"},
+        {"name": "单位", "key": "unit"},
+        {"name": "数量", "key": "quantity", "validation": {"type": "number", "min_value": 0}},
+        {"name": "计划交付时间", "key": "delivery_date", "validation": {"type": "date"}},
+        {"name": "交付地点", "key": "delivery_place"},
+        {"name": "备注", "key": "remark"}
+      ]
+    },
+    {
+      "name": "服务明细表",
+      "key": "service_details",
+      "required": false,
+      "header_keywords": ["服务", "内容", "标准", "时间"],
+      "fields": [
+        {"name": "序号", "key": "index"},
+        {"name": "服务项目", "key": "service_name"},
+        {"name": "服务内容", "key": "service_content"},
+        {"name": "服务标准", "key": "service_standard"},
+        {"name": "服务期限", "key": "service_period"},
+        {"name": "服务费用", "key": "service_fee", "validation": {"type": "number", "min_value": 0}},
+        {"name": "备注", "key": "remark"}
+      ]
+    }
+  ],
+  "layout_detection": {
+    "signature_regions": [
+      {"keywords": ["甲方签字", "甲方盖章", "甲方代表", "委托方签字", "委托方盖章"], "label": "party_a_signature"},
+      {"keywords": ["乙方签字", "乙方盖章", "乙方代表", "受托方签字", "受托方盖章"], "label": "party_b_signature"},
+      {"keywords": ["法定代表人签字", "法人签字", "授权代表签字"], "label": "legal_rep_signature"},
+      {"keywords": ["日期", "年", "月", "日"], "label": "date_field"}
+    ],
+    "seal_regions": [
+      {"keywords": ["公章", "合同章", "专用章"], "label": "official_seal"},
+      {"keywords": ["财务专用章"], "label": "finance_seal"},
+      {"keywords": ["法人章"], "label": "legal_rep_seal"}
+    ],
+    "page_type_detection": {
+      "cover_keywords": ["合同", "协议", "编号"],
+      "signature_keywords": ["签字", "盖章", "签署", "日期"],
+      "attachment_keywords": ["附件", "附录", "补充"]
+    }
+  },
+  "cross_field_validation": [
+    {
+      "rule": "amount_sum_check",
+      "description": "合同金额应等于价格明细表合计金额",
+      "fields": ["contract_amount", "price_details"],
+      "validation": "sum(price_details.amount) == contract_amount",
+      "severity": "warning"
+    },
+    {
+      "rule": "date_logic_check",
+      "description": "生效日期应早于或等于截止日期",
+      "fields": ["effective_date", "expiry_date"],
+      "validation": "effective_date <= expiry_date",
+      "severity": "error"
+    },
+    {
+      "rule": "signing_before_effective_check",
+      "description": "签订日期应早于或等于生效日期",
+      "fields": ["signing_date", "effective_date"],
+      "validation": "signing_date <= effective_date",
+      "severity": "warning"
+    },
+    {
+      "rule": "payment_sum_check",
+      "description": "付款计划合计比例应为100%",
+      "fields": ["payment_schedule"],
+      "validation": "sum(payment_schedule.percentage) == 100",
+      "severity": "warning"
+    },
+    {
+      "rule": "payment_amount_sum_check",
+      "description": "付款计划合计金额应等于合同金额",
+      "fields": ["contract_amount", "payment_schedule"],
+      "validation": "sum(payment_schedule.amount) == contract_amount",
+      "severity": "warning"
+    },
+    {
+      "rule": "tax_calculation_check",
+      "description": "税额计算校验",
+      "fields": ["contract_amount", "tax_rate"],
+      "validation": "tax_amount = contract_amount * tax_rate / (1 + tax_rate)",
+      "severity": "info"
+    }
+  ],
+  "post_processing": {
+    "date_format": "YYYY-MM-DD",
+    "amount_format": "number",
+    "normalize_fields": {
+      "contract_amount": "float",
+      "tax_rate": "float",
+      "signing_date": "date",
+      "effective_date": "date",
+      "expiry_date": "date"
+    }
+  }
+}

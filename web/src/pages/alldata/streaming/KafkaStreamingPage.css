@@ -1,0 +1,242 @@
+/* Kafka 流式数据页面样式 */
+
+.kafka-streaming-page {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.kafka-streaming-page .ant-typography h2 {
+  margin-bottom: 24px;
+}
+
+/* 消息预览样式 */
+.kafka-messages-preview {
+  max-height: 500px;
+  overflow-y: auto;
+  background: #1e1e1e;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.kafka-message-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #2d2d2d;
+  border-radius: 4px;
+  border-left: 3px solid #52c41a;
+}
+
+.kafka-message-item:last-child {
+  margin-bottom: 0;
+}
+
+.message-content {
+  margin: 0;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.message-content code {
+  color: #d4d4d4;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.consuming {
+  background: #52c41a;
+  animation: pulse 1.5s infinite;
+}
+
+.status-dot.paused {
+  background: #faad14;
+}
+
+.status-dot.error {
+  background: #ff4d4f;
+}
+
+.status-dot.stopped {
+  background: #8c8c8c;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 指标卡片 */
+.metrics-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.metrics-card .metric-title {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.metrics-card .metric-value {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.metrics-card .metric-change {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.metric-change.positive {
+  color: #52c41a;
+}
+
+.metric-change.negative {
+  color: #ff4d4f;
+}
+
+/* Topic 列表 */
+.topic-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.topic-card {
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s;
+}
+
+.topic-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #1677ff;
+}
+
+.topic-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.topic-card-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.topic-card-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 分区列表 */
+.partition-list {
+  margin-top: 12px;
+}
+
+.partition-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.partition-item:last-child {
+  border-bottom: none;
+}
+
+.partition-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.partition-offset {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.partition-lag {
+  font-size: 12px;
+}
+
+.partition-lag.high {
+  color: #ff4d4f;
+}
+
+.partition-lag.medium {
+  color: #faad14;
+}
+
+.partition-lag.low {
+  color: #52c41a;
+}
+
+/* 配置表单 */
+.config-form-section {
+  margin-bottom: 24px;
+}
+
+.config-form-section-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 连接状态 */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.connection-status.connected {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.connection-status.disconnected {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.connection-status.connecting {
+  background: #e6f7ff;
+  color: #1677ff;
+}
