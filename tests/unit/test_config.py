@@ -26,8 +26,13 @@ from services.shared.config import (
 class TestDatabaseConfig:
     """数据库配置测试"""
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_default_values(self):
         """测试默认值"""
+        # Clear environment to test actual defaults
+        for key in ['MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_DATABASE',
+                    'DB_POOL_SIZE', 'DB_MAX_OVERFLOW']:
+            os.environ.pop(key, None)
         config = DatabaseConfig()
         assert config.host == "mysql.one-data-infra.svc.cluster.local"
         assert config.port == 3306
@@ -103,8 +108,12 @@ class TestRedisConfig:
 class TestCeleryConfig:
     """Celery 配置测试 - Sprint 8"""
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_default_values(self):
         """测试默认值"""
+        # Clear environment to test actual defaults
+        for key in ['CELERY_BROKER_URL', 'CELERY_RESULT_BACKEND', 'CELERY_TASK_TIME_LIMIT']:
+            os.environ.pop(key, None)
         config = CeleryConfig()
         assert "redis://localhost:6379/1" in config.broker_url
         assert "redis://localhost:6379/2" in config.result_backend

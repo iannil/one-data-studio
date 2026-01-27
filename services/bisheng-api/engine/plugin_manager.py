@@ -28,7 +28,7 @@ import hashlib
 from collections import defaultdict
 
 # 导入工具基类
-from .tools import BaseTool, ToolSchema
+from .base_tools import BaseTool, ToolSchema
 
 logger = logging.getLogger(__name__)
 

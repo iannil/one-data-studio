@@ -5,7 +5,7 @@ SQL 结果解释器单元测试
 
 import pytest
 from datetime import datetime
-from services.bisheng_api.services.result_interpreter import (
+from services.result_interpreter import (
     ResultInterpreter,
     InterpretationResult,
     ChartType,

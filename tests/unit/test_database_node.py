@@ -20,7 +20,7 @@ class TestDatabaseNodeInit:
 
     def test_init_default_config(self):
         """默认配置初始化"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {})
 
@@ -32,7 +32,7 @@ class TestDatabaseNodeInit:
 
     def test_init_with_config(self):
         """自定义配置初始化"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         config = {
             'query': 'SELECT * FROM users',
@@ -57,7 +57,7 @@ class TestSQLEscaping:
     @pytest.fixture
     def node(self):
         """创建测试节点"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
         return DatabaseNodeImpl('node_1', {})
 
     def test_escape_null(self, node):
@@ -114,7 +114,7 @@ class TestSQLInjectionPrevention:
     @pytest.fixture
     def node(self):
         """创建测试节点"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
         return DatabaseNodeImpl('node_1', {})
 
     def test_reject_sql_comment(self, node):
@@ -159,7 +159,7 @@ class TestQueryRendering:
     @pytest.fixture
     def node(self):
         """创建测试节点"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
         return DatabaseNodeImpl('node_1', {'query': 'SELECT * FROM users WHERE id = {{user_id}}'})
 
     def test_render_simple_variable(self, node):
@@ -181,11 +181,11 @@ class TestQueryRendering:
     def test_render_input_variable(self, node):
         """渲染输入变量"""
         context = {
-            '_initial_input': {'query': 'SELECT 1'}
+            '_initial_input': {'query': 'test_query_value'}
         }
         result = node._render_query('Query: {{inputs.query}}', context)
 
-        assert "'SELECT 1'" in result or 'SELECT 1' in result
+        assert "'test_query_value'" in result or 'test_query_value' in result
 
 
 class TestGetQuery:
@@ -193,7 +193,7 @@ class TestGetQuery:
 
     def test_get_query_from_template(self):
         """从模板获取查询"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'query': 'SELECT * FROM users'})
         result = node._get_query({})
@@ -202,7 +202,7 @@ class TestGetQuery:
 
     def test_get_query_from_context(self):
         """从上下文获取查询"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'query_from': 'generated_query'})
         context = {'generated_query': 'SELECT * FROM orders'}
@@ -212,7 +212,7 @@ class TestGetQuery:
 
     def test_get_query_from_nested_context(self):
         """从嵌套上下文获取查询"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'query_from': 'node_a.query'})
         context = {'node_a': {'query': 'SELECT COUNT(*) FROM items'}}
@@ -226,7 +226,7 @@ class TestGetParameters:
 
     def test_get_parameters_from_template(self):
         """从模板获取参数"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'parameters': [1, 'test', True]})
         result = node._get_parameters({})
@@ -235,7 +235,7 @@ class TestGetParameters:
 
     def test_get_parameters_from_context(self):
         """从上下文获取参数"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'parameters_from': 'params'})
         context = {'params': [10, 20]}
@@ -245,7 +245,7 @@ class TestGetParameters:
 
     def test_get_parameters_with_variable_references(self):
         """带变量引用的参数"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'parameters': ['{{user_id}}', '{{name}}']})
         context = {'user_id': 42, 'name': 'Alice'}
@@ -259,7 +259,7 @@ class TestFormatOutput:
 
     def test_format_output_rows(self):
         """rows 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'rows'})
         result = node._format_output({
@@ -271,7 +271,7 @@ class TestFormatOutput:
 
     def test_format_output_first(self):
         """first 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'first'})
         result = node._format_output({
@@ -283,7 +283,7 @@ class TestFormatOutput:
 
     def test_format_output_first_empty(self):
         """first 模式空结果"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'first'})
         result = node._format_output({'rows': [], 'row_count': 0})
@@ -292,7 +292,7 @@ class TestFormatOutput:
 
     def test_format_output_value(self):
         """value 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'value'})
         result = node._format_output({
@@ -304,7 +304,7 @@ class TestFormatOutput:
 
     def test_format_output_count(self):
         """count 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'count'})
         result = node._format_output({
@@ -316,7 +316,7 @@ class TestFormatOutput:
 
     def test_format_output_affected(self):
         """affected 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'affected'})
         result = node._format_output({
@@ -329,7 +329,7 @@ class TestFormatOutput:
 
     def test_format_output_exists(self):
         """exists 模式"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'output_mode': 'exists'})
         result = node._format_output({'rows': [{'id': 1}], 'row_count': 1})
@@ -347,7 +347,7 @@ class TestNestedValueAccess:
     @pytest.fixture
     def node(self):
         """创建测试节点"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
         return DatabaseNodeImpl('node_1', {})
 
     def test_get_nested_value_simple(self, node):
@@ -384,28 +384,28 @@ class TestValidation:
 
     def test_validate_with_query_template(self):
         """有查询模板时验证通过"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'query': 'SELECT 1'})
         assert node.validate() is True
 
     def test_validate_with_query_from(self):
         """有 query_from 时验证通过"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {'query_from': 'ctx.query'})
         assert node.validate() is True
 
     def test_validate_without_query(self):
         """没有查询时验证失败"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {})
         assert node.validate() is False
 
     def test_validate_sets_default_db_type(self):
         """验证时设置默认数据库类型"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {
             'query': 'SELECT 1',
@@ -422,7 +422,7 @@ class TestMockResult:
     def test_mock_result_select(self):
         """Mock SELECT 结果"""
         with patch.dict(os.environ, {'ENVIRONMENT': 'development'}):
-            from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+            from engine.extension_nodes.database import DatabaseNodeImpl
 
             node = DatabaseNodeImpl('node_1', {})
             result = node._mock_result('SELECT * FROM users', [])
@@ -434,7 +434,7 @@ class TestMockResult:
     def test_mock_result_insert(self):
         """Mock INSERT 结果"""
         with patch.dict(os.environ, {'ENVIRONMENT': 'development'}):
-            from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+            from engine.extension_nodes.database import DatabaseNodeImpl
 
             node = DatabaseNodeImpl('node_1', {})
             result = node._mock_result('INSERT INTO users VALUES (1)', [])
@@ -446,7 +446,7 @@ class TestMockResult:
     def test_mock_result_production_raises_error(self):
         """生产环境不返回 Mock"""
         with patch.dict(os.environ, {'ENVIRONMENT': 'production'}):
-            from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+            from engine.extension_nodes.database import DatabaseNodeImpl
 
             node = DatabaseNodeImpl('node_1', {})
 
@@ -460,7 +460,7 @@ class TestExecuteQuery:
     @pytest.fixture
     def node(self):
         """创建测试节点"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
         return DatabaseNodeImpl('node_1', {
             'query': 'SELECT * FROM users',
             'connection': {'type': 'sqlite', 'path': ':memory:'}
@@ -534,7 +534,7 @@ class TestExecuteNode:
     @pytest.mark.asyncio
     async def test_execute_no_query(self):
         """没有查询时返回错误"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {})
         result = await node.execute({})
@@ -545,7 +545,7 @@ class TestExecuteNode:
     @pytest.mark.asyncio
     async def test_execute_success(self):
         """成功执行"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {
             'query': 'SELECT 1 as value',
@@ -560,7 +560,7 @@ class TestExecuteNode:
     @pytest.mark.asyncio
     async def test_execute_with_error(self):
         """执行错误"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {
             'query': 'SELECT * FROM nonexistent_table',
@@ -579,7 +579,7 @@ class TestCredentialValidation:
     @pytest.mark.asyncio
     async def test_postgresql_missing_database(self):
         """PostgreSQL 缺少数据库名称"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {
             'query': 'SELECT 1',
@@ -600,7 +600,7 @@ class TestCredentialValidation:
     @pytest.mark.asyncio
     async def test_mysql_missing_username(self):
         """MySQL 缺少用户名"""
-        from services.bisheng_api.engine.extension_nodes.database import DatabaseNodeImpl
+        from engine.extension_nodes.database import DatabaseNodeImpl
 
         node = DatabaseNodeImpl('node_1', {
             'query': 'SELECT 1',

@@ -4,7 +4,7 @@
 """
 
 import pytest
-from services.bisheng_api.services.hybrid_retriever import (
+from services.hybrid_retriever import (
     BM25Index,
     HybridRetriever,
     RetrievalConfig,

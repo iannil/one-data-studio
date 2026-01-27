@@ -5,9 +5,21 @@ Phase 7: Sprint 7.4 - 调度服务
 P1 - Agent 模板管理
 """
 
-from .vector_store import VectorStore
-from .embedding import EmbeddingService
-from .document import DocumentService
+import os
+
+# 在测试环境下避免自动导入依赖外部服务的模块
+_TESTING = os.environ.get('ENVIRONMENT', '') == 'test'
+
+if not _TESTING:
+    try:
+        from .vector_store import VectorStore
+        from .embedding import EmbeddingService
+        from .document import DocumentService
+        CORE_SERVICES_AVAILABLE = True
+    except ImportError:
+        CORE_SERVICES_AVAILABLE = False
+else:
+    CORE_SERVICES_AVAILABLE = False
 
 try:
     from .scheduler import WorkflowScheduler, get_scheduler
@@ -21,11 +33,10 @@ try:
 except ImportError:
     AGENT_TEMPLATE_AVAILABLE = False
 
-__all__ = [
-    'VectorStore',
-    'EmbeddingService',
-    'DocumentService',
-]
+__all__ = []
+
+if CORE_SERVICES_AVAILABLE:
+    __all__.extend(['VectorStore', 'EmbeddingService', 'DocumentService'])
 
 if SCHEDULER_AVAILABLE:
     __all__.extend(['WorkflowScheduler', 'get_scheduler'])

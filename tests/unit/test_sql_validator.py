@@ -4,7 +4,7 @@ SQL 安全检查器单元测试
 """
 
 import pytest
-from services.bisheng_api.services.sql_validator import (
+from services.sql_validator import (
     SQLValidator,
     SQLValidationResult,
     SQLRiskLevel,

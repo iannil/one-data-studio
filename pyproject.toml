@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "one-data-studio"
+version = "1.0.0"
+description = "ONE-DATA-STUDIO - Enterprise DataOps + MLOps + LLMOps Platform"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["services*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = [
+    ".",
+    "services",
+    "services/bisheng-api",
+    "services/alldata-api/src"
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+    "-p", "no:warnings"
+]
+markers = [
+    "unit: 单元测试（不依赖外部服务）",
+    "integration: 集成测试（需要外部服务）",
+    "slow: 慢速测试（执行时间较长）",
+    "security: 安全测试",
+    "requires_db: 需要数据库",
+    "requires_milvus: 需要 Milvus",
+    "requires_minio: 需要 MinIO",
+    "requires_auth: 需要认证服务",
+    "requires_redis: 需要 Redis"
+]
+
+[tool.coverage.run]
+branch = true
+source = ["services"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+    "*/engine/tools/*",
+    "*/tracer_setup.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:"
+]
+fail_under = 70

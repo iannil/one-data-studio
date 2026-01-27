@@ -7,7 +7,7 @@ import pytest
 import time
 import threading
 from unittest.mock import Mock, patch, AsyncMock
-from services.bisheng_api.engine.plugin_manager import (
+from engine.plugin_manager import (
     PluginManager,
     ToolVersion,
     ToolMetadata,
@@ -18,7 +18,7 @@ from services.bisheng_api.engine.plugin_manager import (
     get_plugin_manager,
     tool,
 )
-from services.bisheng_api.engine.tools import BaseTool, ToolSchema
+from engine.base_tools import BaseTool, ToolSchema
 
 
 class MockTool(BaseTool):

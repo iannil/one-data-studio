@@ -17,7 +17,7 @@ import sys
 
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tools import BaseTool, ToolSchema
+from base_tools import BaseTool, ToolSchema
 
 logger = logging.getLogger(__name__)
 

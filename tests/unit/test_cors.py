@@ -62,12 +62,16 @@ class TestCORSConfig:
     @pytest.mark.unit
     @pytest.mark.security
     def test_is_origin_allowed_all_origins(self):
-        """Test allow all origins mode (development only)."""
+        """Test that allow_all_origins is always disabled for security."""
         from security.cors import CORSConfig
 
+        # Even in development, allow_all_origins should be forced to False
         with patch.dict(os.environ, {'FLASK_ENV': 'development'}):
             config = CORSConfig(allow_all_origins=True)
-            assert config.is_origin_allowed('https://any-origin.com') is True
+            # Security: allow_all_origins is always disabled
+            assert config.allow_all_origins is False
+            # Unknown origins should be rejected
+            assert config.is_origin_allowed('https://any-origin.com') is False
 
     @pytest.mark.unit
     @pytest.mark.security

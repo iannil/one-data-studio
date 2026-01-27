@@ -6,11 +6,18 @@ tests/unit/test_cube_api.py
 """
 
 import os
+import sys
 import json
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
 from datetime import datetime
 
+# 确保 cube-api 优先于其他 app 模块
+_project_root = Path(__file__).parent.parent.parent
+_cube_api_path = str(_project_root / "services" / "cube-api")
+if _cube_api_path not in sys.path:
+    sys.path.insert(0, _cube_api_path)
 
 # 设置测试环境
 os.environ.setdefault('ENVIRONMENT', 'testing')
@@ -23,10 +30,17 @@ class TestHealthEndpoint:
     @pytest.fixture
     def app(self):
         """创建测试应用"""
+        import importlib.util
+        # 显式从 cube-api 目录加载 app 模块
+        spec = importlib.util.spec_from_file_location(
+            "cube_app",
+            str(_project_root / "services" / "cube-api" / "app.py")
+        )
+        cube_app = importlib.util.module_from_spec(spec)
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            from services.cube_api.app import app
-            app.config['TESTING'] = True
-            return app
+            spec.loader.exec_module(cube_app)
+            cube_app.app.config['TESTING'] = True
+            return cube_app.app
 
     @pytest.fixture
     def client(self, app):
@@ -69,7 +83,7 @@ class TestModelsCRUD:
     def app(self):
         """创建测试应用"""
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            from services.cube_api.app import app
+            from app import app
             app.config['TESTING'] = True
             return app
 
@@ -264,7 +278,7 @@ class TestModelDeployment:
     def app(self):
         """创建测试应用"""
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            from services.cube_api.app import app
+            from app import app
             app.config['TESTING'] = True
             return app
 
@@ -375,7 +389,7 @@ class TestPrediction:
             'DATABASE_URL': 'sqlite:///:memory:',
             'USE_MOCK_INFERENCE': 'true'
         }):
-            from services.cube_api.app import app
+            from app import app
             app.config['TESTING'] = True
             return app
 
@@ -442,7 +456,7 @@ class TestBatchPrediction:
     def app(self):
         """创建测试应用"""
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            from services.cube_api.app import app
+            from app import app
             app.config['TESTING'] = True
             return app
 
@@ -504,7 +518,7 @@ class TestTrainingJobs:
     def app(self):
         """创建测试应用"""
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            from services.cube_api.app import app
+            from app import app
             app.config['TESTING'] = True
             return app
 
@@ -604,7 +618,7 @@ class TestGenerateId:
 
     def test_generate_id_with_prefix(self):
         """带前缀的 ID"""
-        from services.cube_api.app import generate_id
+        from app import generate_id
 
         id1 = generate_id("model_")
         id2 = generate_id("train_")
@@ -615,7 +629,7 @@ class TestGenerateId:
 
     def test_generate_id_unique(self):
         """ID 唯一"""
-        from services.cube_api.app import generate_id
+        from app import generate_id
 
         ids = [generate_id("test_") for _ in range(100)]
 

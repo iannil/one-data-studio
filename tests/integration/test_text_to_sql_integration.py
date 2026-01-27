@@ -19,24 +19,24 @@ from typing import List, Dict, Any
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from services.bisheng_api.services.sql_validator import (
+from services.sql_validator import (
     SQLValidator,
     SQLValidationResult,
     SQLRiskLevel,
     get_sql_validator,
 )
-from services.alldata_api.services.metadata_schema_provider import (
+from services.metadata_schema_provider import (
     SchemaProvider,
     SchemaSelectionResult,
     TableSchema,
     ColumnSchema,
 )
-from services.bisheng_api.services.result_interpreter import (
+from services.result_interpreter import (
     ResultInterpreter,
     InterpretationResult,
     InsightType,
 )
-from services.bisheng_api.services.hybrid_retriever import (
+from services.hybrid_retriever import (
     HybridRetriever,
     RetrievalConfig,
     RetrievalMethod,

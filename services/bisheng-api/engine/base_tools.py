@@ -248,7 +248,10 @@ class VectorSearchTool(BaseTool):
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
-        from ..services import VectorStore, EmbeddingService
+        try:
+            from ..services import VectorStore, EmbeddingService
+        except ImportError:
+            from services import VectorStore, EmbeddingService
         self.vector_store = VectorStore()
         self.embedding_service = EmbeddingService()
 

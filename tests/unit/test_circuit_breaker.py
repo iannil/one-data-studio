@@ -93,7 +93,7 @@ class TestCircuitBreaker:
     def test_circuit_opens_after_failures(self):
         """测试失败后熔断器打开"""
         from services.shared.circuit_breaker import (
-            CircuitBreaker, CircuitBreakerConfig, CircuitState
+            CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerOpenError
         )
 
         config = CircuitBreakerConfig(
@@ -109,7 +109,7 @@ class TestCircuitBreaker:
         for _ in range(10):
             try:
                 cb.call(fail_func)
-            except ValueError:
+            except (ValueError, CircuitBreakerOpenError):
                 pass
 
         # 熔断器应该打开

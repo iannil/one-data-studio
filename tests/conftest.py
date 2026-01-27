@@ -10,41 +10,76 @@ import tempfile
 import logging
 from pathlib import Path
 from typing import AsyncGenerator, Generator
-import pymysql
-
-# 添加服务路径到 sys.path
-sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "services" / "bisheng-api"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "services" / "alldata-api" / "src"))
-
-
-# 配置日志
-logging.basicConfig(level=logging.DEBUG)
 
 
 # ==================== 环境变量配置 ====================
+# 必须在导入其他模块之前设置
 
 def setup_test_env():
     """设置测试环境变量"""
     os.environ.update({
         'ENVIRONMENT': 'test',
+        # 数据库配置
         'MYSQL_HOST': os.getenv('TEST_MYSQL_HOST', 'localhost'),
         'MYSQL_PORT': os.getenv('TEST_MYSQL_PORT', '3306'),
         'MYSQL_USER': os.getenv('TEST_MYSQL_USER', 'test_user'),
         'MYSQL_PASSWORD': os.getenv('TEST_MYSQL_PASSWORD', 'test_password'),
         'MYSQL_DATABASE': os.getenv('TEST_MYSQL_DATABASE', 'test_one_data'),
+        # Milvus 配置
         'MILVUS_HOST': os.getenv('TEST_MILVUS_HOST', 'localhost'),
         'MILVUS_PORT': os.getenv('TEST_MILVUS_PORT', '19530'),
+        # MinIO 配置
         'MINIO_ENDPOINT': os.getenv('TEST_MINIO_ENDPOINT', 'localhost:9000'),
         'MINIO_ACCESS_KEY': os.getenv('TEST_MINIO_ACCESS_KEY', 'minioadmin'),
         'MINIO_SECRET_KEY': os.getenv('TEST_MINIO_SECRET_KEY', 'minioadmin'),
-        'OPENAI_API_KEY': os.getenv('TEST_OPENAI_API_KEY', 'test-key'),
+        # OpenAI 配置
+        'OPENAI_API_KEY': os.getenv('TEST_OPENAI_API_KEY', 'test-api-key-for-testing'),
         'OPENAI_BASE_URL': 'http://mock-openai:8000/v1',
+        # JWT 和安全配置 (注意: config.py 使用 JWT_SECRET_KEY)
+        'JWT_SECRET_KEY': os.getenv('TEST_JWT_SECRET_KEY', 'test-jwt-secret-key-for-testing-only-32chars'),
+        'JWT_ALGORITHM': 'HS256',
+        'JWT_ACCESS_TOKEN_EXPIRE': '3600',
+        'JWT_REFRESH_TOKEN_EXPIRE': '604800',
+        # CSRF 配置 (注意: csrf.py 使用 CSRF_SECRET_KEY)
+        'CSRF_SECRET_KEY': os.getenv('TEST_CSRF_SECRET_KEY', 'test-csrf-secret-key-for-testing-32chars'),
+        # Redis 配置
+        'REDIS_HOST': os.getenv('TEST_REDIS_HOST', 'localhost'),
+        'REDIS_PORT': os.getenv('TEST_REDIS_PORT', '6379'),
+        'REDIS_PASSWORD': os.getenv('TEST_REDIS_PASSWORD', ''),
+        'REDIS_DB': '0',
+        'REDIS_ENABLED': 'true',
+        # Celery 配置
+        'CELERY_BROKER_URL': 'memory://',
+        'CELERY_RESULT_BACKEND': 'cache+memory://',
+        # 服务 URL 配置
+        'BISHENG_API_URL': 'http://localhost:8081',
+        'ALLDATA_API_URL': 'http://localhost:8082',
+        'ALDATA_API_URL': 'http://localhost:8082',  # config.py 使用此名称
+        'CUBE_API_URL': 'http://localhost:8083',
+        'ADMIN_API_URL': 'http://localhost:8084',
+        'OPENAI_PROXY_URL': 'http://localhost:8085',
+        # CORS 配置
+        'CORS_ALLOWED_ORIGINS': 'http://localhost:3000,http://localhost:5173',
+        # 日志配置
         'LOG_LEVEL': 'DEBUG',
     })
 
 
+# 必须在 sys.path 配置之前调用
 setup_test_env()
+
+# 添加服务路径到 sys.path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "services"))
+sys.path.insert(0, str(project_root / "services" / "bisheng-api"))
+sys.path.insert(0, str(project_root / "services" / "alldata-api" / "src"))
+sys.path.insert(0, str(project_root / "services" / "shared"))
+
+import pymysql
+
+# 配置日志
+logging.basicConfig(level=logging.DEBUG)
 
 
 # ==================== Pytest 配置 ====================
@@ -59,6 +94,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "requires_db: 需要数据库")
     config.addinivalue_line("markers", "requires_milvus: 需要 Milvus")
     config.addinivalue_line("markers", "requires_minio: 需要 MinIO")
+    config.addinivalue_line("markers", "security: 安全测试")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -127,6 +163,52 @@ def pytest_addoption(parser):
         default=False,
         help="运行性能基准测试"
     )
+
+
+# ==================== Singleton Reset Fixtures ====================
+
+@pytest.fixture(autouse=True)
+def reset_config_singleton():
+    """自动重置配置单例（确保每个测试使用新的配置实例）"""
+    # 先重置以确保使用测试环境变量
+    try:
+        import services.shared.config as config_module
+        config_module._config = None
+    except ImportError:
+        pass
+
+    yield
+
+    # 测试结束后也重置
+    try:
+        import services.shared.config as config_module
+        config_module._config = None
+    except ImportError:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def reset_csrf_singleton():
+    """自动重置 CSRF 单例"""
+    yield
+
+    try:
+        import services.shared.security.csrf as csrf_module
+        csrf_module._csrf_protection = None
+    except ImportError:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def reset_celery_singleton():
+    """自动重置 Celery 任务管理器单例"""
+    yield
+
+    try:
+        import services.shared.celery_app as celery_module
+        celery_module._task_manager = None
+    except ImportError:
+        pass
 
 
 # ==================== Fixtures ====================

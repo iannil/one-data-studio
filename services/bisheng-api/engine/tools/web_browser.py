@@ -17,9 +17,8 @@ import re
 import sys
 import os
 
-# 添加父目录到路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tools import BaseTool, ToolSchema
+# 从父目录的 tools.py 导入基类
+from engine.base_tools import BaseTool, ToolSchema
 
 logger = logging.getLogger(__name__)
 

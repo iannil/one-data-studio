@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from services.alldata_api.services.kettle_orchestration_service import (
+from services.kettle_orchestration_service import (
     KettleOrchestrationService,
     JobExecutionResult,
     JobStatus

@@ -13,7 +13,7 @@ class TestAgentStep:
 
     def test_init(self):
         """测试 AgentStep 初始化"""
-        from services.bisheng_api.engine.agents import AgentStep
+        from engine.agents import AgentStep
 
         step = AgentStep("thought", "thinking about something", {"key": "value"})
 
@@ -24,7 +24,7 @@ class TestAgentStep:
 
     def test_to_dict(self):
         """测试 AgentStep 转换为字典"""
-        from services.bisheng_api.engine.agents import AgentStep
+        from engine.agents import AgentStep
 
         step = AgentStep("action", "running tool", {"result": 42})
         result = step.to_dict()
@@ -40,7 +40,7 @@ class TestStreamingCallback:
 
     def test_emit(self):
         """测试 emit 方法"""
-        from services.bisheng_api.engine.agents import StreamingCallback
+        from engine.agents import StreamingCallback
 
         callback = StreamingCallback()
         step = callback.emit("thought", "test content", {"data": 123})
@@ -51,7 +51,7 @@ class TestStreamingCallback:
 
     def test_get_and_clear(self):
         """测试 get_and_clear 方法"""
-        from services.bisheng_api.engine.agents import StreamingCallback
+        from engine.agents import StreamingCallback
 
         callback = StreamingCallback()
         callback.emit("step1", "content1")
@@ -82,7 +82,7 @@ class TestReActAgent:
 
     def test_build_tools_description(self, mock_tool_registry):
         """测试工具描述构建"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
         description = agent._build_tools_description()
@@ -92,7 +92,7 @@ class TestReActAgent:
 
     def test_get_tool_names(self, mock_tool_registry):
         """测试获取工具名称"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
         names = agent._get_tool_names()
@@ -101,7 +101,7 @@ class TestReActAgent:
 
     def test_parse_action_valid(self, mock_tool_registry):
         """测试解析有效的 Action"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
 
@@ -116,7 +116,7 @@ Action Input: {"expression": "1 + 1"}"""
 
     def test_parse_action_no_action(self, mock_tool_registry):
         """测试解析无 Action 的文本"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
 
@@ -129,7 +129,7 @@ Action Input: {"expression": "1 + 1"}"""
 
     def test_check_final_answer_found(self, mock_tool_registry):
         """测试检测最终答案"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
 
@@ -142,7 +142,7 @@ Final Answer: The result is 42"""
 
     def test_check_final_answer_not_found(self, mock_tool_registry):
         """测试未找到最终答案"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
 
@@ -154,7 +154,7 @@ Final Answer: The result is 42"""
 
     def test_format_history_empty(self, mock_tool_registry):
         """测试格式化空历史"""
-        from services.bisheng_api.engine.agents import ReActAgent
+        from engine.agents import ReActAgent
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
         history = agent._format_history()
@@ -163,7 +163,7 @@ Final Answer: The result is 42"""
 
     def test_format_history_with_steps(self, mock_tool_registry):
         """测试格式化带步骤的历史"""
-        from services.bisheng_api.engine.agents import ReActAgent, AgentStep
+        from engine.agents import ReActAgent, AgentStep
 
         agent = ReActAgent(tool_registry=mock_tool_registry)
         agent.steps = [
@@ -205,10 +205,10 @@ class TestFunctionCallingAgent:
         return registry
 
     @pytest.mark.asyncio
-    @patch('services.bisheng_api.engine.agents.requests.post')
+    @patch('engine.agents.requests.post')
     async def test_run_no_tool_calls(self, mock_post, mock_tool_registry):
         """测试无工具调用的执行"""
-        from services.bisheng_api.engine.agents import FunctionCallingAgent
+        from engine.agents import FunctionCallingAgent
 
         mock_response = Mock()
         mock_response.status_code = 200
@@ -229,10 +229,10 @@ class TestFunctionCallingAgent:
         assert result["answer"] == "The answer is 42"
 
     @pytest.mark.asyncio
-    @patch('services.bisheng_api.engine.agents.requests.post')
+    @patch('engine.agents.requests.post')
     async def test_run_api_error(self, mock_post, mock_tool_registry):
         """测试 API 错误处理"""
-        from services.bisheng_api.engine.agents import FunctionCallingAgent
+        from engine.agents import FunctionCallingAgent
 
         mock_response = Mock()
         mock_response.status_code = 500
@@ -257,10 +257,10 @@ class TestPlanExecuteAgent:
         return registry
 
     @pytest.mark.asyncio
-    @patch('services.bisheng_api.engine.agents.requests.post')
+    @patch('engine.agents.requests.post')
     async def test_make_plan_success(self, mock_post, mock_tool_registry):
         """测试计划生成成功"""
-        from services.bisheng_api.engine.agents import PlanExecuteAgent
+        from engine.agents import PlanExecuteAgent
 
         mock_response = Mock()
         mock_response.status_code = 200
@@ -280,10 +280,10 @@ class TestPlanExecuteAgent:
         assert plan[0] == "Step 1"
 
     @pytest.mark.asyncio
-    @patch('services.bisheng_api.engine.agents.requests.post')
+    @patch('engine.agents.requests.post')
     async def test_make_plan_fallback(self, mock_post, mock_tool_registry):
         """测试计划生成失败时的回退"""
-        from services.bisheng_api.engine.agents import PlanExecuteAgent
+        from engine.agents import PlanExecuteAgent
 
         mock_post.side_effect = Exception("Connection error")
 
@@ -297,30 +297,38 @@ class TestPlanExecuteAgent:
 class TestCreateAgent:
     """Agent 工厂测试"""
 
-    def test_create_react_agent(self):
-        """测试创建 ReAct Agent"""
-        from services.bisheng_api.engine.agents import create_agent, ReActAgent
+    @pytest.fixture
+    def mock_tool_registry(self):
+        """创建 mock tool registry"""
+        registry = MagicMock()
+        registry.list_tools.return_value = []
+        registry.get_function_schemas.return_value = []
+        return registry
 
-        agent = create_agent("react")
+    def test_create_react_agent(self, mock_tool_registry):
+        """测试创建 ReAct Agent"""
+        from engine.agents import create_agent, ReActAgent
+
+        agent = create_agent("react", tool_registry=mock_tool_registry)
         assert isinstance(agent, ReActAgent)
 
-    def test_create_function_calling_agent(self):
+    def test_create_function_calling_agent(self, mock_tool_registry):
         """测试创建 Function Calling Agent"""
-        from services.bisheng_api.engine.agents import create_agent, FunctionCallingAgent
+        from engine.agents import create_agent, FunctionCallingAgent
 
-        agent = create_agent("function_calling")
+        agent = create_agent("function_calling", tool_registry=mock_tool_registry)
         assert isinstance(agent, FunctionCallingAgent)
 
-    def test_create_plan_execute_agent(self):
+    def test_create_plan_execute_agent(self, mock_tool_registry):
         """测试创建 Plan Execute Agent"""
-        from services.bisheng_api.engine.agents import create_agent, PlanExecuteAgent
+        from engine.agents import create_agent, PlanExecuteAgent
 
-        agent = create_agent("plan_execute")
+        agent = create_agent("plan_execute", tool_registry=mock_tool_registry)
         assert isinstance(agent, PlanExecuteAgent)
 
     def test_create_unknown_agent(self):
         """测试创建未知类型 Agent"""
-        from services.bisheng_api.engine.agents import create_agent
+        from engine.agents import create_agent
 
         with pytest.raises(ValueError) as exc_info:
             create_agent("unknown_type")
