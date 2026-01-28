@@ -296,3 +296,47 @@ class TestGetRateLimitKey:
         result = get_rate_limit_key()
         assert result is not None
         assert isinstance(result, str)
+
+
+class TestRateLimitBugFixes:
+    """速率限制 Bug 修复验证测试
+    Sprint 22: Quality Assurance - Bug fix verification
+    """
+
+    @pytest.mark.security
+    def test_typo_fix_limimiter(self):
+        """验证 _limimiter 拼写错误已修复"""
+        from services.shared.rate_limit import init_rate_limit
+        import inspect
+
+        source = inspect.getsource(init_rate_limit)
+        # 不应包含拼写错误
+        assert '_limimiter' not in source
+        # 应包含正确变量名
+        assert '_limiter' in source
+
+    @pytest.mark.security
+    def test_logic_error_fix_double_check(self):
+        """验证重复 redis.enabled 检查已修复"""
+        from services.shared.rate_limit import init_rate_limit
+        import inspect
+
+        source = inspect.getsource(init_rate_limit)
+        # 不应有重复条件
+        assert 'not config.redis.enabled and not config.redis.enabled' not in source
+
+    def test_rate_limit_checker_is_allowed_no_limiter(self):
+        """测试无限流器时检查器返回允许"""
+        from services.shared.rate_limit import RateLimitChecker
+
+        checker = RateLimitChecker()
+        result = checker.is_allowed('test-key', '100/minute')
+        assert result is True
+
+    def test_rate_limit_checker_get_remaining_no_limiter(self):
+        """测试无限流器时获取剩余返回 -1（无限制）"""
+        from services.shared.rate_limit import RateLimitChecker
+
+        checker = RateLimitChecker()
+        result = checker.get_remaining('test-key', '100/minute')
+        assert result == -1

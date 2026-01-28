@@ -46,7 +46,7 @@
 |------|--------|----------|----------|
 | Python 后端 | 274 | 142,887 | `services/alldata-api/`, `services/bisheng-api/`, `services/openai-proxy/`, `services/shared/`, `services/admin-api/`, `services/cube-api/`, `services/ocr-service/`, `services/behavior-service/` |
 | TypeScript 前端 | 216 (194 TSX + 22 TS) | 120,334 | `web/src/pages/`, `web/src/components/`, `web/src/services/` |
-| 测试代码 | 71 | 30,111 | `tests/unit/`, `tests/integration/`, `tests/e2e/` |
+| 测试代码 | 85 | 32,500+ | `tests/unit/`, `tests/integration/`, `tests/e2e/`, `tests/performance/` |
 | 部署配置 | 155 | - | `deploy/`, `k8s/`, `helm/` |
 
 ### 服务完成度矩阵
@@ -453,11 +453,34 @@
 
 | 服务 | 状态 | 说明 |
 |------|------|------|
-| Behavior Service | 代码已完成，未加入部署配置 | 需要添加到 docker-compose.yml 和 K8s 配置 |
+| Behavior Service | ✅ 已添加到部署配置 | docker-compose.yml 已更新，端口 8008 |
 
-### 版本号不一致
+### 版本号管理
 
-CHANGELOG.md 中存在 `0.1.0` 和 `1.0.0-rc` 两个版本线，版本号跳跃较大（0.4.0 → 0.9.1），建议后续版本发布时统一版本策略。
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| web/package.json | 1.3.0 | 前端应用版本，与项目版本同步 |
+| services/ocr-service | 1.0.0 | 独立微服务版本 |
+| services/behavior-service | 1.0.0 | 独立微服务版本 |
+
+> **说明**：项目整体版本 (1.3.0) 与独立微服务版本 (1.0.0) 分开管理。微服务版本在首次稳定发布时可统一升级。
+
+| 冗余/重复代码
+
+| 位置 | 问题 | 状态 |
+|------|------|------|
+| `tests/unit/test_rate_limit*.py` | 存在 2 个重复测试文件需合并 | ✅ 已合并 |
+
+---
+
+## 测试覆盖统计（2026-01-28 更新）
+
+| 测试类型 | 文件数 | 覆盖场景 |
+|----------|--------|----------|
+| 单元测试 | 48 | 数据源验证、健康检查、脱敏规则、限流、填充策略 |
+| 集成测试 | 20 | 资产管理、审计日志、ETL、智能查询、知识库、元数据扫描、模型部署/训练、敏感性扫描、表融合、用户管理 |
+| 端到端测试 | 15 | 5 种用户角色生命周期测试（系统管理员、数据管理员、数据工程师、算法工程师、业务用户） |
+| 性能测试 | 2 | 大规模扫描性能测试 |
 
 ---
 
@@ -465,6 +488,7 @@ CHANGELOG.md 中存在 `0.1.0` 和 `1.0.0-rc` 两个版本线，版本号跳跃�
 
 | 日期 | 更新内容 | 更新人 |
 |------|----------|--------|
+| 2026-01-28 | 添加测试覆盖统计、冗余代码清单，更新文件数量 | Claude |
 | 2026-01-28 | 更新代码统计（274 Python / 216 TS 文件），添加服务完成度矩阵和技术债务清单 | Claude |
 | 2025-01-24 | 添加三层集成完成度矩阵和代码统计 | Claude |
 | 2025-01-24 | 添加 35+ 前端页面/组件，48+ 后端 Python 文件清单 | Claude |

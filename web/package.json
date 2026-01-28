@@ -1,6 +1,6 @@
 {
   "name": "one-data-web",
-  "version": "0.1.0",
+  "version": "1.3.0",
   "description": "ONE-DATA-STUDIO Web UI - 统一数据 + AI + LLM 平台前端",
   "type": "module",
   "scripts": {
