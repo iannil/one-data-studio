@@ -4,6 +4,38 @@
 
 ---
 
+## [1.3.0] - 2026-01-28
+
+### Changed
+
+#### 文档整理与更新
+
+**目录编号修复**
+- 修复 `03-testing` 与 `03-progress` 编号冲突
+- 重新编号: `03-testing` → `04-testing`, `04-planning` → `05-planning`, `05-development` → `06-development`, `06-operations` → `07-operations`, `07-user-guide` → `08-user-guide`
+- 新建 `09-requirements/` 需求文档目录
+
+**散落文档归类**
+- `docs/user-lifecycle.md` → `docs/02-integration/user-lifecycle.md`
+- `docs/implementation-plan.md` → `docs/05-planning/implementation-plan.md`
+- `docs/智能大数据平台建设内容v2.txt` → `docs/09-requirements/platform-requirements.md`（转换为 Markdown）
+
+**代码统计更新**
+- Python 后端: 86+ → 274 文件, 142,887 行
+- TypeScript 前端: 62+ → 216 文件, 120,334 行
+- 测试代码: 24+ → 71 文件, 30,111 行
+- 部署配置: 30+ → 155 文件
+
+### Added
+
+- `docs/03-progress/code-audit-2026-01-28.md` - 代码审计报告
+- `docs/09-requirements/platform-requirements.md` - 原始需求文档（Markdown 版）
+- `docs/09-requirements/README.md` - 需求文档目录说明
+- 服务完成度矩阵（8 个服务的详细状态）
+- 技术债务清单（TODO 项、未部署服务）
+
+---
+
 ## [1.2.0] - 2025-01-24
 
 ### Added
@@ -599,6 +631,8 @@
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| 1.3.0 | 2026-01-28 | 文档整理：目录编号修复、散落文档归类、代码统计更新、代码审计报告 |
+| 1.2.0 | 2025-01-24 | Sprint 32 完成：工作流版本控制、Token 成本追踪 |
 | 1.0.0-rc | 2025-01-24 | Sprint 23 完成：GitOps、TLS 自动化、备份恢复、用户文档 |
 | 0.9.2 | 2025-01-24 | Sprint 22 完成：80% 测试覆盖率、CI/CD 安全扫描、Dependabot |
 | 0.9.1 | 2025-01-24 | Sprint 21 完成：CSRF/CORS/Headers、HttpOnly Cookie、密钥管理 |

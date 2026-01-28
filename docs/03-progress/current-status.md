@@ -40,18 +40,31 @@
 
 ---
 
-## 代码实现统计（2025-01-24）
+## 代码实现统计（2026-01-28 更新）
 
-| 类型 | 文件数 | 主要目录 |
-|------|--------|----------|
-| Python 后端 | 86+ | `services/alldata-api/`, `services/bisheng-api/`, `services/openai-proxy/` |
-| TypeScript 前端 | 62+ | `web/src/pages/`, `web/src/components/`, `web/src/services/` |
-| 测试代码 | 24+ | `tests/unit/`, `tests/integration/`, `tests/e2e/` |
-| 部署配置 | 30+ | `k8s/`, `helm/`, `deploy/` |
+| 类型 | 文件数 | 代码行数 | 主要目录 |
+|------|--------|----------|----------|
+| Python 后端 | 274 | 142,887 | `services/alldata-api/`, `services/bisheng-api/`, `services/openai-proxy/`, `services/shared/`, `services/admin-api/`, `services/cube-api/`, `services/ocr-service/`, `services/behavior-service/` |
+| TypeScript 前端 | 216 (194 TSX + 22 TS) | 120,334 | `web/src/pages/`, `web/src/components/`, `web/src/services/` |
+| 测试代码 | 71 | 30,111 | `tests/unit/`, `tests/integration/`, `tests/e2e/` |
+| 部署配置 | 155 | - | `deploy/`, `k8s/`, `helm/` |
+
+### 服务完成度矩阵
+
+| 服务 | 文件数 | 代码行数 | 状态 | 说明 |
+|------|--------|----------|------|------|
+| Alldata API | 90 | 69,054 | ✅ 生产就绪 | 数据治理核心服务，功能完整 |
+| Bisheng API | 56 | 23,462 | ✅ 生产就绪 | 应用编排服务，工作流/Agent/知识库 |
+| Shared 模块 | 33 | 14,299 | ✅ 生产就绪 | 认证、安全、缓存、配置等共享模块 |
+| OCR Service | 33 | 11,503 | ✅ 已完成 | 非结构化文档识别加工服务 |
+| Admin API | 25 | 10,316 | ✅ 已完成 | 管理后台 API |
+| Cube API | 24 | 10,304 | ✅ 已完成 | MLOps 模型管理 API |
+| Behavior Service | 11 | 3,058 | 🟡 已实现/未部署 | 用户行为分析服务，尚未加入 Docker Compose |
+| OpenAI Proxy | 1 | 890 | ✅ 生产就绪 | OpenAI 兼容代理 |
 
 ---
 
-## 代码实现状态（2025-01-24 更新）
+## 代码实现状态（2026-01-28 更新）
 
 ### 前端实现 (web/)
 
@@ -131,12 +144,16 @@
 
 | 服务 | 状态 | 说明 | 文件数 |
 |------|------|------|--------|
-| Alldata API | ✅ 完成 | Flask 框架，数据集注册、查询、元数据管理 | 11 个 Python 文件 |
+| Alldata API | ✅ 完成 | Flask 框架，数据集注册、查询、元数据管理 | 90 个 Python 文件 |
+| Bisheng API | ✅ 完成 | Flask 框架，工作流、知识库、Agent、调度 | 56 个 Python 文件 |
+| Shared 模块 | ✅ 完成 | 认证、安全、缓存、配置等共享模块 | 33 个 Python 文件 |
+| OCR Service | ✅ 完成 | 非结构化文档智能识别加工 | 33 个 Python 文件 |
+| Admin API | ✅ 完成 | 管理后台 API | 25 个 Python 文件 |
+| Cube API | ✅ 完成 | MLOps 模型管理 API | 24 个 Python 文件 |
+| Behavior Service | 🟡 已实现 | 用户行为分析服务（未部署） | 11 个 Python 文件 |
 | OpenAI Proxy | ✅ 完成 | OpenAI 兼容 API，支持流式响应 | 1 个 Python 文件 |
-| Bisheng API | ✅ 完成 | Flask 框架，工作流、知识库、Agent、调度 | 34 个 Python 文件 |
-| Shared 模块 | ✅ 完成 | 认证、存储共享模块 | 5 个 Python 文件 |
 
-### 后端服务清单 (48+ 个 Python 文件)
+### 后端服务清单 (274 个 Python 文件)
 
 **Alldata API (services/alldata-api/)**
 - `app.py` - Flask 应用入口
@@ -421,10 +438,34 @@
 
 ---
 
+## 技术债务清单
+
+### 代码中的 TODO 项
+
+| 位置 | 内容 | 优先级 |
+|------|------|--------|
+| `services/ocr-service/services/validator.py` | 添加校验码验证 | 低 |
+| `services/bisheng-api/engine/plugin_manager.py` | 从类型注解提取参数 | 中 |
+| `services/alldata-api/app.py` | 从实际表中获取样本数据 | 低 |
+| `web/src/pages/portal/ProfilePage.tsx` | 调用修改密码 API | 中 |
+
+### 未部署服务
+
+| 服务 | 状态 | 说明 |
+|------|------|------|
+| Behavior Service | 代码已完成，未加入部署配置 | 需要添加到 docker-compose.yml 和 K8s 配置 |
+
+### 版本号不一致
+
+CHANGELOG.md 中存在 `0.1.0` 和 `1.0.0-rc` 两个版本线，版本号跳跃较大（0.4.0 → 0.9.1），建议后续版本发布时统一版本策略。
+
+---
+
 ## 更新记录
 
 | 日期 | 更新内容 | 更新人 |
 |------|----------|--------|
+| 2026-01-28 | 更新代码统计（274 Python / 216 TS 文件），添加服务完成度矩阵和技术债务清单 | Claude |
 | 2025-01-24 | 添加三层集成完成度矩阵和代码统计 | Claude |
 | 2025-01-24 | 添加 35+ 前端页面/组件，48+ 后端 Python 文件清单 | Claude |
 | 2025-01-24 | 记录代码清理完成（日志规范化、调试代码清理） | Claude |

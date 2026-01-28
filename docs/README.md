@@ -10,11 +10,11 @@
 
 | 文档类型 | 链接 | 说明 |
 |----------|------|------|
-| 📖 [项目 README](../README.md) | 项目概述（英文） |
-| 📖 [中文 README](../README_ZH.md) | 项目概述（中文） |
-| 🚀 [快速开始](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
-| 📊 [当前状态](03-progress/current-status.md) | 项目进度追踪 |
-| 🗺️ [路线图](04-planning/roadmap.md) | 开发计划与里程碑 |
+| 项目 README | [英文](../README.md) / [中文](../README_ZH.md) | 项目概述 |
+| 快速开始 | [QUICKSTART](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
+| 当前状态 | [current-status](03-progress/current-status.md) | 项目进度追踪 |
+| 路线图 | [roadmap](05-planning/roadmap.md) | 开发计划与里程碑 |
+| 代码审计 | [code-audit](03-progress/code-audit-2026-01-28.md) | 最新代码审计报告 |
 
 ---
 
@@ -26,10 +26,12 @@ docs/
 ├── 01-architecture/     # 架构设计
 ├── 02-integration/      # 集成方案
 ├── 03-progress/         # 进度追踪
-├── 04-planning/         # 规划文档
-├── 05-development/      # 开发指南
-├── 06-operations/       # 运维指南
-├── 07-user-guide/       # 用户手册
+├── 04-testing/          # 测试文档
+├── 05-planning/         # 规划文档
+├── 06-development/      # 开发指南
+├── 07-operations/       # 运维指南
+├── 08-user-guide/       # 用户手册
+├── 09-requirements/     # 需求文档
 └── 99-archived/         # 归档文档
 ```
 
@@ -59,13 +61,15 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [集成总览](02-integration/integration-overview.md) | 三个集成点概览 |
-| [Alldata ↔ Cube](02-integration/alldata-cube.md) | 数据与训练连接 |
-| [Cube ↔ Bisheng](02-integration/cube-bisheng.md) | 模型与应用连接 |
-| [Alldata ↔ Bisheng](02-integration/alldata-bisheng.md) | 结构化数据与LLM |
+| [Alldata - Cube](02-integration/alldata-cube.md) | 数据与训练连接 |
+| [Cube - Bisheng](02-integration/cube-bisheng.md) | 模型与应用连接 |
+| [Alldata - Bisheng](02-integration/alldata-bisheng.md) | 结构化数据与LLM |
 | [时序图](02-integration/sequence-diagrams.md) | 研发态/运行态流程图 |
-| **API 规范** | 三大集成点 API 接口规范 |
-| **安全设计** | 认证鉴权与权限管理方案 |
-| **部署架构** | K8s 部署架构与 Helm Chart |
+| [API 规范](02-integration/api-specifications.md) | 三大集成点 API 接口规范 |
+| [API 参考](02-integration/api-reference.md) | API 端点参考文档 |
+| [安全设计](02-integration/security-design.md) | 认证鉴权与权限管理方案 |
+| [部署架构](02-integration/deployment-architecture.md) | K8s 部署架构与 Helm Chart |
+| [用户生命周期](02-integration/user-lifecycle.md) | 用户全生命周期管理 |
 
 ---
 
@@ -74,46 +78,69 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [当前状态](03-progress/current-status.md) | 项目进度、里程碑、待办事项 |
+| [代码审计报告](03-progress/code-audit-2026-01-28.md) | 2026-01-28 代码审计报告 |
 
 ---
 
-## 04 - 规划文档
+## 04 - 测试文档
 
 | 文档 | 说明 |
 |------|------|
-| [路线图](04-planning/roadmap.md) | 开发计划、里程碑、版本规划 |
+| [用户生命周期测试用例](04-testing/user-lifecycle-test-cases.md) | 用户生命周期端到端测试用例 |
 
 ---
 
-## 05 - 开发指南
+## 05 - 规划文档
 
 | 文档 | 说明 |
 |------|------|
-| [PoC 实施手册](05-development/poc-playbook.md) | PoC 环境搭建指南 |
-| [API 测试指南](05-development/api-testing-guide.md) | API 测试用例与方法 |
-| [K8s 故障排查](05-development/troubleshooting-k8s.md) | Kubernetes 环境故障排查 |
+| [路线图](05-planning/roadmap.md) | 开发计划、里程碑、版本规划 |
+| [功能增强实施计划](05-planning/implementation-plan.md) | 智能大数据平台功能增强实施计划 |
 
 ---
 
-## 06 - 运维指南
+## 06 - 开发指南
 
 | 文档 | 说明 |
 |------|------|
-| [部署指南](06-operations/deployment.md) | 生产环境部署指南 |
-| [运维手册](06-operations/operations-guide.md) | 日常运维操作手册 |
-| [Docker 故障排查](06-operations/troubleshooting-docker.md) | Docker Compose 环境故障排查 |
-| [性能调优](06-operations/performance-tuning.md) | 性能优化指南 |
-| [灾备恢复](06-operations/disaster-recovery.md) | 灾备与恢复方案 |
-| [安全扫描报告](06-operations/security-scan-report.md) | 安全扫描与审计报告 |
+| [PoC 实施手册](06-development/poc-playbook.md) | PoC 环境搭建指南 |
+| [API 测试指南](06-development/api-testing-guide.md) | API 测试用例与方法 |
+| [K8s 故障排查](06-development/troubleshooting-k8s.md) | Kubernetes 环境故障排查 |
+| [Demo 指南](06-development/demo-guide.md) | 演示环境准备指南 |
+| [环境检查清单](06-development/environment-checklist.md) | 开发环境检查清单 |
+| [Sprint 计划](06-development/sprint-plan.md) | Sprint 开发计划 |
 
 ---
 
-## 07 - 用户手册
+## 07 - 运维指南
 
 | 文档 | 说明 |
 |------|------|
-| [快速入门](07-user-guide/getting-started.md) | 用户快速入门指南 |
-| [工作流指南](07-user-guide/workflow-guide.md) | 工作流创建与使用 |
+| [部署指南](07-operations/deployment.md) | 生产环境部署指南 |
+| [运维手册](07-operations/operations-guide.md) | 日常运维操作手册 |
+| [Docker 故障排查](07-operations/troubleshooting-docker.md) | Docker Compose 环境故障排查 |
+| [故障排查](07-operations/troubleshooting.md) | 通用故障排查指南 |
+| [性能调优](07-operations/performance-tuning.md) | 性能优化指南 |
+| [灾备恢复](07-operations/disaster-recovery.md) | 灾备与恢复方案 |
+| [安全扫描报告](07-operations/security-scan-report.md) | 安全扫描与审计报告 |
+| [安全加固](07-operations/security-hardening.md) | 安全加固指南 |
+
+---
+
+## 08 - 用户手册
+
+| 文档 | 说明 |
+|------|------|
+| [快速入门](08-user-guide/getting-started.md) | 用户快速入门指南 |
+| [工作流指南](08-user-guide/workflow-guide.md) | 工作流创建与使用 |
+
+---
+
+## 09 - 需求文档
+
+| 文档 | 说明 |
+|------|------|
+| [平台建设需求](09-requirements/platform-requirements.md) | 智能大数据平台核心功能需求 |
 
 ---
 
@@ -121,6 +148,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-01-28 | 文档整理：修复目录编号冲突，归类散落文档，更新代码统计，创建代码审计报告 |
 | 2025-01-24 | 删除重复文档 `99-archived/implementation-status.md`，内容已合并到 `03-progress/current-status.md` |
 | 2025-01-24 | 更新 Sprint 计划，基于代码实际状态重评估 |
 | 2025-01-24 | 添加 06-operations 和 07-user-guide 索引，重命名故障排查文档 |
