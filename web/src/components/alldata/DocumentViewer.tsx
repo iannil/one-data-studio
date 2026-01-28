@@ -30,7 +30,7 @@ import {
   CloseCircleOutlined,
   WarningOutlined,
   InfoCircleOutlined,
-  StampOutlined,
+  AuditOutlined,
   EditOutlined,
   SaveOutlined,
   DownloadOutlined,
@@ -347,7 +347,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           size="small"
           title={
             <Space>
-              <StampOutlined />
+              <AuditOutlined />
               <span>签名区域</span>
               {layout_info?.has_signatures && (
                 <Badge count={layout_info.signature_regions?.length || 0} />
@@ -358,7 +358,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {layout_info?.signature_regions?.length ? (
             <Space wrap>
               {layout_info.signature_regions.map((region, index) => (
-                <Tag key={index} color="blue" icon={<StampOutlined />}>
+                <Tag key={index} color="blue" icon={<AuditOutlined />}>
                   {SIGNATURE_LABELS[region.label] || region.label}
                   {region.page && ` (第${region.page}页)`}
                 </Tag>
@@ -374,7 +374,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           size="small"
           title={
             <Space>
-              <StampOutlined />
+              <AuditOutlined />
               <span>印章区域</span>
               {layout_info?.has_seals && (
                 <Badge count={layout_info.seal_regions?.length || 0} />
@@ -385,7 +385,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           {layout_info?.seal_regions?.length ? (
             <Space wrap>
               {layout_info.seal_regions.map((region, index) => (
-                <Tag key={index} color="red" icon={<StampOutlined />}>
+                <Tag key={index} color="red" icon={<AuditOutlined />}>
                   {SEAL_LABELS[region.label] || region.label}
                   {region.page && ` (第${region.page}页)`}
                 </Tag>
@@ -511,7 +511,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           <TabPane
             tab={
               <span>
-                <StampOutlined />
+                <AuditOutlined />
                 布局分析
                 {(result.layout_info?.has_signatures || result.layout_info?.has_seals) && (
                   <Badge dot style={{ marginLeft: 8 }} />

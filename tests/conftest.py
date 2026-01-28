@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import AsyncGenerator, Generator
 
 
+# 导入生命周期测试 fixtures
+pytest_plugins = ["fixtures.lifecycle_fixtures"]
+
+
 # ==================== 环境变量配置 ====================
 # 必须在导入其他模块之前设置
 
@@ -73,10 +77,17 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "services"))
 sys.path.insert(0, str(project_root / "services" / "bisheng-api"))
+sys.path.insert(0, str(project_root / "services" / "alldata-api"))
 sys.path.insert(0, str(project_root / "services" / "alldata-api" / "src"))
+sys.path.insert(0, str(project_root / "services" / "cube-api"))
 sys.path.insert(0, str(project_root / "services" / "shared"))
+sys.path.insert(0, str(project_root / "services" / "admin-api"))
+sys.path.insert(0, str(project_root / "services" / "openai-proxy"))
 
-import pymysql
+try:
+    import pymysql
+except ImportError:
+    pymysql = None
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -228,6 +239,8 @@ def test_config():
 @pytest.fixture(scope="session")
 def db_connection(test_config):
     """数据库连接 Fixture"""
+    if pymysql is None:
+        pytest.skip("pymysql 未安装")
     try:
         conn = pymysql.connect(
             host=test_config['mysql_host'],

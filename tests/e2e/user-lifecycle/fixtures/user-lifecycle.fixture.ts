@@ -5,6 +5,7 @@
 
 import { test as base, APIRequestContext, Page } from '@playwright/test';
 import { createApiClient, ApiClient } from '../../helpers/api-client';
+import { test as testDataTest, TestDataFixtures } from './test-data.fixture';
 
 // ============================================
 // 类型定义
@@ -369,6 +370,8 @@ export class UserManager {
 type UserLifecycleFixtures = {
   /** 用户管理器 */
   userManager: UserManager;
+  /** 已认证的管理员页面 */
+  adminPage: Page;
   /** 创建测试用户 */
   createTestUser: (request: CreateUserRequest) => Promise<TestUser>;
   /** 设置用户状态 */
@@ -393,11 +396,65 @@ type UserLifecycleFixtures = {
   cleanupTestUsers: () => Promise<void>;
 };
 
+// 合并 test-data fixtures 和 user-lifecycle fixtures
+type CombinedFixtures = UserLifecycleFixtures & TestDataFixtures;
+
 // ============================================
 // 扩展测试对象
 // ============================================
 
-export const test = base.extend<UserLifecycleFixtures>({
+export const test = testDataTest.extend<CombinedFixtures>({
+  // 已认证的管理员页面
+  adminPage: async ({ page }, use) => {
+    // 设置管理员认证
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64').replace(/=+$/, '');
+    const payload = Buffer.from(JSON.stringify({
+      sub: 'test-admin',
+      username: 'test-admin',
+      email: 'admin@example.com',
+      roles: ['admin', 'user'],
+      exp: Math.floor(Date.now() / 1000) + 3600 * 24,
+    })).toString('base64').replace(/=+$/, '');
+    const mockToken = `${header}.${payload}.signature`;
+
+    await page.addInitScript(({ token, roles }) => {
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('user_info', JSON.stringify({
+        user_id: 'test-admin',
+        username: 'test-admin',
+        email: 'admin@example.com',
+        roles: roles,
+      }));
+    }, { token: mockToken, roles: ['admin', 'user'] });
+
+    // 设置通用 API Mock
+    page.route('**/api/v1/health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 0, message: 'healthy' }),
+      });
+    });
+
+    page.route('**/api/v1/user/info', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          data: {
+            user_id: 'test-admin',
+            username: 'test-admin',
+            email: 'admin@example.com',
+            role: 'admin',
+          },
+        }),
+      });
+    });
+
+    await use(page);
+  },
+
   // 用户管理器
   userManager: async ({ request }, use) => {
     const manager = new UserManager(request);

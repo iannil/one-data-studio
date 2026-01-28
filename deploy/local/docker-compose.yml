@@ -154,8 +154,15 @@ services:
       # Server configuration
       SERVER_HOST: openmetadata
       SERVER_PORT: 8585
-      # Authentication (disabled for development)
-      AUTHENTICATION_PROVIDER: no-auth
+      # Authentication (basic auth for development)
+      AUTHENTICATION_PROVIDER: basic
+      AUTHENTICATION_PUBLIC_KEYS: "[http://localhost:8585/api/v1/system/config/jwks]"
+      AUTHENTICATION_AUTHORITY: "http://localhost:8585"
+      AUTHENTICATION_CLIENT_ID: "open-metadata"
+      AUTHORIZER_CLASS_NAME: "org.openmetadata.service.security.DefaultAuthorizer"
+      AUTHORIZER_REQUEST_FILTER: "org.openmetadata.service.security.JwtFilter"
+      AUTHORIZER_ADMIN_PRINCIPALS: "[admin]"
+      AUTHORIZER_PRINCIPAL_DOMAIN: "open-metadata.org"
       # Airflow disabled (using external orchestration)
       PIPELINE_SERVICE_CLIENT_ENABLED: false
     ports:
@@ -404,8 +411,6 @@ services:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      openmetadata:
         condition: service_healthy
     networks:
       - one-data-network

@@ -12,6 +12,99 @@ sys.path.insert(0, '/app')
 from models import SessionLocal
 from models.content import ContentCategory, ContentTag
 from models.api_call_log import ApiEndpoint, generate_api_endpoint_id
+from models.role import Role
+
+
+# 默认角色列表
+DEFAULT_ROLES = [
+    {
+        'role_id': 'role_admin',
+        'name': 'admin',
+        'display_name': '系统管理员',
+        'description': '拥有所有权限的系统管理员',
+        'role_type': 'system',
+        'is_system': True,
+        'is_active': True,
+        'priority': 1,
+    },
+    {
+        'role_id': 'role_user',
+        'name': 'user',
+        'display_name': '普通用户',
+        'description': '普通用户角色',
+        'role_type': 'business',
+        'is_system': True,
+        'is_active': True,
+        'priority': 10,
+    },
+    {
+        'role_id': 'role_data_engineer',
+        'name': 'data_engineer',
+        'display_name': '数据工程师',
+        'description': '数据工程师角色',
+        'role_type': 'technical',
+        'is_system': True,
+        'is_active': True,
+        'priority': 5,
+    },
+    {
+        'role_id': 'role_data_admin',
+        'name': 'data_admin',
+        'display_name': '数据管理员',
+        'description': '数据管理员角色',
+        'role_type': 'technical',
+        'is_system': True,
+        'is_active': True,
+        'priority': 5,
+    },
+    {
+        'role_id': 'role_algorithm_engineer',
+        'name': 'algorithm_engineer',
+        'display_name': '算法工程师',
+        'description': '算法工程师角色',
+        'role_type': 'technical',
+        'is_system': True,
+        'is_active': True,
+        'priority': 5,
+    },
+    {
+        'role_id': 'role_business_user',
+        'name': 'business_user',
+        'display_name': '业务用户',
+        'description': '业务用户角色',
+        'role_type': 'business',
+        'is_system': True,
+        'is_active': True,
+        'priority': 10,
+    },
+]
+
+
+def init_default_roles():
+    """初始化默认角色"""
+    db = SessionLocal()
+    try:
+        # 检查是否已初始化
+        existing = db.query(Role).count()
+        if existing > 0:
+            print(f"角色已存在，跳过初始化")
+            return
+
+        for role_data in DEFAULT_ROLES:
+            role = Role(
+                created_by='system',
+                **role_data,
+            )
+            db.add(role)
+
+        db.commit()
+        print(f"已初始化 {len(DEFAULT_ROLES)} 个默认角色")
+
+    except Exception as e:
+        print(f"初始化默认角色失败: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 def init_content_categories():
@@ -191,6 +284,7 @@ def main():
     print("开始初始化预置数据...")
     print("=" * 50)
 
+    init_default_roles()
     init_content_categories()
     init_content_tags()
     init_api_endpoints()

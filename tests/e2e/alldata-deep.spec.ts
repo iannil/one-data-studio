@@ -1,551 +1,171 @@
 /**
- * Alldata 数据治理深度验收测试
- * 覆盖数据源、ETL、数据质量、数据血缘、特征存储等功能
- * 使用真实 API 调用
+ * ONE-DATA-STUDIO 数据治理深度 E2E 测试
+ * 覆盖用例: DM-DS-*, DM-MS-*, DM-SD-*, DE-ETL-*
  */
 
-import { test, expect } from './fixtures/real-auth.fixture';
-import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
-import type { AlldataApiClient } from './helpers/api-client';
+import { test, expect, Page } from '@playwright/test';
 
+// 测试配置
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const TEST_USER = { username: 'data_admin', password: 'da123456' };
 
-// ============================================
-// 数据源管理深度测试
-// ============================================
-test.describe('Alldata - 数据源管理', () => {
+// 登录辅助函数
+async function login(page: Page) {
+  await page.goto('/login');
+  await page.fill('input[name="username"]', TEST_USER.username);
+  await page.fill('input[name="password"]', TEST_USER.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/\/(dashboard|alldata)/);
+}
+
+test.describe('数据源管理 (DM-DS)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/datasources`);
-    await page.waitForLoadState('networkidle');
+    await login(page);
+    await page.goto('/alldata/datasources');
   });
 
-  test('should display datasources list', async ({ page }) => {
-    // 验证数据源列表可见
-    const list = page.locator('.datasource-list, .data-table, [class*="table"]').first();
-    await expect(list).toBeVisible();
+  test('DM-DS-001: 注册 MySQL 数据源', async ({ page }) => {
+    // 点击新增数据源
+    await page.click('button:has-text("新增数据源")');
+
+    // 选择 MySQL 类型
+    await page.click('[data-testid="datasource-type-mysql"]');
+
+    // 填写连接信息
+    await page.fill('input[name="name"]', 'test_mysql_source');
+    await page.fill('input[name="host"]', 'localhost');
+    await page.fill('input[name="port"]', '3306');
+    await page.fill('input[name="database"]', 'test_db');
+    await page.fill('input[name="username"]', 'test_user');
+    await page.fill('input[name="password"]', 'test_password');
+
+    // 测试连接
+    await page.click('button:has-text("测试连接")');
+    await expect(page.locator('.ant-message-success')).toBeVisible({ timeout: 10000 });
+
+    // 保存
+    await page.click('button:has-text("保存")');
+    await expect(page.locator('.ant-message-success')).toBeVisible();
   });
 
-  test('should open create datasource modal', async ({ page }) => {
-    const createButton = page.locator('button:has-text("创建"), button:has-text("新建"), button:has-text("添加")').first();
+  test('DM-DS-004: 连接失败处理', async ({ page }) => {
+    await page.click('button:has-text("新增数据源")');
+    await page.click('[data-testid="datasource-type-mysql"]');
 
-    if (await createButton.isVisible()) {
-      await createButton.click();
-      await page.waitForTimeout(500);
+    // 填写错误的连接信息
+    await page.fill('input[name="name"]', 'invalid_source');
+    await page.fill('input[name="host"]', 'invalid-host');
+    await page.fill('input[name="port"]', '3306');
 
-      // 验证创建对话框
-      const modal = page.locator('.ant-modal, .modal, .dialog');
-      const modalVisible = await modal.count() > 0;
-      if (modalVisible) {
-        const formInputs = modal.locator('input, select');
-        expect(await formInputs.count()).toBeGreaterThan(0);
-      }
-    }
+    // 测试连接应失败
+    await page.click('button:has-text("测试连接")');
+    await expect(page.locator('.ant-message-error')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should validate datasource connection', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
+  test('DM-DS-007: 数据源列表展示', async ({ page }) => {
+    // 验证数据源列表存在
+    await expect(page.locator('table, .datasource-list')).toBeVisible();
 
-    // 获取第一个数据源
-    const datasources = await apiClient.getDatasources({ page: 1, page_size: 1 });
-
-    if (datasources.data?.datasources?.length > 0) {
-      const dsId = datasources.data.datasources[0].id;
-
-      // 测试连接
-      const testResult = await apiClient.testDatasource(dsId);
-      expect(testResult.code).toBe(0);
-    }
-  });
-
-  test('should edit datasource configuration', async ({ page }) => {
-    const firstRow = page.locator('tr[data-row-key], .datasource-item').first();
-    if (await firstRow.isVisible()) {
-      const editButton = firstRow.locator('button:has-text("编辑"), button:has-text("Edit"), [class*="edit"]').first();
-
-      if (await editButton.isVisible()) {
-        await editButton.click();
-        await page.waitForTimeout(500);
-
-        // 验证编辑表单
-        const formFields = page.locator('.ant-form-item, .form-field');
-        const hasForm = await formFields.count() > 0;
-        if (hasForm) {
-          expect(await formFields.count()).toBeGreaterThan(2);
-        }
-      }
-    }
-  });
-
-  test('should delete datasource with confirmation', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    // 先创建一个测试数据源
-    const createResult = await apiClient.createDatasource({
-      name: `e2e-test-ds-${Date.now()}`,
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      database: 'test_db',
-      username: 'test_user',
-      password: 'test_pass',
-    });
-
-    if (createResult.code === 0 && createResult.data?.id) {
-      // 在页面中删除
-      await page.goto(`${BASE_URL}/datasources`);
-      await page.waitForLoadState('networkidle');
-
-      // 查找刚创建的数据源并删除
-      const testRow = page.locator(`tr:has-text("e2e-test-ds")`).first();
-      if (await testRow.isVisible()) {
-        const deleteButton = testRow.locator('button:has-text("删除"), button:has-text("Delete")').first();
-        await deleteButton.click();
-        await page.waitForTimeout(500);
-
-        const confirmButton = page.locator('.ant-modal-confirm button:has-text("确定"), button:has-text("确认")').first();
-        if (await confirmButton.isVisible()) {
-          await confirmButton.click();
-          await page.waitForTimeout(1000);
-        }
-      }
-
-      // 清理：通过 API 删除
-      await apiClient.deleteDatasource(createResult.data.id);
-    }
+    // 验证有分页或列表项
+    const rows = page.locator('tr, .datasource-item');
+    await expect(rows.first()).toBeVisible();
   });
 });
 
-// ============================================
-// ETL 任务深度测试
-// ============================================
-test.describe('Alldata - ETL 任务', () => {
-  test('should display ETL tasks list', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    await page.goto(`${BASE_URL}/etl`);
-    await page.waitForLoadState('networkidle');
-
-    const list = page.locator('.etl-list, .data-table, [class*="table"]').first();
-    await expect(list).toBeVisible();
+test.describe('元数据扫描 (DM-MS)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
   });
 
-  test('should create ETL task with visual editor', async ({ page }) => {
-    await page.goto(`${BASE_URL}/etl`);
-    await page.waitForLoadState('networkidle');
+  test('DM-MS-001: 自动元数据扫描', async ({ page }) => {
+    await page.goto('/alldata/metadata');
 
-    const createButton = page.locator('button:has-text("创建"), button:has-text("新建")').first();
-    if (await createButton.isVisible()) {
-      await createButton.click();
-      await page.waitForTimeout(500);
+    // 选择数据源
+    await page.click('button:has-text("扫描")');
 
-      // 验证可视化编辑器
-      const editor = page.locator('.etl-editor, .flow-editor, .canvas-editor');
-      if (await editor.isVisible()) {
-        // 检查节点面板
-        const nodePalette = page.locator('.node-palette, .component-list');
-        const hasPalette = await nodePalette.count() > 0;
-        console.log('Has ETL node palette:', hasPalette);
-      }
-    }
+    // 等待扫描完成
+    await expect(page.locator('text=扫描完成')).toBeVisible({ timeout: 60000 });
   });
 
-  test('should configure ETL schedule', async ({ page }) => {
-    await page.goto(`${BASE_URL}/etl`);
-    await page.waitForLoadState('networkidle');
+  test('DM-MS-002: AI 字段标注', async ({ page }) => {
+    await page.goto('/alldata/metadata');
 
-    const firstRow = page.locator('tr[data-row-key], .etl-item').first();
-    if (await firstRow.isVisible()) {
-      const scheduleButton = firstRow.locator('button:has-text("调度"), button:has-text("Schedule"), [class*="schedule"]').first();
+    // 选择表
+    await page.click('.table-row:first-child');
 
-      if (await scheduleButton.isVisible()) {
-        await scheduleButton.click();
-        await page.waitForTimeout(500);
+    // 触发 AI 标注
+    await page.click('button:has-text("AI 标注")');
 
-        // 验证调度配置
-        const cronInput = page.locator('input[placeholder*="cron"], .cron-input');
-        const hasCron = await cronInput.count() > 0;
-        console.log('Has cron input:', hasCron);
-      }
-    }
-  });
-
-  test('should execute ETL task manually', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    // 获取第一个 ETL 任务
-    const tasks = await apiClient.getEtlTasks({ page: 1, page_size: 1 });
-
-    if (tasks.data?.tasks?.length > 0) {
-      const taskId = tasks.data.tasks[0].id;
-
-      // 执行 ETL 任务
-      const runResult = await apiClient.runEtlTask(taskId);
-      expect(runResult.code).toBe(0);
-    }
-  });
-
-  test('should display ETL execution history', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const tasks = await apiClient.getEtlTasks({ page: 1, page_size: 1 });
-
-    if (tasks.data?.tasks?.length > 0) {
-      const taskId = tasks.data.tasks[0].id;
-
-      await page.goto(`${BASE_URL}/etl`);
-      await page.waitForLoadState('networkidle');
-
-      const historyButton = page.locator(`button:has-text("历史"), button:has-text("History")`).first();
-      if (await historyButton.isVisible()) {
-        await historyButton.click();
-        await page.waitForTimeout(500);
-      }
-    }
-  });
-
-  test('should monitor ETL execution progress', async ({ page }) => {
-    await page.goto(`${BASE_URL}/etl`);
-    await page.waitForLoadState('networkidle');
-
-    // 查找运行中的任务
-    const runningStatus = page.locator('.status-running, .status-executing, [class*="running"]');
-
-    // 如果有运行中的任务，验证进度条
-    const progressBar = page.locator('.ant-progress, .progress-bar, [class*="progress"]');
-    const hasProgress = await progressBar.count() > 0;
-    console.log('Has progress bar:', hasProgress);
+    // 等待标注完成
+    await expect(page.locator('.ai-tag, .field-tag')).toBeVisible({ timeout: 30000 });
   });
 });
 
-// ============================================
-// 数据质量深度测试
-// ============================================
-test.describe('Alldata - 数据质量', () => {
-  test('should display quality rules list', async ({ page }) => {
-    await page.goto(`${BASE_URL}/quality`);
-    await page.waitForLoadState('networkidle');
-
-    const list = page.locator('.quality-list, .data-table, [class*="table"]').first();
-    await expect(list).toBeVisible();
+test.describe('敏感数据识别 (DM-SD)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.goto('/alldata/sensitive');
   });
 
-  test('should create quality rule', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
+  test('DM-SD-001: 敏感字段扫描', async ({ page }) => {
+    // 触发扫描
+    await page.click('button:has-text("扫描敏感数据")');
 
-    // 获取数据集列表
-    const datasets = await apiClient.getDatasets({ page: 1, page_size: 1 });
-
-    if (datasets.data?.datasets?.length > 0) {
-      const datasetId = datasets.data.datasets[0].id;
-
-      // 创建质量规则
-      const ruleResult = await apiClient.createQualityRule({
-        name: `e2e-quality-rule-${Date.now()}`,
-        dataset_id: datasetId,
-        rule_type: 'completeness',
-        config: { column: 'id', threshold: 0.95 },
-      });
-
-      expect(ruleResult.code).toBe(0);
-    }
+    // 等待扫描完成
+    await expect(page.locator('.sensitive-result, .scan-result')).toBeVisible({ timeout: 60000 });
   });
 
-  test('should run quality check', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const rules = await apiClient.getQualityRules({ page: 1, page_size: 1 });
-
-    if (rules.data?.rules?.length > 0) {
-      const ruleId = rules.data.rules[0].id;
-
-      const checkResult = await apiClient.runQualityCheck(ruleId);
-      expect(checkResult.code).toBe(0);
-    }
-  });
-
-  test('should display quality reports', async ({ page }) => {
-    await page.goto(`${BASE_URL}/quality`);
-    await page.waitForLoadState('networkidle');
-
-    const reportButton = page.locator('button:has-text("报告"), button:has-text("Report"), [class*="report"]').first();
-    if (await reportButton.isVisible()) {
-      await reportButton.click();
-      await page.waitForTimeout(500);
-
-      const reportContent = page.locator('.quality-report, .report-content, [class*="report"]');
-      const hasReport = await reportContent.count() > 0;
-      console.log('Has quality report:', hasReport);
-    }
+  test('DM-SD-002: 敏感数据分类', async ({ page }) => {
+    // 验证敏感数据分类展示
+    await expect(page.locator('text=个人身份信息')).toBeVisible();
+    await expect(page.locator('text=财务信息')).toBeVisible();
   });
 });
 
-// ============================================
-// 数据血缘深度测试
-// ============================================
-test.describe('Alldata - 数据血缘', () => {
-  test('should display lineage graph', async ({ page }) => {
-    await page.goto(`${BASE_URL}/lineage`);
-    await page.waitForLoadState('networkidle');
-
-    // 查找图表容器
-    const graphContainer = page.locator('.lineage-graph, .dag-graph, [class*="graph"], svg');
-    await expect(graphContainer.first()).toBeVisible();
+test.describe('ETL 编排 (DE-ETL)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.goto('/alldata/etl');
   });
 
-  test('should query upstream dependencies', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
+  test('DE-ETL-001: 创建 ETL 任务', async ({ page }) => {
+    await page.click('button:has-text("新建任务")');
 
-    // 查询上游依赖
-    const upstream = await apiClient.getLineageUpstream('table', 'users');
-    expect(upstream.code).toBe(0);
+    // 填写任务信息
+    await page.fill('input[name="name"]', 'test_etl_task');
+    await page.fill('textarea[name="description"]', '测试 ETL 任务');
+
+    // 选择源和目标
+    await page.click('[data-testid="source-select"]');
+    await page.click('.ant-select-item:first-child');
+
+    await page.click('[data-testid="target-select"]');
+    await page.click('.ant-select-item:first-child');
+
+    // 保存
+    await page.click('button:has-text("保存")');
+    await expect(page.locator('.ant-message-success')).toBeVisible();
   });
 
-  test('should query downstream dependencies', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
+  test('DE-ETL-003: AI 清洗规则推荐', async ({ page }) => {
+    // 进入 ETL 编辑器
+    await page.click('.etl-task-row:first-child');
 
-    // 查询下游依赖
-    const downstream = await apiClient.getLineageDownstream('table', 'users');
-    expect(downstream.code).toBe(0);
+    // 触发 AI 推荐
+    await page.click('button:has-text("AI 推荐")');
+
+    // 验证推荐结果
+    await expect(page.locator('.ai-recommendation, .cleaning-rule')).toBeVisible({ timeout: 30000 });
   });
 
-  test('should navigate lineage graph', async ({ page }) => {
-    await page.goto(`${BASE_URL}/lineage`);
-    await page.waitForLoadState('networkidle');
+  test('DE-ETL-005: 执行 ETL 任务', async ({ page }) => {
+    // 选择任务
+    await page.click('.etl-task-row:first-child');
 
-    const graphContainer = page.locator('.lineage-graph, svg').first();
-    if (await graphContainer.isVisible()) {
-      // 尝试缩放
-      await page.mouse.wheel(0, 100);
-      await page.waitForTimeout(500);
+    // 执行任务
+    await page.click('button:has-text("执行")');
 
-      // 尝试拖拽
-      await graphContainer.click();
-      await page.mouse.down();
-      await page.mouse.move(100, 100);
-      await page.mouse.up();
-    }
+    // 等待任务完成
+    await expect(page.locator('text=执行成功')).toBeVisible({ timeout: 120000 });
   });
-});
-
-// ============================================
-// 元数据深度测试
-// ============================================
-test.describe('Alldata - 元数据', () => {
-  test('should display databases list', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    await page.goto(`${BASE_URL}/metadata`);
-    await page.waitForLoadState('networkidle');
-
-    const databases = await apiClient.getDatabases();
-    expect(databases.code).toBe(0);
-
-    // 验证页面显示
-    const dbList = page.locator('.database-list, .tree-list').first();
-    await expect(dbList).toBeVisible();
-  });
-
-  test('should display tables for a database', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const databases = await apiClient.getDatabases();
-    if (databases.data?.databases?.length > 0) {
-      const dbName = databases.data.databases[0].name;
-      const tables = await apiClient.getTables(dbName);
-      expect(tables.code).toBe(0);
-    }
-  });
-
-  test('should display columns for a table', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const databases = await apiClient.getDatabases();
-    if (databases.data?.databases?.length > 0) {
-      const dbName = databases.data.databases[0].name;
-
-      const tables = await apiClient.getTables(dbName);
-      if (tables.data?.tables?.length > 0) {
-        const tableName = tables.data.tables[0].name;
-        const columns = await apiClient.getTableColumns(dbName, tableName);
-        expect(columns.code).toBe(0);
-      }
-    }
-  });
-
-  test('should search metadata', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    await page.goto(`${BASE_URL}/metadata`);
-    await page.waitForLoadState('networkidle');
-
-    const searchInput = page.locator('input[placeholder*="搜索"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('user');
-      await page.waitForTimeout(500);
-
-      // API 搜索验证
-      const searchResult = await apiClient.searchMetadata('user');
-      expect(searchResult.code).toBe(0);
-    }
-  });
-});
-
-// ============================================
-// 特征存储深度测试
-// ============================================
-test.describe('Alldata - 特征存储', () => {
-  test('should display feature groups', async ({ page }) => {
-    await page.goto(`${BASE_URL}/features`);
-    await page.waitForLoadState('networkidle');
-
-    const list = page.locator('.feature-list, .data-table, [class*="table"]').first();
-    await expect(list).toBeVisible();
-  });
-
-  test('should create feature group', async ({ page }) => {
-    await page.goto(`${BASE_URL}/features`);
-    await page.waitForLoadState('networkidle');
-
-    const createButton = page.locator('button:has-text("创建"), button:has-text("新建")').first();
-    if (await createButton.isVisible()) {
-      await createButton.click();
-      await page.waitForTimeout(500);
-
-      const modal = page.locator('.ant-modal, .modal');
-      const hasModal = await modal.count() > 0;
-      if (hasModal) {
-        const form = modal.locator('form');
-        await expect(form).toBeVisible();
-      }
-    }
-  });
-
-  test('should display feature versions', async ({ page }) => {
-    await page.goto(`${BASE_URL}/features`);
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('tr[data-row-key], .feature-item').first();
-    if (await firstRow.isVisible()) {
-      const versionButton = firstRow.locator('button:has-text("版本"), button:has-text("Version")').first();
-      if (await versionButton.isVisible()) {
-        await versionButton.click();
-        await page.waitForTimeout(500);
-      }
-    }
-  });
-});
-
-// ============================================
-// API 端点验证测试
-// ============================================
-test.describe('Alldata - API 端点验证', () => {
-  test('should verify all Alldata API endpoints', async ({ request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-    clearRequestLogs();
-
-    // 健康检查
-    const health = await apiClient.healthCheck();
-    expect(health.code).toBe(0);
-
-    // 数据源
-    const datasources = await apiClient.getDatasources();
-    expect(datasources.code).toBe(0);
-
-    // 数据集
-    const datasets = await apiClient.getDatasets();
-    expect(datasets.code).toBe(0);
-
-    // 元数据
-    const databases = await apiClient.getDatabases();
-    expect(databases.code).toBe(0);
-
-    // 查询验证
-    const validateResult = await apiClient.validateSQL('SELECT 1');
-    expect(validateResult.code).toBe(0);
-
-    // ETL 任务
-    const etlTasks = await apiClient.getEtlTasks();
-    expect(etlTasks.code).toBe(0);
-
-    // 质量规则
-    const qualityRules = await apiClient.getQualityRules();
-    expect(qualityRules.code).toBe(0);
-
-    // 血缘
-    const lineage = await apiClient.getLineage();
-    expect(lineage.code).toBe(0);
-
-    // 验证没有失败的请求
-    const failedRequests = getFailedRequests();
-    expect(failedRequests.length).toBe(0);
-  });
-
-  test('should handle query execution correctly', async ({ request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    // 获取数据库列表
-    const databases = await apiClient.getDatabases();
-    if (databases.data?.databases?.length > 0) {
-      const dbName = databases.data.databases[0].name;
-
-      // 执行查询
-      const queryResult = await apiClient.executeQuery({
-        database: dbName,
-        sql: 'SELECT 1 as test_column',
-        limit: 10,
-      });
-
-      expect(queryResult.code).toBe(0);
-    }
-  });
-});
-
-// ============================================
-// 边界条件测试
-// ============================================
-test.describe('Alldata - 边界条件', () => {
-  test('should handle empty datasource list', async ({ page, request }) => {
-    await page.goto(`${BASE_URL}/datasources`);
-    await page.waitForLoadState('networkidle');
-
-    const emptyState = page.locator('.empty-state, .no-data');
-    // 空状态可能不显示（如果有数据）
-    const hasEmpty = await emptyState.count() > 0;
-    console.log('Has empty state for datasources:', hasEmpty);
-  });
-
-  test('should handle invalid SQL query', async ({ request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const validateResult = await apiClient.validateSQL('INVALID SQL QUERY');
-    // 应该返回错误而不是崩溃
-    expect(validateResult.code).not.toBe(0);
-  });
-
-  test('should handle large metadata set', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'alldata') as AlldataApiClient;
-
-    const databases = await apiClient.getDatabases();
-    if (databases.data?.databases?.length > 0) {
-      const dbName = databases.data.databases[0].name;
-      const tables = await apiClient.getTables(dbName);
-
-      // 测试大量表的渲染
-      if (tables.data?.tables?.length > 50) {
-        await page.goto(`${BASE_URL}/metadata`);
-        await page.waitForLoadState('networkidle');
-
-        // 检查是否正确渲染
-        const tableList = page.locator('.table-list, [class*="table"]');
-        await expect(tableList.first()).toBeVisible();
-      }
-    }
-  });
-});
-
-test.afterEach(async ({ request }) => {
-  const failedRequests = getFailedRequests();
-  if (failedRequests.length > 0) {
-    console.error('Failed API requests in Alldata test:', failedRequests);
-  }
 });

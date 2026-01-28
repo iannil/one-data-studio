@@ -210,6 +210,136 @@ test-e2e:
 	@bash deploy/scripts/test-e2e.sh
 
 # ============================================
+# 测试计划执行 (基于 user-lifecycle-test-cases.md)
+# ============================================
+
+# 单元测试 - 全部
+test-unit:
+	@echo "==> 运行所有单元测试..."
+	@pytest tests/unit/ -v --tb=short --cov=services --cov-report=html:reports/coverage
+
+# 单元测试 - P0 优先级
+test-unit-p0:
+	@echo "==> 运行 P0 单元测试..."
+	@pytest tests/unit/ -v -m "unit and not slow" --tb=short
+
+# 单元测试 - 按模块
+test-unit-alldata:
+	@echo "==> 运行 Alldata 模块单元测试..."
+	@pytest tests/unit/test_alldata*.py tests/unit/test_datasource*.py tests/unit/test_metadata*.py tests/unit/test_sensitive*.py tests/unit/test_masking*.py tests/unit/test_data_standard.py -v
+
+test-unit-bisheng:
+	@echo "==> 运行 Bisheng 模块单元测试..."
+	@pytest tests/unit/test_bisheng*.py tests/unit/test_hybrid*.py tests/unit/test_sql*.py tests/unit/test_document*.py tests/unit/test_agents.py -v
+
+test-unit-cube:
+	@echo "==> 运行 Cube 模块单元测试..."
+	@pytest tests/unit/test_cube*.py tests/unit/test_model*.py tests/unit/test_workflow*.py -v
+
+test-unit-shared:
+	@echo "==> 运行共享模块单元测试..."
+	@pytest tests/unit/test_auth*.py tests/unit/test_jwt*.py tests/unit/test_csrf*.py tests/unit/test_security*.py tests/unit/test_cache*.py tests/unit/test_config*.py -v
+
+# 集成测试 - 全部
+test-integration:
+	@echo "==> 运行所有集成测试..."
+	@pytest tests/integration/ -v --tb=short --with-db
+
+# 集成测试 - 按阶段 (对应测试计划)
+test-integration-dm:
+	@echo "==> 运行数据管理员模块集成测试..."
+	@pytest tests/integration/test_metadata*.py tests/integration/test_sensitivity*.py tests/integration/test_asset*.py tests/integration/test_lineage*.py -v --with-db
+
+test-integration-de:
+	@echo "==> 运行数据工程师模块集成测试..."
+	@pytest tests/integration/test_etl*.py tests/integration/test_table_fusion*.py -v --with-db
+
+test-integration-ae:
+	@echo "==> 运行算法工程师模块集成测试..."
+	@pytest tests/integration/test_model*.py -v --with-db
+
+test-integration-bu:
+	@echo "==> 运行业务用户模块集成测试..."
+	@pytest tests/integration/test_knowledge*.py tests/integration/test_intelligent*.py tests/integration/test_text_to_sql*.py -v --with-db --with-milvus
+
+test-integration-sa:
+	@echo "==> 运行系统管理员模块集成测试..."
+	@pytest tests/integration/test_user*.py tests/integration/test_audit*.py -v --with-db
+
+# 前端测试
+test-frontend:
+	@echo "==> 运行前端单元测试..."
+	@cd web && npm run test -- --run
+
+test-frontend-coverage:
+	@echo "==> 运行前端测试并生成覆盖率..."
+	@cd web && npm run test:coverage
+
+# E2E 测试 - 按项目
+test-e2e-core:
+	@echo "==> 运行核心页面 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-fast core-pages*.spec.ts
+
+test-e2e-alldata:
+	@echo "==> 运行 Alldata 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance alldata-deep.spec.ts
+
+test-e2e-bisheng:
+	@echo "==> 运行 Bisheng 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance bisheng-deep.spec.ts
+
+test-e2e-cube:
+	@echo "==> 运行 Cube 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance cube-deep.spec.ts
+
+test-e2e-lifecycle:
+	@echo "==> 运行用户生命周期 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=user-lifecycle
+
+# 专项测试
+test-performance:
+	@echo "==> 运行性能测试..."
+	@pytest tests/performance/ -v --benchmark
+
+test-security:
+	@echo "==> 运行安全测试..."
+	@pytest tests/ -m "security" -v
+
+# 测试计划执行脚本
+test-plan:
+	@echo "==> 使用测试计划脚本..."
+	@python3 tests/run_tests.py --help
+
+test-plan-phase2:
+	@echo "==> 执行测试计划第二阶段（单元测试）..."
+	@python3 tests/run_tests.py --phase 2
+
+test-plan-phase3:
+	@echo "==> 执行测试计划第三阶段（集成测试）..."
+	@python3 tests/run_tests.py --phase 3
+
+test-plan-phase4:
+	@echo "==> 执行测试计划第四阶段（E2E测试）..."
+	@python3 tests/run_tests.py --phase 4
+
+test-plan-all:
+	@echo "==> 执行完整测试计划..."
+	@python3 tests/run_tests.py --all
+
+# 快速回归测试 (P0 用例)
+test-regression:
+	@echo "==> 运行回归测试 (P0 用例)..."
+	@pytest tests/unit/ tests/integration/ -m "not slow" -v --tb=short
+	@cd tests/e2e && npx playwright test --project=chromium-fast
+
+# 测试报告
+test-report:
+	@echo "==> 查看测试报告..."
+	@echo "  覆盖率报告: reports/coverage/index.html"
+	@echo "  E2E 报告: tests/e2e/playwright-report/index.html"
+	@open reports/coverage/index.html 2>/dev/null || xdg-open reports/coverage/index.html 2>/dev/null || echo "请手动打开报告文件"
+
+# ============================================
 # 数据库初始化
 # ============================================
 

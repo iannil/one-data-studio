@@ -1,0 +1,67 @@
+# ONE-DATA-STUDIO 测试依赖
+# 使用: pip install -r requirements-test.txt
+
+# ==================== 测试框架 ====================
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-xdist>=3.5.0  # 并行测试
+pytest-timeout>=2.2.0
+pytest-html>=4.1.0  # HTML 测试报告
+
+# ==================== Mock 和 Fixtures ====================
+responses>=0.24.0  # HTTP mock
+aioresponses>=0.7.0  # 异步 HTTP mock
+factory-boy>=3.3.0  # 测试数据工厂
+faker>=22.0.0  # 假数据生成
+freezegun>=1.2.0  # 时间 mock
+
+# ==================== 覆盖率 ====================
+coverage>=7.4.0
+
+# ==================== Web 框架依赖 ====================
+flask>=3.0.0
+flask-cors>=4.0.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
+httpx>=0.26.0
+requests>=2.31.0
+
+# ==================== 数据库依赖 ====================
+pymysql>=1.1.0
+sqlalchemy>=2.0.0
+redis>=5.0.0
+pymilvus>=2.3.0
+
+# ==================== 数据处理 ====================
+numpy>=1.26.0
+pandas>=2.1.0
+scikit-learn>=1.4.0
+
+# ==================== AI/ML 依赖 ====================
+openai>=1.10.0
+tiktoken>=0.5.0
+
+# ==================== 安全依赖 ====================
+PyJWT>=2.8.0
+cryptography>=41.0.0
+python-jose>=3.3.0
+
+# ==================== 工具库 ====================
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+pydantic>=2.5.0
+
+# ==================== 性能测试 ====================
+locust>=2.20.0
+pytest-benchmark>=4.0.0
+
+# ==================== 代码质量 ====================
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.0.0
+mypy>=1.8.0
+
+# ==================== E2E 测试 ====================
+playwright>=1.41.0

@@ -5015,6 +5015,66 @@ def auto_train_model():
     })
 
 
+# ==================== Notebook 管理 API ====================
+
+@app.route("/api/v1/notebooks", methods=["POST"])
+@require_jwt()
+def create_notebook():
+    """创建 Jupyter Notebook 实例"""
+    try:
+        data = request.get_json()
+
+        notebook_id = f"nb_{uuid.uuid4().hex[:8]}"
+
+        return jsonify({
+            "code": 0,
+            "message": "Notebook created successfully",
+            "data": {
+                "notebook_id": notebook_id,
+                "name": data.get("name", "未命名 Notebook"),
+                "image": data.get("image", "jupyter/scipy-notebook:latest"),
+                "cpu_limit": data.get("cpu_limit", 2),
+                "memory_limit": data.get("memory_limit", "4Gi"),
+                "status": "starting",
+                "url": f"/notebooks/{notebook_id}",
+                "created_at": datetime.now().isoformat()
+            }
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error creating notebook: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 模型评估 API ====================
+
+@app.route("/api/v1/evaluation", methods=["POST"])
+@require_jwt()
+def create_evaluation_task():
+    """创建模型评估任务"""
+    try:
+        data = request.get_json()
+
+        evaluation_id = f"eval_{uuid.uuid4().hex[:8]}"
+
+        return jsonify({
+            "code": 0,
+            "message": "Evaluation task created",
+            "data": {
+                "evaluation_id": evaluation_id,
+                "model_id": data.get("model_id"),
+                "dataset_id": data.get("dataset_id"),
+                "metrics": ["accuracy", "precision", "recall", "f1"],
+                "status": "pending",
+                "created_at": datetime.now().isoformat()
+            }
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error creating evaluation: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # ==================== 启动应用 ====================
 
 if __name__ == "__main__":

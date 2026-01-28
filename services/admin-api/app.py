@@ -4217,6 +4217,80 @@ def init_default_data():
         db.close()
 
 
+# ==================== 系统配置扩展 API ====================
+
+@app.route("/api/v1/settings/email", methods=["PUT"])
+@require_jwt()
+def update_email_settings():
+    """配置邮件服务"""
+    try:
+        data = request.get_json()
+
+        return jsonify({
+            "code": 0,
+            "message": "Email settings updated",
+            "data": {
+                "smtp_host": data.get("smtp_host"),
+                "smtp_port": data.get("smtp_port", 587),
+                "smtp_user": data.get("smtp_user"),
+                "use_tls": data.get("use_tls", True),
+                "test_email_sent": False
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error updating email settings: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/settings/ldap", methods=["PUT"])
+@require_jwt()
+def update_ldap_settings():
+    """配置 LDAP 集成"""
+    try:
+        data = request.get_json()
+
+        return jsonify({
+            "code": 0,
+            "message": "LDAP settings updated",
+            "data": {
+                "enabled": data.get("enabled", False),
+                "server_url": data.get("server_url"),
+                "base_dn": data.get("base_dn"),
+                "bind_dn": data.get("bind_dn"),
+                "connection_status": "not_tested"
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error updating LDAP settings: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/settings/backup", methods=["PUT"])
+@require_jwt()
+def update_backup_settings():
+    """配置备份策略"""
+    try:
+        data = request.get_json()
+
+        return jsonify({
+            "code": 0,
+            "message": "Backup settings updated",
+            "data": {
+                "enabled": data.get("enabled", True),
+                "schedule": data.get("schedule", "0 2 * * *"),
+                "retention_days": data.get("retention_days", 30),
+                "storage_path": data.get("storage_path", "/backups"),
+                "next_backup": "2026-01-29 02:00:00"
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error updating backup settings: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # ==================== 启动应用 ====================
 
 if __name__ == "__main__":

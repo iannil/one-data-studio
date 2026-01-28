@@ -40,6 +40,8 @@ pnpm-debug.log*
 # Testing
 .coverage
 .pytest_cache/
+test-results/
+playwright-report/
 htmlcov/
 .tox/
 

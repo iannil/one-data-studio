@@ -91,6 +91,12 @@ class Resource:
     TABLE = "table"
     COLUMN = "column"
     STORAGE = "storage"
+    SYSTEM = "system"
+    WORKFLOW = "workflow"
+    CHAT = "chat"
+    MODEL = "model"
+    PROMPT_TEMPLATE = "prompt_template"
+    USER = "user"
 
 
 class Operation:

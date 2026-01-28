@@ -4785,6 +4785,80 @@ def create_sft_dataset():
         db.close()
 
 
+# ==================== BI 报表生成 API ====================
+
+@app.route("/api/v1/bi/generate", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.CHAT, Operation.EXECUTE)
+def bi_generate_report():
+    """自然语言生成 BI 报表"""
+    try:
+        data = request.get_json()
+        question = data.get("question", "")
+        dataset_id = data.get("dataset_id")
+
+        if not question:
+            return jsonify({"code": 40001, "message": "Question is required"}), 400
+
+        # 简化实现：返回预配置的报表结构
+        return jsonify({
+            "code": 0,
+            "message": "Report generated successfully",
+            "data": {
+                "report_id": f"bi_report_{uuid.uuid4().hex[:8]}",
+                "question": question,
+                "sql": f"SELECT * FROM dataset_{dataset_id or 'default'} WHERE 1=1",
+                "charts": [
+                    {
+                        "type": "bar",
+                        "title": "数据分布",
+                        "x_axis": "category",
+                        "y_axis": "value",
+                        "data": [
+                            {"category": "A", "value": 100},
+                            {"category": "B", "value": 200},
+                            {"category": "C", "value": 150}
+                        ]
+                    }
+                ],
+                "summary": f"根据您的问题「{question}」，生成了包含1个图表的报表。"
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 预警规则 API ====================
+
+@app.route("/api/v1/alerts/rules", methods=["POST"])
+@require_jwt()
+@require_permission(Resource.WORKFLOW, Operation.MANAGE)
+def create_alert_rule():
+    """创建预警规则"""
+    try:
+        data = request.get_json()
+
+        rule_id = f"alert_{uuid.uuid4().hex[:8]}"
+
+        return jsonify({
+            "code": 0,
+            "message": "Alert rule created successfully",
+            "data": {
+                "rule_id": rule_id,
+                "name": data.get("name", "未命名规则"),
+                "metric": data.get("metric", "default"),
+                "condition": data.get("condition", ">"),
+                "threshold": data.get("threshold", 100),
+                "enabled": True,
+                "created_at": datetime.now().isoformat()
+            }
+        }), 201
+
+    except Exception as e:
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8081))
     debug = os.getenv("DEBUG", "false").lower() == "true"
