@@ -1,11 +1,51 @@
 """
 跨服务集成测试
-测试 Alldata、Cube Studio、Bisheng 之间的协作
+测试 Data、Model、Agent 之间的协作
+
+使用真实服务类，但 Mock 外部依赖（Kubernetes、HTTP、数据库）。
 """
+
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'model-api'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'agent-api'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'data-api'))
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
+
+from services.k8s_training_service import (
+    K8sTrainingService,
+    TrainingJobSpec,
+    TrainingFramework,
+    ResourceRequest,
+    GPUResource,
+    TrainingInput,
+    Hyperparameters,
+    JobType,
+    JobStatus,
+    JobResult,
+)
+from services.inference import ModelInferenceService, InferenceResult
+
+
+def _make_mock_k8s_modules():
+    """构建 Mock 的 kubernetes 模块，使 K8sTrainingService 可以正常工作"""
+    mock_config = MagicMock()
+    mock_client = MagicMock()
+
+    # 模拟所有 kubernetes.client 数据类，使其直接保存参数
+    for cls_name in [
+        "V1ObjectMeta", "V1PodTemplateSpec", "V1PodSpec", "V1Container",
+        "V1ResourceRequirements", "V1EnvVar", "V1VolumeMount", "V1Volume",
+        "V1PersistentVolumeClaimVolumeSource", "V1Job", "V1JobSpec",
+        "V1DeleteOptions", "CoreV1Api", "BatchV1Api", "CustomObjectsApi",
+    ]:
+        setattr(mock_client, cls_name, MagicMock())
+
+    return mock_client, mock_config
 
 
 @pytest.mark.integration
@@ -15,138 +55,304 @@ class TestCrossServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_data_to_model_pipeline(self):
-        """测试数据→模型→服务的跨服务流程"""
-        # 1. Alldata: 数据ETL
-        alldata_service = Mock()
-        alldata_service.run_etl = AsyncMock(return_value={
-            'success': True,
-            'output_path': 's3://datasets/training_data/',
-            'rows': 100000
-        })
+        """测试数据(Data) -> 模型(Model) 的跨服务流程：ETL输出数据集后提交K8s训练任务"""
+        mock_client, mock_config = _make_mock_k8s_modules()
 
-        etl_result = await alldata_service.run_etl(
-            source='raw_data',
-            target='training_data',
-            transformations=['cleaning', 'masking']
-        )
+        with patch.dict("sys.modules", {
+            "kubernetes": MagicMock(client=mock_client, config=mock_config),
+            "kubernetes.client": mock_client,
+            "kubernetes.config": mock_config,
+        }):
+            # 1. Data 层：ETL 输出数据集路径（模拟）
+            dataset_path = "s3://datasets/training_data/"
 
-        assert etl_result['success'] is True
-        dataset_path = etl_result['output_path']
+            # 2. Model 层：使用真实 K8sTrainingService 提交训练任务
+            service = K8sTrainingService(namespace="ml-training", use_training_operator=False)
+            # 手动初始化客户端以绕过 _ensure_clients 中的 import
+            service._core_api = MagicMock()
+            service._batch_api = MagicMock()
+            service._custom_api = MagicMock()
 
-        # 2. Cube: 训练模型
-        cube_service = Mock()
-        cube_service.submit_training = AsyncMock(return_value={
-            'success': True,
-            'job_id': 'job_0001',
-            'model_id': 'model_0001'
-        })
+            # 模拟 create_namespaced_job 返回
+            created_job_mock = MagicMock()
+            created_job_mock.metadata.name = "xgboost-train-abc12345"
+            service._batch_api.create_namespaced_job.return_value = created_job_mock
 
-        training_result = await cube_service.submit_training(
-            dataset_path=dataset_path,
-            model_type='xgboost',
-            hyperparameters={'max_depth': 6}
-        )
+            spec = TrainingJobSpec(
+                name="xgboost-train",
+                framework=TrainingFramework.XGBOOST,
+                job_type=JobType.TRAINING,
+                image="python:3.10-slim",
+                inputs=TrainingInput(dataset_path=dataset_path),
+                resources=ResourceRequest(cpu="4", memory="8Gi"),
+                hyperparameters=Hyperparameters(
+                    learning_rate=0.01,
+                    batch_size=64,
+                    epochs=20,
+                ),
+            )
 
-        assert training_result['success'] is True
-        model_id = training_result['model_id']
+            result = service.submit_training_job(spec)
 
-        # 3. Bisheng: 调用模型服务
-        bisheng_service = Mock()
-        bisheng_service.deploy_model = AsyncMock(return_value={
-            'success': True,
-            'endpoint': f'/v1/models/{model_id}/predict'
-        })
+            # 验证返回的 JobResult
+            assert isinstance(result, JobResult)
+            assert result.status == JobStatus.PENDING
+            assert result.job_id.startswith("train-")
+            assert result.started_at is not None
 
-        deploy_result = await bisheng_service.deploy_model(model_id)
-
-        assert deploy_result['success'] is True
+            # 验证 create_namespaced_job 被调用，且 namespace 正确
+            service._batch_api.create_namespaced_job.assert_called_once()
+            call_kwargs = service._batch_api.create_namespaced_job.call_args
+            assert call_kwargs[1]["namespace"] == "ml-training" or call_kwargs[0][0] == "ml-training"
 
     @pytest.mark.asyncio
     async def test_metadata_to_rag_pipeline(self):
-        """测试元数据→RAG的跨服务流程"""
-        # 1. Alldata: 元数据同步
-        alldata_service = Mock()
-        alldata_service.get_table_schema = AsyncMock(return_value={
-            'success': True,
-            'schema': {
-                'table_name': 'users',
-                'columns': [
-                    {'name': 'id', 'type': 'bigint'},
-                    {'name': 'username', 'type': 'varchar(50)'},
-                    {'name': 'phone', 'type': 'varchar(20)', 'sensitive': True}
-                ]
-            }
-        })
+        """测试元数据(Data) -> RAG(Agent) 的跨服务流程"""
+        # 1. Data 层：元数据 schema 结构（真实格式）
+        schema = {
+            "table_name": "users",
+            "columns": [
+                {"name": "id", "type": "bigint"},
+                {"name": "username", "type": "varchar(50)"},
+                {"name": "phone", "type": "varchar(20)", "sensitive": True},
+            ],
+        }
 
-        schema_result = await alldata_service.get_table_schema('users')
-        assert schema_result['success'] is True
+        # 验证 schema 结构包含 Agent 层 Text-to-SQL 所需的字段
+        assert "table_name" in schema
+        assert "columns" in schema
+        assert len(schema["columns"]) > 0
 
-        # 2. Bisheng: 使用Schema进行Text-to-SQL
-        bisheng_service = Mock()
-        bisheng_service.text_to_sql = AsyncMock(return_value={
-            'success': True,
-            'sql': 'SELECT id, username FROM users LIMIT 10',
-            'schema_used': schema_result['schema']
-        })
+        # 验证每列都有 name 和 type（Agent 生成 SQL 时依赖这些字段）
+        for col in schema["columns"]:
+            assert "name" in col, "每列必须包含 name 字段"
+            assert "type" in col, "每列必须包含 type 字段"
 
-        sql_result = await bisheng_service.text_to_sql(
-            query='查询前10个用户',
-            schema=schema_result['schema']
+        # 验证敏感字段标记存在（Data 层标记，Agent 层在生成 SQL 时需过滤）
+        sensitive_columns = [c for c in schema["columns"] if c.get("sensitive")]
+        assert len(sensitive_columns) > 0, "schema 应包含敏感字段标记"
+        assert sensitive_columns[0]["name"] == "phone"
+
+        # 2. Agent 层：用 schema 构造 Text-to-SQL prompt
+        column_defs = ", ".join(
+            f"{c['name']} {c['type']}" for c in schema["columns"]
         )
-
-        assert sql_result['success'] is True
+        prompt = f"Table: {schema['table_name']} ({column_defs})\nQuestion: 查询前10个用户"
+        assert "users" in prompt
+        assert "bigint" in prompt
 
     @pytest.mark.asyncio
     async def test_full_ml_pipeline(self):
-        """测试完整ML流程：数据→特征→训练→部署→推理"""
-        # 1. 数据准备
-        data_service = Mock()
-        data_service.prepare_features = AsyncMock(return_value={
-            'success': True,
-            'feature_path': 's3://features/',
-            'feature_count': 50
-        })
+        """测试完整ML流程：数据 -> 特征 -> 训练 -> 部署 -> 推理（使用真实 ModelInferenceService）"""
+        # 1-3. 数据准备、特征工程、训练（模拟前置步骤输出）
+        model_name = "churn-predictor-v1"
+        serving_endpoint = "http://model-serving:8000"
 
-        features = await data_service.prepare_features(
-            raw_data='s3://raw_data/',
-            target_column='churn'
+        # 4. 推理：使用真实 ModelInferenceService
+        inference_service = ModelInferenceService(
+            endpoint=serving_endpoint,
+            api_key="test-key",
+            backend="vllm",
         )
 
-        # 2. 模型训练
-        training_service = Mock()
-        training_service.train = AsyncMock(return_value={
-            'success': True,
-            'model_id': 'model_0001',
-            'accuracy': 0.92
-        })
+        assert inference_service.is_available()
+        assert inference_service.backend == "vllm"
+        assert inference_service.endpoint == serving_endpoint
 
-        model = await training_service.train(
-            features=features['feature_path'],
-            algorithm='random_forest'
+        # Mock httpx 发出的 HTTP 请求
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "Based on the features, the churn probability is 0.82."
+                    }
+                }
+            ],
+            "usage": {"total_tokens": 45},
+        }
+
+        with patch("httpx.AsyncClient") as mock_async_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post.return_value = mock_response
+            mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+            mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_async_client.return_value = mock_client_instance
+
+            result = await inference_service.infer(
+                model=model_name,
+                input_data="Predict churn for user with features: age=35, tenure=12, monthly_charges=70.5",
+                model_type="text-generation",
+                parameters={"temperature": 0.3, "max_tokens": 256},
+            )
+
+        # 验证推理结果
+        assert isinstance(result, InferenceResult)
+        assert result.model == model_name
+        assert result.backend == "vllm"
+        assert result.tokens_used == 45
+        assert result.latency_ms is not None and result.latency_ms >= 0
+        assert "generated_text" in result.output
+        assert "churn" in result.output["generated_text"].lower()
+
+    @pytest.mark.asyncio
+    async def test_k8s_training_service_lifecycle(self):
+        """测试 K8s 训练服务完整生命周期：submit -> get_status -> get_logs -> cancel"""
+        mock_client, mock_config = _make_mock_k8s_modules()
+
+        with patch.dict("sys.modules", {
+            "kubernetes": MagicMock(client=mock_client, config=mock_config),
+            "kubernetes.client": mock_client,
+            "kubernetes.config": mock_config,
+        }):
+            service = K8sTrainingService(namespace="ml-jobs", use_training_operator=False)
+            service._core_api = MagicMock()
+            service._batch_api = MagicMock()
+            service._custom_api = MagicMock()
+
+            # --- 1. Submit ---
+            created_job_mock = MagicMock()
+            created_job_mock.metadata.name = "bert-finetune-abc12345"
+            service._batch_api.create_namespaced_job.return_value = created_job_mock
+
+            spec = TrainingJobSpec(
+                name="bert-finetune",
+                framework=TrainingFramework.TRANSFORMERS,
+                job_type=JobType.FINE_TUNING,
+                image="nvcr.io/nvidia/pytorch:23.10-py3",
+                inputs=TrainingInput(
+                    dataset_path="s3://datasets/sft-data/",
+                    model_path="s3://models/bert-base/",
+                ),
+                resources=ResourceRequest(
+                    cpu="8",
+                    memory="32Gi",
+                    gpu=GPUResource(count=2, type="nvidia.com/gpu"),
+                ),
+                hyperparameters=Hyperparameters(
+                    learning_rate=2e-5,
+                    batch_size=16,
+                    epochs=3,
+                    lora_r=16,
+                    lora_alpha=32,
+                ),
+                env_vars={"WANDB_PROJECT": "bert-sft"},
+            )
+
+            submit_result = service.submit_training_job(spec)
+            assert submit_result.status == JobStatus.PENDING
+            job_id = submit_result.job_id
+            job_name = f"bert-finetune-{job_id}"
+
+            # --- 2. Get Status (running) ---
+            mock_job_status = MagicMock()
+            mock_job_status.status.succeeded = None
+            mock_job_status.status.failed = None
+            mock_job_status.status.active = 1
+            service._batch_api.read_namespaced_job_status.return_value = mock_job_status
+
+            status = service.get_job_status(job_id, job_name)
+            assert status == JobStatus.RUNNING
+            service._batch_api.read_namespaced_job_status.assert_called_with(
+                name=job_name,
+                namespace="ml-jobs",
+            )
+
+            # --- 3. Get Logs ---
+            mock_pod = MagicMock()
+            mock_pod.metadata.name = f"{job_name}-pod-xyz"
+            mock_pod_list = MagicMock()
+            mock_pod_list.items = [mock_pod]
+            service._core_api.list_namespaced_pod.return_value = mock_pod_list
+            service._core_api.read_namespaced_pod_log.return_value = (
+                "Epoch 1/3 - loss: 0.523\nEpoch 2/3 - loss: 0.312\n"
+            )
+
+            logs = service.get_job_logs(job_name, tail_lines=50)
+            assert "Epoch" in logs
+            assert "loss" in logs
+            service._core_api.list_namespaced_pod.assert_called_once()
+            service._core_api.read_namespaced_pod_log.assert_called_once()
+
+            # --- 4. Cancel ---
+            service._batch_api.delete_namespaced_job.return_value = MagicMock()
+            cancelled = service.cancel_job(job_name)
+            assert cancelled is True
+            service._batch_api.delete_namespaced_job.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_inference_service_text_generation(self):
+        """测试推理服务文本生成：使用真实 ModelInferenceService，Mock httpx 响应"""
+        service = ModelInferenceService(
+            endpoint="http://vllm-server:8000",
+            api_key="sk-test-key",
+            backend="vllm",
+            timeout=30.0,
         )
 
-        # 3. 模型部署
-        deployment_service = Mock()
-        deployment_service.deploy = AsyncMock(return_value={
-            'success': True,
-            'endpoint': '/v1/models/churn_predictor'
-        })
+        # 验证初始化状态
+        assert service.is_available()
+        assert service.backend == "vllm"
 
-        deployment = await deployment_service.deploy(model['model_id'])
+        # 准备 Mock HTTP 响应
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "id": "chatcmpl-abc123",
+            "object": "chat.completion",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "以下是数据分析报告的摘要：\n1. 总用户数增长了15%\n2. 活跃用户比例提高到72%",
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 28,
+                "completion_tokens": 42,
+                "total_tokens": 70,
+            },
+        }
 
-        # 4. 推理测试
-        inference_service = Mock()
-        inference_service.predict = AsyncMock(return_value={
-            'success': True,
-            'predictions': [0.2, 0.8, 0.5]
-        })
+        with patch("httpx.AsyncClient") as mock_async_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post.return_value = mock_response
+            mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+            mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_async_client.return_value = mock_client_instance
 
-        predictions = await inference_service.predict(
-            endpoint=deployment['endpoint'],
-            data=[[1.0, 2.0, 3.0]]
-        )
+            result = await service.infer(
+                model="qwen-72b-chat",
+                input_data="请根据以下数据生成分析报告摘要",
+                model_type="text-generation",
+                parameters={"temperature": 0.5, "max_tokens": 1024, "top_p": 0.95},
+            )
 
-        assert len(predictions) > 0
+            # 验证 httpx 调用
+            mock_client_instance.post.assert_called_once()
+            call_args = mock_client_instance.post.call_args
+            posted_url = call_args[0][0] if call_args[0] else call_args[1].get("url", "")
+            assert "chat/completions" in posted_url
+
+            posted_json = call_args[1].get("json") or call_args[0][1] if len(call_args[0]) > 1 else call_args[1]["json"]
+            assert posted_json["model"] == "qwen-72b-chat"
+            assert posted_json["temperature"] == 0.5
+            assert posted_json["max_tokens"] == 1024
+
+        # 验证推理结果解析
+        assert isinstance(result, InferenceResult)
+        assert result.model == "qwen-72b-chat"
+        assert result.tokens_used == 70
+        assert result.backend == "vllm"
+        assert result.latency_ms is not None
+        assert "generated_text" in result.output
+        assert "数据分析报告" in result.output["generated_text"]
 
 
 @pytest.mark.integration
@@ -157,57 +363,63 @@ class TestTextToSQLIntegration:
     @pytest.mark.asyncio
     async def test_sql_generation_with_schema_injection(self):
         """测试Schema注入的SQL生成完整流程"""
-        # 1. 获取Schema
-        metadata_service = Mock()
-        metadata_service.get_schema = AsyncMock(return_value={
-            'tables': [
+        # 1. 获取 Schema（模拟 Data 层元数据服务返回）
+        schema = {
+            "tables": [
                 {
-                    'name': 'orders',
-                    'columns': [
-                        {'name': 'id', 'type': 'bigint'},
-                        {'name': 'user_id', 'type': 'bigint'},
-                        {'name': 'amount', 'type': 'decimal(12,2)'},
-                        {'name': 'order_time', 'type': 'datetime'}
-                    ]
+                    "name": "orders",
+                    "columns": [
+                        {"name": "id", "type": "bigint"},
+                        {"name": "user_id", "type": "bigint"},
+                        {"name": "amount", "type": "decimal(12,2)"},
+                        {"name": "order_time", "type": "datetime"},
+                    ],
                 }
             ]
-        })
+        }
 
-        schema = await metadata_service.get_schema()
+        # 验证 schema 结构符合预期
+        assert len(schema["tables"]) > 0
+        orders_table = schema["tables"][0]
+        assert orders_table["name"] == "orders"
+        column_names = [c["name"] for c in orders_table["columns"]]
+        assert "amount" in column_names
+        assert "order_time" in column_names
 
-        # 2. 生成SQL
+        # 2. 生成SQL（模拟 Agent 层 LLM 调用）
         sql_service = Mock()
         sql_service.generate = AsyncMock(return_value={
-            'sql': f"SELECT SUM(amount) FROM orders WHERE order_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
-            'confidence': 0.92
+            "sql": "SELECT SUM(amount) FROM orders WHERE order_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+            "confidence": 0.92,
         })
 
         result = await sql_service.generate(
-            query='近30天的订单总额',
-            schema=schema['tables']
+            query="近30天的订单总额",
+            schema=schema["tables"],
         )
 
-        assert result['sql'] is not None
+        assert result["sql"] is not None
+        assert "SUM(amount)" in result["sql"]
 
         # 3. 安全检查
         security_service = Mock()
         security_service.check = AsyncMock(return_value={
-            'safe': True,
-            'warnings': []
+            "safe": True,
+            "warnings": [],
         })
 
-        security_result = await security_service.check(result['sql'])
-        assert security_result['safe'] is True
+        security_result = await security_service.check(result["sql"])
+        assert security_result["safe"] is True
 
         # 4. 执行SQL
         query_service = Mock()
         query_service.execute = AsyncMock(return_value={
-            'success': True,
-            'data': [{'total': 1500000.50}]
+            "success": True,
+            "data": [{"total": 1500000.50}],
         })
 
-        query_result = await query_service.execute(result['sql'])
-        assert query_result['success'] is True
+        query_result = await query_service.execute(result["sql"])
+        assert query_result["success"] is True
 
 
 @pytest.mark.integration
@@ -221,69 +433,92 @@ class TestRAGIntegration:
         # 1. 文档上传
         doc_service = Mock()
         doc_service.upload = AsyncMock(return_value={
-            'success': True,
-            'doc_id': 'doc_0001',
-            'file_path': 's3://documents/sample.pdf'
+            "success": True,
+            "doc_id": "doc_0001",
+            "file_path": "s3://documents/sample.pdf",
         })
 
-        doc = await doc_service.upload('sample.pdf')
-        assert doc['success'] is True
+        doc = await doc_service.upload("sample.pdf")
+        assert doc["success"] is True
 
         # 2. 文档处理
         doc_service.process = AsyncMock(return_value={
-            'success': True,
-            'chunks': [
-                {'chunk_id': 'c1', 'text': '这是第一段内容'},
-                {'chunk_id': 'c2', 'text': '这是第二段内容'}
-            ]
+            "success": True,
+            "chunks": [
+                {"chunk_id": "c1", "text": "这是第一段内容"},
+                {"chunk_id": "c2", "text": "这是第二段内容"},
+            ],
         })
 
-        chunks = await doc_service.process(doc['doc_id'])
-        assert len(chunks['chunks']) > 0
+        chunks = await doc_service.process(doc["doc_id"])
+        assert len(chunks["chunks"]) > 0
 
         # 3. 向量化
         embedding_service = Mock()
         embedding_service.embed = AsyncMock(return_value={
-            'embeddings': [[0.1] * 1536 for _ in chunks['chunks']]
+            "embeddings": [[0.1] * 1536 for _ in chunks["chunks"]]
         })
 
-        embeddings = await embedding_service.embed([c['text'] for c in chunks['chunks']])
-        assert len(embeddings['embeddings']) == len(chunks['chunks'])
+        embeddings = await embedding_service.embed([c["text"] for c in chunks["chunks"]])
+        assert len(embeddings["embeddings"]) == len(chunks["chunks"])
 
         # 4. 索引构建
         vector_service = Mock()
         vector_service.index = AsyncMock(return_value={
-            'success': True,
-            'indexed_count': len(chunks['chunks'])
+            "success": True,
+            "indexed_count": len(chunks["chunks"]),
         })
 
         index_result = await vector_service.index(
-            chunks=chunks['chunks'],
-            embeddings=embeddings['embeddings']
+            chunks=chunks["chunks"],
+            embeddings=embeddings["embeddings"],
         )
-        assert index_result['success'] is True
+        assert index_result["success"] is True
 
         # 5. 检索
         vector_service.search = AsyncMock(return_value={
-            'results': [
-                {'chunk_id': 'c1', 'score': 0.95, 'text': '这是第一段内容'}
+            "results": [
+                {"chunk_id": "c1", "score": 0.95, "text": "这是第一段内容"}
             ]
         })
 
         search_results = await vector_service.search(
-            query='test query',
-            top_k=5
+            query="test query",
+            top_k=5,
         )
 
-        # 6. LLM生成
-        llm_service = Mock()
-        llm_service.generate = AsyncMock(return_value={
-            'answer': '根据文档内容，这是答案。'
-        })
+        # 6. LLM生成（使用真实 ModelInferenceService 结构验证）
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [
+                {"message": {"content": "根据文档内容，这是答案。"}}
+            ],
+            "usage": {"total_tokens": 35},
+        }
 
-        answer = await llm_service.generate(
-            query='test query',
-            context=search_results['results']
+        inference_service = ModelInferenceService(
+            endpoint="http://llm-server:8000",
+            api_key="test-key",
+            backend="vllm",
         )
 
-        assert answer['answer'] is not None
+        with patch("httpx.AsyncClient") as mock_async_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post.return_value = mock_response
+            mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+            mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+            mock_async_client.return_value = mock_client_instance
+
+            context_text = "\n".join(r["text"] for r in search_results["results"])
+            prompt = f"Context: {context_text}\n\nQuestion: test query"
+
+            answer = await inference_service.infer(
+                model="qwen-72b-chat",
+                input_data=prompt,
+                model_type="text-generation",
+            )
+
+        assert isinstance(answer, InferenceResult)
+        assert answer.output["generated_text"] is not None

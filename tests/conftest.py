@@ -56,10 +56,9 @@ def setup_test_env():
         'CELERY_BROKER_URL': 'memory://',
         'CELERY_RESULT_BACKEND': 'cache+memory://',
         # 服务 URL 配置
-        'BISHENG_API_URL': 'http://localhost:8081',
-        'ALLDATA_API_URL': 'http://localhost:8082',
-        'ALDATA_API_URL': 'http://localhost:8082',  # config.py 使用此名称
-        'CUBE_API_URL': 'http://localhost:8083',
+        'AGENT_API_URL': 'http://localhost:8081',
+        'DATA_API_URL': 'http://localhost:8082',
+        'MODEL_API_URL': 'http://localhost:8083',
         'ADMIN_API_URL': 'http://localhost:8084',
         'OPENAI_PROXY_URL': 'http://localhost:8085',
         # CORS 配置
@@ -76,10 +75,10 @@ setup_test_env()
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "services"))
-sys.path.insert(0, str(project_root / "services" / "bisheng-api"))
-sys.path.insert(0, str(project_root / "services" / "alldata-api"))
-sys.path.insert(0, str(project_root / "services" / "alldata-api" / "src"))
-sys.path.insert(0, str(project_root / "services" / "cube-api"))
+sys.path.insert(0, str(project_root / "services" / "agent-api"))
+sys.path.insert(0, str(project_root / "services" / "data-api"))
+sys.path.insert(0, str(project_root / "services" / "data-api" / "src"))
+sys.path.insert(0, str(project_root / "services" / "model-api"))
 sys.path.insert(0, str(project_root / "services" / "shared"))
 sys.path.insert(0, str(project_root / "services" / "admin-api"))
 sys.path.insert(0, str(project_root / "services" / "openai-proxy"))
@@ -495,11 +494,11 @@ def api_client_base_url():
 
 
 @pytest.fixture
-def bisheng_api_client(api_client_base_url):
-    """Bisheng API 客户端"""
+def agent_api_client(api_client_base_url):
+    """Agent API 客户端"""
     import requests
 
-    class BishengAPIClient:
+    class AgentAPIClient:
         def __init__(self, base_url):
             self.base_url = base_url
             self.session = requests.Session()
@@ -531,4 +530,4 @@ def bisheng_api_client(api_client_base_url):
         def list_conversations(self):
             return self.get("/api/v1/conversations")
 
-    return BishengAPIClient(api_client_base_url)
+    return AgentAPIClient(api_client_base_url)

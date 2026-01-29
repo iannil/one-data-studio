@@ -1,4 +1,4 @@
-# Alldata 与 Cube Studio 集成方案
+# Data 与 Model 平台集成方案
 
 ## 集成目标
 
@@ -11,7 +11,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                         Alldata                              │
+│                         Data 平台                             │
 │  ┌─────────┐   ┌─────────┐   ┌──────────────┐               │
 │  │ 数据源  │──→│  ETL    │──→│  元数据中心   │               │
 │  └─────────┘   └─────────┘   └──────┬───────┘               │
@@ -20,7 +20,7 @@
                                │ API 调用
                                ↓
 ┌──────────────────────────────────────────────────────────────┐
-│                       Cube Studio                            │
+│                       Model 平台                              │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐     │
 │  │ 元数据中心   │←──│  训练任务    │←──│   Notebook   │     │
 │  │  (同步)      │   │  (挂载数据)  │   │   (开发)     │     │
@@ -41,15 +41,15 @@
 
 ```mermaid
 sequenceDiagram
-    participant ETL as Alldata ETL
+    participant ETL as Data ETL
     participant Storage as MinIO/HDFS
     participant Meta as 元数据中心
-    participant Cube as Cube Studio
+    participant Model as Model 平台
 
     ETL->>Storage: 1. 写入清洗后的数据
     ETL->>Meta: 2. 注册数据集元数据
-    Meta->>Cube: 3. Webhook 通知新数据集
-    Cube->>Cube: 4. 更新数据集列表
+    Meta->>Model: 3. Webhook 通知新数据集
+    Model->>Model: 4. 更新数据集列表
 ```
 
 ### 2. 训练任务数据加载
@@ -70,7 +70,7 @@ sequenceDiagram
 
 ## API 规范
 
-### Alldata 侧：数据集注册
+### Data 平台侧：数据集注册
 
 ```http
 POST /api/v1/datasets/register
@@ -99,7 +99,7 @@ Content-Type: application/json
 }
 ```
 
-### Cube Studio 侧：数据集查询
+### Model 平台侧：数据集查询
 
 ```http
 GET /api/v1/datasets/{dataset_id}
@@ -122,10 +122,10 @@ Accept: application/json
 
 ## SDK 使用示例
 
-### Python SDK (Cube Studio)
+### Python SDK (Model 平台)
 
 ```python
-from cube_sdk import Dataset, TrainingJob
+from model_sdk import Dataset, TrainingJob
 
 # 获取已注册的数据集
 dataset = Dataset.get("sales_training_2024_01")
@@ -167,7 +167,7 @@ job.submit()
     },
     "downstream": {
       "training_jobs": [
-        "cube_job_sales_forecast_v1"
+        "model_job_sales_forecast_v1"
       ],
       "models": [
         "sales_forecast_lstm_v1.0"
@@ -179,28 +179,28 @@ job.submit()
 
 ## 配置清单
 
-### Alldata 配置
+### Data 平台配置
 
 ```yaml
-# Alldata 配置文件
-cube_studio:
+# Data 平台配置文件
+model_platform:
   enabled: true
-  api_endpoint: http://cube-studio-api.kubeflow.svc.cluster.local
-  api_key: ${CUBE_API_KEY}
+  api_endpoint: http://model-api.kubeflow.svc.cluster.local
+  api_key: ${MODEL_API_KEY}
   auto_register_datasets: true
   dataset_tags:
     - training-ready
-    - cube-sync
+    - model-sync
 ```
 
-### Cube Studio 配置
+### Model 平台配置
 
 ```yaml
-# Cube Studio 配置文件
-alldata:
+# Model 平台配置文件
+data_platform:
   enabled: true
-  api_endpoint: http://alldata-api.default.svc.cluster.local
-  webhook_secret: ${ALDATA_WEBHOOK_SECRET}
+  api_endpoint: http://data-api.default.svc.cluster.local
+  webhook_secret: ${DATA_WEBHOOK_SECRET}
   dataset_sync:
     enabled: true
     sync_interval: 300s
@@ -210,14 +210,14 @@ alldata:
 
 ```bash
 # 1. 验证数据集注册
-curl -X POST http://alldata-api/api/v1/datasets/test-register
+curl -X POST http://data-api/api/v1/datasets/test-register
 
-# 2. 验证 Cube Studio 能获取数据集
-curl http://cube-studio-api/api/v1/datasets
+# 2. 验证 Model 平台能获取数据集
+curl http://model-api/api/v1/datasets
 
 # 3. 验证 Notebook 能读取数据
 python -c "
-from cube_sdk import Dataset
+from model_sdk import Dataset
 ds = Dataset.get('test_dataset')
 print(ds.read().head())
 "

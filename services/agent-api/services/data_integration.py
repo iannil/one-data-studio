@@ -1,6 +1,6 @@
 """
-Alldata 客户端集成模块
-Sprint 24: 增强 Alldata → Bisheng 集成
+Data 客户端集成模块
+Sprint 24: 增强 Data → Agent 集成
 
 功能:
 - 元数据查询与缓存
@@ -24,9 +24,9 @@ from abc import ABC, abstractmethod
 logger = logging.getLogger(__name__)
 
 # 配置
-ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
-ALDATA_API_KEY = os.getenv("ALDATA_API_KEY", "")
-ALDATA_TIMEOUT = int(os.getenv("ALDATA_TIMEOUT", "30"))
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+DATA_API_KEY = os.getenv("DATA_API_KEY", "")
+DATA_TIMEOUT = int(os.getenv("DATA_TIMEOUT", "30"))
 
 # SSL 验证
 VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
@@ -169,10 +169,10 @@ def with_retry(config: RetryConfig = None):
     return decorator
 
 
-# ==================== Alldata 客户端 ====================
+# ==================== Data 客户端 ====================
 
-class AlldataClient:
-    """Alldata API 客户端"""
+class DataClient:
+    """Data API 客户端"""
 
     def __init__(
         self,
@@ -182,9 +182,9 @@ class AlldataClient:
         cache_enabled: bool = True,
         cache_ttl: int = 3600
     ):
-        self.base_url = base_url or ALDATA_API_URL
-        self.api_key = api_key or ALDATA_API_KEY
-        self.timeout = timeout or ALDATA_TIMEOUT
+        self.base_url = base_url or DATA_API_URL
+        self.api_key = api_key or DATA_API_KEY
+        self.timeout = timeout or DATA_TIMEOUT
         self.cache_enabled = cache_enabled
 
         # 初始化缓存
@@ -239,8 +239,8 @@ class AlldataClient:
 class MetadataService:
     """元数据查询服务"""
 
-    def __init__(self, client: AlldataClient = None):
-        self.client = client or AlldataClient()
+    def __init__(self, client: DataClient = None):
+        self.client = client or DataClient()
         self._cache = self.client._metadata_cache
 
     async def search_tables(
@@ -370,8 +370,8 @@ class EnhancedVectorSearchService:
     - 结果重排序
     """
 
-    def __init__(self, client: AlldataClient = None):
-        self.client = client or AlldataClient()
+    def __init__(self, client: DataClient = None):
+        self.client = client or DataClient()
 
     async def search(
         self,
@@ -795,22 +795,22 @@ class EnhancedText2SQLService:
 
 # ==================== 统一集成服务 ====================
 
-class AlldataIntegrationService:
-    """Alldata 统一集成服务
+class DataIntegrationService:
+    """Data 统一集成服务
 
-    提供完整的 Alldata → Bisheng 集成能力
+    提供完整的 Data → Agent 集成能力
     """
 
-    _instance: Optional['AlldataIntegrationService'] = None
+    _instance: Optional['DataIntegrationService'] = None
 
     def __init__(self):
-        self.client = AlldataClient()
+        self.client = DataClient()
         self.metadata = MetadataService(self.client)
         self.vector = EnhancedVectorSearchService(self.client)
         self.text2sql = EnhancedText2SQLService(self.metadata)
 
     @classmethod
-    def get_instance(cls) -> 'AlldataIntegrationService':
+    def get_instance(cls) -> 'DataIntegrationService':
         """获取单例实例"""
         if cls._instance is None:
             cls._instance = cls()

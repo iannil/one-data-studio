@@ -1,5 +1,5 @@
 """
-Alldata API - 数据治理与开发平台 API
+Data API - 数据治理与开发平台 API
 Sprint 4.4: 真实 MySQL 数据持久化
 
 功能：
@@ -166,7 +166,7 @@ if PROMETHEUS_ENABLED:
         # 使用新的共享 PrometheusMetrics 模块
         sys.path.insert(0, '/app/shared')
         from prometheus_metrics import PrometheusMetrics, init_metrics
-        metrics = init_metrics(app, service_name="alldata-api")
+        metrics = init_metrics(app, service_name="data-api")
         logger = logging.getLogger(__name__)
         logger.info("Prometheus metrics initialized with shared module")
     except Exception as e:
@@ -174,18 +174,18 @@ if PROMETHEUS_ENABLED:
         try:
             metrics = PrometheusMetrics(
                 app,
-                defaults_prefix='alldata_api',
+                defaults_prefix='data_api',
                 default_label_as_endpoint=True,
             )
             # 自定义指标
-            metrics.info('alldata_api_info', 'Alldata API 信息', version='2.0.0')
+            metrics.info('data_api_info', 'Data API 信息', version='2.0.0')
             logging.getLogger(__name__).warning(f"Using legacy PrometheusMetrics: {e}")
         except Exception as e2:
             logging.getLogger(__name__).error(f"Failed to initialize Prometheus metrics: {e2}")
             metrics = None
 
 # 配置
-ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://keycloak.one-data-system.svc.cluster.local:80")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
@@ -238,7 +238,7 @@ def health():
     health_status = {
         "code": 0,
         "message": "healthy",
-        "service": "alldata-api",
+        "service": "data-api",
         "version": "2.0.0",
         "auth_enabled": AUTH_ENABLED and AUTH_MODE,
         "prometheus_enabled": PROMETHEUS_ENABLED,
@@ -1992,7 +1992,7 @@ def get_etl_task_logs(task_id):
 
 # ============================================
 # Kettle ETL Engine APIs
-# 基于 Alldata 原生 Kettle (Pentaho Data Integration) 能力
+# 基于 Data 平台原生 Kettle (Pentaho Data Integration) 能力
 # ============================================
 
 @app.route("/api/v1/kettle/status", methods=["GET"])
@@ -14651,6 +14651,1731 @@ def remove_kafka_consumer(consumer_id):
 
     except Exception as e:
         logger.error(f"移除 Kafka 消费者失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 审批工作流 API ====================
+
+@app.route("/api/v1/approval/templates", methods=["GET"])
+@require_jwt()
+def list_approval_templates():
+    """获取审批模板列表"""
+    db = next(get_db())
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        templates = engine.list_templates(db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": [t.to_dict() if hasattr(t, 'to_dict') else t for t in templates]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取审批模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/templates", methods=["POST"])
+@require_jwt()
+def create_approval_template():
+    """创建审批模板"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        template = engine.create_template(data, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "审批模板创建成功",
+            "data": template.to_dict() if hasattr(template, 'to_dict') else template
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建审批模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/requests", methods=["POST"])
+@require_jwt()
+def submit_approval_request():
+    """提交审批请求"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        req = engine.submit_request(data, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "审批请求已提交",
+            "data": req.to_dict() if hasattr(req, 'to_dict') else req
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"提交审批请求失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/requests/<request_id>", methods=["GET"])
+@require_jwt()
+def get_approval_request(request_id):
+    """获取审批请求详情"""
+    db = next(get_db())
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        req = engine.get_request_detail(request_id, db_session=db)
+        if not req:
+            return jsonify({"code": 40400, "message": "审批请求不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": req.to_dict() if hasattr(req, 'to_dict') else req
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取审批请求失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/requests/<request_id>/approve", methods=["POST"])
+@require_jwt()
+def process_approval(request_id):
+    """处理审批（批准/拒绝）"""
+    db = next(get_db())
+    data = request.json or {}
+    data["request_id"] = request_id
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        result = engine.process_approval(request_id, data, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "审批处理成功",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"处理审批失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/pending", methods=["GET"])
+@require_jwt()
+def get_pending_approvals():
+    """获取待审批列表"""
+    db = next(get_db())
+    user_id = request.args.get("user_id", "")
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        pending = engine.get_pending_approvals(user_id, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": [p.to_dict() if hasattr(p, 'to_dict') else p for p in pending]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取待审批列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/approval/statistics", methods=["GET"])
+@require_jwt()
+def get_approval_statistics():
+    """获取审批统计"""
+    db = next(get_db())
+    try:
+        from services.approval_workflow_engine import get_approval_workflow_engine
+        engine = get_approval_workflow_engine()
+        stats = engine.get_approval_statistics(db_session=db)
+        return jsonify({"code": 0, "data": stats})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取审批统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== CDC 变更数据捕获 API ====================
+
+@app.route("/api/v1/cdc/tasks", methods=["POST"])
+@require_jwt()
+def create_cdc_task():
+    """创建 CDC 采集任务"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.cdc_service import get_cdc_service, CDCConfig
+        service = get_cdc_service()
+        import secrets
+        cdc_id = data.get("cdc_id") or f"cdc_{secrets.token_hex(8)}"
+        config = CDCConfig(
+            source_type=data.get("source_type", "mysql"),
+            host=data.get("host", "localhost"),
+            port=data.get("port", 3306),
+            database=data.get("database", ""),
+            username=data.get("username", ""),
+            password=data.get("password", ""),
+            tables=data.get("tables", []),
+        )
+        result = service.create_cdc_task(cdc_id, config)
+        return jsonify({
+            "code": 0,
+            "message": "CDC 任务创建成功",
+            "data": {"cdc_id": cdc_id, "success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建 CDC 任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/tasks/<cdc_id>/start", methods=["POST"])
+@require_jwt()
+def start_cdc_task(cdc_id):
+    """启动 CDC 任务"""
+    db = next(get_db())
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        result = service.start_cdc_task(cdc_id)
+        return jsonify({
+            "code": 0,
+            "message": "CDC 任务已启动",
+            "data": {"cdc_id": cdc_id, "success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"启动 CDC 任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/tasks/<cdc_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_cdc_task(cdc_id):
+    """停止 CDC 任务"""
+    db = next(get_db())
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        service.stop_cdc_task(cdc_id)
+        return jsonify({
+            "code": 0,
+            "message": "CDC 任务已停止",
+            "data": {"cdc_id": cdc_id}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"停止 CDC 任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/tasks/<cdc_id>/metrics", methods=["GET"])
+@require_jwt()
+def get_cdc_metrics(cdc_id):
+    """获取 CDC 任务指标"""
+    db = next(get_db())
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        metrics_data = service.get_metrics(cdc_id)
+        if not metrics_data:
+            return jsonify({"code": 40400, "message": "CDC 任务不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": metrics_data.to_dict() if hasattr(metrics_data, 'to_dict') else metrics_data
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 CDC 指标失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/metrics", methods=["GET"])
+@require_jwt()
+def get_all_cdc_metrics():
+    """获取所有 CDC 任务指标"""
+    db = next(get_db())
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        all_metrics = service.get_all_metrics()
+        return jsonify({
+            "code": 0,
+            "data": {k: v.to_dict() if hasattr(v, 'to_dict') else v for k, v in all_metrics.items()}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取所有 CDC 指标失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/tasks/<cdc_id>/events", methods=["GET"])
+@require_jwt()
+def get_cdc_events(cdc_id):
+    """获取 CDC 缓冲事件"""
+    db = next(get_db())
+    limit = request.args.get("limit", 100, type=int)
+    clear = request.args.get("clear", "false").lower() == "true"
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        events = service.get_buffered_events(cdc_id, limit=limit, clear=clear)
+        return jsonify({"code": 0, "data": events})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 CDC 事件失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/cdc/tasks/<cdc_id>", methods=["DELETE"])
+@require_jwt()
+def remove_cdc_task(cdc_id):
+    """删除 CDC 任务"""
+    db = next(get_db())
+    try:
+        from services.cdc_service import get_cdc_service
+        service = get_cdc_service()
+        service.remove_cdc_task(cdc_id)
+        return jsonify({"code": 0, "message": "CDC 任务已删除"})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"删除 CDC 任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 表融合推荐 API ====================
+
+@app.route("/api/v1/table-fusion/join-keys", methods=["POST"])
+@require_jwt()
+def detect_join_keys():
+    """检测潜在 JOIN 键"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.table_fusion_service import get_table_fusion_service
+        service = get_table_fusion_service()
+        table1 = data.get("table1")
+        table2 = data.get("table2")
+        threshold = data.get("similarity_threshold", 0.6)
+        if not table1 or not table2:
+            return jsonify({"code": 40001, "message": "table1 和 table2 不能为空"}), 400
+        keys = service.detect_potential_join_keys(table1, table2, threshold, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": [k.to_dict() if hasattr(k, 'to_dict') else k for k in keys]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"检测 JOIN 键失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/table-fusion/join-quality", methods=["POST"])
+@require_jwt()
+def validate_join_quality():
+    """验证 JOIN 一致性"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.table_fusion_service import get_table_fusion_service
+        service = get_table_fusion_service()
+        table1 = data.get("table1")
+        table2 = data.get("table2")
+        join_keys = data.get("join_keys", [])
+        if not table1 or not table2 or not join_keys:
+            return jsonify({"code": 40001, "message": "table1, table2, join_keys 不能为空"}), 400
+        score = service.validate_join_consistency(table1, table2, join_keys, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": score.to_dict() if hasattr(score, 'to_dict') else score
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"验证 JOIN 一致性失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/table-fusion/recommend", methods=["POST"])
+@require_jwt()
+def recommend_join_strategy():
+    """推荐 JOIN 策略"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.table_fusion_service import get_table_fusion_service
+        service = get_table_fusion_service()
+        table1 = data.get("table1")
+        table2 = data.get("table2")
+        if not table1 or not table2:
+            return jsonify({"code": 40001, "message": "table1 和 table2 不能为空"}), 400
+        rec = service.recommend_join_strategy(table1, table2, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": rec.to_dict() if hasattr(rec, 'to_dict') else rec
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"推荐 JOIN 策略失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/table-fusion/multi-path", methods=["POST"])
+@require_jwt()
+def detect_multi_table_join_path():
+    """检测多表 JOIN 路径"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.table_fusion_service import get_table_fusion_service
+        service = get_table_fusion_service()
+        tables = data.get("tables", [])
+        if len(tables) < 2:
+            return jsonify({"code": 40001, "message": "至少需要两个表"}), 400
+        path = service.detect_multi_table_join_path(tables, db_session=db)
+        return jsonify({"code": 0, "data": path})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"检测多表 JOIN 路径失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/table-fusion/kettle-config", methods=["POST"])
+@require_jwt()
+def generate_kettle_join_config():
+    """生成 Kettle JOIN 配置"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.table_fusion_service import get_table_fusion_service
+        service = get_table_fusion_service()
+        table1 = data.get("table1")
+        table2 = data.get("table2")
+        join_keys = data.get("join_keys", [])
+        if not table1 or not table2 or not join_keys:
+            return jsonify({"code": 40001, "message": "table1, table2, join_keys 不能为空"}), 400
+        config_xml = service.generate_kettle_join_config(table1, table2, join_keys, db_session=db)
+        return jsonify({"code": 0, "data": {"xml": config_xml}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"生成 Kettle JOIN 配置失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 元数据自动扫描 API ====================
+
+@app.route("/api/v1/metadata/auto-scan", methods=["POST"])
+@require_jwt()
+def trigger_metadata_scan():
+    """触发元数据自动扫描"""
+    db = next(get_db())
+    data = request.json or {}
+    try:
+        from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+        engine = get_metadata_auto_scan_engine()
+        database = data.get("database", "")
+        schema = data.get("schema", "public")
+        if not database:
+            return jsonify({"code": 40001, "message": "database 不能为空"}), 400
+        result = engine.scan_database(database, schema, db_session=db)
+        return jsonify({"code": 0, "message": "扫描完成", "data": result})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"元数据扫描失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/auto-scan/history", methods=["GET"])
+@require_jwt()
+def get_scan_history():
+    """获取扫描历史"""
+    db = next(get_db())
+    database = request.args.get("database", "")
+    limit = request.args.get("limit", 20, type=int)
+    try:
+        from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+        engine = get_metadata_auto_scan_engine()
+        history = engine.get_scan_history(database, limit=limit, db_session=db)
+        return jsonify({"code": 0, "data": history})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取扫描历史失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/auto-scan/changes", methods=["POST"])
+@require_jwt()
+def detect_metadata_changes():
+    """检测元数据变更"""
+    db = next(get_db())
+    data = request.json or {}
+    try:
+        from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+        engine = get_metadata_auto_scan_engine()
+        database = data.get("database", "")
+        schema = data.get("schema", "public")
+        if not database:
+            return jsonify({"code": 40001, "message": "database 不能为空"}), 400
+        report = engine.detect_changes(database, schema, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": report.to_dict() if hasattr(report, 'to_dict') else report
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"检测元数据变更失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/auto-scan/profile", methods=["POST"])
+@require_jwt()
+def scan_and_profile():
+    """扫描并生成 Profile"""
+    db = next(get_db())
+    data = request.json or {}
+    try:
+        from services.metadata_auto_scan_engine import get_metadata_auto_scan_engine
+        engine = get_metadata_auto_scan_engine()
+        database = data.get("database", "")
+        schema = data.get("schema", "public")
+        tables = data.get("tables", [])
+        if not database:
+            return jsonify({"code": 40001, "message": "database 不能为空"}), 400
+        result = engine.scan_and_profile(database, schema, tables=tables, db_session=db)
+        return jsonify({"code": 0, "data": result})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"扫描 Profile 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 元数据 Schema 提供 API ====================
+
+@app.route("/api/v1/metadata/schema-selection", methods=["POST"])
+@require_jwt()
+def get_schema_for_question():
+    """为自然语言问题选择相关 Schema"""
+    db = next(get_db())
+    data = request.json or {}
+    try:
+        from services.metadata_schema_provider import get_schema_provider
+        provider = get_schema_provider()
+        question = data.get("question", "")
+        limit = data.get("limit", 5)
+        if not question:
+            return jsonify({"code": 40001, "message": "question 不能为空"}), 400
+        result = provider.get_schema_for_question(question, limit=limit, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": result.to_dict() if hasattr(result, 'to_dict') else result
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Schema 选择失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/metadata/table-suggestions", methods=["GET"])
+@require_jwt()
+def get_table_suggestions():
+    """获取表建议"""
+    db = next(get_db())
+    question = request.args.get("question", "")
+    top_k = request.args.get("top_k", 5, type=int)
+    try:
+        from services.metadata_schema_provider import get_schema_provider
+        provider = get_schema_provider()
+        if not question:
+            return jsonify({"code": 40001, "message": "question 不能为空"}), 400
+        suggestions = provider.get_table_suggestions(question, top_k=top_k, db_session=db)
+        return jsonify({
+            "code": 0,
+            "data": [s.to_dict() if hasattr(s, 'to_dict') else s for s in suggestions]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取表建议失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== OpenLineage 事件 API ====================
+
+@app.route("/api/v1/lineage/events", methods=["POST"])
+@require_jwt()
+def emit_lineage_event():
+    """发送血缘事件"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        result = service.emit_event(data)
+        return jsonify({
+            "code": 0,
+            "message": "事件已发送",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"发送血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/events/batch", methods=["POST"])
+@require_jwt()
+def emit_lineage_events_batch():
+    """批量发送血缘事件"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        events = data.get("events", [])
+        result = service.emit_batch(events)
+        return jsonify({
+            "code": 0,
+            "message": "批量事件已发送",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"批量发送血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/upstream/<path:dataset>", methods=["GET"])
+@require_jwt()
+def get_lineage_upstream(dataset):
+    """获取上游血缘"""
+    db = next(get_db())
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        upstream = service.get_upstream(dataset)
+        return jsonify({"code": 0, "data": upstream})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取上游血缘失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/downstream/<path:dataset>", methods=["GET"])
+@require_jwt()
+def get_lineage_downstream(dataset):
+    """获取下游血缘"""
+    db = next(get_db())
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        downstream = service.get_downstream(dataset)
+        return jsonify({"code": 0, "data": downstream})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取下游血缘失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/impact/<path:dataset>", methods=["GET"])
+@require_jwt()
+def get_lineage_impact(dataset):
+    """获取影响分析"""
+    db = next(get_db())
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        impact = service.get_impact_analysis(dataset)
+        return jsonify({"code": 0, "data": impact})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取影响分析失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/events/recent", methods=["GET"])
+@require_jwt()
+def get_recent_lineage_events():
+    """获取最近血缘事件"""
+    db = next(get_db())
+    limit = request.args.get("limit", 50, type=int)
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        events = service.get_recent_events(limit=limit)
+        return jsonify({"code": 0, "data": events})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取最近血缘事件失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/lineage/service/health", methods=["GET"])
+@require_jwt()
+def get_lineage_service_health():
+    """获取血缘服务健康状态"""
+    db = next(get_db())
+    try:
+        from services.openlineage_event_service import get_openlineage_event_service
+        service = get_openlineage_event_service()
+        health = service.health_check()
+        return jsonify({"code": 0, "data": health})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取血缘服务健康状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 扫描调度器 API ====================
+
+@app.route("/api/v1/scan-scheduler/jobs", methods=["POST"])
+@require_jwt()
+def register_scan_job():
+    """注册扫描任务"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.scan_scheduler import get_scan_scheduler
+        scheduler = get_scan_scheduler()
+        database = data.get("database", "")
+        schema = data.get("schema", "public")
+        cron_expr = data.get("cron_expression", "0 2 * * *")
+        if not database:
+            return jsonify({"code": 40001, "message": "database 不能为空"}), 400
+        job_id = scheduler.register_scan_job(database, schema, cron_expr)
+        return jsonify({
+            "code": 0,
+            "message": "扫描任务已注册",
+            "data": {"job_id": job_id}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"注册扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scan-scheduler/jobs", methods=["GET"])
+@require_jwt()
+def list_scan_jobs():
+    """获取已注册的扫描任务"""
+    db = next(get_db())
+    try:
+        from services.scan_scheduler import get_scan_scheduler
+        scheduler = get_scan_scheduler()
+        jobs = scheduler.get_registered_jobs()
+        return jsonify({"code": 0, "data": jobs})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取扫描任务列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scan-scheduler/jobs/<job_id>", methods=["GET"])
+@require_jwt()
+def get_scan_job_status(job_id):
+    """获取扫描任务状态"""
+    db = next(get_db())
+    try:
+        from services.scan_scheduler import get_scan_scheduler
+        scheduler = get_scan_scheduler()
+        status = scheduler.get_job_status(job_id)
+        if not status:
+            return jsonify({"code": 40400, "message": "任务不存在"}), 404
+        return jsonify({"code": 0, "data": status})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取扫描任务状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scan-scheduler/jobs/<job_id>/trigger", methods=["POST"])
+@require_jwt()
+def trigger_scan_job(job_id):
+    """立即触发扫描任务"""
+    db = next(get_db())
+    try:
+        from services.scan_scheduler import get_scan_scheduler
+        scheduler = get_scan_scheduler()
+        result = scheduler.trigger_scan_now(job_id)
+        return jsonify({
+            "code": 0,
+            "message": "扫描任务已触发",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"触发扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/scan-scheduler/jobs/<job_id>", methods=["DELETE"])
+@require_jwt()
+def remove_scan_job(job_id):
+    """删除扫描任务"""
+    db = next(get_db())
+    try:
+        from services.scan_scheduler import get_scan_scheduler
+        scheduler = get_scan_scheduler()
+        result = scheduler.remove_scan_job(job_id)
+        return jsonify({"code": 0, "message": "扫描任务已删除", "data": {"success": result}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"删除扫描任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== AI 预测服务 API ====================
+
+@app.route("/api/v1/prediction/models", methods=["GET"])
+@require_jwt()
+def list_prediction_models():
+    """获取预测模型列表"""
+    db = next(get_db())
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        models = service.list_models()
+        return jsonify({
+            "code": 0,
+            "data": [m.to_dict() if hasattr(m, 'to_dict') else m for m in models]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取预测模型列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models", methods=["POST"])
+@require_jwt()
+def create_prediction_model():
+    """创建预测模型"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        model = service.create_model(data)
+        return jsonify({
+            "code": 0,
+            "message": "预测模型创建成功",
+            "data": model.to_dict() if hasattr(model, 'to_dict') else model
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建预测模型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models/<model_id>", methods=["GET"])
+@require_jwt()
+def get_prediction_model(model_id):
+    """获取预测模型详情"""
+    db = next(get_db())
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        model = service.get_model(model_id)
+        if not model:
+            return jsonify({"code": 40400, "message": "模型不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": model.to_dict() if hasattr(model, 'to_dict') else model
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取预测模型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models/<model_id>/train", methods=["POST"])
+@require_jwt()
+def train_prediction_model(model_id):
+    """训练预测模型"""
+    db = next(get_db())
+    data = request.json or {}
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        result = service.train_model(model_id, data)
+        return jsonify({
+            "code": 0,
+            "message": "模型训练已启动",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"训练预测模型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models/<model_id>/predict", methods=["POST"])
+@require_jwt()
+def run_prediction(model_id):
+    """执行预测"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        result = service.predict(model_id, data)
+        return jsonify({
+            "code": 0,
+            "data": result.to_dict() if hasattr(result, 'to_dict') else result
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"执行预测失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models/<model_id>/deploy", methods=["POST"])
+@require_jwt()
+def deploy_prediction_model(model_id):
+    """部署预测模型"""
+    db = next(get_db())
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        result = service.deploy_model(model_id)
+        return jsonify({
+            "code": 0,
+            "message": "模型部署成功",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"部署预测模型失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/prediction/models/<model_id>/statistics", methods=["GET"])
+@require_jwt()
+def get_prediction_statistics(model_id):
+    """获取预测模型统计"""
+    db = next(get_db())
+    try:
+        from services.ai_prediction_service import get_ai_prediction_service
+        service = get_ai_prediction_service()
+        stats = service.get_statistics(model_id)
+        return jsonify({"code": 0, "data": stats})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取预测统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 采集调度器 API ====================
+
+@app.route("/api/v1/collection/tasks", methods=["POST"])
+@require_jwt()
+def create_collection_task():
+    """创建采集任务"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        task_id = scheduler.create_task(data)
+        return jsonify({
+            "code": 0,
+            "message": "采集任务创建成功",
+            "data": {"task_id": task_id}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建采集任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks", methods=["GET"])
+@require_jwt()
+def list_collection_tasks():
+    """获取采集任务列表"""
+    db = next(get_db())
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        tasks = scheduler.list_tasks()
+        return jsonify({
+            "code": 0,
+            "data": [t.to_dict() if hasattr(t, 'to_dict') else t for t in tasks]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取采集任务列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks/<task_id>", methods=["GET"])
+@require_jwt()
+def get_collection_task(task_id):
+    """获取采集任务详情"""
+    db = next(get_db())
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        task = scheduler.get_task(task_id)
+        if not task:
+            return jsonify({"code": 40400, "message": "任务不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": task.to_dict() if hasattr(task, 'to_dict') else task
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取采集任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks/<task_id>", methods=["PUT"])
+@require_jwt()
+def update_collection_task(task_id):
+    """更新采集任务"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        result = scheduler.update_task(task_id, data)
+        return jsonify({
+            "code": 0,
+            "message": "采集任务更新成功",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"更新采集任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks/<task_id>", methods=["DELETE"])
+@require_jwt()
+def delete_collection_task(task_id):
+    """删除采集任务"""
+    db = next(get_db())
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        result = scheduler.delete_task(task_id)
+        return jsonify({"code": 0, "message": "采集任务已删除", "data": {"success": result}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"删除采集任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks/<task_id>/trigger", methods=["POST"])
+@require_jwt()
+def trigger_collection_task(task_id):
+    """立即触发采集任务"""
+    db = next(get_db())
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        result = scheduler.trigger_task(task_id)
+        return jsonify({
+            "code": 0,
+            "message": "采集任务已触发",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"触发采集任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/tasks/<task_id>/history", methods=["GET"])
+@require_jwt()
+def get_collection_history(task_id):
+    """获取采集执行历史"""
+    db = next(get_db())
+    limit = request.args.get("limit", 20, type=int)
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        history = scheduler.get_execution_history(task_id, limit=limit)
+        return jsonify({
+            "code": 0,
+            "data": [h.to_dict() if hasattr(h, 'to_dict') else h for h in history]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取采集执行历史失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/collection/statistics", methods=["GET"])
+@require_jwt()
+def get_collection_statistics():
+    """获取采集统计"""
+    db = next(get_db())
+    try:
+        from services.collection_scheduler_service import get_collection_scheduler
+        scheduler = get_collection_scheduler()
+        stats = scheduler.get_statistics()
+        return jsonify({"code": 0, "data": stats})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取采集统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== IM 机器人通知 API ====================
+
+@app.route("/api/v1/im-robots", methods=["GET"])
+@require_jwt()
+def list_im_robots():
+    """获取 IM 机器人列表"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        robots = service.list_robots()
+        return jsonify({"code": 0, "data": robots})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 IM 机器人列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots", methods=["POST"])
+@require_jwt()
+def create_im_robot():
+    """创建 IM 机器人"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        robot = service.create_robot(data)
+        return jsonify({
+            "code": 0,
+            "message": "IM 机器人创建成功",
+            "data": robot
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>", methods=["GET"])
+@require_jwt()
+def get_im_robot(robot_id):
+    """获取 IM 机器人详情"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        robot = service.get_robot(robot_id)
+        if not robot:
+            return jsonify({"code": 40400, "message": "机器人不存在"}), 404
+        return jsonify({"code": 0, "data": robot})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>", methods=["PUT"])
+@require_jwt()
+def update_im_robot(robot_id):
+    """更新 IM 机器人"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.update_robot(robot_id, data)
+        return jsonify({
+            "code": 0,
+            "message": "IM 机器人更新成功",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"更新 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>", methods=["DELETE"])
+@require_jwt()
+def delete_im_robot(robot_id):
+    """删除 IM 机器人"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.delete_robot(robot_id)
+        return jsonify({"code": 0, "message": "IM 机器人已删除", "data": {"success": result}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"删除 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>/enable", methods=["POST"])
+@require_jwt()
+def enable_im_robot(robot_id):
+    """启用 IM 机器人"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.enable_robot(robot_id)
+        return jsonify({"code": 0, "message": "机器人已启用", "data": {"success": result}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"启用 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>/disable", methods=["POST"])
+@require_jwt()
+def disable_im_robot(robot_id):
+    """禁用 IM 机器人"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.disable_robot(robot_id)
+        return jsonify({"code": 0, "message": "机器人已禁用", "data": {"success": result}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"禁用 IM 机器人失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>/send", methods=["POST"])
+@require_jwt()
+def send_im_notification(robot_id):
+    """通过 IM 机器人发送通知"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.send_notification(robot_id, data)
+        return jsonify({
+            "code": 0,
+            "message": "通知已发送",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"发送 IM 通知失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/broadcast", methods=["POST"])
+@require_jwt()
+def broadcast_im_notification():
+    """广播通知到所有 IM 机器人"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.send_to_all(data)
+        return jsonify({
+            "code": 0,
+            "message": "广播通知已发送",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"广播通知失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/<robot_id>/records", methods=["GET"])
+@require_jwt()
+def get_im_records(robot_id):
+    """获取 IM 发送记录"""
+    db = next(get_db())
+    limit = request.args.get("limit", 50, type=int)
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        records = service.get_records(robot_id, limit=limit)
+        return jsonify({
+            "code": 0,
+            "data": [r.to_dict() if hasattr(r, 'to_dict') else r for r in records]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 IM 发送记录失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/statistics", methods=["GET"])
+@require_jwt()
+def get_im_statistics():
+    """获取 IM 机器人统计"""
+    db = next(get_db())
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        stats = service.get_statistics()
+        return jsonify({"code": 0, "data": stats})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 IM 统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/im-robots/callback", methods=["POST"])
+def handle_im_callback():
+    """处理 IM 平台回调"""
+    data = request.json or {}
+    try:
+        from services.im_robot_service import get_im_robot_service
+        service = get_im_robot_service()
+        result = service.handle_callback(data)
+        return jsonify({"code": 0, "data": result})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"处理 IM 回调失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== Kettle 编排 API ====================
+
+@app.route("/api/v1/kettle/orchestrate", methods=["POST"])
+@require_jwt()
+def kettle_orchestrate():
+    """执行 Kettle 编排"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        result = service.orchestrate(data)
+        return jsonify({
+            "code": 0,
+            "message": "编排任务已提交",
+            "data": result.to_dict() if hasattr(result, 'to_dict') else result
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Kettle 编排失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/kettle/tasks", methods=["GET"])
+@require_jwt()
+def list_kettle_tasks():
+    """获取 Kettle 编排任务列表"""
+    db = next(get_db())
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        tasks = service.list_tasks()
+        return jsonify({
+            "code": 0,
+            "data": [t.to_dict() if hasattr(t, 'to_dict') else t for t in tasks]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 Kettle 任务列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/kettle/tasks/<task_id>", methods=["GET"])
+@require_jwt()
+def get_kettle_task(task_id):
+    """获取 Kettle 任务详情"""
+    db = next(get_db())
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        task = service.get_task(task_id)
+        if not task:
+            return jsonify({"code": 40400, "message": "任务不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": task.to_dict() if hasattr(task, 'to_dict') else task
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 Kettle 任务失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/kettle/tasks/<task_id>/xml", methods=["GET"])
+@require_jwt()
+def get_kettle_xml(task_id):
+    """获取 Kettle 转换 XML"""
+    db = next(get_db())
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        xml = service.get_transformation_xml(task_id)
+        if not xml:
+            return jsonify({"code": 40400, "message": "XML 不存在"}), 404
+        return jsonify({"code": 0, "data": {"xml": xml}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 Kettle XML 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/kettle/quality-reports", methods=["GET"])
+@require_jwt()
+def list_kettle_quality_reports():
+    """获取 Kettle 数据质量报告列表"""
+    db = next(get_db())
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        reports = service.list_quality_reports()
+        return jsonify({
+            "code": 0,
+            "data": [r.to_dict() if hasattr(r, 'to_dict') else r for r in reports]
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取质量报告列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/kettle/tasks/<task_id>/quality-report", methods=["GET"])
+@require_jwt()
+def get_kettle_quality_report(task_id):
+    """获取 Kettle 任务的质量报告"""
+    db = next(get_db())
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        report = service.get_quality_report(task_id)
+        if not report:
+            return jsonify({"code": 40400, "message": "报告不存在"}), 404
+        return jsonify({
+            "code": 0,
+            "data": report.to_dict() if hasattr(report, 'to_dict') else report
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取质量报告失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# ==================== 统一认证 API ====================
+
+@app.route("/api/v1/auth/clients", methods=["GET"])
+@require_jwt()
+def list_auth_clients():
+    """获取认证客户端列表"""
+    db = next(get_db())
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        clients = service.list_clients(db_session=db)
+        return jsonify({"code": 0, "data": clients})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取认证客户端列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/clients", methods=["POST"])
+@require_jwt()
+def register_auth_client():
+    """注册认证客户端"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        result = service.register_client(data, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "客户端注册成功",
+            "data": result
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"注册认证客户端失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/api-keys", methods=["POST"])
+@require_jwt()
+def create_api_key():
+    """创建 API Key"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        user_id = data.get("user_id", "")
+        api_key = service.create_api_key(user_id, data, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "API Key 创建成功",
+            "data": {"api_key": api_key}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"创建 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/api-keys", methods=["GET"])
+@require_jwt()
+def list_api_keys_auth():
+    """获取 API Key 列表"""
+    db = next(get_db())
+    user_id = request.args.get("user_id", "")
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        keys = service.list_api_keys(user_id, db_session=db)
+        return jsonify({"code": 0, "data": keys})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 API Key 列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/api-keys/validate", methods=["POST"])
+def validate_api_key():
+    """验证 API Key"""
+    data = request.json
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        api_key = data.get("api_key", "")
+        result = service.validate_api_key(api_key)
+        if not result:
+            return jsonify({"code": 40100, "message": "API Key 无效"}), 401
+        return jsonify({"code": 0, "data": result})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"验证 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/auth/api-keys/revoke", methods=["POST"])
+@require_jwt()
+def revoke_api_key():
+    """撤销 API Key"""
+    db = next(get_db())
+    data = request.json
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        api_key = data.get("api_key", "")
+        result = service.revoke_api_key(api_key, db_session=db)
+        return jsonify({
+            "code": 0,
+            "message": "API Key 已撤销",
+            "data": {"success": result}
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"撤销 API Key 失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/statistics", methods=["GET"])
+@require_jwt()
+def get_auth_statistics():
+    """获取认证统计"""
+    db = next(get_db())
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        stats = service.get_auth_statistics(db_session=db)
+        return jsonify({"code": 0, "data": stats})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取认证统计失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/audit-logs", methods=["GET"])
+@require_jwt()
+def get_auth_audit_logs():
+    """获取认证审计日志"""
+    db = next(get_db())
+    limit = request.args.get("limit", 100, type=int)
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        logs = service.get_auth_audit_logs(limit=limit, db_session=db)
+        return jsonify({"code": 0, "data": logs})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取认证审计日志失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/api/v1/auth/sessions", methods=["GET"])
+@require_jwt()
+def get_active_sessions():
+    """获取活跃会话"""
+    db = next(get_db())
+    try:
+        from services.unified_auth_service import get_unified_auth_service
+        service = get_unified_auth_service()
+        sessions = service.get_active_sessions(db_session=db)
+        return jsonify({"code": 0, "data": sessions})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取活跃会话失败: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
     finally:
         db.close()

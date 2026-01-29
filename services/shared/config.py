@@ -26,7 +26,7 @@ class DatabaseConfig:
     port: int = field(default_factory=lambda: int(os.getenv('MYSQL_PORT', '3306')))
     user: str = field(default_factory=lambda: os.getenv('MYSQL_USER', 'one_data'))
     password: str = field(default_factory=lambda: os.getenv('MYSQL_PASSWORD', ''))
-    database: str = field(default_factory=lambda: os.getenv('MYSQL_DATABASE', 'one_data_bisheng'))
+    database: str = field(default_factory=lambda: os.getenv('MYSQL_DATABASE', 'one_data_agent'))
 
     # 连接池配置
     pool_size: int = field(default_factory=lambda: int(os.getenv('DB_POOL_SIZE', '10')))
@@ -69,7 +69,7 @@ class MinIOConfig:
     endpoint: str = field(default_factory=lambda: os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000'))
     access_key: str = field(default_factory=lambda: os.getenv('MINIO_ACCESS_KEY', ''))
     secret_key: str = field(default_factory=lambda: os.getenv('MINIO_SECRET_KEY', ''))
-    default_bucket: str = field(default_factory=lambda: os.getenv('MINIO_DEFAULT_BUCKET', 'alldata'))
+    default_bucket: str = field(default_factory=lambda: os.getenv('MINIO_DEFAULT_BUCKET', 'one-data'))
     use_ssl: bool = field(default_factory=lambda: os.getenv('MINIO_USE_SSL', 'false').lower() == 'true')
 
     def __post_init__(self):
@@ -481,9 +481,9 @@ class JWTConfig:
 @dataclass
 class ServiceConfig:
     """服务间调用配置"""
-    alldata_api_url: str = field(default_factory=lambda: os.getenv('ALDATA_API_URL', 'http://alldata-api:8080'))
-    bisheng_api_url: str = field(default_factory=lambda: os.getenv('BISHENG_API_URL', 'http://bisheng-api:8081'))
-    cube_api_url: str = field(default_factory=lambda: os.getenv('CUBE_API_URL', 'http://vllm-serving:8000'))
+    data_api_url: str = field(default_factory=lambda: os.getenv('DATA_API_URL', 'http://data-api:8080'))
+    agent_api_url: str = field(default_factory=lambda: os.getenv('AGENT_API_URL', 'http://agent-api:8081'))
+    model_api_url: str = field(default_factory=lambda: os.getenv('MODEL_API_URL', 'http://vllm-serving:8000'))
     openai_proxy_url: str = field(default_factory=lambda: os.getenv('OPENAI_PROXY_URL', 'http://openai-proxy:8000'))
 
 
@@ -683,9 +683,9 @@ class Config:
                 'client_id': self.keycloak.client_id
             },
             'service': {
-                'alldata_api_url': self.service.alldata_api_url,
-                'bisheng_api_url': self.service.bisheng_api_url,
-                'cube_api_url': self.service.cube_api_url
+                'data_api_url': self.service.data_api_url,
+                'agent_api_url': self.service.agent_api_url,
+                'model_api_url': self.service.model_api_url
             }
         }
 
@@ -694,7 +694,7 @@ class Config:
         获取服务 URL
 
         Args:
-            service_name: 服务名称 (alldata, bisheng, cube, openai_proxy)
+            service_name: 服务名称 (data, agent, model, openai_proxy)
 
         Returns:
             服务 URL

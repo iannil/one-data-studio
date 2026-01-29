@@ -1,15 +1,15 @@
 /**
- * Bisheng LLMOps 页面 E2E 验收测试
+ * Agent LLMOps 页面 E2E 验收测试
  * 测试提示词管理、知识库、应用编排等 LLMOps 功能
  */
 
 import { test, expect } from '@playwright/test';
 import { setupAuth, setupCommonMocks, BASE_URL } from './helpers';
 
-test.describe('Bisheng - Prompts', () => {
+test.describe('Agent - Prompts', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/bisheng/prompts', async (route) => {
+    page.route('**/api/v1/agent/prompts', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -29,21 +29,21 @@ test.describe('Bisheng - Prompts', () => {
 
   test('should display prompts page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/prompts`);
+    await page.goto(`${BASE_URL}/agent-platform/prompts`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create prompt button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/prompts`);
+    await page.goto(`${BASE_URL}/agent-platform/prompts`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Bisheng - Knowledge', () => {
+test.describe('Agent - Knowledge', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/bisheng/knowledge', async (route) => {
+    page.route('**/api/v1/agent/knowledge', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -63,21 +63,21 @@ test.describe('Bisheng - Knowledge', () => {
 
   test('should display knowledge page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/knowledge`);
+    await page.goto(`${BASE_URL}/agent-platform/knowledge`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create knowledge base button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/knowledge`);
+    await page.goto(`${BASE_URL}/agent-platform/knowledge`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Bisheng - Apps', () => {
+test.describe('Agent - Apps', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/bisheng/apps', async (route) => {
+    page.route('**/api/v1/agent/apps', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -97,21 +97,21 @@ test.describe('Bisheng - Apps', () => {
 
   test('should display apps page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/apps`);
+    await page.goto(`${BASE_URL}/agent-platform/apps`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create app button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/apps`);
+    await page.goto(`${BASE_URL}/agent-platform/apps`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Bisheng - Evaluation', () => {
+test.describe('Agent - Evaluation', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/bisheng/evaluations', async (route) => {
+    page.route('**/api/v1/agent/evaluations', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -131,21 +131,21 @@ test.describe('Bisheng - Evaluation', () => {
 
   test('should display evaluation page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/evaluation`);
+    await page.goto(`${BASE_URL}/agent-platform/evaluation`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create evaluation button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/evaluation`);
+    await page.goto(`${BASE_URL}/agent-platform/evaluation`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Bisheng - SFT', () => {
+test.describe('Agent - SFT', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/bisheng/sft', async (route) => {
+    page.route('**/api/v1/agent/sft', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -165,13 +165,13 @@ test.describe('Bisheng - SFT', () => {
 
   test('should display SFT page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/sft`);
+    await page.goto(`${BASE_URL}/agent-platform/sft`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create SFT job button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/bisheng/sft`);
+    await page.goto(`${BASE_URL}/agent-platform/sft`);
     await expect(page.locator('body')).toBeVisible();
   });
 });

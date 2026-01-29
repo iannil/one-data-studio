@@ -219,7 +219,7 @@ function HomePage() {
       <div style={{ marginBottom: '24px' }}>
         <Title level={2}>工作台</Title>
         <Paragraph type="secondary" style={{ fontSize: '16px' }}>
-          统一数据 + AI + LLM 融合平台，整合 Alldata、Cube Studio 和 Bisheng 三大平台能力
+          统一数据 + AI + LLM 融合平台
         </Paragraph>
       </div>
 

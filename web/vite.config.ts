@@ -34,7 +34,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     proxy: {
-      // Alldata API
+      // Data API
       '/api/v1/datasets': {
         target: 'http://localhost:8001',
         changeOrigin: true,
@@ -105,12 +105,12 @@ export default defineConfig({
         target: 'http://localhost:8003',
         changeOrigin: true,
       },
-      // Cube Studio API (model management)
+      // Model API (model management)
       '/api/v1/models': {
         target: 'http://localhost:8002',
         changeOrigin: true,
       },
-      // Bisheng API - all other /api/v1/* routes
+      // Agent API - all other /api/v1/* routes
       '/api/v1': {
         target: 'http://localhost:8000',
         changeOrigin: true,

@@ -73,10 +73,10 @@ class PrometheusMetrics:
     Prometheus 指标收集器
 
     用法：
-        metrics = PrometheusMetrics(app, service_name="alldata-api")
+        metrics = PrometheusMetrics(app, service_name="data-api")
         或
         metrics = PrometheusMetrics()
-        metrics.init_app(app, service_name="alldata-api")
+        metrics.init_app(app, service_name="data-api")
     """
 
     def __init__(self, app: Optional[Flask] = None, service_name: str = "api"):

@@ -1,15 +1,15 @@
 /**
- * Alldata DataOps 页面 E2E 验收测试
+ * Data DataOps 页面 E2E 验收测试
  * 测试数据治理、ETL、质量监控等 DataOps 功能
  */
 
 import { test, expect } from '@playwright/test';
 import { setupAuth, setupCommonMocks, BASE_URL } from './helpers';
 
-test.describe('Alldata - Data Sources', () => {
+test.describe('Data - Data Sources', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/datasources', async (route) => {
+    page.route('**/api/v1/data/datasources', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -29,21 +29,21 @@ test.describe('Alldata - Data Sources', () => {
 
   test('should display datasources page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    await page.goto(`${BASE_URL}/data/datasources`);
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have add datasource button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    await page.goto(`${BASE_URL}/data/datasources`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - ETL', () => {
+test.describe('Data - ETL', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/etl-jobs', async (route) => {
+    page.route('**/api/v1/data/etl-jobs', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -63,15 +63,15 @@ test.describe('Alldata - ETL', () => {
 
   test('should display ETL page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/etl`);
+    await page.goto(`${BASE_URL}/data/etl`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Data Quality', () => {
+test.describe('Data - Data Quality', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/quality', async (route) => {
+    page.route('**/api/v1/data/quality', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -91,15 +91,15 @@ test.describe('Alldata - Data Quality', () => {
 
   test('should display data quality page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/quality`);
+    await page.goto(`${BASE_URL}/data/quality`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Lineage', () => {
+test.describe('Data - Lineage', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/lineage', async (route) => {
+    page.route('**/api/v1/data/lineage', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -121,15 +121,15 @@ test.describe('Alldata - Lineage', () => {
 
   test('should display lineage page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/lineage`);
+    await page.goto(`${BASE_URL}/data/lineage`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Features', () => {
+test.describe('Data - Features', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/features', async (route) => {
+    page.route('**/api/v1/data/features', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -149,15 +149,15 @@ test.describe('Alldata - Features', () => {
 
   test('should display features page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/features`);
+    await page.goto(`${BASE_URL}/data/features`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Standards', () => {
+test.describe('Data - Standards', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/standards', async (route) => {
+    page.route('**/api/v1/data/standards', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -176,15 +176,15 @@ test.describe('Alldata - Standards', () => {
 
   test('should display standards page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/standards`);
+    await page.goto(`${BASE_URL}/data/standards`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Assets', () => {
+test.describe('Data - Assets', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/assets', async (route) => {
+    page.route('**/api/v1/data/assets', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -204,15 +204,15 @@ test.describe('Alldata - Assets', () => {
 
   test('should display assets page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/assets`);
+    await page.goto(`${BASE_URL}/data/assets`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Services', () => {
+test.describe('Data - Services', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/services', async (route) => {
+    page.route('**/api/v1/data/services', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -232,15 +232,15 @@ test.describe('Alldata - Services', () => {
 
   test('should display services page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/services`);
+    await page.goto(`${BASE_URL}/data/services`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - BI', () => {
+test.describe('Data - BI', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/bi', async (route) => {
+    page.route('**/api/v1/data/bi', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -260,15 +260,15 @@ test.describe('Alldata - BI', () => {
 
   test('should display BI page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/bi`);
+    await page.goto(`${BASE_URL}/data/bi`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Monitoring', () => {
+test.describe('Data - Monitoring', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/monitoring', async (route) => {
+    page.route('**/api/v1/data/monitoring', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -288,15 +288,15 @@ test.describe('Alldata - Monitoring', () => {
 
   test('should display monitoring page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/monitoring`);
+    await page.goto(`${BASE_URL}/data/monitoring`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Streaming', () => {
+test.describe('Data - Streaming', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/streaming', async (route) => {
+    page.route('**/api/v1/data/streaming', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -316,27 +316,27 @@ test.describe('Alldata - Streaming', () => {
 
   test('should display streaming page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/streaming`);
+    await page.goto(`${BASE_URL}/data/streaming`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Streaming IDE', () => {
+test.describe('Data - Streaming IDE', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
   });
 
   test('should display streaming IDE page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/streaming-ide`);
+    await page.goto(`${BASE_URL}/data/streaming-ide`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Offline', () => {
+test.describe('Data - Offline', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/offline', async (route) => {
+    page.route('**/api/v1/data/offline', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -356,15 +356,15 @@ test.describe('Alldata - Offline', () => {
 
   test('should display offline page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/offline`);
+    await page.goto(`${BASE_URL}/data/offline`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Alldata - Metrics', () => {
+test.describe('Data - Metrics', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
-    page.route('**/api/v1/alldata/metrics', async (route) => {
+    page.route('**/api/v1/data/metrics', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -384,7 +384,7 @@ test.describe('Alldata - Metrics', () => {
 
   test('should display metrics page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/alldata/metrics`);
+    await page.goto(`${BASE_URL}/data/metrics`);
     await expect(page.locator('body')).toBeVisible();
   });
 });

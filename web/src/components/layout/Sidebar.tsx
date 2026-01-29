@@ -63,7 +63,7 @@ const menuItems = [
     label: '数据管理',
     children: [
       {
-        key: '/alldata/datasources',
+        key: '/data/datasources',
         icon: <ApiOutlined />,
         label: '数据源',
       },
@@ -83,32 +83,32 @@ const menuItems = [
         label: '版本对比',
       },
       {
-        key: '/alldata/features',
+        key: '/data/features',
         icon: <AppstoreOutlined />,
         label: '特征存储',
       },
       {
-        key: '/alldata/standards',
+        key: '/data/standards',
         icon: <FileTextOutlined />,
         label: '数据标准',
       },
       {
-        key: '/alldata/assets',
+        key: '/data/assets',
         icon: <ShopOutlined />,
         label: '数据资产',
       },
       {
-        key: '/alldata/services',
+        key: '/data/services',
         icon: <CloudServerOutlined />,
         label: '数据服务',
       },
       {
-        key: '/alldata/bi',
+        key: '/data/bi',
         icon: <LineChartOutlined />,
         label: 'BI 报表',
       },
       {
-        key: '/alldata/metrics',
+        key: '/data/metrics',
         icon: <FundOutlined />,
         label: '指标体系',
       },
@@ -122,57 +122,57 @@ const menuItems = [
     label: '数据开发',
     children: [
       {
-        key: '/alldata/etl',
+        key: '/data/etl',
         icon: <SwapOutlined />,
         label: 'ETL 任务',
       },
       {
-        key: '/alldata/kettle',
+        key: '/data/kettle',
         icon: <ToolOutlined />,
         label: 'Kettle 引擎',
       },
       {
-        key: '/alldata/kettle-generator',
+        key: '/data/kettle-generator',
         icon: <SettingOutlined />,
         label: 'Kettle 配置生成',
       },
       {
-        key: '/alldata/ocr',
+        key: '/data/ocr',
         icon: <ScanOutlined />,
         label: '文档 OCR',
       },
       {
-        key: '/alldata/quality',
+        key: '/data/quality',
         icon: <SafetyOutlined />,
         label: '数据质量',
       },
       {
-        key: '/alldata/lineage',
+        key: '/data/lineage',
         icon: <ApartmentOutlined />,
         label: '数据血缘',
       },
       {
-        key: '/alldata/offline',
+        key: '/data/offline',
         icon: <BranchesOutlined />,
         label: '离线开发',
       },
       {
-        key: '/alldata/streaming',
+        key: '/data/streaming',
         icon: <RadarChartOutlined />,
         label: '实时开发',
       },
       {
-        key: '/alldata/streaming-ide',
+        key: '/data/streaming-ide',
         icon: <CodeOutlined />,
         label: '实时 IDE',
       },
       {
-        key: '/cube/notebooks',
+        key: '/model/notebooks',
         icon: <LaptopOutlined />,
         label: 'Notebook',
       },
       {
-        key: '/cube/sql-lab',
+        key: '/model/sql-lab',
         icon: <FileSearchOutlined />,
         label: 'SQL Lab',
       },
@@ -186,32 +186,32 @@ const menuItems = [
     label: '模型开发',
     children: [
       {
-        key: '/cube/experiments',
+        key: '/model/experiments',
         icon: <ExperimentOutlined />,
         label: '实验管理',
       },
       {
-        key: '/cube/training',
+        key: '/model/training',
         icon: <DeploymentUnitOutlined />,
         label: '训练任务',
       },
       {
-        key: '/cube/models',
+        key: '/model/models',
         icon: <ClusterOutlined />,
         label: '模型仓库',
       },
       {
-        key: '/cube/aihub',
+        key: '/model/aihub',
         icon: <ShopOutlined />,
         label: 'AIHub',
       },
       {
-        key: '/cube/pipelines',
+        key: '/model/pipelines',
         icon: <BranchesOutlined />,
         label: 'Pipeline',
       },
       {
-        key: '/cube/llm-tuning',
+        key: '/model/llm-tuning',
         icon: <ThunderboltOutlined />,
         label: 'LLM 微调',
       },
@@ -225,17 +225,17 @@ const menuItems = [
     label: '模型服务',
     children: [
       {
-        key: '/cube/serving',
+        key: '/model/serving',
         icon: <CloudServerOutlined />,
         label: '在线服务',
       },
       {
-        key: '/cube/resources',
+        key: '/model/resources',
         icon: <ClusterOutlined />,
         label: '资源管理',
       },
       {
-        key: '/cube/monitoring',
+        key: '/model/monitoring',
         icon: <MonitorOutlined />,
         label: '监控告警',
       },
@@ -254,22 +254,22 @@ const menuItems = [
         label: 'AI 对话',
       },
       {
-        key: '/bisheng/prompts',
+        key: '/agent-platform/prompts',
         icon: <BgColorsOutlined />,
         label: 'Prompt 管理',
       },
       {
-        key: '/bisheng/knowledge',
+        key: '/agent-platform/knowledge',
         icon: <BookOutlined />,
         label: '知识库',
       },
       {
-        key: '/bisheng/evaluation',
+        key: '/agent-platform/evaluation',
         icon: <ExperimentOutlined />,
         label: '模型评估',
       },
       {
-        key: '/bisheng/sft',
+        key: '/agent-platform/sft',
         icon: <ThunderboltOutlined />,
         label: 'SFT 微调',
       },
@@ -289,7 +289,7 @@ const menuItems = [
         label: 'Text2SQL',
       },
       {
-        key: '/bisheng/apps',
+        key: '/agent-platform/apps',
         icon: <RocketOutlined />,
         label: '应用发布',
       },
@@ -303,12 +303,12 @@ const menuItems = [
     label: '运维中心',
     children: [
       {
-        key: '/alldata/monitoring',
+        key: '/data/monitoring',
         icon: <MonitorOutlined />,
         label: '系统监控',
       },
       {
-        key: '/alldata/alerts',
+        key: '/data/alerts',
         icon: <ThunderboltOutlined />,
         label: '智能预警',
       },
@@ -461,57 +461,57 @@ function Sidebar({ collapsed }: SidebarProps) {
     const pathname = location.pathname;
 
     // 数据管理
-    if (pathname.startsWith('/alldata/datasources')) return '/alldata/datasources';
+    if (pathname.startsWith('/data/datasources')) return '/data/datasources';
     if (pathname === '/datasets') return '/datasets';
     if (pathname === '/metadata' || pathname.startsWith('/metadata/graph')) return '/metadata';
     if (pathname.startsWith('/metadata/version')) return '/metadata/version-diff';
-    if (pathname.startsWith('/alldata/features')) return '/alldata/features';
-    if (pathname.startsWith('/alldata/standards')) return '/alldata/standards';
-    if (pathname.startsWith('/alldata/assets')) return '/alldata/assets';
-    if (pathname.startsWith('/alldata/services')) return '/alldata/services';
-    if (pathname.startsWith('/alldata/bi')) return '/alldata/bi';
-    if (pathname.startsWith('/alldata/metrics')) return '/alldata/metrics';
+    if (pathname.startsWith('/data/features')) return '/data/features';
+    if (pathname.startsWith('/data/standards')) return '/data/standards';
+    if (pathname.startsWith('/data/assets')) return '/data/assets';
+    if (pathname.startsWith('/data/services')) return '/data/services';
+    if (pathname.startsWith('/data/bi')) return '/data/bi';
+    if (pathname.startsWith('/data/metrics')) return '/data/metrics';
 
     // 数据开发
-    if (pathname.startsWith('/alldata/etl')) return '/alldata/etl';
-    if (pathname.startsWith('/alldata/kettle')) return '/alldata/kettle';
-    if (pathname.startsWith('/alldata/kettle-generator')) return '/alldata/kettle-generator';
-    if (pathname.startsWith('/alldata/ocr')) return '/alldata/ocr';
-    if (pathname.startsWith('/alldata/quality')) return '/alldata/quality';
-    if (pathname.startsWith('/alldata/lineage')) return '/alldata/lineage';
-    if (pathname.startsWith('/alldata/offline')) return '/alldata/offline';
-    if (pathname.startsWith('/alldata/streaming-ide')) return '/alldata/streaming-ide';
-    if (pathname.startsWith('/alldata/streaming')) return '/alldata/streaming';
-    if (pathname.startsWith('/cube/notebooks')) return '/cube/notebooks';
-    if (pathname.startsWith('/cube/sql-lab')) return '/cube/sql-lab';
+    if (pathname.startsWith('/data/etl')) return '/data/etl';
+    if (pathname.startsWith('/data/kettle')) return '/data/kettle';
+    if (pathname.startsWith('/data/kettle-generator')) return '/data/kettle-generator';
+    if (pathname.startsWith('/data/ocr')) return '/data/ocr';
+    if (pathname.startsWith('/data/quality')) return '/data/quality';
+    if (pathname.startsWith('/data/lineage')) return '/data/lineage';
+    if (pathname.startsWith('/data/offline')) return '/data/offline';
+    if (pathname.startsWith('/data/streaming-ide')) return '/data/streaming-ide';
+    if (pathname.startsWith('/data/streaming')) return '/data/streaming';
+    if (pathname.startsWith('/model/notebooks')) return '/model/notebooks';
+    if (pathname.startsWith('/model/sql-lab')) return '/model/sql-lab';
 
     // 模型开发
-    if (pathname.startsWith('/cube/experiments')) return '/cube/experiments';
-    if (pathname.startsWith('/cube/training')) return '/cube/training';
-    if (pathname.startsWith('/cube/models')) return '/cube/models';
-    if (pathname.startsWith('/cube/aihub')) return '/cube/aihub';
-    if (pathname.startsWith('/cube/pipelines')) return '/cube/pipelines';
-    if (pathname.startsWith('/cube/llm-tuning')) return '/cube/llm-tuning';
+    if (pathname.startsWith('/model/experiments')) return '/model/experiments';
+    if (pathname.startsWith('/model/training')) return '/model/training';
+    if (pathname.startsWith('/model/models')) return '/model/models';
+    if (pathname.startsWith('/model/aihub')) return '/model/aihub';
+    if (pathname.startsWith('/model/pipelines')) return '/model/pipelines';
+    if (pathname.startsWith('/model/llm-tuning')) return '/model/llm-tuning';
 
     // 模型服务
-    if (pathname.startsWith('/cube/serving')) return '/cube/serving';
-    if (pathname.startsWith('/cube/resources')) return '/cube/resources';
-    if (pathname.startsWith('/cube/monitoring')) return '/cube/monitoring';
+    if (pathname.startsWith('/model/serving')) return '/model/serving';
+    if (pathname.startsWith('/model/resources')) return '/model/resources';
+    if (pathname.startsWith('/model/monitoring')) return '/model/monitoring';
 
     // AI 应用
     if (pathname === '/chat') return '/chat';
-    if (pathname.startsWith('/bisheng/prompts')) return '/bisheng/prompts';
-    if (pathname.startsWith('/bisheng/knowledge')) return '/bisheng/knowledge';
-    if (pathname.startsWith('/bisheng/evaluation')) return '/bisheng/evaluation';
-    if (pathname.startsWith('/bisheng/sft')) return '/bisheng/sft';
+    if (pathname.startsWith('/agent-platform/prompts')) return '/agent-platform/prompts';
+    if (pathname.startsWith('/agent-platform/knowledge')) return '/agent-platform/knowledge';
+    if (pathname.startsWith('/agent-platform/evaluation')) return '/agent-platform/evaluation';
+    if (pathname.startsWith('/agent-platform/sft')) return '/agent-platform/sft';
     if (pathname === '/agents') return '/agents';
     if (pathname.startsWith('/workflows')) return '/workflows';
     if (pathname === '/text2sql') return '/text2sql';
-    if (pathname.startsWith('/bisheng/apps')) return '/bisheng/apps';
+    if (pathname.startsWith('/agent-platform/apps')) return '/agent-platform/apps';
 
     // 运维中心
-    if (pathname.startsWith('/alldata/monitoring')) return '/alldata/monitoring';
-    if (pathname.startsWith('/alldata/alerts')) return '/alldata/alerts';
+    if (pathname.startsWith('/data/monitoring')) return '/data/monitoring';
+    if (pathname.startsWith('/data/alerts')) return '/data/alerts';
     if (pathname === '/schedules' || pathname.startsWith('/schedules/')) return '/schedules';
     if (pathname.startsWith('/scheduler/smart')) return '/scheduler/smart';
     if (pathname === '/executions') return '/executions';
@@ -546,46 +546,46 @@ function Sidebar({ collapsed }: SidebarProps) {
     const keys: string[] = [];
 
     // 数据管理
-    if (pathname.startsWith('/alldata/datasources') || pathname === '/datasets' ||
-        pathname.startsWith('/metadata') || pathname.startsWith('/alldata/features') ||
-        pathname.startsWith('/alldata/standards') || pathname.startsWith('/alldata/assets') ||
-        pathname.startsWith('/alldata/services') || pathname.startsWith('/alldata/bi') ||
-        pathname.startsWith('/alldata/metrics')) {
+    if (pathname.startsWith('/data/datasources') || pathname === '/datasets' ||
+        pathname.startsWith('/metadata') || pathname.startsWith('/data/features') ||
+        pathname.startsWith('/data/standards') || pathname.startsWith('/data/assets') ||
+        pathname.startsWith('/data/services') || pathname.startsWith('/data/bi') ||
+        pathname.startsWith('/data/metrics')) {
       keys.push('data');
     }
 
     // 数据开发
-    if (pathname.startsWith('/alldata/etl') || pathname.startsWith('/alldata/kettle') ||
-        pathname.startsWith('/alldata/kettle-generator') || pathname.startsWith('/alldata/ocr') ||
-        pathname.startsWith('/alldata/quality') ||
-        pathname.startsWith('/alldata/lineage') || pathname.startsWith('/alldata/offline') ||
-        pathname.startsWith('/alldata/streaming') || pathname.startsWith('/alldata/streaming-ide') ||
-        pathname.startsWith('/cube/notebooks') || pathname.startsWith('/cube/sql-lab')) {
+    if (pathname.startsWith('/data/etl') || pathname.startsWith('/data/kettle') ||
+        pathname.startsWith('/data/kettle-generator') || pathname.startsWith('/data/ocr') ||
+        pathname.startsWith('/data/quality') ||
+        pathname.startsWith('/data/lineage') || pathname.startsWith('/data/offline') ||
+        pathname.startsWith('/data/streaming') || pathname.startsWith('/data/streaming-ide') ||
+        pathname.startsWith('/model/notebooks') || pathname.startsWith('/model/sql-lab')) {
       keys.push('dev');
     }
 
     // 模型开发
-    if (pathname.startsWith('/cube/experiments') || pathname.startsWith('/cube/training') ||
-        pathname.startsWith('/cube/models') || pathname.startsWith('/cube/aihub') ||
-        pathname.startsWith('/cube/pipelines') || pathname.startsWith('/cube/llm-tuning')) {
+    if (pathname.startsWith('/model/experiments') || pathname.startsWith('/model/training') ||
+        pathname.startsWith('/model/models') || pathname.startsWith('/model/aihub') ||
+        pathname.startsWith('/model/pipelines') || pathname.startsWith('/model/llm-tuning')) {
       keys.push('model');
     }
 
     // 模型服务
-    if (pathname.startsWith('/cube/serving') || pathname.startsWith('/cube/resources') ||
-        pathname.startsWith('/cube/monitoring')) {
+    if (pathname.startsWith('/model/serving') || pathname.startsWith('/model/resources') ||
+        pathname.startsWith('/model/monitoring')) {
       keys.push('serving');
     }
 
     // AI 应用
-    if (pathname.startsWith('/chat') || pathname.startsWith('/bisheng/') ||
+    if (pathname.startsWith('/chat') || pathname.startsWith('/agent-platform/') ||
         pathname.startsWith('/agents') || pathname.startsWith('/workflows') ||
         pathname.startsWith('/text2sql')) {
       keys.push('ai');
     }
 
     // 运维中心
-    if (pathname.startsWith('/alldata/monitoring') || pathname.startsWith('/alldata/alerts') ||
+    if (pathname.startsWith('/data/monitoring') || pathname.startsWith('/data/alerts') ||
         pathname.startsWith('/schedules') || pathname.startsWith('/scheduler/') ||
         pathname.startsWith('/executions') || pathname.startsWith('/documents')) {
       keys.push('ops');

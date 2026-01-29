@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Alldata SDK 示例
-演示如何使用 Alldata 数据集 API
+Data 平台 SDK 示例
+演示如何使用 Data 平台数据集 API
 """
 
 import requests
 from typing import Dict, List, Optional
 
 
-class AlldataClient:
-    """Alldata API 客户端"""
+class DataClient:
+    """Data 平台 API 客户端"""
 
     def __init__(self, base_url: str, token: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
@@ -94,7 +94,7 @@ class AlldataClient:
 def main():
     """示例用法"""
     # 初始化客户端
-    client = AlldataClient("http://localhost:8080")
+    client = DataClient("http://localhost:8080")
 
     # 1. 健康检查
     print("=== 健康检查 ===")

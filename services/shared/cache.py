@@ -369,7 +369,7 @@ class RedisCache(CacheBackend):
         try:
             # 只清除带前缀的键
             config = get_config()
-            pattern = f"{config.service.bisheng_api_url}:*"
+            pattern = f"{config.service.agent_api_url}:*"
             keys = self.client.keys(pattern)
             if keys:
                 return self.client.delete(*keys) > 0
@@ -391,7 +391,7 @@ class RedisCache(CacheBackend):
 
     def _make_key(self, key: str) -> str:
         """生成带命名空间的键"""
-        return f"bisheng:{key}"
+        return f"agent:{key}"
 
     def delete_pattern(self, pattern: str) -> int:
         """删除匹配模式的所有键"""
@@ -399,7 +399,7 @@ class RedisCache(CacheBackend):
             return _get_memory_cache().delete_pattern(pattern)
 
         try:
-            full_pattern = f"bisheng:{pattern}"
+            full_pattern = f"agent:{pattern}"
             keys = self.client.keys(full_pattern)
             if keys:
                 return self.client.delete(*keys)

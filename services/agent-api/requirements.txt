@@ -1,4 +1,4 @@
-# Bisheng API 依赖
+# Agent API 依赖
 # Sprint 4.5: 添加 MySQL 数据持久化
 # Phase 6: Sprint 6.1-6.4 - 添加工作流执行引擎、向量数据库、文档处理
 # Phase 7: Sprint 7.1-7.4 - Agent 编排、控制流、调度系统
@@ -39,3 +39,11 @@ aiofiles==23.2.1          # 异步文件操作
 # Phase 7 新增依赖
 apscheduler==3.10.4       # 调度器
 croniter==2.0.1           # Cron 表达式解析
+
+# LLM 集成
+openai==1.12.0            # OpenAI API 客户端
+tiktoken==0.6.0           # Token 计数
+
+# 图像处理
+Pillow==10.2.0            # 图像处理
+pytesseract==0.3.10       # OCR 文字识别

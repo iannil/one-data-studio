@@ -24,45 +24,45 @@ const AgentsPage = lazy(() => import('./pages/agents/AgentsPage'));
 const Text2SQLPage = lazy(() => import('./pages/text2sql/Text2SQLPage'));
 const ExecutionsDashboard = lazy(() => import('./pages/executions/ExecutionsDashboard'));
 
-// Cube Studio Pages
-const NotebooksPage = lazy(() => import('./pages/cube/notebook/NotebooksPage'));
-const ExperimentsPage = lazy(() => import('./pages/cube/experiments/ExperimentsPage'));
-const ModelsPage = lazy(() => import('./pages/cube/models/ModelsPage'));
-const TrainingPage = lazy(() => import('./pages/cube/training/TrainingPage'));
-const ServingPage = lazy(() => import('./pages/cube/serving/ServingPage'));
-const ResourcesPage = lazy(() => import('./pages/cube/resources/ResourcesPage'));
-const MonitoringPage = lazy(() => import('./pages/cube/monitoring/MonitoringPage'));
-const AIHubPage = lazy(() => import('./pages/cube/aihub/AIHubPage'));
-const PipelinesPage = lazy(() => import('./pages/cube/pipelines/PipelinesPage'));
-const LLMTuningPage = lazy(() => import('./pages/cube/llmtuning/LLMTuningPage'));
-const SqlLabPage = lazy(() => import('./pages/cube/sql-lab/SqlLabPage'));
+// Model Pages
+const NotebooksPage = lazy(() => import('./pages/model/notebook/NotebooksPage'));
+const ExperimentsPage = lazy(() => import('./pages/model/experiments/ExperimentsPage'));
+const ModelsPage = lazy(() => import('./pages/model/models/ModelsPage'));
+const TrainingPage = lazy(() => import('./pages/model/training/TrainingPage'));
+const ServingPage = lazy(() => import('./pages/model/serving/ServingPage'));
+const ResourcesPage = lazy(() => import('./pages/model/resources/ResourcesPage'));
+const MonitoringPage = lazy(() => import('./pages/model/monitoring/MonitoringPage'));
+const AIHubPage = lazy(() => import('./pages/model/aihub/AIHubPage'));
+const PipelinesPage = lazy(() => import('./pages/model/pipelines/PipelinesPage'));
+const LLMTuningPage = lazy(() => import('./pages/model/llmtuning/LLMTuningPage'));
+const SqlLabPage = lazy(() => import('./pages/model/sql-lab/SqlLabPage'));
 
-// Alldata Pages
-const DataSourcesPage = lazy(() => import('./pages/alldata/datasources/DataSourcesPage'));
-const ETLPage = lazy(() => import('./pages/alldata/etl/ETLPage'));
-const KettlePanel = lazy(() => import('./pages/alldata/etl/KettlePanel'));
-const QualityPage = lazy(() => import('./pages/alldata/quality/QualityPage'));
-const LineagePage = lazy(() => import('./pages/alldata/lineage/LineagePage'));
-const FeaturesPage = lazy(() => import('./pages/alldata/features/FeaturesPage'));
-const StandardsPage = lazy(() => import('./pages/alldata/standards/StandardsPage'));
-const AssetsPage = lazy(() => import('./pages/alldata/assets/AssetsPage'));
-const ServicesPage = lazy(() => import('./pages/alldata/services/ServicesPage'));
-const BIPage = lazy(() => import('./pages/alldata/bi/BIPage'));
-const MonitoringPageAlldata = lazy(() => import('./pages/alldata/monitoring/MonitoringPage'));
-const StreamingPage = lazy(() => import('./pages/alldata/streaming/StreamingPage'));
-const StreamingIDEPage = lazy(() => import('./pages/alldata/streaming-ide/StreamingIDEPage'));
-const OfflinePage = lazy(() => import('./pages/alldata/offline/OfflinePage'));
-const MetricsPage = lazy(() => import('./pages/alldata/metrics/MetricsPage'));
-const AlertsPage = lazy(() => import('./pages/alldata/monitoring/AlertsPage'));
-const OCRPage = lazy(() => import('./pages/alldata/ocr/OCRPage'));
-const KettleGeneratorPage = lazy(() => import('./pages/alldata/etl/KettlePage'));
+// Data Pages
+const DataSourcesPage = lazy(() => import('./pages/data/datasources/DataSourcesPage'));
+const ETLPage = lazy(() => import('./pages/data/etl/ETLPage'));
+const KettlePanel = lazy(() => import('./pages/data/etl/KettlePanel'));
+const QualityPage = lazy(() => import('./pages/data/quality/QualityPage'));
+const LineagePage = lazy(() => import('./pages/data/lineage/LineagePage'));
+const FeaturesPage = lazy(() => import('./pages/data/features/FeaturesPage'));
+const StandardsPage = lazy(() => import('./pages/data/standards/StandardsPage'));
+const AssetsPage = lazy(() => import('./pages/data/assets/AssetsPage'));
+const ServicesPage = lazy(() => import('./pages/data/services/ServicesPage'));
+const BIPage = lazy(() => import('./pages/data/bi/BIPage'));
+const MonitoringPageData = lazy(() => import('./pages/data/monitoring/MonitoringPage'));
+const StreamingPage = lazy(() => import('./pages/data/streaming/StreamingPage'));
+const StreamingIDEPage = lazy(() => import('./pages/data/streaming-ide/StreamingIDEPage'));
+const OfflinePage = lazy(() => import('./pages/data/offline/OfflinePage'));
+const MetricsPage = lazy(() => import('./pages/data/metrics/MetricsPage'));
+const AlertsPage = lazy(() => import('./pages/data/monitoring/AlertsPage'));
+const OCRPage = lazy(() => import('./pages/data/ocr/OCRPage'));
+const KettleGeneratorPage = lazy(() => import('./pages/data/etl/KettlePage'));
 
-// Bisheng Pages
-const PromptsPage = lazy(() => import('./pages/bisheng/prompts/PromptsPage'));
-const KnowledgePage = lazy(() => import('./pages/bisheng/knowledge/KnowledgePage'));
-const AppsPage = lazy(() => import('./pages/bisheng/apps/AppsPage'));
-const EvaluationPage = lazy(() => import('./pages/bisheng/evaluation/EvaluationPage'));
-const SFTPage = lazy(() => import('./pages/bisheng/sft/SFTPage'));
+// Agent Pages
+const PromptsPage = lazy(() => import('./pages/agent-platform/prompts/PromptsPage'));
+const KnowledgePage = lazy(() => import('./pages/agent-platform/knowledge/KnowledgePage'));
+const AppsPage = lazy(() => import('./pages/agent-platform/apps/AppsPage'));
+const EvaluationPage = lazy(() => import('./pages/agent-platform/evaluation/EvaluationPage'));
+const SFTPage = lazy(() => import('./pages/agent-platform/sft/SFTPage'));
 
 // Admin Pages
 const UsersPage = lazy(() => import('./pages/admin/users/UsersPage'));
@@ -141,46 +141,46 @@ function AppRoutes() {
         <Route path="text2sql" element={<LazyWrapper><Text2SQLPage /></LazyWrapper>} />
         <Route path="executions" element={<LazyWrapper><ExecutionsDashboard /></LazyWrapper>} />
 
-        {/* Cube Studio Routes */}
-        <Route path="cube/notebooks" element={<LazyWrapper><NotebooksPage /></LazyWrapper>} />
-        <Route path="cube/experiments" element={<LazyWrapper><ExperimentsPage /></LazyWrapper>} />
-        <Route path="cube/experiments/compare" element={<LazyWrapper><ExperimentsPage /></LazyWrapper>} />
-        <Route path="cube/models" element={<LazyWrapper><ModelsPage /></LazyWrapper>} />
-        <Route path="cube/training" element={<LazyWrapper><TrainingPage /></LazyWrapper>} />
-        <Route path="cube/serving" element={<LazyWrapper><ServingPage /></LazyWrapper>} />
-        <Route path="cube/resources" element={<LazyWrapper><ResourcesPage /></LazyWrapper>} />
-        <Route path="cube/monitoring" element={<LazyWrapper><MonitoringPage /></LazyWrapper>} />
-        <Route path="cube/aihub" element={<LazyWrapper><AIHubPage /></LazyWrapper>} />
-        <Route path="cube/pipelines" element={<LazyWrapper><PipelinesPage /></LazyWrapper>} />
-        <Route path="cube/llm-tuning" element={<LazyWrapper><LLMTuningPage /></LazyWrapper>} />
-        <Route path="cube/sql-lab" element={<LazyWrapper><SqlLabPage /></LazyWrapper>} />
+        {/* Model Routes */}
+        <Route path="model/notebooks" element={<LazyWrapper><NotebooksPage /></LazyWrapper>} />
+        <Route path="model/experiments" element={<LazyWrapper><ExperimentsPage /></LazyWrapper>} />
+        <Route path="model/experiments/compare" element={<LazyWrapper><ExperimentsPage /></LazyWrapper>} />
+        <Route path="model/models" element={<LazyWrapper><ModelsPage /></LazyWrapper>} />
+        <Route path="model/training" element={<LazyWrapper><TrainingPage /></LazyWrapper>} />
+        <Route path="model/serving" element={<LazyWrapper><ServingPage /></LazyWrapper>} />
+        <Route path="model/resources" element={<LazyWrapper><ResourcesPage /></LazyWrapper>} />
+        <Route path="model/monitoring" element={<LazyWrapper><MonitoringPage /></LazyWrapper>} />
+        <Route path="model/aihub" element={<LazyWrapper><AIHubPage /></LazyWrapper>} />
+        <Route path="model/pipelines" element={<LazyWrapper><PipelinesPage /></LazyWrapper>} />
+        <Route path="model/llm-tuning" element={<LazyWrapper><LLMTuningPage /></LazyWrapper>} />
+        <Route path="model/sql-lab" element={<LazyWrapper><SqlLabPage /></LazyWrapper>} />
 
-        {/* Alldata Routes */}
-        <Route path="alldata/datasources" element={<LazyWrapper><DataSourcesPage /></LazyWrapper>} />
-        <Route path="alldata/etl" element={<LazyWrapper><ETLPage /></LazyWrapper>} />
-        <Route path="alldata/kettle" element={<LazyWrapper><KettlePanel /></LazyWrapper>} />
-        <Route path="alldata/quality" element={<LazyWrapper><QualityPage /></LazyWrapper>} />
-        <Route path="alldata/lineage" element={<LazyWrapper><LineagePage /></LazyWrapper>} />
-        <Route path="alldata/features" element={<LazyWrapper><FeaturesPage /></LazyWrapper>} />
-        <Route path="alldata/standards" element={<LazyWrapper><StandardsPage /></LazyWrapper>} />
-        <Route path="alldata/assets" element={<LazyWrapper><AssetsPage /></LazyWrapper>} />
-        <Route path="alldata/services" element={<LazyWrapper><ServicesPage /></LazyWrapper>} />
-        <Route path="alldata/bi" element={<LazyWrapper><BIPage /></LazyWrapper>} />
-        <Route path="alldata/monitoring" element={<LazyWrapper><MonitoringPageAlldata /></LazyWrapper>} />
-        <Route path="alldata/streaming" element={<LazyWrapper><StreamingPage /></LazyWrapper>} />
-        <Route path="alldata/streaming-ide" element={<LazyWrapper><StreamingIDEPage /></LazyWrapper>} />
-        <Route path="alldata/offline" element={<LazyWrapper><OfflinePage /></LazyWrapper>} />
-        <Route path="alldata/metrics" element={<LazyWrapper><MetricsPage /></LazyWrapper>} />
-        <Route path="alldata/alerts" element={<LazyWrapper><AlertsPage /></LazyWrapper>} />
-        <Route path="alldata/ocr" element={<LazyWrapper><OCRPage /></LazyWrapper>} />
-        <Route path="alldata/kettle-generator" element={<LazyWrapper><KettleGeneratorPage /></LazyWrapper>} />
+        {/* Data Routes */}
+        <Route path="data/datasources" element={<LazyWrapper><DataSourcesPage /></LazyWrapper>} />
+        <Route path="data/etl" element={<LazyWrapper><ETLPage /></LazyWrapper>} />
+        <Route path="data/kettle" element={<LazyWrapper><KettlePanel /></LazyWrapper>} />
+        <Route path="data/quality" element={<LazyWrapper><QualityPage /></LazyWrapper>} />
+        <Route path="data/lineage" element={<LazyWrapper><LineagePage /></LazyWrapper>} />
+        <Route path="data/features" element={<LazyWrapper><FeaturesPage /></LazyWrapper>} />
+        <Route path="data/standards" element={<LazyWrapper><StandardsPage /></LazyWrapper>} />
+        <Route path="data/assets" element={<LazyWrapper><AssetsPage /></LazyWrapper>} />
+        <Route path="data/services" element={<LazyWrapper><ServicesPage /></LazyWrapper>} />
+        <Route path="data/bi" element={<LazyWrapper><BIPage /></LazyWrapper>} />
+        <Route path="data/monitoring" element={<LazyWrapper><MonitoringPageData /></LazyWrapper>} />
+        <Route path="data/streaming" element={<LazyWrapper><StreamingPage /></LazyWrapper>} />
+        <Route path="data/streaming-ide" element={<LazyWrapper><StreamingIDEPage /></LazyWrapper>} />
+        <Route path="data/offline" element={<LazyWrapper><OfflinePage /></LazyWrapper>} />
+        <Route path="data/metrics" element={<LazyWrapper><MetricsPage /></LazyWrapper>} />
+        <Route path="data/alerts" element={<LazyWrapper><AlertsPage /></LazyWrapper>} />
+        <Route path="data/ocr" element={<LazyWrapper><OCRPage /></LazyWrapper>} />
+        <Route path="data/kettle-generator" element={<LazyWrapper><KettleGeneratorPage /></LazyWrapper>} />
 
-        {/* Bisheng Routes */}
-        <Route path="bisheng/prompts" element={<LazyWrapper><PromptsPage /></LazyWrapper>} />
-        <Route path="bisheng/knowledge" element={<LazyWrapper><KnowledgePage /></LazyWrapper>} />
-        <Route path="bisheng/apps" element={<LazyWrapper><AppsPage /></LazyWrapper>} />
-        <Route path="bisheng/evaluation" element={<LazyWrapper><EvaluationPage /></LazyWrapper>} />
-        <Route path="bisheng/sft" element={<LazyWrapper><SFTPage /></LazyWrapper>} />
+        {/* Agent Routes */}
+        <Route path="agent-platform/prompts" element={<LazyWrapper><PromptsPage /></LazyWrapper>} />
+        <Route path="agent-platform/knowledge" element={<LazyWrapper><KnowledgePage /></LazyWrapper>} />
+        <Route path="agent-platform/apps" element={<LazyWrapper><AppsPage /></LazyWrapper>} />
+        <Route path="agent-platform/evaluation" element={<LazyWrapper><EvaluationPage /></LazyWrapper>} />
+        <Route path="agent-platform/sft" element={<LazyWrapper><SFTPage /></LazyWrapper>} />
 
         {/* Admin Routes */}
         <Route path="admin/users" element={<LazyWrapper><UsersPage /></LazyWrapper>} />

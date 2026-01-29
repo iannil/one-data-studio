@@ -1,12 +1,13 @@
 """
 元数据版本差异对比服务
 支持表结构版本管理和差异对比
+持久化到 MySQL 数据库
 """
 
 import logging
 import secrets
 from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 from sqlalchemy.orm import Session
@@ -191,86 +192,73 @@ class MetadataSnapshot:
         }
 
 
+# ==================== 序列化辅助 ====================
+
+def _tables_to_json(tables: Dict[str, TableVersion]) -> Dict[str, Any]:
+    """将 TableVersion 字典序列化为 JSON 可存储格式"""
+    return {k: v.to_dict() for k, v in tables.items()}
+
+
+def _tables_from_json(data: Dict[str, Any]) -> Dict[str, TableVersion]:
+    """从 JSON 反序列化为 TableVersion 字典"""
+    tables = {}
+    for table_name, table_data in (data or {}).items():
+        columns = {}
+        for col_name, col_data in table_data.get("columns", {}).items():
+            columns[col_name] = ColumnVersion(
+                name=col_data.get("name", col_name),
+                type=col_data.get("type", "VARCHAR(255)"),
+                nullable=col_data.get("nullable", True),
+                primary_key=col_data.get("primary_key", False),
+                default_value=col_data.get("default_value"),
+                comment=col_data.get("comment", ""),
+                max_length=col_data.get("max_length"),
+                decimal_places=col_data.get("decimal_places"),
+                auto_increment=col_data.get("auto_increment", False),
+            )
+        tables[table_name] = TableVersion(
+            table_name=table_data.get("table_name", table_name),
+            database=table_data.get("database", ""),
+            columns=columns,
+            indexes=table_data.get("indexes", []),
+            relations=table_data.get("relations", []),
+            row_count=table_data.get("row_count", 0),
+            comment=table_data.get("comment", ""),
+            engine=table_data.get("engine", ""),
+            charset=table_data.get("charset", ""),
+            collation=table_data.get("collation", ""),
+        )
+    return tables
+
+
+def _snapshot_from_model(model) -> MetadataSnapshot:
+    """从 ORM 模型转换为 MetadataSnapshot dataclass"""
+    return MetadataSnapshot(
+        snapshot_id=model.id,
+        version=model.version,
+        database=model.database,
+        tables=_tables_from_json(model.tables_snapshot),
+        created_at=model.created_at,
+        created_by=model.created_by or "",
+        description=model.description or "",
+        tags=model.tags or [],
+    )
+
+
 # ==================== 版本对比服务 ====================
 
 class MetadataVersionService:
-    """元数据版本对比服务"""
+    """元数据版本对比服务 - 使用数据库持久化"""
 
-    def __init__(self):
-        # 内存存储，实际应使用数据库
-        self._snapshots: Dict[str, MetadataSnapshot] = {}
+    def __init__(self, db_session_factory=None):
+        self._db_session_factory = db_session_factory
 
-        # 初始化示例数据
-        self._init_sample_data()
-
-    def _init_sample_data(self):
-        """初始化示例数据"""
-        # 创建 v1 版本
-        users_columns_v1 = {
-            "id": ColumnVersion("id", "INT", False, True),
-            "username": ColumnVersion("username", "VARCHAR(50)", False, False),
-            "email": ColumnVersion("email", "VARCHAR(100)", False, False),
-            "created_at": ColumnVersion("created_at", "TIMESTAMP", True, False),
-        }
-        orders_columns_v1 = {
-            "id": ColumnVersion("id", "INT", False, True),
-            "user_id": ColumnVersion("user_id", "INT", False, False),
-            "total": ColumnVersion("total", "DECIMAL(10,2)", False, False, comment="订单总额"),
-            "status": ColumnVersion("status", "VARCHAR(20)", False, False),
-        }
-
-        snapshot_v1 = MetadataSnapshot(
-            snapshot_id="snap_v1",
-            version="1.0.0",
-            database="business_db",
-            tables={
-                "users": TableVersion("users", "business_db", users_columns_v1),
-                "orders": TableVersion("orders", "business_db", orders_columns_v1),
-            },
-            created_at=datetime.now() - timedelta(days=30),
-            created_by="system",
-            description="初始版本",
-        )
-
-        # 创建 v2 版本（有变更）
-        users_columns_v2 = {
-            "id": ColumnVersion("id", "INT", False, True),
-            "username": ColumnVersion("username", "VARCHAR(50)", False, False, comment="用户名"),  # 新增注释
-            "email": ColumnVersion("email", "VARCHAR(100)", True, False),  # 改为可空
-            "phone": ColumnVersion("phone", "VARCHAR(20)", True, False),  # 新增字段
-            "created_at": ColumnVersion("created_at", "TIMESTAMP", True, False),
-            "updated_at": ColumnVersion("updated_at", "TIMESTAMP", True, False),  # 新增字段
-        }
-        orders_columns_v2 = {
-            "id": ColumnVersion("id", "INT", False, True),
-            "user_id": ColumnVersion("user_id", "INT", False, False),
-            "total": ColumnVersion("total", "DECIMAL(12,2)", False, False, comment="订单含税总额"),  # 类型变更
-            "status": ColumnVersion("status", "VARCHAR(20)", False, False),
-            "discount": ColumnVersion("discount", "DECIMAL(5,2)", True, None, comment="折扣金额"),  # 新增
-        }
-        products_columns_v2 = {  # 新表
-            "id": ColumnVersion("id", "INT", False, True),
-            "name": ColumnVersion("name", "VARCHAR(100)", False, False),
-            "price": ColumnVersion("price", "DECIMAL(10,2)", False, False),
-            "stock": ColumnVersion("stock", "INT", False, None, default_value=0),
-        }
-
-        snapshot_v2 = MetadataSnapshot(
-            snapshot_id="snap_v2",
-            version="1.1.0",
-            database="business_db",
-            tables={
-                "users": TableVersion("users", "business_db", users_columns_v2),
-                "orders": TableVersion("orders", "business_db", orders_columns_v2),
-                "products": TableVersion("products", "business_db", products_columns_v2),
-            },
-            created_at=datetime.now() - timedelta(days=15),
-            created_by="admin",
-            description="新增电话和更新时间字段，新增产品表",
-        )
-
-        self._snapshots[snapshot_v1.snapshot_id] = snapshot_v1
-        self._snapshots[snapshot_v2.snapshot_id] = snapshot_v2
+    def _get_db(self) -> Session:
+        """获取数据库会话"""
+        if self._db_session_factory:
+            return self._db_session_factory()
+        from models import get_db
+        return next(get_db())
 
     # ==================== 快照管理 ====================
 
@@ -284,22 +272,56 @@ class MetadataVersionService:
         tags: List[str] = None,
     ) -> MetadataSnapshot:
         """创建元数据快照"""
-        snapshot = MetadataSnapshot(
-            snapshot_id=f"snap_{secrets.token_hex(8)}",
-            version=version,
-            database=database,
-            tables=tables,
-            created_at=datetime.now(),
-            created_by=created_by,
-            description=description,
-            tags=tags or [],
-        )
-        self._snapshots[snapshot.snapshot_id] = snapshot
-        return snapshot
+        from models.metadata_version import MetadataSnapshotModel
+
+        snapshot_id = f"snap_{secrets.token_hex(8)}"
+        now = datetime.utcnow()
+
+        db = self._get_db()
+        try:
+            model = MetadataSnapshotModel(
+                id=snapshot_id,
+                version=version,
+                database=database,
+                tables_snapshot=_tables_to_json(tables),
+                created_by=created_by,
+                description=description,
+                tags=tags or [],
+                created_at=now,
+            )
+            db.add(model)
+            db.commit()
+
+            return MetadataSnapshot(
+                snapshot_id=snapshot_id,
+                version=version,
+                database=database,
+                tables=tables,
+                created_at=now,
+                created_by=created_by,
+                description=description,
+                tags=tags or [],
+            )
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def get_snapshot(self, snapshot_id: str) -> Optional[MetadataSnapshot]:
         """获取快照"""
-        return self._snapshots.get(snapshot_id)
+        from models.metadata_version import MetadataSnapshotModel
+
+        db = self._get_db()
+        try:
+            model = db.query(MetadataSnapshotModel).filter(
+                MetadataSnapshotModel.id == snapshot_id
+            ).first()
+            if not model:
+                return None
+            return _snapshot_from_model(model)
+        finally:
+            db.close()
 
     def list_snapshots(
         self,
@@ -307,20 +329,39 @@ class MetadataVersionService:
         limit: int = 50,
     ) -> List[MetadataSnapshot]:
         """列出快照"""
-        snapshots = list(self._snapshots.values())
+        from models.metadata_version import MetadataSnapshotModel
 
-        if database:
-            snapshots = [s for s in snapshots if s.database == database]
+        db = self._get_db()
+        try:
+            query = db.query(MetadataSnapshotModel)
+            if database:
+                query = query.filter(MetadataSnapshotModel.database == database)
+            query = query.order_by(MetadataSnapshotModel.created_at.desc())
+            query = query.limit(limit)
 
-        snapshots.sort(key=lambda s: s.created_at, reverse=True)
-        return snapshots[:limit]
+            return [_snapshot_from_model(m) for m in query.all()]
+        finally:
+            db.close()
 
     def delete_snapshot(self, snapshot_id: str) -> bool:
         """删除快照"""
-        if snapshot_id in self._snapshots:
-            del self._snapshots[snapshot_id]
+        from models.metadata_version import MetadataSnapshotModel
+
+        db = self._get_db()
+        try:
+            model = db.query(MetadataSnapshotModel).filter(
+                MetadataSnapshotModel.id == snapshot_id
+            ).first()
+            if not model:
+                return False
+            db.delete(model)
+            db.commit()
             return True
-        return False
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     # ==================== 差异对比 ====================
 
@@ -339,8 +380,8 @@ class MetadataVersionService:
             - modified_tables: 有变更的表
             - table_diffs: 每个表的详细差异
         """
-        from_snapshot = self._snapshots.get(from_snapshot_id)
-        to_snapshot = self._snapshots.get(to_snapshot_id)
+        from_snapshot = self.get_snapshot(from_snapshot_id)
+        to_snapshot = self.get_snapshot(to_snapshot_id)
 
         if not from_snapshot or not to_snapshot:
             raise ValueError("快照不存在")
@@ -554,12 +595,14 @@ class MetadataVersionService:
         diff = self.compare_snapshots(from_snapshot_id, to_snapshot_id)
         sql_statements: Dict[str, List[str]] = {}
 
+        # 获取 to_snapshot 用于新增表
+        to_snapshot = self.get_snapshot(to_snapshot_id)
+
         for table_name, table_diff in diff["table_diffs"].items():
             table_sql = []
 
             # 新增表
             if table_diff.get("is_new_table"):
-                to_snapshot = self._snapshots.get(to_snapshot_id)
                 if to_snapshot and table_name in to_snapshot.tables:
                     table_sql.append(self._generate_create_table_sql(to_snapshot.tables[table_name]))
 

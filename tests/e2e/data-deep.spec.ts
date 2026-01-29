@@ -15,13 +15,13 @@ async function login(page: Page) {
   await page.fill('input[name="username"]', TEST_USER.username);
   await page.fill('input[name="password"]', TEST_USER.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|alldata)/);
+  await page.waitForURL(/\/(dashboard|data)/);
 }
 
 test.describe('数据源管理 (DM-DS)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/alldata/datasources');
+    await page.goto('/data/datasources');
   });
 
   test('DM-DS-001: 注册 MySQL 数据源', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe('元数据扫描 (DM-MS)', () => {
   });
 
   test('DM-MS-001: 自动元数据扫描', async ({ page }) => {
-    await page.goto('/alldata/metadata');
+    await page.goto('/data/metadata');
 
     // 选择数据源
     await page.click('button:has-text("扫描")');
@@ -88,7 +88,7 @@ test.describe('元数据扫描 (DM-MS)', () => {
   });
 
   test('DM-MS-002: AI 字段标注', async ({ page }) => {
-    await page.goto('/alldata/metadata');
+    await page.goto('/data/metadata');
 
     // 选择表
     await page.click('.table-row:first-child');
@@ -104,7 +104,7 @@ test.describe('元数据扫描 (DM-MS)', () => {
 test.describe('敏感数据识别 (DM-SD)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/alldata/sensitive');
+    await page.goto('/data/sensitive');
   });
 
   test('DM-SD-001: 敏感字段扫描', async ({ page }) => {
@@ -125,7 +125,7 @@ test.describe('敏感数据识别 (DM-SD)', () => {
 test.describe('ETL 编排 (DE-ETL)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/alldata/etl');
+    await page.goto('/data/etl');
   });
 
   test('DE-ETL-001: 创建 ETL 任务', async ({ page }) => {

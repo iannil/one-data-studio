@@ -21,9 +21,9 @@
 
 **ONE-DATA-STUDIO** 是一个开源的企业级平台，融合了三个关键的 AI 基础设施层：
 
-- **Alldata** - 数据治理与开发平台（DataOps 层）
-- **Cube Studio** - 云原生 MLOps 平台（模型/计算层）
-- **Bisheng** - 大模型应用开发平台（LLMOps 层）
+- **Data** - 数据治理与开发平台（DataOps 层）
+- **Model** - 云原生 MLOps 平台（模型/计算层）
+- **Agent** - 大模型应用开发平台（LLMOps 层）
 
 该平台打通了从**原始数据治理**到**模型训练部署**，再到**生成式 AI 应用构建**的完整价值链。
 
@@ -31,21 +31,21 @@
 
 ### 打破数据与 AI 的孤岛
 
-数据团队（使用 Alldata）和算法团队（使用 Cube Studio）往往各自为政。我们的整合实现了**无缝的特征平台**，算法工程师可以直接使用经过治理的高质量数据，无需重复清洗。
+数据团队（使用 Data 平台）和算法团队（使用 Model 平台）往往各自为政。我们的整合实现了**无缝的特征平台**，算法工程师可以直接使用经过治理的高质量数据，无需重复清洗。
 
 ### 结构化与非结构化数据的统一
 
-Alldata 擅长处理结构化数据，Bisheng 擅长处理非结构化文档。两者结合后，企业可以构建**"ChatBI"**——既能查询文档知识库，又能用自然语言查询数据库中的销售报表（Text-to-SQL）。
+Data 平台擅长处理结构化数据，Agent 平台擅长处理非结构化文档。两者结合后，企业可以构建**"ChatBI"**——既能查询文档知识库，又能用自然语言查询数据库中的销售报表（Text-to-SQL）。
 
 ### 私有化大模型落地的完整闭环
 
-许多企业只想用 Bisheng 做应用，但缺乏模型微调能力；或者只有 Cube Studio 训练了模型，但缺乏好用的应用构建工具。
+许多企业只想用 Agent 平台做应用，但缺乏模型微调能力；或者只有 Model 平台训练了模型，但缺乏好用的应用构建工具。
 
-**三者结合 = 私有数据 (Alldata) + 私有算力/模型 (Cube Studio) + 私有应用 (Bisheng)**。这构成了最安全的企业级 AGI 解决方案。
+**三者结合 = 私有数据 (Data) + 私有算力/模型 (Model) + 私有应用 (Agent)**。这构成了最安全的企业级 AGI 解决方案。
 
 ### 全生命周期治理
 
-从数据血缘（Alldata）到模型血缘（Cube Studio）再到应用日志，整个链路可追溯。如果 AI 回答出错，可以一路追溯是 Prompt 问题、模型过拟合，还是原始数据本身就是脏数据。
+从数据血缘（Data 平台）到模型血缘（Model 平台）再到应用日志，整个链路可追溯。如果 AI 回答出错，可以一路追溯是 Prompt 问题、模型过拟合，还是原始数据本身就是脏数据。
 
 ## 功能特性
 
@@ -81,17 +81,17 @@ Alldata 擅长处理结构化数据，Bisheng 擅长处理非结构化文档。�
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L4 应用编排层 (Bisheng)                        │
+│                    L4 应用编排层 (Agent)                          │
 │                RAG 流水线 | Agent 编排 | 工作流                    │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ OpenAI API / 元数据
 ┌─────────────────────────────────────────────────────────────────┐
-│                   L3 算法引擎层 (Cube Studio)                     │
+│                   L3 算法引擎层 (Model)                           │
 │               Notebook | 分布式训练 | 模型服务化                    │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ 挂载数据卷
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L2 数据底座层 (Alldata)                        │
+│                    L2 数据底座层 (Data)                           │
 │           数据集成 | ETL | 数据治理 | 特征存储 | 向量存储            │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ 存储协议
@@ -105,9 +105,9 @@ Alldata 擅长处理结构化数据，Bisheng 擅长处理非结构化文档。�
 
 | 集成方向 | 描述 | 完成度 |
 | ---------- | ------ | -------- |
-| **Alldata → Cube** | 统一存储协议与数据集版本化 | 90% |
-| **Cube → Bisheng** | OpenAI 兼容的模型即服务 API | 85% |
-| **Alldata → Bisheng** | 基于元数据的 Text-to-SQL | 75% |
+| **Data → Model** | 统一存储协议与数据集版本化 | 90% |
+| **Model → Agent** | OpenAI 兼容的模型即服务 API | 85% |
+| **Data → Agent** | 基于元数据的 Text-to-SQL | 75% |
 
 ## 技术栈
 
@@ -130,8 +130,8 @@ Alldata 擅长处理结构化数据，Bisheng 擅长处理非结构化文档。�
 | 技术 | 版本 | 用途 |
 | ------ | ------ | ------ |
 | Python | 3.10+ | 运行时 |
-| Flask | - | Web 框架 (Alldata, Bisheng) |
-| FastAPI | - | Web 框架 (OpenAI Proxy, Cube) |
+| Flask | - | Web 框架 (Data, Agent) |
+| FastAPI | - | Web 框架 (OpenAI Proxy, Model) |
 | MySQL | 8.0 | 持久化存储 |
 | Redis | 7.0 | 缓存和会话 |
 | MinIO | Latest | S3 兼容对象存储 |
@@ -207,9 +207,9 @@ make forward
 | 服务 | 地址 | 说明 |
 | ------ | ------ | ------ |
 | Web UI | <http://localhost:3000> | 主应用界面 |
-| Bisheng API | <http://localhost:8000> | 应用编排 API |
-| Alldata API | <http://localhost:8001> | 数据治理 API |
-| Cube API | <http://localhost:8002> | 模型服务 API |
+| Agent API | <http://localhost:8000> | 应用编排 API |
+| Data API | <http://localhost:8001> | 数据治理 API |
+| Model API | <http://localhost:8002> | 模型服务 API |
 | OpenAI Proxy | <http://localhost:8003> | OpenAI 兼容代理 |
 | Admin API | <http://localhost:8004> | 平台管理 API |
 | Keycloak | <http://localhost:8080> | 身份管理 |
@@ -222,9 +222,9 @@ make forward
 ```
 one-data-studio/
 ├── services/                 # 后端服务
-│   ├── alldata-api/          # 数据治理 API (Flask)
-│   ├── bisheng-api/          # 应用编排 API (Flask)
-│   ├── cube-api/             # 模型服务 API (FastAPI)
+│   ├── data-api/             # 数据治理 API (Flask)
+│   ├── agent-api/            # 应用编排 API (Flask)
+│   ├── model-api/            # 模型服务 API (FastAPI)
 │   ├── openai-proxy/         # OpenAI 兼容代理 (FastAPI)
 │   ├── admin-api/            # 平台管理 API (Flask)
 │   └── shared/               # 共享模块（认证、存储、工具）
@@ -296,7 +296,7 @@ one-data-studio/
 
 ```bash
 # 后端开发
-cd services/bisheng-api
+cd services/agent-api
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -375,9 +375,9 @@ limitations under the License.
 
 本项目建立在以下优秀开源项目的基础之上：
 
-- [Alldata](https://github.com/Computing-Data/Alldata) - 数据治理平台
-- [Cube Studio](https://github.com/tencentmusic/cube-studio) - 云原生 MLOps 平台
-- [Bisheng](https://github.com/dataelement/bisheng) - 大模型应用开发平台
+- [Alldata](https://github.com/Computing-Data/Alldata) - 数据治理平台（Data 层灵感来源）
+- [Cube Studio](https://github.com/tencentmusic/cube-studio) - 云原生 MLOps 平台（Model 层灵感来源）
+- [Bisheng](https://github.com/dataelement/bisheng) - 大模型应用开发平台（Agent 层灵感来源）
 
 ## 社区
 

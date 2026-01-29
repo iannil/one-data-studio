@@ -20,38 +20,38 @@ import { logError } from './logger';
  * 集中管理所有查询键，便于缓存失效和刷新
  */
 export const QueryKeys = {
-  // Alldata API
-  datasets: () => ['alldata', 'datasets'] as const,
-  dataset: (id: string) => ['alldata', 'datasets', id] as const,
-  datasetVersions: (id: string) => ['alldata', 'datasets', id, 'versions'] as const,
-  metadataDatabases: () => ['alldata', 'metadata', 'databases'] as const,
-  metadataTables: (db: string) => ['alldata', 'metadata', 'databases', db, 'tables'] as const,
+  // Data API
+  datasets: () => ['data', 'datasets'] as const,
+  dataset: (id: string) => ['data', 'datasets', id] as const,
+  datasetVersions: (id: string) => ['data', 'datasets', id, 'versions'] as const,
+  metadataDatabases: () => ['data', 'metadata', 'databases'] as const,
+  metadataTables: (db: string) => ['data', 'metadata', 'databases', db, 'tables'] as const,
   metadataColumns: (db: string, table: string) =>
-    ['alldata', 'metadata', 'databases', db, 'tables', table, 'columns'] as const,
+    ['data', 'metadata', 'databases', db, 'tables', table, 'columns'] as const,
 
-  // Bisheng API
-  workflows: () => ['bisheng', 'workflows'] as const,
-  workflow: (id: string) => ['bisheng', 'workflows', id] as const,
-  workflowExecutions: (id: string) => ['bisheng', 'workflows', id, 'executions'] as const,
-  executions: () => ['bisheng', 'executions'] as const,
-  executionLogs: (id: string) => ['bisheng', 'executions', id, 'logs'] as const,
-  conversations: () => ['bisheng', 'conversations'] as const,
-  conversation: (id: string) => ['bisheng', 'conversations', id] as const,
-  messages: (conversationId: string) => ['bisheng', 'conversations', conversationId, 'messages'] as const,
-  documents: () => ['bisheng', 'documents'] as const,
-  document: (id: string) => ['bisheng', 'documents', id] as const,
-  collections: () => ['bisheng', 'collections'] as const,
-  agentTemplates: () => ['bisheng', 'agent', 'templates'] as const,
-  agentTemplate: (id: string) => ['bisheng', 'agent', 'templates', id] as const,
-  tools: () => ['bisheng', 'tools'] as const,
+  // Agent API
+  workflows: () => ['agent', 'workflows'] as const,
+  workflow: (id: string) => ['agent', 'workflows', id] as const,
+  workflowExecutions: (id: string) => ['agent', 'workflows', id, 'executions'] as const,
+  executions: () => ['agent', 'executions'] as const,
+  executionLogs: (id: string) => ['agent', 'executions', id, 'logs'] as const,
+  conversations: () => ['agent', 'conversations'] as const,
+  conversation: (id: string) => ['agent', 'conversations', id] as const,
+  messages: (conversationId: string) => ['agent', 'conversations', conversationId, 'messages'] as const,
+  documents: () => ['agent', 'documents'] as const,
+  document: (id: string) => ['agent', 'documents', id] as const,
+  collections: () => ['agent', 'collections'] as const,
+  agentTemplates: () => ['agent', 'agent', 'templates'] as const,
+  agentTemplate: (id: string) => ['agent', 'agent', 'templates', id] as const,
+  tools: () => ['agent', 'tools'] as const,
   schedules: (workflowId?: string) =>
     workflowId
-      ? (['bisheng', 'workflows', workflowId, 'schedules'] as const)
-      : (['bisheng', 'schedules'] as const),
-  scheduleStats: (scheduleId: string) => ['bisheng', 'schedules', scheduleId, 'statistics'] as const,
+      ? (['agent', 'workflows', workflowId, 'schedules'] as const)
+      : (['agent', 'schedules'] as const),
+  scheduleStats: (scheduleId: string) => ['agent', 'schedules', scheduleId, 'statistics'] as const,
 
-  // Cube API
-  models: () => ['cube', 'models'] as const,
+  // Model API
+  models: () => ['model', 'models'] as const,
 
   // 用户相关
   currentUser: () => ['auth', 'user'] as const,
@@ -83,23 +83,23 @@ export const CacheTime = {
  */
 export const CacheStrategies: Record<string, { staleTime: number; gcTime: number }> = {
   // 实时数据 - 需要频繁更新
-  'bisheng.executions': { staleTime: CacheTime.REALTIME, gcTime: CacheTime.SHORT },
+  'agent.executions': { staleTime: CacheTime.REALTIME, gcTime: CacheTime.SHORT },
 
   // 聊天相关 - 较短缓存
-  'bisheng.conversations': { staleTime: CacheTime.SHORT, gcTime: CacheTime.MEDIUM },
+  'agent.conversations': { staleTime: CacheTime.SHORT, gcTime: CacheTime.MEDIUM },
 
   // 工作流和文档 - 中期缓存
-  'bisheng.workflows': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
-  'bisheng.documents': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
-  'alldata.datasets': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
+  'agent.workflows': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
+  'agent.documents': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
+  'data.datasets': { staleTime: CacheTime.MEDIUM, gcTime: CacheTime.LONG },
 
   // 元数据 - 长期缓存
-  'alldata.metadata': { staleTime: CacheTime.LONG, gcTime: CacheTime.STATIC },
+  'data.metadata': { staleTime: CacheTime.LONG, gcTime: CacheTime.STATIC },
 
   // 静态数据 - 很少变化
-  'cube.models': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
+  'model.models': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
   'auth.permissions': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
-  'bisheng.tools': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
+  'agent.tools': { staleTime: CacheTime.STATIC, gcTime: CacheTime.INFINITE },
 };
 
 /**

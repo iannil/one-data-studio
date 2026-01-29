@@ -5075,6 +5075,589 @@ def create_evaluation_task():
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 
+# ==================== 镜像构建 API ====================
+
+@app.route("/api/v1/image-builds", methods=["GET"])
+@require_jwt()
+def list_image_builds():
+    """获取镜像构建列表"""
+    try:
+        from services.image_build_service import get_image_build_service
+        service = get_image_build_service()
+
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 20))
+        builds = service.list_builds(status=status, limit=limit)
+        return jsonify({"code": 0, "message": "success", "data": builds})
+    except Exception as e:
+        logger.error(f"Error listing image builds: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/image-builds/dockerfile", methods=["POST"])
+@require_jwt()
+def create_dockerfile_build():
+    """创建 Dockerfile 镜像构建任务"""
+    try:
+        from services.image_build_service import get_image_build_service
+        service = get_image_build_service()
+        data = request.get_json()
+
+        job = service.create_dockerfile_build(
+            image_name=data.get("image_name"),
+            tag=data.get("tag", "latest"),
+            dockerfile_content=data.get("dockerfile_content", ""),
+            build_args=data.get("build_args", {}),
+        )
+        return jsonify({"code": 0, "message": "Build job created", "data": job.to_dict()}), 201
+    except Exception as e:
+        logger.error(f"Error creating dockerfile build: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/image-builds/<job_id>", methods=["GET"])
+@require_jwt()
+def get_build_status(job_id):
+    """获取构建状态"""
+    try:
+        from services.image_build_service import get_image_build_service
+        service = get_image_build_service()
+
+        job = service.get_build_status(job_id)
+        if not job:
+            return jsonify({"code": 40400, "message": "Build job not found"}), 404
+        return jsonify({"code": 0, "message": "success", "data": job.to_dict()})
+    except Exception as e:
+        logger.error(f"Error getting build status: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/image-builds/<job_id>/logs", methods=["GET"])
+@require_jwt()
+def get_build_logs(job_id):
+    """获取构建日志"""
+    try:
+        from services.image_build_service import get_image_build_service
+        service = get_image_build_service()
+
+        tail = int(request.args.get("tail", 100))
+        logs = service.get_build_logs(job_id, tail_lines=tail)
+        return jsonify({"code": 0, "message": "success", "data": {"logs": logs}})
+    except Exception as e:
+        logger.error(f"Error getting build logs: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/image-builds/<job_id>/cancel", methods=["POST"])
+@require_jwt()
+def cancel_build(job_id):
+    """取消构建任务"""
+    try:
+        from services.image_build_service import get_image_build_service
+        service = get_image_build_service()
+
+        success = service.cancel_build(job_id)
+        if not success:
+            return jsonify({"code": 40400, "message": "Build job not found or cannot be cancelled"}), 404
+        return jsonify({"code": 0, "message": "Build cancelled"})
+    except Exception as e:
+        logger.error(f"Error cancelling build: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/image-builds/templates", methods=["GET"])
+@require_jwt()
+def get_base_image_templates():
+    """获取基础镜像模板"""
+    try:
+        from services.image_build_service import get_image_build_service, ImageType
+        service = get_image_build_service()
+
+        image_type = request.args.get("type")
+        it = ImageType(image_type) if image_type else None
+        templates = service.get_base_templates(image_type=it)
+        return jsonify({"code": 0, "message": "success", "data": templates})
+    except Exception as e:
+        logger.error(f"Error getting base templates: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 数据标注 API ====================
+
+@app.route("/api/v1/labeling/projects", methods=["GET"])
+@require_jwt()
+def list_labeling_projects():
+    """获取标注项目列表"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        status = request.args.get("status")
+        limit = int(request.args.get("limit", 20))
+        projects = service.list_projects(status=status, limit=limit)
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": [p.to_dict() for p in projects]
+        })
+    except Exception as e:
+        logger.error(f"Error listing labeling projects: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects", methods=["POST"])
+@require_jwt()
+def create_labeling_project():
+    """创建标注项目"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+        data = request.get_json()
+
+        project = service.create_project(
+            name=data.get("name"),
+            task_type=data.get("task_type", "classification"),
+            description=data.get("description", ""),
+            label_config=data.get("label_config", {}),
+        )
+        return jsonify({"code": 0, "message": "Project created", "data": project.to_dict()}), 201
+    except Exception as e:
+        logger.error(f"Error creating labeling project: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects/<project_id>", methods=["GET"])
+@require_jwt()
+def get_labeling_project(project_id):
+    """获取标注项目详情"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        project = service.get_project(project_id)
+        if not project:
+            return jsonify({"code": 40400, "message": "Project not found"}), 404
+        return jsonify({"code": 0, "message": "success", "data": project.to_dict()})
+    except Exception as e:
+        logger.error(f"Error getting labeling project: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects/<project_id>/tasks", methods=["POST"])
+@require_jwt()
+def add_labeling_tasks(project_id):
+    """添加标注任务"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+        data = request.get_json()
+
+        tasks = service.add_tasks(
+            project_id=project_id,
+            items=data.get("items", []),
+        )
+        return jsonify({
+            "code": 0,
+            "message": f"Added {len(tasks)} tasks",
+            "data": [t.to_dict() for t in tasks]
+        }), 201
+    except Exception as e:
+        logger.error(f"Error adding labeling tasks: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects/<project_id>/next", methods=["GET"])
+@require_jwt()
+def get_next_labeling_task(project_id):
+    """获取下一个待标注任务"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        task = service.get_next_task(project_id)
+        if not task:
+            return jsonify({"code": 0, "message": "No more tasks", "data": None})
+        return jsonify({"code": 0, "message": "success", "data": task.to_dict()})
+    except Exception as e:
+        logger.error(f"Error getting next task: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/tasks/<task_id>/annotate", methods=["POST"])
+@require_jwt()
+def submit_annotation(task_id):
+    """提交标注"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+        data = request.get_json()
+
+        annotation = service.submit_annotation(
+            task_id=task_id,
+            result=data.get("result", {}),
+            annotator=data.get("annotator", ""),
+        )
+        return jsonify({"code": 0, "message": "Annotation submitted", "data": annotation.to_dict()})
+    except Exception as e:
+        logger.error(f"Error submitting annotation: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects/<project_id>/export", methods=["GET"])
+@require_jwt()
+def export_annotations(project_id):
+    """导出标注结果"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        format_type = request.args.get("format", "json")
+        data = service.export_annotations(project_id, format_type=format_type)
+        return jsonify({"code": 0, "message": "success", "data": data})
+    except Exception as e:
+        logger.error(f"Error exporting annotations: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/projects/<project_id>/statistics", methods=["GET"])
+@require_jwt()
+def get_labeling_statistics(project_id):
+    """获取标注项目统计"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        stats = service.get_project_statistics(project_id)
+        return jsonify({"code": 0, "message": "success", "data": stats})
+    except Exception as e:
+        logger.error(f"Error getting labeling statistics: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/labeling/config-templates", methods=["GET"])
+@require_jwt()
+def get_label_config_templates():
+    """获取标注配置模板"""
+    try:
+        from services.labeling_service import get_labeling_service
+        service = get_labeling_service()
+
+        task_type = request.args.get("task_type")
+        templates = service.get_label_config_templates(task_type=task_type)
+        return jsonify({"code": 0, "message": "success", "data": templates})
+    except Exception as e:
+        logger.error(f"Error getting config templates: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 在线 IDE API ====================
+
+@app.route("/api/v1/ide/instances", methods=["GET"])
+@require_jwt()
+def list_ide_instances():
+    """获取 IDE 实例列表"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+
+        status = request.args.get("status")
+        ide_type = request.args.get("type")
+        instances = service.list_instances(status=status, ide_type=ide_type)
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": [inst.to_dict() for inst in instances]
+        })
+    except Exception as e:
+        logger.error(f"Error listing IDE instances: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/instances", methods=["POST"])
+@require_jwt()
+def create_ide_instance():
+    """创建 IDE 实例"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+        data = request.get_json()
+
+        instance = service.create_instance(
+            name=data.get("name"),
+            ide_type=data.get("ide_type", "jupyter"),
+            image=data.get("image"),
+            resources=data.get("resources", {}),
+        )
+        return jsonify({"code": 0, "message": "IDE instance created", "data": instance.to_dict()}), 201
+    except Exception as e:
+        logger.error(f"Error creating IDE instance: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/instances/<instance_id>", methods=["GET"])
+@require_jwt()
+def get_ide_instance(instance_id):
+    """获取 IDE 实例详情"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+
+        instance = service.get_instance(instance_id)
+        if not instance:
+            return jsonify({"code": 40400, "message": "IDE instance not found"}), 404
+        return jsonify({"code": 0, "message": "success", "data": instance.to_dict()})
+    except Exception as e:
+        logger.error(f"Error getting IDE instance: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/instances/<instance_id>/start", methods=["POST"])
+@require_jwt()
+def start_ide_instance(instance_id):
+    """启动 IDE 实例"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+
+        success = service.start_instance(instance_id)
+        if not success:
+            return jsonify({"code": 40400, "message": "Instance not found or cannot be started"}), 404
+        return jsonify({"code": 0, "message": "IDE instance starting"})
+    except Exception as e:
+        logger.error(f"Error starting IDE instance: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/instances/<instance_id>/stop", methods=["POST"])
+@require_jwt()
+def stop_ide_instance(instance_id):
+    """停止 IDE 实例"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+
+        success = service.stop_instance(instance_id)
+        if not success:
+            return jsonify({"code": 40400, "message": "Instance not found or cannot be stopped"}), 404
+        return jsonify({"code": 0, "message": "IDE instance stopping"})
+    except Exception as e:
+        logger.error(f"Error stopping IDE instance: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/instances/<instance_id>", methods=["DELETE"])
+@require_jwt()
+def delete_ide_instance(instance_id):
+    """删除 IDE 实例"""
+    try:
+        from services.online_ide_service import get_ide_service
+        service = get_ide_service()
+
+        keep_data = request.args.get("keep_data", "false").lower() == "true"
+        success = service.delete_instance(instance_id, keep_data=keep_data)
+        if not success:
+            return jsonify({"code": 40400, "message": "IDE instance not found"}), 404
+        return jsonify({"code": 0, "message": "IDE instance deleted"})
+    except Exception as e:
+        logger.error(f"Error deleting IDE instance: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/ide/images", methods=["GET"])
+@require_jwt()
+def get_available_ide_images():
+    """获取可用 IDE 镜像列表"""
+    try:
+        from services.online_ide_service import get_ide_service, IDEType
+        service = get_ide_service()
+
+        ide_type = request.args.get("type")
+        it = IDEType(ide_type) if ide_type else None
+        images = service.get_available_images(ide_type=it)
+        return jsonify({"code": 0, "message": "success", "data": images})
+    except Exception as e:
+        logger.error(f"Error getting IDE images: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== K8s 训练服务 API ====================
+
+@app.route("/api/v1/k8s-training/submit", methods=["POST"])
+@require_jwt()
+def submit_k8s_training():
+    """提交 K8s 训练任务"""
+    try:
+        from services.k8s_training_service import get_k8s_training_service
+        service = get_k8s_training_service()
+        data = request.get_json()
+
+        result = service.submit_training_job(
+            job_name=data.get("job_name"),
+            image=data.get("image"),
+            framework=data.get("framework", "pytorch"),
+            resources=data.get("resources", {}),
+            hyperparameters=data.get("hyperparameters", {}),
+            data_config=data.get("data_config", {}),
+        )
+        return jsonify({"code": 0, "message": "Training job submitted", "data": result}), 201
+    except Exception as e:
+        logger.error(f"Error submitting K8s training: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/k8s-training/<job_name>/status", methods=["GET"])
+@require_jwt()
+def get_k8s_training_status(job_name):
+    """获取 K8s 训练任务状态"""
+    try:
+        from services.k8s_training_service import get_k8s_training_service
+        service = get_k8s_training_service()
+
+        job_id = request.args.get("job_id", "")
+        status = service.get_job_status(job_id, job_name)
+        return jsonify({"code": 0, "message": "success", "data": {"status": status.value}})
+    except Exception as e:
+        logger.error(f"Error getting K8s training status: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/k8s-training/<job_name>/logs", methods=["GET"])
+@require_jwt()
+def get_k8s_training_logs(job_name):
+    """获取 K8s 训练日志"""
+    try:
+        from services.k8s_training_service import get_k8s_training_service
+        service = get_k8s_training_service()
+
+        tail = int(request.args.get("tail", 100))
+        logs = service.get_job_logs(job_name, tail_lines=tail)
+        return jsonify({"code": 0, "message": "success", "data": {"logs": logs}})
+    except Exception as e:
+        logger.error(f"Error getting K8s training logs: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/k8s-training/<job_name>/cancel", methods=["POST"])
+@require_jwt()
+def cancel_k8s_training(job_name):
+    """取消 K8s 训练任务"""
+    try:
+        from services.k8s_training_service import get_k8s_training_service
+        service = get_k8s_training_service()
+
+        success = service.cancel_job(job_name)
+        if not success:
+            return jsonify({"code": 40400, "message": "Job not found or cannot be cancelled"}), 404
+        return jsonify({"code": 0, "message": "Training job cancelled"})
+    except Exception as e:
+        logger.error(f"Error cancelling K8s training: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/k8s-training", methods=["GET"])
+@require_jwt()
+def list_k8s_training_jobs():
+    """获取 K8s 训练任务列表"""
+    try:
+        from services.k8s_training_service import get_k8s_training_service
+        service = get_k8s_training_service()
+
+        label_selector = request.args.get("label_selector")
+        jobs = service.list_jobs(label_selector=label_selector)
+        return jsonify({"code": 0, "message": "success", "data": jobs})
+    except Exception as e:
+        logger.error(f"Error listing K8s training jobs: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 模型注册表 API ====================
+
+@app.route("/api/v1/model-registry/register", methods=["POST"])
+@require_jwt()
+def register_model_version():
+    """注册模型版本"""
+    try:
+        from services.model_registry import get_model_registry
+        registry = get_model_registry()
+        data = request.get_json()
+
+        version_info = registry.register_model(
+            model_id=data.get("model_id"),
+            version=data.get("version"),
+            artifact_path=data.get("artifact_path"),
+            metrics=data.get("metrics", {}),
+            parameters=data.get("parameters", {}),
+        )
+        return jsonify({"code": 0, "message": "Model registered", "data": version_info}), 201
+    except Exception as e:
+        logger.error(f"Error registering model: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/model-registry/<model_id>/versions", methods=["GET"])
+@require_jwt()
+def list_model_registry_versions(model_id):
+    """获取模型版本列表"""
+    try:
+        from services.model_registry import get_model_registry
+        registry = get_model_registry()
+
+        versions = registry.list_model_versions(model_id)
+        return jsonify({"code": 0, "message": "success", "data": versions})
+    except Exception as e:
+        logger.error(f"Error listing model versions: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/model-registry/<model_id>/versions/<version>/download", methods=["GET"])
+@require_jwt()
+def download_model_version(model_id, version):
+    """下载模型版本"""
+    try:
+        from services.model_registry import get_model_registry
+        registry = get_model_registry()
+
+        local_path = request.args.get("local_path", f"/tmp/models/{model_id}/{version}")
+        result = registry.download_model(model_id, version, local_path)
+        return jsonify({"code": 0, "message": "success", "data": result})
+    except Exception as e:
+        logger.error(f"Error downloading model: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/model-registry/<model_id>/versions/compare", methods=["GET"])
+@require_jwt()
+def compare_model_versions(model_id):
+    """对比模型版本"""
+    try:
+        from services.model_registry import get_model_registry
+        registry = get_model_registry()
+
+        v1 = request.args.get("v1")
+        v2 = request.args.get("v2")
+        comparison = registry.compare_versions(model_id, v1, v2)
+        return jsonify({"code": 0, "message": "success", "data": comparison})
+    except Exception as e:
+        logger.error(f"Error comparing model versions: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/model-registry/<model_id>/versions/<version>/stage", methods=["PUT"])
+@require_jwt()
+def set_model_stage(model_id, version):
+    """设置模型阶段（staging/production/archived）"""
+    try:
+        from services.model_registry import get_model_registry
+        registry = get_model_registry()
+        data = request.get_json()
+
+        result = registry.set_model_stage(model_id, version, stage=data.get("stage"))
+        return jsonify({"code": 0, "message": "Model stage updated", "data": result})
+    except Exception as e:
+        logger.error(f"Error setting model stage: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # ==================== 启动应用 ====================
 
 if __name__ == "__main__":

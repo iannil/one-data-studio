@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cube 模型服务示例
+Model 平台模型服务示例
 演示如何调用 OpenAI 兼容的模型推理 API
 """
 
@@ -8,8 +8,8 @@ import requests
 from typing import List, Dict, Optional
 
 
-class CubeModelClient:
-    """Cube 模型服务客户端（OpenAI 兼容）"""
+class ModelClient:
+    """Model 平台服务客户端（OpenAI 兼容）"""
 
     def __init__(self, base_url: str, api_key: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
@@ -76,7 +76,7 @@ class CubeModelClient:
 class ChatHelper:
     """聊天助手类 - 管理对话上下文"""
 
-    def __init__(self, client: CubeModelClient, system_prompt: str = ""):
+    def __init__(self, client: ModelClient, system_prompt: str = ""):
         self.client = client
         self.messages = []
         if system_prompt:
@@ -104,7 +104,7 @@ class ChatHelper:
 def main():
     """示例用法"""
     # 初始化客户端
-    client = CubeModelClient("http://localhost:8000")
+    client = ModelClient("http://localhost:8000")
 
     # 1. 列出可用模型
     print("=== 可用模型 ===")

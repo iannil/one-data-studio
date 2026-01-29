@@ -1,4 +1,4 @@
-# Cube Studio 与 Bisheng 集成方案
+# Model 与 Agent 平台集成方案
 
 ## 集成目标
 
@@ -11,7 +11,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                       Bisheng (L4)                           │
+│                       Agent 平台 (L4)                         │
 │  ┌─────────┐   ┌─────────┐   ┌──────────────┐               │
 │  │ RAG 流程 │   │ Agent  │   │  应用编排    │               │
 │  └────┬────┘   └────┬────┘   └──────┬───────┘               │
@@ -23,7 +23,7 @@
                       │
                       ↓
 ┌──────────────────────────────────────────────────────────────┐
-│                    Cube Studio (L3)                          │
+│                    Model 平台 (L3)                            │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │              Istio Gateway (模型服务网关)             │    │
 │  │              /llm/* → /v1/* (OpenAI 兼容)            │    │
@@ -45,17 +45,17 @@
 ```mermaid
 sequenceDiagram
     participant User as 算法工程师
-    participant Cube as Cube Studio
+    participant Model as Model 平台
     participant K8s as Kubernetes
     participant Gateway as Istio Gateway
-    participant Bisheng as Bisheng
+    participant Agent as Agent 平台
 
-    User->>Cube: 1. 提交微调后模型
-    Cube->>K8s: 2. 创建 vLLM Deployment
-    Cube->>Gateway: 3. 配置路由规则
-    Gateway-->>Cube: 4. 返回服务 URL
-    Cube->>Bisheng: 5. 注册模型端点
-    Bisheng-->>User: 6. 模型就绪
+    User->>Model: 1. 提交微调后模型
+    Model->>K8s: 2. 创建 vLLM Deployment
+    Model->>Gateway: 3. 配置路由规则
+    Gateway-->>Model: 4. 返回服务 URL
+    Model->>Agent: 5. 注册模型端点
+    Agent-->>User: 6. 模型就绪
 ```
 
 ### 2. 推理调用流程
@@ -63,16 +63,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as 业务用户
-    participant Bisheng as Bisheng 应用
+    participant Agent as Agent 应用
     participant Gateway as Istio Gateway
     participant vLLM as vLLM Pods
 
-    User->>Bisheng: 1. 发送问题
-    Bisheng->>Gateway: 2. POST /v1/chat/completions
+    User->>Agent: 1. 发送问题
+    Agent->>Gateway: 2. POST /v1/chat/completions
     Gateway->>vLLM: 3. 负载均衡请求
     vLLM-->>Gateway: 4. 返回推理结果
-    Gateway-->>Bisheng: 5. 返回结果
-    Bisheng-->>User: 6. 返回回答
+    Gateway-->>Agent: 5. 返回结果
+    Agent-->>User: 6. 返回回答
 ```
 
 ## API 规范
@@ -82,7 +82,7 @@ sequenceDiagram
 ```http
 POST /v1/chat/completions
 Content-Type: application/json
-Authorization: Bearer ${CUBE_API_KEY}
+Authorization: Bearer ${MODEL_API_KEY}
 
 {
   "model": "enterprise-llama-7b-v1.0",
@@ -129,7 +129,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: llama-7b-vllm
-  namespace: cube-studio
+  namespace: model-platform
 spec:
   replicas: 1
   selector:
@@ -206,18 +206,18 @@ spec:
           number: 8000
 ```
 
-## Bisheng 配置
+## Agent 平台配置
 
 ### 模型接入配置
 
 ```yaml
-# Bisheng config/models.yaml
+# Agent 平台 config/models.yaml
 models:
   - id: "enterprise-llama-7b"
     name: "企业私有 Llama 7B"
     type: "openai-compatible"
     base_url: "http://llm.example.com/v1"
-    api_key: "${CUBE_LLM_API_KEY}"
+    api_key: "${MODEL_LLM_API_KEY}"
     capabilities:
       chat: true
       completion: true
@@ -233,9 +233,9 @@ models:
 ```python
 from langchain.llms import OpenAI
 
-# 配置 Cube Studio 模型
+# 配置 Model 平台模型
 llm = OpenAI(
-    openai_api_key="${CUBE_LLM_API_KEY}",
+    openai_api_key="${MODEL_LLM_API_KEY}",
     openai_api_base="http://llm.example.com/v1",
     model_name="enterprise-llama-7b",
     temperature=0.7

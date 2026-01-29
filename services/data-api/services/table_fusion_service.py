@@ -1322,6 +1322,261 @@ ON {' AND '.join(join_conditions)}"""
             return 0
 
 
+    # ==================== JOIN 执行方法 ====================
+
+    def execute_join(
+        self,
+        db: Session,
+        source_table: str,
+        target_table: str,
+        join_keys: List[JoinKeyPair],
+        join_type: JoinType = JoinType.LEFT,
+        select_columns: Optional[Dict[str, List[str]]] = None,
+        where_clause: Optional[str] = None,
+        source_database: Optional[str] = None,
+        target_database: Optional[str] = None,
+        limit: int = 1000,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        执行 JOIN 查询并返回结果
+
+        Args:
+            db: 数据库会话
+            source_table: 源表名
+            target_table: 目标表名
+            join_keys: 关联键列表
+            join_type: JOIN 类型
+            select_columns: 选择的列 {"source": [...], "target": [...]}，None 表示 SELECT *
+            where_clause: 额外的 WHERE 条件
+            source_database: 源数据库名
+            target_database: 目标数据库名
+            limit: 返回行数限制
+            offset: 偏移量
+
+        Returns:
+            JOIN 查询结果
+        """
+        if not join_keys:
+            return {
+                "success": False,
+                "error": "未提供关联键",
+                "data": [],
+                "total": 0,
+            }
+
+        source_full = f"{source_database}.{source_table}" if source_database else source_table
+        target_full = f"{target_database}.{target_table}" if target_database else target_table
+
+        # 构建 SELECT 子句
+        if select_columns:
+            source_cols = [f"s.{c}" for c in select_columns.get("source", ["*"])]
+            target_cols = [f"t.{c}" for c in select_columns.get("target", ["*"])]
+            select_clause = ", ".join(source_cols + target_cols)
+        else:
+            select_clause = "s.*, t.*"
+
+        # 构建 JOIN 条件
+        join_conditions = []
+        for key in join_keys[:3]:
+            join_conditions.append(f"s.{key.source_column} = t.{key.target_column}")
+        on_clause = " AND ".join(join_conditions)
+
+        # 构建完整 SQL
+        join_type_sql = join_type.value.upper()
+        sql = (
+            f"SELECT {select_clause} "
+            f"FROM {source_full} s "
+            f"{join_type_sql} JOIN {target_full} t ON {on_clause}"
+        )
+
+        if where_clause:
+            sql += f" WHERE {where_clause}"
+
+        # 先获取总数
+        count_sql = f"SELECT COUNT(*) FROM ({sql}) _count_query"
+        sql += f" LIMIT {limit} OFFSET {offset}"
+
+        try:
+            # 获取总数
+            total = 0
+            try:
+                count_result = db.execute(text(count_sql))
+                total = count_result.scalar() or 0
+            except Exception as e:
+                logger.warning(f"获取总数失败，跳过: {e}")
+
+            # 执行查询
+            result = db.execute(text(sql))
+            rows = result.fetchall()
+
+            # 转换为字典列表
+            data = []
+            column_names = list(result.keys()) if hasattr(result, 'keys') else []
+            for row in rows:
+                if hasattr(row, '_mapping'):
+                    data.append(dict(row._mapping))
+                elif column_names:
+                    data.append(dict(zip(column_names, row)))
+                else:
+                    data.append({str(i): v for i, v in enumerate(row)})
+
+            return {
+                "success": True,
+                "data": data,
+                "row_count": len(data),
+                "total": total if total > 0 else len(data),
+                "limit": limit,
+                "offset": offset,
+                "join_type": join_type.value,
+                "join_keys": [k.to_dict() for k in join_keys[:3]],
+                "sql": sql,
+            }
+
+        except Exception as e:
+            logger.error(f"JOIN 执行失败: {e}")
+            return {
+                "success": False,
+                "error": f"JOIN 执行失败: {str(e)}",
+                "data": [],
+                "total": 0,
+                "sql": sql,
+            }
+
+    def execute_fusion(
+        self,
+        db: Session,
+        source_table: str,
+        target_table: str,
+        source_database: Optional[str] = None,
+        target_database: Optional[str] = None,
+        output_table: Optional[str] = None,
+        select_columns: Optional[Dict[str, List[str]]] = None,
+        limit: int = 1000
+    ) -> Dict[str, Any]:
+        """
+        一站式表融合：自动检测关联键、推荐策略、执行 JOIN
+
+        Args:
+            db: 数据库会话
+            source_table: 源表名
+            target_table: 目标表名
+            source_database: 源数据库名
+            target_database: 目标数据库名
+            output_table: 输出表名（如提供则将结果写入该表）
+            select_columns: 选择的列
+            limit: 返回行数限制
+
+        Returns:
+            融合结果
+        """
+        # 1. 检测关联键
+        join_keys_map = self.detect_potential_join_keys(
+            db, source_table, [target_table],
+            source_database, target_database
+        )
+
+        join_keys = join_keys_map.get(target_table, [])
+        if not join_keys:
+            return {
+                "success": False,
+                "error": f"未能在 {source_table} 和 {target_table} 之间检测到关联键",
+                "phase": "detection",
+            }
+
+        # 2. 推荐策略
+        strategy = self.recommend_join_strategy(
+            db, source_table, target_table,
+            join_keys, source_database, target_database
+        )
+
+        # 3. 执行 JOIN
+        result = self.execute_join(
+            db, source_table, target_table,
+            strategy.join_keys,
+            strategy.join_type,
+            select_columns=select_columns,
+            source_database=source_database,
+            target_database=target_database,
+            limit=limit
+        )
+
+        # 4. 如果指定了输出表，将结果写入
+        if output_table and result.get("success"):
+            write_result = self._write_join_result(
+                db, strategy, output_table,
+                source_database, target_database,
+                select_columns
+            )
+            result["output_table"] = write_result
+
+        # 合并策略信息
+        result["strategy"] = strategy.to_dict()
+        result["detected_keys"] = [k.to_dict() for k in join_keys]
+
+        return result
+
+    def _write_join_result(
+        self,
+        db: Session,
+        strategy: JoinStrategyRecommendation,
+        output_table: str,
+        source_database: Optional[str] = None,
+        target_database: Optional[str] = None,
+        select_columns: Optional[Dict[str, List[str]]] = None
+    ) -> Dict[str, Any]:
+        """将 JOIN 结果写入输出表"""
+        try:
+            # 使用 CREATE TABLE ... AS SELECT 语法
+            source_full = f"{source_database}.{strategy.join_keys[0].source_table}" \
+                if source_database else strategy.join_keys[0].source_table
+            target_full = f"{target_database}.{strategy.join_keys[0].target_table}" \
+                if target_database else strategy.join_keys[0].target_table
+
+            if select_columns:
+                source_cols = [f"s.{c}" for c in select_columns.get("source", ["*"])]
+                target_cols = [f"t.{c}" for c in select_columns.get("target", ["*"])]
+                select_clause = ", ".join(source_cols + target_cols)
+            else:
+                select_clause = "s.*, t.*"
+
+            join_conditions = []
+            for key in strategy.join_keys:
+                join_conditions.append(f"s.{key.source_column} = t.{key.target_column}")
+
+            join_type_sql = strategy.join_type.value.upper()
+
+            create_sql = (
+                f"CREATE TABLE IF NOT EXISTS {output_table} AS "
+                f"SELECT {select_clause} "
+                f"FROM {source_full} s "
+                f"{join_type_sql} JOIN {target_full} t "
+                f"ON {' AND '.join(join_conditions)}"
+            )
+
+            db.execute(text(create_sql))
+            db.commit()
+
+            # 获取行数
+            count_result = db.execute(text(f"SELECT COUNT(*) FROM {output_table}"))
+            row_count = count_result.scalar() or 0
+
+            return {
+                "success": True,
+                "output_table": output_table,
+                "row_count": row_count,
+                "sql": create_sql,
+            }
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"写入输出表失败: {e}")
+            return {
+                "success": False,
+                "error": f"写入输出表失败: {str(e)}",
+            }
+
+
 # 创建全局服务实例
 _table_fusion_service = None
 

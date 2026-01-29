@@ -21,9 +21,9 @@
 
 **ONE-DATA-STUDIO** is an open-source enterprise platform that converges three critical AI infrastructure layers:
 
-- **Alldata** - Data governance and development platform (DataOps layer)
-- **Cube Studio** - Cloud-native MLOps platform (Model/Compute layer)
-- **Bisheng** - LLM application development platform (LLMOps layer)
+- **Data** - Data governance and development platform (DataOps layer)
+- **Model** - Cloud-native MLOps platform (Model/Compute layer)
+- **Agent** - LLM application development platform (LLMOps layer)
 
 This platform bridges the complete value chain from **raw data governance** to **model training/deployment**, and finally to **generative AI application construction**.
 
@@ -31,21 +31,21 @@ This platform bridges the complete value chain from **raw data governance** to *
 
 ### Break Down Data & AI Silos
 
-Data teams (using Alldata) and algorithm teams (using Cube Studio) often work in isolation. Our integration enables a **seamless Feature Store** where algorithm engineers can directly access high-quality, governed data without redundant cleaning efforts.
+Data teams (using Data platform) and algorithm teams (using Model platform) often work in isolation. Our integration enables a **seamless Feature Store** where algorithm engineers can directly access high-quality, governed data without redundant cleaning efforts.
 
 ### Unified Structured & Unstructured Data
 
-Alldata excels at structured data while Bisheng handles unstructured documents. Combined, enterprises can build **"ChatBI"**—querying both document knowledge bases and database sales reports using natural language (Text-to-SQL).
+Data platform excels at structured data while Agent platform handles unstructured documents. Combined, enterprises can build **"ChatBI"**—querying both document knowledge bases and database sales reports using natural language (Text-to-SQL).
 
 ### Complete Private LLM Deployment Loop
 
-Many enterprises want to use Bisheng for applications but lack model fine-tuning capabilities, or have models trained via Cube Studio but lack application-building tools.
+Many enterprises want to use Agent platform for applications but lack model fine-tuning capabilities, or have models trained via Model platform but lack application-building tools.
 
-**All three combined = Private Data (Alldata) + Private Compute/Models (Cube Studio) + Private Applications (Bisheng)**. This constitutes the most secure enterprise AGI solution.
+**All three combined = Private Data (Data) + Private Compute/Models (Model) + Private Applications (Agent)**. This constitutes the most secure enterprise AGI solution.
 
 ### Full Lifecycle Governance
 
-From data lineage (Alldata) to model lineage (Cube Studio) to application logs, the entire chain is traceable. If an AI answer is incorrect, you can trace whether it's a Prompt issue, model overfitting, or dirty source data.
+From data lineage (Data platform) to model lineage (Model platform) to application logs, the entire chain is traceable. If an AI answer is incorrect, you can trace whether it's a Prompt issue, model overfitting, or dirty source data.
 
 ## Features
 
@@ -81,17 +81,17 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                 L4 Application Layer (Bisheng)                  │
+│                 L4 Application Layer (Agent)                    │
 │             RAG Pipeline | Agent Orchestration | Workflow       │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ OpenAI API / Metadata
 ┌─────────────────────────────────────────────────────────────────┐
-│                L3 Algorithm Engine Layer (Cube Studio)          │
+│                L3 Algorithm Engine Layer (Model)                │
 │             Notebook | Distributed Training | Model Serving     │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ Mount Data Volumes
 ┌─────────────────────────────────────────────────────────────────┐
-│                  L2 Data Foundation Layer (Alldata)             │
+│                  L2 Data Foundation Layer (Data)                │
 │        Data Integration | ETL | Governance | Vector Store       │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ Storage Protocol
@@ -105,9 +105,9 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 
 | Integration | Description | Status |
 | ------------- | ------------- | -------- |
-| **Alldata → Cube** | Unified storage protocol with dataset versioning | 90% |
-| **Cube → Bisheng** | OpenAI-compatible model serving API | 85% |
-| **Alldata → Bisheng** | Metadata-based Text-to-SQL | 75% |
+| **Data → Model** | Unified storage protocol with dataset versioning | 90% |
+| **Model → Agent** | OpenAI-compatible model serving API | 85% |
+| **Data → Agent** | Metadata-based Text-to-SQL | 75% |
 
 ## Tech Stack
 
@@ -130,8 +130,8 @@ From data lineage (Alldata) to model lineage (Cube Studio) to application logs, 
 | Technology | Version | Purpose |
 | ------------ | --------- | --------- |
 | Python | 3.10+ | Runtime |
-| Flask | - | Web Framework (Alldata, Bisheng) |
-| FastAPI | - | Web Framework (OpenAI Proxy, Cube) |
+| Flask | - | Web Framework (Data, Agent) |
+| FastAPI | - | Web Framework (OpenAI Proxy, Model) |
 | MySQL | 8.0 | Persistent Storage |
 | Redis | 7.0 | Caching & Session |
 | MinIO | Latest | S3-compatible Object Storage |
@@ -209,9 +209,9 @@ make forward
 | Service | URL | Description |
 | --------- | ----- | ------------- |
 | Web UI | <http://localhost:3000> | Main application interface |
-| Bisheng API | <http://localhost:8000> | Application orchestration API |
-| Alldata API | <http://localhost:8001> | Data governance API |
-| Cube API | <http://localhost:8002> | Model service API |
+| Agent API | <http://localhost:8000> | Application orchestration API |
+| Data API | <http://localhost:8001> | Data governance API |
+| Model API | <http://localhost:8002> | Model service API |
 | OpenAI Proxy | <http://localhost:8003> | OpenAI-compatible proxy |
 | Admin API | <http://localhost:8004> | Platform administration API |
 | OpenMetadata | <http://localhost:8585> | Metadata governance platform |
@@ -225,9 +225,9 @@ make forward
 ```
 one-data-studio/
 ├── services/                 # Backend services
-│   ├── alldata-api/          # Data governance API (Flask)
-│   ├── bisheng-api/          # Application orchestration API (Flask)
-│   ├── cube-api/             # Model service API (FastAPI)
+│   ├── data-api/             # Data governance API (Flask)
+│   ├── agent-api/            # Application orchestration API (Flask)
+│   ├── model-api/            # Model service API (FastAPI)
 │   ├── openai-proxy/         # OpenAI-compatible proxy (FastAPI)
 │   ├── admin-api/            # Platform administration API (Flask)
 │   └── shared/               # Shared modules (auth, storage, utils)
@@ -299,7 +299,7 @@ We welcome contributions from the community!
 
 ```bash
 # Backend development
-cd services/bisheng-api
+cd services/agent-api
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -379,8 +379,8 @@ limitations under the License.
 This project builds upon the shoulders of giants:
 
 - [OpenMetadata](https://open-metadata.org/) - Open source metadata platform (optional integration)
-- [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform
-- [Bisheng](https://github.com/dataelement/bisheng) - LLM application development platform
+- [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform (Model layer inspiration)
+- [Bisheng](https://github.com/dataelement/bisheng) - LLM application development platform (Agent layer inspiration)
 
 ## Community
 

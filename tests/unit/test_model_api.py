@@ -1,6 +1,6 @@
 """
-Cube API 单元测试
-tests/unit/test_cube_api.py
+Model API 单元测试
+tests/unit/test_model_api.py
 
 测试模型管理、部署、预测等 API 端点。
 """
@@ -13,11 +13,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
 from datetime import datetime
 
-# 确保 cube-api 优先于其他 app 模块
+# 确保 model-api 优先于其他 app 模块
 _project_root = Path(__file__).parent.parent.parent
-_cube_api_path = str(_project_root / "services" / "cube-api")
-if _cube_api_path not in sys.path:
-    sys.path.insert(0, _cube_api_path)
+_model_api_path = str(_project_root / "services" / "model-api")
+if _model_api_path not in sys.path:
+    sys.path.insert(0, _model_api_path)
 
 # 设置测试环境
 os.environ.setdefault('ENVIRONMENT', 'testing')
@@ -31,16 +31,16 @@ class TestHealthEndpoint:
     def app(self):
         """创建测试应用"""
         import importlib.util
-        # 显式从 cube-api 目录加载 app 模块
+        # 显式从 model-api 目录加载 app 模块
         spec = importlib.util.spec_from_file_location(
-            "cube_app",
-            str(_project_root / "services" / "cube-api" / "app.py")
+            "model_app",
+            str(_project_root / "services" / "model-api" / "app.py")
         )
-        cube_app = importlib.util.module_from_spec(spec)
+        model_app = importlib.util.module_from_spec(spec)
         with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///:memory:'}):
-            spec.loader.exec_module(cube_app)
-            cube_app.app.config['TESTING'] = True
-            return cube_app.app
+            spec.loader.exec_module(model_app)
+            model_app.app.config['TESTING'] = True
+            return model_app.app
 
     @pytest.fixture
     def client(self, app):
@@ -49,7 +49,7 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client):
         """健康检查返回正确状态"""
-        with patch('services.cube_api.app.get_huggingface_service') as mock_hf:
+        with patch('services.model_api.app.get_huggingface_service') as mock_hf:
             mock_hf_service = MagicMock()
             mock_hf_service.token = None
             mock_hf.return_value = mock_hf_service
@@ -59,12 +59,12 @@ class TestHealthEndpoint:
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data['status'] == 'ok'
-            assert data['service'] == 'cube-api'
+            assert data['service'] == 'model-api'
             assert data['version'] == '1.0.0'
 
     def test_health_check_v1(self, client):
         """v1 健康检查端点"""
-        with patch('services.cube_api.app.get_huggingface_service') as mock_hf:
+        with patch('services.model_api.app.get_huggingface_service') as mock_hf:
             mock_hf_service = MagicMock()
             mock_hf_service.token = 'test-token'
             mock_hf.return_value = mock_hf_service
@@ -99,7 +99,7 @@ class TestModelsCRUD:
 
     def test_list_models_empty(self, client):
         """列出空模型列表"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_query = MagicMock()
             mock_query.count.return_value = 0
@@ -118,7 +118,7 @@ class TestModelsCRUD:
 
     def test_list_models_with_filters(self, client):
         """列出带过滤的模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_query = MagicMock()
             mock_query.count.return_value = 0
@@ -136,7 +136,7 @@ class TestModelsCRUD:
 
     def test_create_model_success(self, client):
         """成功创建模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
 
@@ -148,7 +148,7 @@ class TestModelsCRUD:
                 'status': 'created'
             }
 
-            with patch('services.cube_api.app.MLModel', return_value=mock_model):
+            with patch('services.model_api.app.MLModel', return_value=mock_model):
                 response = client.post('/api/v1/models',
                     data=json.dumps({
                         'name': 'Test Model',
@@ -165,7 +165,7 @@ class TestModelsCRUD:
 
     def test_create_model_missing_name(self, client):
         """缺少名称时创建模型失败"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
 
@@ -182,7 +182,7 @@ class TestModelsCRUD:
 
     def test_get_model_success(self, client):
         """成功获取模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
             mock_model.to_dict.return_value = {
@@ -200,7 +200,7 @@ class TestModelsCRUD:
 
     def test_get_model_not_found(self, client):
         """模型不存在"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_db.query.return_value.filter.return_value.first.return_value = None
             mock_get_db.return_value = mock_db
@@ -213,7 +213,7 @@ class TestModelsCRUD:
 
     def test_update_model_success(self, client):
         """成功更新模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
             mock_model.to_dict.return_value = {
@@ -238,7 +238,7 @@ class TestModelsCRUD:
 
     def test_delete_model_success(self, client):
         """成功删除模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
             mock_db.query.return_value.filter.return_value.first.return_value = mock_model
@@ -252,7 +252,7 @@ class TestModelsCRUD:
 
     def test_delete_model_with_active_deployment(self, client):
         """有活跃部署时不能删除模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
 
@@ -289,7 +289,7 @@ class TestModelDeployment:
 
     def test_list_deployments(self, client):
         """列出部署"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_query = MagicMock()
             mock_query.count.return_value = 0
@@ -307,7 +307,7 @@ class TestModelDeployment:
 
     def test_deploy_model_success(self, client):
         """成功部署模型"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
 
             mock_model = MagicMock()
@@ -324,7 +324,7 @@ class TestModelDeployment:
             mock_db.query.return_value.filter.return_value.first.return_value = mock_model
             mock_get_db.return_value = mock_db
 
-            with patch('services.cube_api.app.ModelDeployment', return_value=mock_deployment):
+            with patch('services.model_api.app.ModelDeployment', return_value=mock_deployment):
                 response = client.post('/api/v1/models/model_test123/deploy',
                     data=json.dumps({
                         'replicas': 2,
@@ -339,7 +339,7 @@ class TestModelDeployment:
 
     def test_deploy_model_not_ready(self, client):
         """模型未就绪时不能部署"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
             mock_model.status = 'created'  # 未就绪
@@ -358,7 +358,7 @@ class TestModelDeployment:
 
     def test_undeploy_model(self, client):
         """取消部署"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
 
             mock_deployment = MagicMock()
@@ -400,7 +400,7 @@ class TestPrediction:
 
     def test_predict_mock_text_generation(self, client):
         """Mock 模式文本生成预测"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
 
             mock_deployment = MagicMock()
@@ -436,7 +436,7 @@ class TestPrediction:
 
     def test_predict_deployment_not_found(self, client):
         """部署不存在时预测失败"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_db.query.return_value.filter.return_value.first.return_value = None
             mock_get_db.return_value = mock_db
@@ -467,7 +467,7 @@ class TestBatchPrediction:
 
     def test_create_batch_prediction(self, client):
         """创建批量预测任务"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_model = MagicMock()
             mock_model.name = 'Test Model'
@@ -481,7 +481,7 @@ class TestBatchPrediction:
             mock_db.query.return_value.filter.return_value.first.return_value = mock_model
             mock_get_db.return_value = mock_db
 
-            with patch('services.cube_api.app.BatchPredictionJob', return_value=mock_job):
+            with patch('services.model_api.app.BatchPredictionJob', return_value=mock_job):
                 response = client.post('/api/v1/batch-predictions',
                     data=json.dumps({
                         'model_id': 'model_123',
@@ -496,7 +496,7 @@ class TestBatchPrediction:
 
     def test_create_batch_prediction_missing_params(self, client):
         """缺少必需参数"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
 
@@ -529,7 +529,7 @@ class TestTrainingJobs:
 
     def test_list_training_jobs(self, client):
         """列出训练任务"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_query = MagicMock()
             mock_query.count.return_value = 0
@@ -546,7 +546,7 @@ class TestTrainingJobs:
 
     def test_create_training_job(self, client):
         """创建训练任务"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
 
             mock_job = MagicMock()
@@ -558,7 +558,7 @@ class TestTrainingJobs:
 
             mock_get_db.return_value = mock_db
 
-            with patch('services.cube_api.app.TrainingJob', return_value=mock_job):
+            with patch('services.model_api.app.TrainingJob', return_value=mock_job):
                 response = client.post('/api/v1/training-jobs',
                     data=json.dumps({
                         'name': 'Training Job',
@@ -572,7 +572,7 @@ class TestTrainingJobs:
 
     def test_create_training_job_missing_name(self, client):
         """缺少名称"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
 
@@ -585,7 +585,7 @@ class TestTrainingJobs:
 
     def test_cancel_training_job(self, client):
         """取消训练任务"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_job = MagicMock()
             mock_job.status = 'running'
@@ -600,7 +600,7 @@ class TestTrainingJobs:
 
     def test_cancel_completed_job_fails(self, client):
         """已完成的任务不能取消"""
-        with patch('services.cube_api.app.get_db_session') as mock_get_db:
+        with patch('services.model_api.app.get_db_session') as mock_get_db:
             mock_db = MagicMock()
             mock_job = MagicMock()
             mock_job.status = 'completed'

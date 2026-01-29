@@ -1,16 +1,16 @@
 /**
- * Cube Studio MLOps 页面 E2E 验收测试
+ * Model MLOps 页面 E2E 验收测试
  * 测试模型开发、训练、服务等 MLOps 功能
  */
 
 import { test, expect } from '@playwright/test';
 import { setupAuth, setupCommonMocks, BASE_URL } from './helpers';
 
-test.describe('Cube Studio - Notebooks', () => {
+test.describe('Model - Notebooks', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/notebooks', async (route) => {
+    page.route('**/api/v1/model/notebooks', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -30,24 +30,24 @@ test.describe('Cube Studio - Notebooks', () => {
 
   test('should display notebooks page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/notebooks`);
+    await page.goto(`${BASE_URL}/model/notebooks`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should have create notebook button', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/notebooks`);
+    await page.goto(`${BASE_URL}/model/notebooks`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Experiments', () => {
+test.describe('Model - Experiments', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/experiments', async (route) => {
+    page.route('**/api/v1/model/experiments', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -67,17 +67,17 @@ test.describe('Cube Studio - Experiments', () => {
 
   test('should display experiments page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/experiments`);
+    await page.goto(`${BASE_URL}/model/experiments`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Models', () => {
+test.describe('Model - Models', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/models', async (route) => {
+    page.route('**/api/v1/model/models', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -97,17 +97,17 @@ test.describe('Cube Studio - Models', () => {
 
   test('should display models page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/models`);
+    await page.goto(`${BASE_URL}/model/models`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Training', () => {
+test.describe('Model - Training', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/training-jobs', async (route) => {
+    page.route('**/api/v1/model/training-jobs', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -127,17 +127,17 @@ test.describe('Cube Studio - Training', () => {
 
   test('should display training page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/training`);
+    await page.goto(`${BASE_URL}/model/training`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Serving', () => {
+test.describe('Model - Serving', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/serving', async (route) => {
+    page.route('**/api/v1/model/serving', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -157,17 +157,17 @@ test.describe('Cube Studio - Serving', () => {
 
   test('should display serving page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/serving`);
+    await page.goto(`${BASE_URL}/model/serving`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Resources', () => {
+test.describe('Model - Resources', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/resources', async (route) => {
+    page.route('**/api/v1/model/resources', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -189,17 +189,17 @@ test.describe('Cube Studio - Resources', () => {
 
   test('should display resources page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/resources`);
+    await page.goto(`${BASE_URL}/model/resources`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Monitoring', () => {
+test.describe('Model - Monitoring', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/metrics', async (route) => {
+    page.route('**/api/v1/model/metrics', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -220,17 +220,17 @@ test.describe('Cube Studio - Monitoring', () => {
 
   test('should display monitoring page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/monitoring`);
+    await page.goto(`${BASE_URL}/model/monitoring`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - AI Hub', () => {
+test.describe('Model - AI Hub', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/aihub/models', async (route) => {
+    page.route('**/api/v1/model/aihub/models', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -250,17 +250,17 @@ test.describe('Cube Studio - AI Hub', () => {
 
   test('should display AI Hub page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/aihub`);
+    await page.goto(`${BASE_URL}/model/aihub`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - Pipelines', () => {
+test.describe('Model - Pipelines', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/pipelines', async (route) => {
+    page.route('**/api/v1/model/pipelines', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -280,17 +280,17 @@ test.describe('Cube Studio - Pipelines', () => {
 
   test('should display pipelines page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/pipelines`);
+    await page.goto(`${BASE_URL}/model/pipelines`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - LLM Tuning', () => {
+test.describe('Model - LLM Tuning', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/llm-tuning', async (route) => {
+    page.route('**/api/v1/model/llm-tuning', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -310,17 +310,17 @@ test.describe('Cube Studio - LLM Tuning', () => {
 
   test('should display LLM tuning page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/llm-tuning`);
+    await page.goto(`${BASE_URL}/model/llm-tuning`);
 
     await expect(page.locator('body')).toBeVisible();
   });
 });
 
-test.describe('Cube Studio - SQL Lab', () => {
+test.describe('Model - SQL Lab', () => {
   test.beforeEach(async ({ page }) => {
     setupCommonMocks(page);
 
-    page.route('**/api/v1/cube/sql-lab', async (route) => {
+    page.route('**/api/v1/model/sql-lab', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -340,7 +340,7 @@ test.describe('Cube Studio - SQL Lab', () => {
 
   test('should display SQL Lab page', async ({ page }) => {
     await setupAuth(page);
-    await page.goto(`${BASE_URL}/cube/sql-lab`);
+    await page.goto(`${BASE_URL}/model/sql-lab`);
 
     await expect(page.locator('body')).toBeVisible();
   });

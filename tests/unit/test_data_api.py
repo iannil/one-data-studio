@@ -1,8 +1,8 @@
 """
-Alldata API 单元测试
+Data API 单元测试
 Sprint 24: 测试覆盖率扩展
 
-测试 Alldata API 的核心功能
+测试 Data API 的核心功能
 """
 
 import pytest

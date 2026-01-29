@@ -1131,9 +1131,9 @@ def get_system_settings():
         "max_login_attempts": 5,
         "lockout_duration_minutes": 30,
         "features_enabled": {
-            "alldata": True,
-            "cube": True,
-            "bisheng": True,
+            "data": True,
+            "model": True,
+            "agent": True,
             "workflows": True
         }
     }

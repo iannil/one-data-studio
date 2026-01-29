@@ -1,4 +1,4 @@
-# Alldata 与 Bisheng 集成方案
+# Data 与 Agent 平台集成方案
 
 ## 集成目标
 
@@ -11,7 +11,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                       Bisheng (L4)                           │
+│                       Agent 平台 (L4)                         │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                    应用编排层                        │    │
 │  │  ┌─────────────┐   ┌─────────────┐   ┌───────────┐ │    │
@@ -24,7 +24,7 @@
              │                  │                │
              ↓                  ↓                ↓
 ┌──────────────────────────────────────────────────────────────┐
-│                       Alldata (L2)                           │
+│                       Data 平台 (L2)                          │
 │  ┌─────────────┐   ┌─────────────┐   ┌───────────────────┐  │
 │  │ 元数据中心   │   │ 向量数据库  │   │   业务数仓        │  │
 │  │  (Metadata) │   │ (Vector DB) │   │  (Doris/Hive)    │  │
@@ -39,19 +39,19 @@
 ```mermaid
 sequenceDiagram
     participant User as 用户
-    participant Bisheng as Bisheng SQL Agent
-    participant Meta as Alldata 元数据中心
+    participant Agent as Agent SQL Agent
+    participant Meta as Data 元数据中心
     participant LLM as LLM
     participant DW as 业务数仓
 
-    User->>Bisheng: "上个月销售额是多少？"
-    Bisheng->>Meta: 获取相关表元数据
-    Meta-->>Bisheng: 返回表结构 (sales, orders)
-    Bisheng->>LLM: 生成 SQL (带 Schema 上下文)
-    LLM-->>Bisheng: SELECT sum(amount) FROM sales...
-    Bisheng->>DW: 执行 SQL
-    DW-->>Bisheng: 返回查询结果
-    Bisheng-->>User: "上个月销售额为 500 万"
+    User->>Agent: "上个月销售额是多少？"
+    Agent->>Meta: 获取相关表元数据
+    Meta-->>Agent: 返回表结构 (sales, orders)
+    Agent->>LLM: 生成 SQL (带 Schema 上下文)
+    LLM-->>Agent: SELECT sum(amount) FROM sales...
+    Agent->>DW: 执行 SQL
+    DW-->>Agent: 返回查询结果
+    Agent-->>User: "上个月销售额为 500 万"
 ```
 
 ### 场景二：RAG 检索（非结构化知识）
@@ -59,16 +59,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as 用户
-    participant Bisheng as Bisheng RAG Agent
-    participant VectorDB as Alldata 向量库
+    participant Agent as Agent RAG Agent
+    participant VectorDB as Data 向量库
     participant LLM as LLM
 
-    User->>Bisheng: "销售政策有什么变化？"
-    Bisheng->>VectorDB: 向量检索相似文档
-    VectorDB-->>Bisheng: 返回相关文档片段
-    Bisheng->>LLM: 生成回答 (RAG)
-    LLM-->>Bisheng: 返回自然语言回答
-    Bisheng-->>User: "根据最新政策..."
+    User->>Agent: "销售政策有什么变化？"
+    Agent->>VectorDB: 向量检索相似文档
+    VectorDB-->>Agent: 返回相关文档片段
+    Agent->>LLM: 生成回答 (RAG)
+    LLM-->>Agent: 返回自然语言回答
+    Agent-->>User: "根据最新政策..."
 ```
 
 ### 场景三：混合查询（RAG + SQL）
@@ -76,26 +76,26 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as 用户
-    participant Bisheng as Bisheng 编排器
+    participant Agent as Agent 编排器
     participant SQLAgent as SQL Agent
     participant RAGAgent as RAG Agent
     participant Meta as 元数据中心
     participant VectorDB as 向量库
     participant LLM as LLM
 
-    User->>Bisheng: "分析上月销售下滑原因"
-    Bisheng->>SQLAgent: 查询销售数据
+    User->>Agent: "分析上月销售下滑原因"
+    Agent->>SQLAgent: 查询销售数据
     SQLAgent->>Meta: 获取表结构
     SQLAgent->>LLM: 生成 SQL
     Note over SQLAgent: 获取数据: -15%
 
-    Bisheng->>RAGAgent: 检索相关政策
+    Agent->>RAGAgent: 检索相关政策
     RAGAgent->>VectorDB: 向量检索
     Note over RAGAgent: 获取政策文档
 
-    Bisheng->>LLM: 综合分析 (数据+文档)
-    LLM-->>Bisheng: "销售下滑15%，主要原因是..."
-    Bisheng-->>User: 返回分析结果
+    Agent->>LLM: 综合分析 (数据+文档)
+    LLM-->>Agent: "销售下滑15%，主要原因是..."
+    Agent-->>User: 返回分析结果
 ```
 
 ## API 规范
@@ -238,10 +238,10 @@ TEXT_TO_SQL_PROMPT = """
 ### 代码示例
 
 ```python
-from bisheng.agents import SQLAgent
-from alldata_client import MetadataClient, QueryClient
+from agent_platform.agents import SQLAgent
+from data_client import MetadataClient, QueryClient
 
-class AlldataSQLAgent(SQLAgent):
+class DataSQLAgent(SQLAgent):
     def __init__(self):
         self.metadata_client = MetadataClient()
         self.query_client = QueryClient()
@@ -271,10 +271,10 @@ class AlldataSQLAgent(SQLAgent):
 ### 代码示例
 
 ```python
-from bisheng.agents import RAGAgent
-from alldata_client import VectorClient
+from agent_platform.agents import RAGAgent
+from data_client import VectorClient
 
-class AldataRAGAgent(RAGAgent):
+class DataRAGAgent(RAGAgent):
     def __init__(self):
         self.vector_client = VectorClient()
         self.llm = self.get_llm()
@@ -307,14 +307,14 @@ class AldataRAGAgent(RAGAgent):
 
 ## 配置清单
 
-### Bisheng 配置
+### Agent 平台配置
 
 ```yaml
-# config/alldata_integration.yaml
-alldata:
+# config/data_integration.yaml
+data_platform:
   enabled: true
-  api_endpoint: http://alldata-api.default.svc.cluster.local
-  api_key: ${ALDATA_API_KEY}
+  api_endpoint: http://data-api.default.svc.cluster.local
+  api_key: ${DATA_API_KEY}
   timeout: 30
 
   metadata:
@@ -328,15 +328,15 @@ alldata:
 
   vector:
     enabled: true
-    endpoint: http://alldata-vector.default.svc.cluster.local
+    endpoint: http://data-vector.default.svc.cluster.local
     top_k: 5
 ```
 
 ### 元数据同步配置
 
 ```yaml
-# Alldata 侧配置
-bisheng_integration:
+# Data 平台侧配置
+agent_integration:
   metadata_sync:
     enabled: true
     sync_interval: 300s
@@ -352,12 +352,12 @@ bisheng_integration:
 
 ```python
 def test_text_to_sql():
-    agent = AlldataSQLAgent()
+    agent = DataSQLAgent()
     result = agent.query("上个月销售额是多少？")
     assert "500万" in result
 
 def test_rag():
-    agent = AldataRAGAgent()
+    agent = DataRAGAgent()
     result = agent.query("销售政策有什么变化？")
     assert len(result) > 0
 

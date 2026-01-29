@@ -1,13 +1,13 @@
 """
-Bisheng LLM 适配器 for LangChain
+Agent 平台 LLM 适配器 for LangChain
 
-将 ONE-DATA-STUDIO (Bisheng) 的 LLM 服务封装为 LangChain 兼容的 LLM 类，
+将 ONE-DATA-STUDIO (Agent 平台) 的 LLM 服务封装为 LangChain 兼容的 LLM 类，
 使用户可以在 LangChain 应用中无缝使用平台部署的模型。
 
 用法示例：
-    from bisheng_llm import BishengLLM
+    from agent_llm import AgentLLM
 
-    llm = BishengLLM(
+    llm = AgentLLM(
         api_base="http://localhost:8000",
         model_name="qwen-7b-chat",
         api_key="your-api-key"
@@ -38,14 +38,14 @@ from langchain_core.outputs import GenerationChunk
 logger = logging.getLogger(__name__)
 
 
-class BishengLLM(LLM):
+class AgentLLM(LLM):
     """
-    Bisheng (ONE-DATA-STUDIO) LLM 适配器
+    Agent 平台 (ONE-DATA-STUDIO) LLM 适配器
 
-    通过 OpenAI 兼容 API 连接到 Bisheng 部署的模型服务。
+    通过 OpenAI 兼容 API 连接到 Agent 平台部署的模型服务。
 
     Attributes:
-        api_base: Bisheng API 基础 URL
+        api_base: Agent 平台 API 基础 URL
         model_name: 模型名称
         api_key: API 密钥
         temperature: 采样温度
@@ -70,19 +70,19 @@ class BishengLLM(LLM):
     streaming: bool = False
 
     def __init__(self, **kwargs: Any):
-        """初始化 Bisheng LLM"""
+        """初始化 Agent LLM"""
         super().__init__(**kwargs)
 
         # 从环境变量获取配置
         if not self.api_base:
-            self.api_base = os.getenv("BISHENG_API_BASE", "http://localhost:8000")
+            self.api_base = os.getenv("AGENT_API_BASE", "http://localhost:8000")
         if not self.api_key:
-            self.api_key = os.getenv("BISHENG_API_KEY", os.getenv("OPENAI_API_KEY"))
+            self.api_key = os.getenv("AGENT_API_KEY", os.getenv("OPENAI_API_KEY"))
 
     @property
     def _llm_type(self) -> str:
         """返回 LLM 类型标识"""
-        return "bisheng"
+        return "agent"
 
     @property
     def _identifying_params(self) -> Mapping[str, Any]:
@@ -156,7 +156,7 @@ class BishengLLM(LLM):
 
         except requests.exceptions.RequestException as e:
             logger.error(f"API request failed: {e}")
-            raise ValueError(f"Bisheng API request failed: {e}")
+            raise ValueError(f"Agent API request failed: {e}")
 
     def _stream(
         self,
@@ -229,7 +229,7 @@ class BishengLLM(LLM):
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Streaming request failed: {e}")
-            raise ValueError(f"Bisheng streaming request failed: {e}")
+            raise ValueError(f"Agent streaming request failed: {e}")
 
     async def _acall(
         self,
@@ -288,20 +288,20 @@ class BishengLLM(LLM):
 
         except aiohttp.ClientError as e:
             logger.error(f"Async API request failed: {e}")
-            raise ValueError(f"Bisheng async API request failed: {e}")
+            raise ValueError(f"Agent async API request failed: {e}")
 
 
-class BishengChatModel:
+class AgentChatModel:
     """
-    Bisheng Chat Model 适配器
+    Agent 平台 Chat Model 适配器
 
     用于对话场景，支持多轮对话历史。
 
     用法示例：
-        from bisheng_llm import BishengChatModel
+        from agent_llm import AgentChatModel
         from langchain_core.messages import HumanMessage, SystemMessage
 
-        chat = BishengChatModel(
+        chat = AgentChatModel(
             api_base="http://localhost:8000",
             model_name="qwen-7b-chat"
         )
@@ -323,9 +323,9 @@ class BishengChatModel:
         max_tokens: int = 2048,
         timeout: int = 60,
     ):
-        self.api_base = api_base or os.getenv("BISHENG_API_BASE", "http://localhost:8000")
+        self.api_base = api_base or os.getenv("AGENT_API_BASE", "http://localhost:8000")
         self.model_name = model_name
-        self.api_key = api_key or os.getenv("BISHENG_API_KEY", os.getenv("OPENAI_API_KEY"))
+        self.api_key = api_key or os.getenv("AGENT_API_KEY", os.getenv("OPENAI_API_KEY"))
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout
@@ -375,14 +375,14 @@ class BishengChatModel:
 
 
 # 便捷函数
-def create_bisheng_llm(
+def create_agent_llm(
     api_base: Optional[str] = None,
     model_name: str = "default",
     api_key: Optional[str] = None,
     **kwargs: Any,
-) -> BishengLLM:
+) -> AgentLLM:
     """
-    创建 Bisheng LLM 实例
+    创建 Agent LLM 实例
 
     Args:
         api_base: API 基础 URL
@@ -391,10 +391,10 @@ def create_bisheng_llm(
         **kwargs: 其他 LLM 参数
 
     Returns:
-        BishengLLM 实例
+        AgentLLM 实例
     """
-    return BishengLLM(
-        api_base=api_base or os.getenv("BISHENG_API_BASE", "http://localhost:8000"),
+    return AgentLLM(
+        api_base=api_base or os.getenv("AGENT_API_BASE", "http://localhost:8000"),
         model_name=model_name,
         api_key=api_key,
         **kwargs,
@@ -403,7 +403,7 @@ def create_bisheng_llm(
 
 if __name__ == "__main__":
     # 简单测试
-    llm = BishengLLM(
+    llm = AgentLLM(
         api_base="http://localhost:8000",
         model_name="qwen-7b-chat",
     )

@@ -1,8 +1,8 @@
 """
-Bisheng API Tracer Setup
-Sprint 11.2: 分布式追踪 - Bisheng 追踪配置
+Agent API Tracer Setup
+Sprint 11.2: 分布式追踪 - Agent 追踪配置
 
-初始化 Bisheng API 的 OpenTelemetry 追踪配置。
+初始化 Agent API 的 OpenTelemetry 追踪配置。
 """
 
 import os
@@ -32,7 +32,7 @@ except ImportError:
 
 # 追踪配置
 TRACING_CONFIG = {
-    "service_name": "bisheng-api",
+    "service_name": "agent-api",
     "service_version": os.getenv("SERVICE_VERSION", "1.0.0"),
     "environment": os.getenv("ENVIRONMENT", "production"),
     "exporter": os.getenv("TRACING_EXPORTER", "otlp"),
@@ -46,7 +46,7 @@ TRACING_CONFIG = {
 
 def setup_tracing():
     """
-    设置 Bisheng API 的追踪
+    设置 Agent API 的追踪
 
     在应用启动时调用此函数初始化追踪。
     """
@@ -57,14 +57,14 @@ def setup_tracing():
     try:
         tracer = init_tracing(**TRACING_CONFIG)
         if tracer:
-            logger.info(f"Bisheng API tracing initialized: {TRACING_CONFIG}")
+            logger.info(f"Agent API tracing initialized: {TRACING_CONFIG}")
         return tracer
     except Exception as e:
         logger.error(f"Failed to initialize tracing: {e}")
         return None
 
 
-# Bisheng 特定的追踪装饰器
+# Agent 特定的追踪装饰器
 def trace_chat_request():
     """追踪聊天请求"""
     if not TRACING_AVAILABLE:
@@ -186,8 +186,8 @@ def trace_vector_search(collection: str):
 
 
 # 预配置的追踪器
-class BishengTracer:
-    """Bisheng API 追踪器"""
+class AgentTracer:
+    """Agent API 追踪器"""
 
     def __init__(self):
         self.tracer = setup_tracing()
@@ -220,15 +220,15 @@ class BishengTracer:
 
 
 # 单例实例
-_bisheng_tracer = None
+_agent_tracer = None
 
 
-def get_bisheng_tracer() -> BishengTracer:
-    """获取 Bisheng 追踪器单例"""
-    global _bisheng_tracer
-    if _bisheng_tracer is None:
-        _bisheng_tracer = BishengTracer()
-    return _bisheng_tracer
+def get_agent_tracer() -> AgentTracer:
+    """获取 Agent 追踪器单例"""
+    global _agent_tracer
+    if _agent_tracer is None:
+        _agent_tracer = AgentTracer()
+    return _agent_tracer
 
 
 # Flask 集成
@@ -349,6 +349,6 @@ if __name__ == "__main__":
     # 测试追踪初始化
     tracer = setup_tracing()
     if tracer:
-        logger.info("Bisheng API tracing initialized successfully")
+        logger.info("Agent API tracing initialized successfully")
     else:
-        logger.warning("Bisheng API tracing initialization failed")
+        logger.warning("Agent API tracing initialization failed")

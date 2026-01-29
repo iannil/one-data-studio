@@ -42,7 +42,7 @@ def index_document(self, doc_id: str, collection_name: str,
         self.update_state(state='PROGRESS', meta={'progress': 0, 'status': 'Initializing'})
 
         # 导入向量存储
-        from services.bisheng_api.services.vector_store import VectorStore
+        from services.agent_api.services.vector_store import VectorStore
 
         vector_store = VectorStore()
         count = vector_store.insert(collection_name, texts, embeddings, metadata)
@@ -135,7 +135,7 @@ def execute_workflow(self, workflow_id: str, input_data: Dict[str, Any],
         self.update_state(state='PROGRESS', meta={'progress': 0, 'status': 'Loading workflow'})
 
         # 导入工作流引擎
-        from services.bisheng_api.engine.workflow_executor import WorkflowExecutor
+        from services.agent_api.engine.workflow_executor import WorkflowExecutor
 
         executor = WorkflowExecutor()
 
@@ -243,7 +243,7 @@ def generate_embeddings(texts: List[str], model: str = "text-embedding-ada-002")
     """
     try:
         # 导入嵌入服务
-        from services.bisheng_api.services.embedding_service import EmbeddingService
+        from services.agent_api.services.embedding_service import EmbeddingService
 
         embedding_service = EmbeddingService()
         embeddings = embedding_service.embed_texts(texts, model=model)
@@ -329,14 +329,14 @@ def periodic_health_check() -> Dict[str, Any]:
 
         # 检查数据库
         try:
-            from services.alldata_api.src.database import check_db_health
+            from services.data_api.src.database import check_db_health
             checks['database'] = check_db_health()
         except Exception as e:
             checks['database'] = False
 
         # 检查向量数据库
         try:
-            from services.bisheng_api.services.vector_store import VectorStore
+            from services.agent_api.services.vector_store import VectorStore
             vs = VectorStore()
             checks['milvus'] = VectorStore._connected
         except Exception as e:

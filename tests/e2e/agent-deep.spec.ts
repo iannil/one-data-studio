@@ -15,13 +15,13 @@ async function login(page: Page) {
   await page.fill('input[name="username"]', TEST_USER.username);
   await page.fill('input[name="password"]', TEST_USER.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|bisheng)/);
+  await page.waitForURL(/\/(dashboard|agent-platform)/);
 }
 
 test.describe('知识库管理 (BU-KB)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/bisheng/knowledge');
+    await page.goto('/agent-platform/knowledge');
   });
 
   test('BU-KB-001: 创建知识库', async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe('知识库管理 (BU-KB)', () => {
 test.describe('智能查询 (BU-IQ)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/bisheng/chat');
+    await page.goto('/agent-platform/chat');
   });
 
   test('BU-IQ-001: 纯 SQL 查询', async ({ page }) => {
@@ -152,7 +152,7 @@ test.describe('智能查询 (BU-IQ)', () => {
 test.describe('工作流编排', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/bisheng/workflows');
+    await page.goto('/agent-platform/workflows');
   });
 
   test('创建 RAG 工作流', async ({ page }) => {

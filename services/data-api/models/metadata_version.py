@@ -39,6 +39,56 @@ class MetadataChangeType(str, Enum):
     OWNER_CHANGED = "owner_changed"
 
 
+class MetadataSnapshotModel(Base):
+    """元数据快照模型 - 用于版本对比服务的持久化存储"""
+
+    __tablename__ = "metadata_snapshots"
+
+    # 主键
+    id = Column(String(36), primary_key=True)
+
+    # 快照版本号
+    version = Column(String(50), nullable=False, index=True)
+
+    # 数据库名
+    database = Column(String(200), nullable=False, index=True)
+
+    # 表结构快照 (JSON) - 包含完整的 tables 结构
+    tables_snapshot = Column(JSON, default=dict)
+
+    # 创建者
+    created_by = Column(String(100), default="system")
+
+    # 描述
+    description = Column(Text, default="")
+
+    # 标签 (JSON 数组)
+    tags = Column(JSON, default=list)
+
+    # 时间戳
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # 租户 ID（多租户支持）
+    tenant_id = Column(String(36), nullable=True, index=True)
+
+    def __repr__(self):
+        return f"<MetadataSnapshot {self.id} version={self.version} db={self.database}>"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "snapshot_id": self.id,
+            "version": self.version,
+            "database": self.database,
+            "tables": self.tables_snapshot or {},
+            "created_by": self.created_by,
+            "description": self.description,
+            "tags": self.tags or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "tenant_id": self.tenant_id,
+        }
+
+
 class MetadataVersionModel(Base):
     """元数据版本模型"""
 

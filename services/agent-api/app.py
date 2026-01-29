@@ -1,5 +1,5 @@
 """
-Bisheng API - 大模型应用开发平台 API
+Agent API - 大模型应用开发平台 API
 Sprint 4.5: 真实 MySQL 数据持久化
 Phase 6: Sprint 6.1 - 工作流执行引擎
 Phase 7: Sprint 7.1 - Agent 编排与工具系统
@@ -147,8 +147,8 @@ app.config['JSON_AS_ASCII'] = False
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB (for file uploads)
 
 # 配置
-ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://keycloak.one-data-system.svc.cluster.local:80")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
@@ -255,12 +255,12 @@ def health():
     health_status = {
         "code": 0,
         "message": "healthy",
-        "service": "bisheng-api",
+        "service": "agent-api",
         "version": "2.0.0",
         "auth_enabled": AUTH_ENABLED and AUTH_MODE,
         "connections": {
-            "alldata_api": ALDATA_API_URL,
-            "cube_api": CUBE_API_URL
+            "data_api": DATA_API_URL,
+            "model_api": MODEL_API_URL
         },
         "checks": {}
     }
@@ -326,49 +326,49 @@ def health():
     # 测试上游服务连接
     try:
         start = time_module.time()
-        response = requests.get(f"{ALDATA_API_URL}/api/v1/health", timeout=5)
+        response = requests.get(f"{DATA_API_URL}/api/v1/health", timeout=5)
         latency = (time_module.time() - start) * 1000
         if response.status_code == 200:
-            health_status["checks"]["alldata_api"] = {
+            health_status["checks"]["data_api"] = {
                 "status": "healthy",
                 "latency_ms": round(latency, 2)
             }
         else:
-            health_status["checks"]["alldata_api"] = {
+            health_status["checks"]["data_api"] = {
                 "status": "degraded",
                 "http_status": response.status_code
             }
     except requests.Timeout:
-        health_status["checks"]["alldata_api"] = {"status": "timeout", "error": "Connection timeout"}
+        health_status["checks"]["data_api"] = {"status": "timeout", "error": "Connection timeout"}
         # 上游服务不可用不影响本服务健康
     except requests.ConnectionError as e:
-        health_status["checks"]["alldata_api"] = {"status": "unreachable", "error": "Connection error"}
+        health_status["checks"]["data_api"] = {"status": "unreachable", "error": "Connection error"}
         # 上游服务不可用不影响本服务健康
     except requests.RequestException as e:
-        health_status["checks"]["alldata_api"] = {"status": "unreachable", "error": str(e)}
+        health_status["checks"]["data_api"] = {"status": "unreachable", "error": str(e)}
         # 上游服务不可用不影响本服务健康
 
     # 测试 LLM 服务连接
     try:
         start = time_module.time()
-        response = requests.get(f"{CUBE_API_URL}/v1/models", timeout=5)
+        response = requests.get(f"{MODEL_API_URL}/v1/models", timeout=5)
         latency = (time_module.time() - start) * 1000
         if response.status_code == 200:
-            health_status["checks"]["cube_api"] = {
+            health_status["checks"]["model_api"] = {
                 "status": "healthy",
                 "latency_ms": round(latency, 2)
             }
         else:
-            health_status["checks"]["cube_api"] = {
+            health_status["checks"]["model_api"] = {
                 "status": "degraded",
                 "http_status": response.status_code
             }
     except requests.Timeout:
-        health_status["checks"]["cube_api"] = {"status": "timeout", "error": "Connection timeout"}
+        health_status["checks"]["model_api"] = {"status": "timeout", "error": "Connection timeout"}
     except requests.ConnectionError:
-        health_status["checks"]["cube_api"] = {"status": "unreachable", "error": "Connection error"}
+        health_status["checks"]["model_api"] = {"status": "unreachable", "error": "Connection error"}
     except requests.RequestException as e:
-        health_status["checks"]["cube_api"] = {"status": "unreachable", "error": str(e)}
+        health_status["checks"]["model_api"] = {"status": "unreachable", "error": str(e)}
 
     # 设置整体状态
     if not all_healthy:
@@ -684,7 +684,7 @@ def chat():
         # 调用上游 LLM
         try:
             response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
+                f"{MODEL_API_URL}/v1/chat/completions",
                 json={
                     "model": model,
                     "messages": [{"role": "user", "content": message}],
@@ -738,9 +738,9 @@ def chat():
 @app.route("/api/v1/datasets", methods=["GET"])
 @require_jwt(optional=True)
 def list_datasets():
-    """列出数据集（代理到 Alldata API）"""
+    """列出数据集（代理到 Data API）"""
     try:
-        # 转发请求到 Alldata API
+        # 转发请求到 Data API
         headers = {}
         if hasattr(g, 'payload') and g.payload:
             # 转发认证 token
@@ -749,7 +749,7 @@ def list_datasets():
                 headers["Authorization"] = token
 
         response = requests.get(
-            f"{ALDATA_API_URL}/api/v1/datasets",
+            f"{DATA_API_URL}/api/v1/datasets",
             headers=headers,
             timeout=10
         )
@@ -761,7 +761,7 @@ def list_datasets():
 @app.route("/api/v1/datasets/<dataset_id>", methods=["GET"])
 @require_jwt(optional=True)
 def get_dataset(dataset_id):
-    """获取数据集详情（代理到 Alldata API）"""
+    """获取数据集详情（代理到 Data API）"""
     try:
         headers = {}
         if hasattr(g, 'payload') and g.payload:
@@ -770,7 +770,7 @@ def get_dataset(dataset_id):
                 headers["Authorization"] = token
 
         response = requests.get(
-            f"{ALDATA_API_URL}/api/v1/datasets/{dataset_id}",
+            f"{DATA_API_URL}/api/v1/datasets/{dataset_id}",
             headers=headers,
             timeout=10
         )
@@ -1229,7 +1229,7 @@ products 表:
 
 
 def build_schema_from_metadata(database: str, selected_tables: list = None) -> str:
-    """从 Alldata 元数据构建 Schema 字符串
+    """从 Data 平台元数据构建 Schema 字符串
 
     Args:
         database: 数据库名称
@@ -1247,7 +1247,7 @@ def build_schema_from_metadata(database: str, selected_tables: list = None) -> s
 
         # 获取表列表
         tables_response = requests.get(
-            f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables",
+            f"{DATA_API_URL}/api/v1/metadata/databases/{database}/tables",
             headers=headers,
             timeout=10
         )
@@ -1273,7 +1273,7 @@ def build_schema_from_metadata(database: str, selected_tables: list = None) -> s
 
             # 获取表详情
             detail_response = requests.get(
-                f"{ALDATA_API_URL}/api/v1/metadata/databases/{database}/tables/{table_name}",
+                f"{DATA_API_URL}/api/v1/metadata/databases/{database}/tables/{table_name}",
                 headers=headers,
                 timeout=10
             )
@@ -1309,7 +1309,7 @@ def build_schema_from_metadata(database: str, selected_tables: list = None) -> s
 @require_jwt()
 @require_permission(Resource.CHAT, Operation.EXECUTE)
 def generate_sql():
-    """Text-to-SQL 生成（使用 Alldata 动态 Schema）"""
+    """Text-to-SQL 生成（使用 Data 平台动态 Schema）"""
     data = request.json
     question = data.get("question", "")
     database = data.get("database", "sales_dw")
@@ -1318,12 +1318,12 @@ def generate_sql():
     if not question:
         return jsonify({"code": 40001, "message": "Question is required"}), 400
 
-    # 从 Alldata 元数据服务获取 Schema
+    # 从 Data 平台元数据服务获取 Schema
     schema = build_schema_from_metadata(database, selected_tables)
 
     try:
         response = requests.post(
-            f"{CUBE_API_URL}/v1/chat/completions",
+            f"{MODEL_API_URL}/v1/chat/completions",
             json={
                 "model": "gpt-4o-mini",
                 "messages": [
@@ -1387,12 +1387,12 @@ def text2sql():
     if not question:
         return jsonify({"code": 40001, "message": "Question is required"}), 400
 
-    # 从 Alldata 元数据服务获取 Schema
+    # 从 Data 平台元数据服务获取 Schema
     schema = build_schema_from_metadata(database, selected_tables)
 
     try:
         response = requests.post(
-            f"{CUBE_API_URL}/v1/chat/completions",
+            f"{MODEL_API_URL}/v1/chat/completions",
             json={
                 "model": "gpt-4o-mini",
                 "messages": [
@@ -2509,7 +2509,7 @@ async def rag_query():
         else:
             # 如果没有检索结果，使用默认上下文
             context = """
-            ONE-DATA-STUDIO 是一个融合了 Alldata（数据治理）、Cube Studio（模型训练）、Bisheng（应用编排）的企业级 AI 平台。
+            ONE-DATA-STUDIO 是一个融合了 Data（数据治理）、Model（模型训练）、Agent（应用编排）的企业级 AI 平台。
 
             主要功能：
             1. 数据治理：数据集成、ETL、元数据管理
@@ -2520,7 +2520,7 @@ async def rag_query():
 
         # 调用 LLM 生成答案
         response = requests.post(
-            f"{CUBE_API_URL}/v1/chat/completions",
+            f"{MODEL_API_URL}/v1/chat/completions",
             json={
                 "model": "gpt-4o-mini",
                 "messages": [
@@ -4682,7 +4682,7 @@ def deploy_sft_model(task_id):
         if not task.output_model_path:
             return jsonify({"code": 40002, "message": "模型输出路径不存在"}), 400
 
-        # 模拟部署（实际应调用 Cube Studio 服务）
+        # 模拟部署（实际应调用 Model 平台服务）
         deployment_id = generate_id("deploy_")
 
         return jsonify({
@@ -4856,6 +4856,384 @@ def create_alert_rule():
         }), 201
 
     except Exception as e:
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 成本追踪 API ====================
+
+@app.route("/api/v1/cost/summary", methods=["GET"])
+@require_jwt()
+def get_cost_summary():
+    """获取 Token 成本摘要"""
+    try:
+        from services.cost_tracker import get_cost_tracker
+        tracker = get_cost_tracker()
+
+        period = request.args.get("period", "daily")
+        model = request.args.get("model")
+
+        summary = tracker.get_summary(period=period, model_filter=model)
+        return jsonify({"code": 0, "message": "success", "data": summary.to_dict()})
+    except Exception as e:
+        logger.error(f"Error getting cost summary: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/cost/record", methods=["POST"])
+@require_jwt()
+def record_token_usage():
+    """记录 Token 使用"""
+    try:
+        from services.cost_tracker import get_cost_tracker
+        tracker = get_cost_tracker()
+        data = request.get_json()
+
+        tracker.record_usage(
+            model=data.get("model", "gpt-4"),
+            input_tokens=data.get("input_tokens", 0),
+            output_tokens=data.get("output_tokens", 0),
+            context=data.get("context", {}),
+        )
+        return jsonify({"code": 0, "message": "Usage recorded"})
+    except Exception as e:
+        logger.error(f"Error recording usage: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/cost/budget", methods=["GET"])
+@require_jwt()
+def check_budget():
+    """检查预算"""
+    try:
+        from services.cost_tracker import get_cost_tracker
+        tracker = get_cost_tracker()
+
+        remaining = tracker.get_remaining_budget()
+        return jsonify({"code": 0, "message": "success", "data": {"remaining_budget": remaining}})
+    except Exception as e:
+        logger.error(f"Error checking budget: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/cost/daily-breakdown", methods=["GET"])
+@require_jwt()
+def get_daily_cost_breakdown():
+    """获取每日成本明细"""
+    try:
+        from services.cost_tracker import get_cost_tracker
+        tracker = get_cost_tracker()
+
+        days = int(request.args.get("days", 7))
+        breakdown = tracker.get_daily_breakdown(days=days)
+        return jsonify({"code": 0, "message": "success", "data": breakdown})
+    except Exception as e:
+        logger.error(f"Error getting daily breakdown: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== SQL 验证 API ====================
+
+@app.route("/api/v1/sql/validate", methods=["POST"])
+@require_jwt()
+def validate_sql():
+    """验证 SQL 安全性"""
+    try:
+        from services.sql_validator import get_sql_validator
+        validator = get_sql_validator()
+        data = request.get_json()
+
+        sql = data.get("sql", "")
+        result = validator.validate(sql)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "is_safe": result.is_safe,
+                "risk_level": result.risk_level.value,
+                "warnings": result.warnings,
+                "blocked_operations": result.blocked_operations,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error validating SQL: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/sql/sanitize", methods=["POST"])
+@require_jwt()
+def sanitize_sql():
+    """清理和安全化 SQL"""
+    try:
+        from services.sql_validator import get_sql_validator
+        validator = get_sql_validator()
+        data = request.get_json()
+
+        sql = data.get("sql", "")
+        sanitized, result = validator.sanitize_sql(sql)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "original_sql": sql,
+                "sanitized_sql": sanitized,
+                "is_safe": result.is_safe,
+                "risk_level": result.risk_level.value,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error sanitizing SQL: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 工作流版本对比 API ====================
+
+@app.route("/api/v1/workflows/<workflow_id>/versions", methods=["GET"])
+@require_jwt()
+def get_workflow_versions(workflow_id):
+    """获取工作流版本历史"""
+    try:
+        from services.workflow_diff import get_version_manager
+        db = next(get_db())
+        try:
+            manager = get_version_manager(session=db)
+            limit = int(request.args.get("limit", 20))
+            history = manager.get_history(workflow_id, limit=limit)
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": [v.to_dict() for v in history]
+            })
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error getting workflow versions: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/workflows/<workflow_id>/versions", methods=["POST"])
+@require_jwt()
+def create_workflow_version(workflow_id):
+    """创建工作流版本"""
+    try:
+        from services.workflow_diff import get_version_manager
+        db = next(get_db())
+        try:
+            manager = get_version_manager(session=db)
+            data = request.get_json()
+            version = manager.create_version(
+                workflow_id=workflow_id,
+                definition=data.get("definition", {}),
+                message=data.get("message", ""),
+                author=data.get("author", "system"),
+            )
+            return jsonify({
+                "code": 0,
+                "message": "Version created",
+                "data": version.to_dict()
+            }), 201
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error creating workflow version: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/workflows/<workflow_id>/versions/compare", methods=["GET"])
+@require_jwt()
+def compare_workflow_versions(workflow_id):
+    """对比工作流版本"""
+    try:
+        from services.workflow_diff import get_version_manager
+        db = next(get_db())
+        try:
+            manager = get_version_manager(session=db)
+            from_version = request.args.get("from")
+            to_version = request.args.get("to")
+
+            diff = manager.compare_versions(workflow_id, from_version, to_version)
+            return jsonify({"code": 0, "message": "success", "data": diff.to_dict()})
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error comparing versions: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/workflows/<workflow_id>/versions/<version_id>/rollback", methods=["POST"])
+@require_jwt()
+def rollback_workflow_version(workflow_id, version_id):
+    """回滚工作流到指定版本"""
+    try:
+        from services.workflow_diff import get_version_manager
+        db = next(get_db())
+        try:
+            manager = get_version_manager(session=db)
+            result = manager.rollback(workflow_id, version_id)
+            return jsonify({"code": 0, "message": "Rollback successful", "data": result.to_dict()})
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error rolling back version: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 混合检索 API ====================
+
+@app.route("/api/v1/retrieval/hybrid", methods=["POST"])
+@require_jwt()
+def hybrid_retrieve():
+    """混合检索（向量 + BM25）"""
+    try:
+        from services.hybrid_retriever import get_hybrid_retriever
+        retriever = get_hybrid_retriever()
+        data = request.get_json()
+
+        results = retriever.retrieve(
+            query=data.get("query", ""),
+            collection_name=data.get("collection_name", "default"),
+            top_k=data.get("top_k", 10),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": [
+                    {"text": r.text, "score": r.score, "metadata": r.metadata}
+                    for r in results
+                ],
+                "total": len(results),
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in hybrid retrieval: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/retrieval/rerank", methods=["POST"])
+@require_jwt()
+def retrieve_with_rerank():
+    """混合检索 + 重排序"""
+    try:
+        from services.hybrid_retriever import get_hybrid_retriever
+        retriever = get_hybrid_retriever()
+        data = request.get_json()
+
+        results = retriever.retrieve_with_rerank(
+            query=data.get("query", ""),
+            collection_name=data.get("collection_name", "default"),
+            top_k=data.get("top_k", 10),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "results": [
+                    {"text": r.text, "score": r.score, "metadata": r.metadata}
+                    for r in results
+                ],
+                "total": len(results),
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in reranked retrieval: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 结果解释 API ====================
+
+@app.route("/api/v1/results/interpret", methods=["POST"])
+@require_jwt()
+def interpret_results():
+    """AI 结果解释（Text-to-SQL 结果可视化建议）"""
+    try:
+        from services.result_interpreter import get_result_interpreter
+        interpreter = get_result_interpreter()
+        data = request.get_json()
+
+        result = interpreter.interpret(
+            data=data.get("data", []),
+            query=data.get("query", ""),
+            sql=data.get("sql", ""),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "summary": result.summary,
+                "charts": [c.to_dict() for c in result.charts],
+                "insights": [
+                    {"type": i.type.value, "message": i.message, "confidence": i.confidence}
+                    for i in result.insights
+                ],
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error interpreting results: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== 数据集成 API ====================
+
+@app.route("/api/v1/integration/metadata", methods=["GET"])
+@require_jwt()
+def get_integration_metadata():
+    """获取数据平台元数据（跨服务集成）"""
+    try:
+        from services.data_integration import DataIntegrationService
+        service = DataIntegrationService.get_instance()
+
+        database = request.args.get("database")
+        table = request.args.get("table")
+
+        metadata = service.metadata.get_metadata(database=database, table=table)
+        return jsonify({"code": 0, "message": "success", "data": metadata})
+    except Exception as e:
+        logger.error(f"Error getting integration metadata: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/integration/text2sql", methods=["POST"])
+@require_jwt()
+def enhanced_text2sql():
+    """增强版 Text-to-SQL"""
+    try:
+        from services.data_integration import DataIntegrationService
+        service = DataIntegrationService.get_instance()
+        data = request.get_json()
+
+        result = service.text2sql.generate_sql(
+            question=data.get("question", ""),
+            database=data.get("database"),
+            conversation_id=data.get("conversation_id"),
+        )
+        return jsonify({"code": 0, "message": "success", "data": result})
+    except Exception as e:
+        logger.error(f"Error in enhanced text2sql: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/integration/vector-search", methods=["POST"])
+@require_jwt()
+def enhanced_vector_search():
+    """增强版向量搜索"""
+    try:
+        from services.data_integration import DataIntegrationService
+        service = DataIntegrationService.get_instance()
+        data = request.get_json()
+
+        results = service.vector_search.search(
+            query=data.get("query", ""),
+            collection_name=data.get("collection_name", "default"),
+            top_k=data.get("top_k", 10),
+        )
+        return jsonify({"code": 0, "message": "success", "data": results})
+    except Exception as e:
+        logger.error(f"Error in enhanced vector search: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 

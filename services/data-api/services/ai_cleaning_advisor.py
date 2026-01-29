@@ -861,6 +861,480 @@ class AICleaningAdvisor:
             return False
 
 
+    # ==================== SQL 执行逻辑 ====================
+
+    def generate_cleaning_sql(
+        self,
+        recommendation: CleaningRecommendation,
+        database_name: Optional[str] = None
+    ) -> Dict[str, str]:
+        """
+        根据清洗规则建议生成可执行的 SQL 语句
+
+        Args:
+            recommendation: 清洗规则建议
+            database_name: 数据库名
+
+        Returns:
+            包含 preview_sql、execute_sql、rollback_info 的字典
+        """
+        config = recommendation.rule_config
+        table = config.get("target_table", "")
+        column = config.get("target_column", "")
+        action = config.get("action", "")
+
+        if not table or not column:
+            return {"error": "缺少目标表或目标列信息"}
+
+        full_table = f"{database_name}.{table}" if database_name else table
+
+        # 生成预览 SQL（SELECT 查询，查看受影响的行）
+        preview_sql = ""
+        execute_sql = ""
+
+        if action == "fill" or action == "replace":
+            fill_strategy = config.get("fill_strategy", "default")
+            default_value = config.get("default_value", "")
+
+            if fill_strategy == "mean":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows, "
+                    f"AVG({column}) AS fill_value "
+                    f"FROM {full_table} WHERE {column} IS NULL"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = ("
+                    f"SELECT avg_val FROM (SELECT AVG({column}) AS avg_val FROM {full_table}) t"
+                    f") WHERE {column} IS NULL"
+                )
+            elif fill_strategy == "mode":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NULL"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = ("
+                    f"SELECT {column} FROM {full_table} "
+                    f"WHERE {column} IS NOT NULL "
+                    f"GROUP BY {column} ORDER BY COUNT(*) DESC LIMIT 1"
+                    f") WHERE {column} IS NULL"
+                )
+            elif fill_strategy == "interpolate":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NULL"
+                )
+                # 日期插值使用当前时间
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = NOW() "
+                    f"WHERE {column} IS NULL"
+                )
+            else:
+                # default 策略
+                escaped_val = str(default_value).replace("'", "''") if default_value else ""
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NULL"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = '{escaped_val}' "
+                    f"WHERE {column} IS NULL"
+                )
+
+        elif action == "trim":
+            preview_sql = (
+                f"SELECT COUNT(*) AS affected_rows "
+                f"FROM {full_table} WHERE {column} != TRIM({column})"
+            )
+            execute_sql = (
+                f"UPDATE {full_table} SET {column} = TRIM({column}) "
+                f"WHERE {column} != TRIM({column})"
+            )
+
+        elif action == "remove_special_chars":
+            preview_sql = (
+                f"SELECT COUNT(*) AS affected_rows "
+                f"FROM {full_table} WHERE {column} REGEXP '[^a-zA-Z0-9\\\\s\\\\u4e00-\\\\u9fff]'"
+            )
+            execute_sql = (
+                f"UPDATE {full_table} SET {column} = REGEXP_REPLACE({column}, "
+                f"'[^a-zA-Z0-9 \\u4e00-\\u9fff]', '') "
+                f"WHERE {column} REGEXP '[^a-zA-Z0-9 \\u4e00-\\u9fff]'"
+            )
+
+        elif action == "deduplicate":
+            preview_sql = (
+                f"SELECT {column}, COUNT(*) AS dup_count "
+                f"FROM {full_table} "
+                f"GROUP BY {column} HAVING COUNT(*) > 1 "
+                f"ORDER BY dup_count DESC LIMIT 20"
+            )
+            timestamp_col = config.get("timestamp_column", "updated_at")
+            execute_sql = (
+                f"DELETE t1 FROM {full_table} t1 "
+                f"INNER JOIN {full_table} t2 "
+                f"WHERE t1.{column} = t2.{column} "
+                f"AND t1.{timestamp_col} < t2.{timestamp_col}"
+            )
+
+        elif action == "keep_latest":
+            timestamp_col = config.get("timestamp_column", "updated_at")
+            preview_sql = (
+                f"SELECT {column}, COUNT(*) AS dup_count "
+                f"FROM {full_table} "
+                f"GROUP BY {column} HAVING COUNT(*) > 1"
+            )
+            execute_sql = (
+                f"DELETE t1 FROM {full_table} t1 "
+                f"INNER JOIN {full_table} t2 "
+                f"WHERE t1.{column} = t2.{column} "
+                f"AND t1.{timestamp_col} < t2.{timestamp_col}"
+            )
+
+        elif action == "validate":
+            pattern = config.get("pattern", "")
+            if pattern:
+                escaped_pattern = pattern.replace("'", "''")
+                preview_sql = (
+                    f"SELECT COUNT(*) AS invalid_count "
+                    f"FROM {full_table} "
+                    f"WHERE {column} IS NOT NULL "
+                    f"AND {column} NOT REGEXP '{escaped_pattern}'"
+                )
+                execute_sql = ""  # 验证规则不执行修改
+
+        elif action == "clip":
+            min_val = config.get("min_value")
+            max_val = config.get("max_value")
+            conditions = []
+            updates = []
+            if min_val is not None:
+                conditions.append(f"{column} < {min_val}")
+                updates.append(f"WHEN {column} < {min_val} THEN {min_val}")
+            if max_val is not None:
+                conditions.append(f"{column} > {max_val}")
+                updates.append(f"WHEN {column} > {max_val} THEN {max_val}")
+
+            if conditions:
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {' OR '.join(conditions)}"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CASE "
+                    f"{' '.join(updates)} ELSE {column} END "
+                    f"WHERE {' OR '.join(conditions)}"
+                )
+
+        elif action == "standardize":
+            standard_type = config.get("standard_type", "case")
+            if standard_type == "case":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} != LOWER(TRIM({column}))"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = LOWER(TRIM({column})) "
+                    f"WHERE {column} != LOWER(TRIM({column}))"
+                )
+            elif standard_type == "trim":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} != TRIM({column})"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = TRIM({column}) "
+                    f"WHERE {column} != TRIM({column})"
+                )
+
+        elif action == "map":
+            mapping_dict = config.get("mapping_dict", {})
+            if mapping_dict:
+                case_parts = []
+                for old_val, new_val in mapping_dict.items():
+                    escaped_old = str(old_val).replace("'", "''")
+                    escaped_new = str(new_val).replace("'", "''")
+                    case_parts.append(f"WHEN '{escaped_old}' THEN '{escaped_new}'")
+
+                old_values = ", ".join(
+                    f"'{str(v).replace(chr(39), chr(39)+chr(39))}'" for v in mapping_dict.keys()
+                )
+                preview_sql = (
+                    f"SELECT {column}, COUNT(*) AS cnt "
+                    f"FROM {full_table} WHERE {column} IN ({old_values}) "
+                    f"GROUP BY {column}"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CASE {column} "
+                    f"{' '.join(case_parts)} ELSE {column} END "
+                    f"WHERE {column} IN ({old_values})"
+                )
+
+        elif action == "mask":
+            mask_type = config.get("mask_type", "partial")
+            if mask_type == "phone_mask":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NOT NULL AND LENGTH({column}) >= 7"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CONCAT("
+                    f"LEFT({column}, 3), '****', RIGHT({column}, 4)"
+                    f") WHERE {column} IS NOT NULL AND LENGTH({column}) >= 7"
+                )
+            elif mask_type == "email_mask":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} LIKE '%@%'"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CONCAT("
+                    f"LEFT({column}, 1), '***@', "
+                    f"SUBSTRING_INDEX({column}, '@', -1)"
+                    f") WHERE {column} LIKE '%@%'"
+                )
+            elif mask_type == "id_mask":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NOT NULL AND LENGTH({column}) >= 10"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CONCAT("
+                    f"LEFT({column}, 6), '********', RIGHT({column}, 4)"
+                    f") WHERE {column} IS NOT NULL AND LENGTH({column}) >= 10"
+                )
+            elif mask_type == "name_mask":
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NOT NULL AND LENGTH({column}) >= 2"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CONCAT("
+                    f"LEFT({column}, 1), REPEAT('*', LENGTH({column}) - 1)"
+                    f") WHERE {column} IS NOT NULL AND LENGTH({column}) >= 2"
+                )
+            else:
+                # partial mask: 保留首尾字符
+                preview_sql = (
+                    f"SELECT COUNT(*) AS affected_rows "
+                    f"FROM {full_table} WHERE {column} IS NOT NULL AND LENGTH({column}) >= 3"
+                )
+                execute_sql = (
+                    f"UPDATE {full_table} SET {column} = CONCAT("
+                    f"LEFT({column}, 1), REPEAT('*', LENGTH({column}) - 2), RIGHT({column}, 1)"
+                    f") WHERE {column} IS NOT NULL AND LENGTH({column}) >= 3"
+                )
+
+        if not preview_sql:
+            return {
+                "error": f"不支持的清洗动作: {action}",
+                "action": action,
+                "rule_type": recommendation.rule_type,
+            }
+
+        return {
+            "preview_sql": preview_sql,
+            "execute_sql": execute_sql,
+            "action": action,
+            "target_table": full_table,
+            "target_column": column,
+            "rule_name": recommendation.rule_name,
+        }
+
+    def preview_cleaning(
+        self,
+        db: Session,
+        recommendation: CleaningRecommendation,
+        database_name: Optional[str] = None,
+        limit: int = 20
+    ) -> Dict[str, Any]:
+        """
+        预览清洗操作将影响的数据（dry run）
+
+        Args:
+            db: 数据库会话
+            recommendation: 清洗规则建议
+            database_name: 数据库名
+            limit: 预览行数
+
+        Returns:
+            预览结果，包含受影响行数和样本数据
+        """
+        sql_info = self.generate_cleaning_sql(recommendation, database_name)
+
+        if "error" in sql_info:
+            return sql_info
+
+        preview_sql = sql_info.get("preview_sql", "")
+        if not preview_sql:
+            return {"error": "无法生成预览 SQL"}
+
+        try:
+            # 添加 LIMIT
+            if "LIMIT" not in preview_sql.upper():
+                preview_sql = f"{preview_sql} LIMIT {limit}"
+
+            result = db.execute(text(preview_sql))
+            rows = result.fetchall()
+            columns = result.keys() if hasattr(result, 'keys') else []
+
+            # 转换为字典列表
+            preview_data = []
+            for row in rows:
+                if hasattr(row, '_mapping'):
+                    preview_data.append(dict(row._mapping))
+                elif hasattr(row, 'keys'):
+                    preview_data.append(dict(row))
+                else:
+                    preview_data.append({str(i): v for i, v in enumerate(row)})
+
+            return {
+                "success": True,
+                "preview_data": preview_data,
+                "row_count": len(preview_data),
+                "sql": preview_sql,
+                "execute_sql": sql_info.get("execute_sql", ""),
+                "rule_name": sql_info.get("rule_name", ""),
+                "action": sql_info.get("action", ""),
+                "target_table": sql_info.get("target_table", ""),
+                "target_column": sql_info.get("target_column", ""),
+            }
+
+        except Exception as e:
+            logger.error(f"清洗预览失败: {e}")
+            return {
+                "success": False,
+                "error": f"预览失败: {str(e)}",
+                "sql": preview_sql,
+            }
+
+    def execute_cleaning_rule(
+        self,
+        db: Session,
+        recommendation: CleaningRecommendation,
+        database_name: Optional[str] = None,
+        dry_run: bool = False
+    ) -> Dict[str, Any]:
+        """
+        执行清洗规则
+
+        Args:
+            db: 数据库会话
+            recommendation: 清洗规则建议
+            database_name: 数据库名
+            dry_run: 是否仅预览不执行
+
+        Returns:
+            执行结果
+        """
+        if dry_run:
+            return self.preview_cleaning(db, recommendation, database_name)
+
+        sql_info = self.generate_cleaning_sql(recommendation, database_name)
+
+        if "error" in sql_info:
+            return sql_info
+
+        execute_sql = sql_info.get("execute_sql", "")
+        if not execute_sql:
+            return {
+                "success": True,
+                "message": "此规则为验证规则，无需执行修改操作",
+                "action": sql_info.get("action", ""),
+            }
+
+        try:
+            # 先获取受影响行数
+            preview_result = self.preview_cleaning(db, recommendation, database_name)
+            affected_estimate = preview_result.get("row_count", 0) if preview_result.get("success") else 0
+
+            # 执行清洗 SQL
+            result = db.execute(text(execute_sql))
+            db.commit()
+
+            affected_rows = result.rowcount if hasattr(result, 'rowcount') else 0
+
+            logger.info(
+                f"清洗规则执行成功: {recommendation.rule_name}, "
+                f"影响行数: {affected_rows}"
+            )
+
+            return {
+                "success": True,
+                "rule_name": sql_info.get("rule_name", ""),
+                "action": sql_info.get("action", ""),
+                "target_table": sql_info.get("target_table", ""),
+                "target_column": sql_info.get("target_column", ""),
+                "affected_rows": affected_rows,
+                "affected_estimate": affected_estimate,
+                "execute_sql": execute_sql,
+            }
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"清洗规则执行失败: {e}")
+            return {
+                "success": False,
+                "error": f"执行失败: {str(e)}",
+                "execute_sql": execute_sql,
+            }
+
+    def batch_execute_cleaning(
+        self,
+        db: Session,
+        recommendations: List[CleaningRecommendation],
+        database_name: Optional[str] = None,
+        dry_run: bool = False,
+        stop_on_error: bool = True
+    ) -> Dict[str, Any]:
+        """
+        批量执行清洗规则
+
+        Args:
+            db: 数据库会话
+            recommendations: 清洗规则列表
+            database_name: 数据库名
+            dry_run: 是否仅预览
+            stop_on_error: 出错时是否停止
+
+        Returns:
+            批量执行结果
+        """
+        results = []
+        total_affected = 0
+        errors = []
+
+        for i, rec in enumerate(recommendations):
+            result = self.execute_cleaning_rule(db, rec, database_name, dry_run)
+            results.append({
+                "index": i,
+                "rule_name": rec.rule_name,
+                "priority": rec.priority,
+                "result": result,
+            })
+
+            if result.get("success"):
+                total_affected += result.get("affected_rows", 0)
+            else:
+                errors.append({
+                    "index": i,
+                    "rule_name": rec.rule_name,
+                    "error": result.get("error", ""),
+                })
+                if stop_on_error:
+                    break
+
+        return {
+            "success": len(errors) == 0,
+            "total_rules": len(recommendations),
+            "executed": len(results),
+            "total_affected_rows": total_affected,
+            "errors": errors,
+            "results": results,
+            "dry_run": dry_run,
+        }
+
+
 # 创建全局服务实例
 _ai_cleaning_advisor = None
 

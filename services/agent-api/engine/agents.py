@@ -161,31 +161,65 @@ class ReActAgent:
             return match.group(1).strip()
         return None
 
-    async def _call_llm(self, prompt: str) -> str:
-        """调用 LLM API"""
-        try:
-            response = requests.post(
-                f"{self.llm_api_url}/v1/chat/completions",
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": "你是一个有帮助的 AI 助手，可以思考和使用工具来解决问题。"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 1000
-                },
-                timeout=30
-            )
+    async def _call_llm(self, prompt: str, retries: int = 2) -> str:
+        """调用 LLM API（异步 + 重试）"""
+        last_error = None
 
-            if response.status_code == 200:
-                result = response.json()
-                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            else:
-                return f"Error: LLM API returned {response.status_code}"
+        for attempt in range(retries + 1):
+            try:
+                try:
+                    import aiohttp
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            f"{self.llm_api_url}/v1/chat/completions",
+                            json={
+                                "model": self.model,
+                                "messages": [
+                                    {"role": "system", "content": "你是一个有帮助的 AI 助手，可以思考和使用工具来解决问题。"},
+                                    {"role": "user", "content": prompt}
+                                ],
+                                "temperature": 0.1,
+                                "max_tokens": 1000
+                            },
+                            timeout=aiohttp.ClientTimeout(total=30)
+                        ) as resp:
+                            if resp.status == 200:
+                                result = await resp.json()
+                                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            else:
+                                last_error = f"LLM API returned {resp.status}"
+                except ImportError:
+                    # aiohttp 不可用时回退到同步 requests
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    response = await loop.run_in_executor(None, lambda: requests.post(
+                        f"{self.llm_api_url}/v1/chat/completions",
+                        json={
+                            "model": self.model,
+                            "messages": [
+                                {"role": "system", "content": "你是一个有帮助的 AI 助手，可以思考和使用工具来解决问题。"},
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.1,
+                            "max_tokens": 1000
+                        },
+                        timeout=30
+                    ))
 
-        except Exception as e:
-            return f"Error: {str(e)}"
+                    if response.status_code == 200:
+                        result = response.json()
+                        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    else:
+                        last_error = f"LLM API returned {response.status_code}"
+
+            except Exception as e:
+                last_error = str(e)
+                if attempt < retries:
+                    import asyncio
+                    await asyncio.sleep(1 * (attempt + 1))  # 递增延迟
+                    logger.warning(f"LLM 调用失败 (attempt {attempt + 1}/{retries + 1}): {e}")
+
+        return f"Error: {last_error}"
 
     def _format_history(self) -> str:
         """格式化执行历史"""
@@ -217,6 +251,8 @@ class ReActAgent:
         tools_description = self._build_tools_description()
         tool_names = ", ".join(self._get_tool_names())
 
+        consecutive_no_action = 0  # 连续无动作计数
+
         for iteration in range(self.max_iterations):
             # 构建提示
             history = self._format_history()
@@ -233,6 +269,16 @@ class ReActAgent:
             if self.verbose:
                 logger.debug(f"\n=== Iteration {iteration + 1} ===")
                 logger.debug(f"LLM Output:\n{llm_output}")
+
+            # 检查 LLM 是否返回了错误
+            if llm_output.startswith("Error:"):
+                self.steps.append(AgentStep("error", llm_output))
+                return {
+                    "success": False,
+                    "error": llm_output,
+                    "iterations": iteration + 1,
+                    "steps": [s.to_dict() for s in self.steps]
+                }
 
             # 检查是否有最终答案
             final_answer = self._check_final_answer(llm_output)
@@ -255,10 +301,14 @@ class ReActAgent:
             tool_name, parameters = self._parse_action(llm_output)
 
             if tool_name:
+                consecutive_no_action = 0
                 self.steps.append(AgentStep("action", f"{tool_name}({json.dumps(parameters, ensure_ascii=False)})"))
 
                 # 执行工具
-                tool_result = await self.tool_registry.execute(tool_name, **parameters)
+                try:
+                    tool_result = await self.tool_registry.execute(tool_name, **parameters)
+                except Exception as e:
+                    tool_result = {"success": False, "error": f"工具执行异常: {str(e)}"}
 
                 # 格式化观察结果
                 if isinstance(tool_result, dict):
@@ -269,17 +319,42 @@ class ReActAgent:
                 else:
                     observation = str(tool_result)
 
+                # 截断过长的观察结果
+                if len(observation) > 2000:
+                    observation = observation[:2000] + "...(结果已截断)"
+
                 self.steps.append(AgentStep("observation", observation, tool_result))
 
                 if self.verbose:
                     logger.debug(f"Action: {tool_name}")
                     logger.debug(f"Parameters: {parameters}")
-                    logger.debug(f"Observation: {observation}")
+                    logger.debug(f"Observation: {observation[:200]}")
+            else:
+                # LLM 没有给出 Action 也没有给出 Final Answer
+                consecutive_no_action += 1
+                if consecutive_no_action >= 2:
+                    # 如果连续两次无法解析出动作，将 LLM 原始输出作为最终答案
+                    clean_output = llm_output.strip()
+                    if thought_match:
+                        clean_output = thought_match.group(1).strip()
+                    self.steps.append(AgentStep("final", clean_output))
+                    return {
+                        "success": True,
+                        "answer": clean_output,
+                        "iterations": iteration + 1,
+                        "steps": [s.to_dict() for s in self.steps],
+                        "note": "LLM 未使用工具，直接返回思考结果"
+                    }
 
         # 达到最大迭代次数
+        # 尝试从最后的步骤中提取有用信息
+        last_thoughts = [s.content for s in self.steps if s.step_type in ("thought", "observation")]
+        fallback_answer = last_thoughts[-1] if last_thoughts else "未能在最大迭代次数内得出结论"
+
         return {
             "success": False,
             "error": "Max iterations reached",
+            "answer": fallback_answer,
             "iterations": self.max_iterations,
             "steps": [s.to_dict() for s in self.steps]
         }
@@ -301,6 +376,8 @@ class ReActAgent:
         # 发送开始事件
         yield {"type": "start", "message": "开始执行 Agent", "agent_type": "react"}
 
+        consecutive_no_action = 0
+
         for iteration in range(self.max_iterations):
             # 构建提示
             history = self._format_history()
@@ -316,6 +393,13 @@ class ReActAgent:
 
             # 调用 LLM
             llm_output = await self._call_llm(prompt)
+
+            # 检查 LLM 错误
+            if llm_output.startswith("Error:"):
+                self.steps.append(AgentStep("error", llm_output))
+                yield {"type": "step", "data": AgentStep("error", llm_output).to_dict()}
+                yield {"type": "end", "success": False, "error": llm_output, "iterations": iteration + 1}
+                return
 
             # 检查是否有最终答案
             final_answer = self._check_final_answer(llm_output)
@@ -336,13 +420,18 @@ class ReActAgent:
             tool_name, parameters = self._parse_action(llm_output)
 
             if tool_name:
+                consecutive_no_action = 0
                 action_str = f"{tool_name}({json.dumps(parameters, ensure_ascii=False)})"
                 self.steps.append(AgentStep("action", action_str))
                 yield {"type": "step", "data": AgentStep("action", action_str).to_dict()}
 
                 # 执行工具
                 yield {"type": "tool_start", "tool": tool_name}
-                tool_result = await self.tool_registry.execute(tool_name, **parameters)
+
+                try:
+                    tool_result = await self.tool_registry.execute(tool_name, **parameters)
+                except Exception as e:
+                    tool_result = {"success": False, "error": f"工具执行异常: {str(e)}"}
 
                 # 格式化观察结果
                 if isinstance(tool_result, dict):
@@ -353,9 +442,22 @@ class ReActAgent:
                 else:
                     observation = str(tool_result)
 
+                if len(observation) > 2000:
+                    observation = observation[:2000] + "...(结果已截断)"
+
                 self.steps.append(AgentStep("observation", observation, tool_result))
                 yield {"type": "step", "data": AgentStep("observation", observation, tool_result).to_dict()}
                 yield {"type": "tool_end", "tool": tool_name}
+            else:
+                consecutive_no_action += 1
+                if consecutive_no_action >= 2:
+                    clean_output = llm_output.strip()
+                    if thought_match:
+                        clean_output = thought_match.group(1).strip()
+                    self.steps.append(AgentStep("final", clean_output))
+                    yield {"type": "step", "data": AgentStep("final", clean_output).to_dict()}
+                    yield {"type": "end", "success": True, "answer": clean_output, "iterations": iteration + 1}
+                    return
 
         # 达到最大迭代次数
         yield {"type": "end", "success": False, "error": "Max iterations reached", "iterations": self.max_iterations}

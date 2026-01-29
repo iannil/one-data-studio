@@ -1,5 +1,5 @@
 """
-Alldata API 认证模块
+Data API 认证模块
 P5: 使用 Keycloak JWT 进行身份验证和授权
 
 功能：
@@ -84,7 +84,7 @@ except ImportError:
 # ============= 资源和操作定义 =============
 
 class Resource:
-    """Alldata 资源类型定义"""
+    """Data 资源类型定义"""
     DATASET = "dataset"
     METADATA = "metadata"
     DATABASE = "database"
@@ -113,8 +113,8 @@ class Operation:
 
 # ============= 权限矩阵 =============
 
-# Alldata 权限矩阵 (角色 -> 资源 -> 操作)
-ALDATA_PERMISSIONS = {
+# Data 权限矩阵 (角色 -> 资源 -> 操作)
+DATA_PERMISSIONS = {
     "admin": {
         Resource.DATASET: [Operation.READ, Operation.CREATE, Operation.UPDATE, Operation.DELETE, Operation.EXPORT],
         Resource.METADATA: [Operation.READ, Operation.CREATE, Operation.UPDATE, Operation.DELETE],
@@ -232,7 +232,7 @@ def _introspect_token(token: str) -> Optional[Dict]:
     使用 Keycloak token introspection 端点验证 token
     """
     try:
-        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "alldata-api")
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "data-api")
         client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
         if not client_secret:
             logger.warning("KEYCLOAK_CLIENT_SECRET not set, token introspection may fail")
@@ -342,8 +342,8 @@ def require_permission(resource: str, operation: str) -> Callable:
             # 检查每个角色的权限
             has_permission = False
             for role in user_roles:
-                if role in ALDATA_PERMISSIONS:
-                    role_permissions = ALDATA_PERMISSIONS[role]
+                if role in DATA_PERMISSIONS:
+                    role_permissions = DATA_PERMISSIONS[role]
                     if resource in role_permissions:
                         if operation in role_permissions[resource]:
                             has_permission = True
@@ -418,8 +418,8 @@ def check_permission(resource: str, operation: str, roles: List[str]) -> bool:
         return True
 
     for role in roles:
-        if role in ALDATA_PERMISSIONS:
-            role_permissions = ALDATA_PERMISSIONS[role]
+        if role in DATA_PERMISSIONS:
+            role_permissions = DATA_PERMISSIONS[role]
             if resource in role_permissions:
                 if operation in role_permissions[resource]:
                     return True

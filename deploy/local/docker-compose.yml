@@ -338,11 +338,11 @@ services:
   # ============================================
   # Application Services
   # ============================================
-  bisheng-api:
+  agent-api:
     build:
       context: ../../
-      dockerfile: deploy/dockerfiles/bisheng-api/Dockerfile
-    container_name: one-data-bisheng-api
+      dockerfile: deploy/dockerfiles/agent-api/Dockerfile
+    container_name: one-data-agent-api
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
       DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
@@ -353,7 +353,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
       # LLM API configuration (through openai-proxy or direct vLLM)
-      CUBE_API_URL: ${CUBE_API_URL:-http://openai-proxy:8000}
+      MODEL_API_URL: ${MODEL_API_URL:-http://openai-proxy:8000}
       # Direct vLLM endpoints for high-performance scenarios
       VLLM_CHAT_URL: ${VLLM_CHAT_URL:-http://vllm-chat:8000}
       VLLM_EMBED_URL: ${VLLM_EMBED_URL:-http://vllm-embed:8000}
@@ -376,11 +376,11 @@ services:
     networks:
       - one-data-network
 
-  alldata-api:
+  data-api:
     build:
       context: ../../
-      dockerfile: deploy/dockerfiles/alldata-api/Dockerfile
-    container_name: one-data-alldata-api
+      dockerfile: deploy/dockerfiles/data-api/Dockerfile
+    container_name: one-data-data-api
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
       MYSQL_HOST: mysql
@@ -465,17 +465,17 @@ services:
     networks:
       - one-data-network
 
-  cube-api:
+  model-api:
     build:
       context: ../../
-      dockerfile: deploy/dockerfiles/cube-api/Dockerfile
-    container_name: one-data-cube-api
+      dockerfile: deploy/dockerfiles/model-api/Dockerfile
+    container_name: one-data-model-api
     volumes:
       # 开发模式：挂载本地源代码，修改后需重启容器
-      - ../../services/cube-api:/app
+      - ../../services/model-api:/app
     environment:
       # SECURITY: All credentials MUST be set via environment variables - no default fallbacks
-      CUBE_DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      MODEL_DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
@@ -586,15 +586,15 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      bisheng-api:
+      agent-api:
         condition: service_started
-      alldata-api:
+      data-api:
         condition: service_started
       openai-proxy:
         condition: service_started
       admin-api:
         condition: service_started
-      cube-api:
+      model-api:
         condition: service_started
       keycloak:
         condition: service_started

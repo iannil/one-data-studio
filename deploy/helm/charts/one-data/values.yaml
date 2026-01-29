@@ -301,15 +301,15 @@ services:
   jwtSecretKey: ""  # REQUIRED: set via JWT_SECRET_KEY environment variable
 
 # ============================================
-# Alldata 平台
+# Data 平台
 # ============================================
 
-alldata:
+data:
   enabled: true
-  namespace: one-data-alldata
+  namespace: one-data-data
 
   image:
-    repository: one-data/alldata-api
+    repository: one-data/data-api
     tag: "v1.0.0"
     pullPolicy: IfNotPresent
 
@@ -337,11 +337,11 @@ alldata:
   ingress:
     enabled: true
     className: nginx
-    host: alldata.example.com
+    host: data.example.com
     # SECURITY: TLS enabled by default for production security
     # Requires cert-manager or manually configured TLS secrets
     tls: true
-    tlsSecretName: alldata-tls
+    tlsSecretName: data-tls
 
   # Kettle ETL 引擎配置
   kettle:
@@ -405,8 +405,8 @@ alldata:
     # OpenLineage 集成
     openlineage:
       enabled: true
-      apiUrl: "http://alldata-api.one-data-alldata.svc.cluster.local:8080/api/v1/lineage/events"
-      namespace: "alldata"
+      apiUrl: "http://data-api.one-data-data.svc.cluster.local:8080/api/v1/lineage/events"
+      namespace: "data"
 
     # OpenMetadata 集成
     openmetadata:
@@ -419,7 +419,7 @@ alldata:
       cleaningEnabled: true
       maskingEnabled: true
       imputationEnabled: true
-      serviceUrl: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+      serviceUrl: "http://data-api.one-data-data.svc.cluster.local:8080"
 
     # 日志配置
     logging:
@@ -433,12 +433,12 @@ alldata:
         schedule: "0 2 * * *"  # 每天凌晨 2 点
 
 # ============================================
-# Cube Studio 平台
+# Model 平台
 # ============================================
 
-cube:
+model:
   enabled: true
-  namespace: one-data-cube
+  namespace: one-data-model
 
   # 模型服务配置
   modelServing:
@@ -477,10 +477,10 @@ cube:
     ingress:
       enabled: true
       className: nginx
-      host: cube.example.com
+      host: model.example.com
       # SECURITY: TLS enabled by default for production security
       tls: true
-      tlsSecretName: cube-tls
+      tlsSecretName: model-tls
 
   # JupyterHub 配置（可选）
   jupyterhub:
@@ -494,15 +494,15 @@ cube:
         cpu: 500m
 
 # ============================================
-# Bisheng 平台
+# Agent 平台
 # ============================================
 
-bisheng:
+agent:
   enabled: true
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 
   image:
-    repository: one-data/bisheng-api
+    repository: one-data/agent-api
     tag: "v1.0.0"
     pullPolicy: IfNotPresent
 
@@ -510,8 +510,8 @@ bisheng:
 
   # 外部服务依赖
   dependencies:
-    alldataApiUrl: http://alldata-api.one-data-alldata.svc.cluster.local:8080
-    cubeApiUrl: http://vllm-serving.one-data-cube.svc.cluster.local:8000
+    dataApiUrl: http://data-api.one-data-data.svc.cluster.local:8080
+    modelApiUrl: http://vllm-serving.one-data-model.svc.cluster.local:8000
 
   resources:
     requests:
@@ -528,11 +528,11 @@ bisheng:
   ingress:
     enabled: true
     className: nginx
-    host: bisheng.example.com
+    host: agent.example.com
     # SECURITY: TLS enabled by default for production security
     # Requires cert-manager or manually configured TLS secrets
     tls: true
-    tlsSecretName: bisheng-tls
+    tlsSecretName: agent-tls
 
 # ============================================
 # 监控

@@ -14,13 +14,13 @@ async function login(page: Page) {
   await page.fill('input[name="username"]', TEST_USER.username);
   await page.fill('input[name="password"]', TEST_USER.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|cube)/);
+  await page.waitForURL(/\/(dashboard|model)/);
 }
 
 test.describe('开发环境 (AE-NB)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/cube/notebooks');
+    await page.goto('/model/notebooks');
   });
 
   test('AE-NB-001: 启动 Notebook', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('开发环境 (AE-NB)', () => {
 test.describe('模型训练 (AE-TR)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/cube/training');
+    await page.goto('/model/training');
   });
 
   test('AE-TR-001: 提交训练任务', async ({ page }) => {
@@ -135,7 +135,7 @@ test.describe('模型训练 (AE-TR)', () => {
 test.describe('模型部署 (AE-DP)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
-    await page.goto('/cube/deployment');
+    await page.goto('/model/deployment');
   });
 
   test('AE-DP-001: 部署模型服务', async ({ page }) => {

@@ -1,4 +1,4 @@
-# Alldata API 依赖
+# Data API 依赖
 # Sprint 1.1 持久化版本
 
 # Web 框架
@@ -30,3 +30,15 @@ alembic==1.13.0
 
 # 定时调度
 APScheduler==3.10.4
+
+# 消息队列 & CDC
+kafka-python==2.0.2
+confluent-kafka==2.3.0
+
+# AI/LLM 集成
+openai==1.12.0
+tiktoken==0.6.0
+
+# 数据处理
+pandas==2.1.4
+numpy==1.26.2

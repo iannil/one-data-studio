@@ -1,15 +1,15 @@
 """
-Bisheng VectorStore 适配器 for LangChain
+Agent 平台 VectorStore 适配器 for LangChain
 
-将 ONE-DATA-STUDIO (Bisheng) 的向量存储服务封装为 LangChain 兼容的 VectorStore 类，
+将 ONE-DATA-STUDIO (Agent 平台) 的向量存储服务封装为 LangChain 兼容的 VectorStore 类，
 使用户可以在 LangChain RAG 应用中无缝使用平台的向量检索能力。
 
 用法示例：
-    from bisheng_vectorstore import BishengVectorStore
+    from agent_vectorstore import AgentVectorStore
     from langchain_openai import OpenAIEmbeddings
 
     # 创建向量存储
-    vectorstore = BishengVectorStore(
+    vectorstore = AgentVectorStore(
         api_base="http://localhost:8000",
         collection_name="my_documents",
         embedding=OpenAIEmbeddings()
@@ -46,14 +46,14 @@ from langchain_core.vectorstores import VectorStore
 logger = logging.getLogger(__name__)
 
 
-class BishengVectorStore(VectorStore):
+class AgentVectorStore(VectorStore):
     """
-    Bisheng (ONE-DATA-STUDIO) VectorStore 适配器
+    Agent 平台 (ONE-DATA-STUDIO) VectorStore 适配器
 
-    通过 Bisheng API 连接到 Milvus 向量存储服务。
+    通过 Agent API 连接到 Milvus 向量存储服务。
 
     Attributes:
-        api_base: Bisheng API 基础 URL
+        api_base: Agent API 基础 URL
         collection_name: 向量集合名称
         embedding: 嵌入模型
         api_key: API 密钥
@@ -69,19 +69,19 @@ class BishengVectorStore(VectorStore):
         timeout: int = 60,
     ):
         """
-        初始化 Bisheng VectorStore
+        初始化 Agent VectorStore
 
         Args:
-            api_base: Bisheng API 基础 URL
+            api_base: Agent API 基础 URL
             collection_name: 向量集合名称
             embedding: 嵌入模型 (可选，如果不提供则使用服务端嵌入)
             api_key: API 密钥
             timeout: 请求超时时间（秒）
         """
-        self.api_base = api_base or os.getenv("BISHENG_API_BASE", "http://localhost:8000")
+        self.api_base = api_base or os.getenv("AGENT_API_BASE", "http://localhost:8000")
         self.collection_name = collection_name
         self._embedding = embedding
-        self.api_key = api_key or os.getenv("BISHENG_API_KEY")
+        self.api_key = api_key or os.getenv("AGENT_API_KEY")
         self.timeout = timeout
 
     @property
@@ -144,7 +144,7 @@ class BishengVectorStore(VectorStore):
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to add texts: {e}")
-            raise ValueError(f"Failed to add texts to Bisheng: {e}")
+            raise ValueError(f"Failed to add texts to Agent platform: {e}")
 
     def add_documents(
         self,
@@ -410,7 +410,7 @@ class BishengVectorStore(VectorStore):
 
     @classmethod
     def from_texts(
-        cls: Type["BishengVectorStore"],
+        cls: Type["AgentVectorStore"],
         texts: List[str],
         embedding: Embeddings,
         metadatas: Optional[List[Dict[str, Any]]] = None,
@@ -418,7 +418,7 @@ class BishengVectorStore(VectorStore):
         api_base: Optional[str] = None,
         api_key: Optional[str] = None,
         **kwargs: Any,
-    ) -> "BishengVectorStore":
+    ) -> "AgentVectorStore":
         """
         从文本创建向量存储
 
@@ -432,7 +432,7 @@ class BishengVectorStore(VectorStore):
             **kwargs: 其他参数
 
         Returns:
-            BishengVectorStore 实例
+            AgentVectorStore 实例
         """
         vectorstore = cls(
             api_base=api_base,
@@ -445,14 +445,14 @@ class BishengVectorStore(VectorStore):
 
     @classmethod
     def from_documents(
-        cls: Type["BishengVectorStore"],
+        cls: Type["AgentVectorStore"],
         documents: List[Document],
         embedding: Embeddings,
         collection_name: str = "default",
         api_base: Optional[str] = None,
         api_key: Optional[str] = None,
         **kwargs: Any,
-    ) -> "BishengVectorStore":
+    ) -> "AgentVectorStore":
         """
         从文档创建向量存储
 
@@ -465,7 +465,7 @@ class BishengVectorStore(VectorStore):
             **kwargs: 其他参数
 
         Returns:
-            BishengVectorStore 实例
+            AgentVectorStore 实例
         """
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
@@ -522,14 +522,14 @@ class BishengVectorStore(VectorStore):
 
 
 # 便捷函数
-def create_bisheng_vectorstore(
+def create_agent_vectorstore(
     collection_name: str = "default",
     api_base: Optional[str] = None,
     embedding: Optional[Embeddings] = None,
     api_key: Optional[str] = None,
-) -> BishengVectorStore:
+) -> AgentVectorStore:
     """
-    创建 Bisheng VectorStore 实例
+    创建 Agent VectorStore 实例
 
     Args:
         collection_name: 集合名称
@@ -538,9 +538,9 @@ def create_bisheng_vectorstore(
         api_key: API 密钥
 
     Returns:
-        BishengVectorStore 实例
+        AgentVectorStore 实例
     """
-    return BishengVectorStore(
+    return AgentVectorStore(
         api_base=api_base,
         collection_name=collection_name,
         embedding=embedding,
@@ -550,7 +550,7 @@ def create_bisheng_vectorstore(
 
 if __name__ == "__main__":
     # 简单测试
-    vectorstore = BishengVectorStore(
+    vectorstore = AgentVectorStore(
         api_base="http://localhost:8000",
         collection_name="test_collection",
     )

@@ -1,34 +1,34 @@
-{{- if .Values.alldataApi.enabled }}
+{{- if .Values.dataApi.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "one-data-studio.fullname" . }}-alldata-api
+  name: {{ include "one-data-studio.fullname" . }}-data-api
   labels:
     {{- include "one-data-studio.labels" . | nindent 4 }}
-    app.kubernetes.io/component: alldata-api
+    app.kubernetes.io/component: data-api
 spec:
-  {{- if not .Values.alldataApi.autoscaling.enabled }}
-  replicas: {{ .Values.alldataApi.replicaCount }}
+  {{- if not .Values.dataApi.autoscaling.enabled }}
+  replicas: {{ .Values.dataApi.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
       {{- include "one-data-studio.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: alldata-api
+      app.kubernetes.io/component: data-api
   template:
     metadata:
       labels:
         {{- include "one-data-studio.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: alldata-api
+        app.kubernetes.io/component: data-api
     spec:
       {{- include "one-data-studio.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "one-data-studio.serviceAccountName" . }}
       containers:
-        - name: alldata-api
-          image: "{{ .Values.global.imageRegistry }}{{ .Values.alldataApi.image.repository }}:{{ .Values.alldataApi.image.tag }}"
-          imagePullPolicy: {{ .Values.alldataApi.image.pullPolicy }}
+        - name: data-api
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.dataApi.image.repository }}:{{ .Values.dataApi.image.tag }}"
+          imagePullPolicy: {{ .Values.dataApi.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.alldataApi.service.port }}
+              containerPort: {{ .Values.dataApi.service.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -43,7 +43,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.alldataApi.resources | nindent 12 }}
+            {{- toYaml .Values.dataApi.resources | nindent 12 }}
           env:
             - name: ENVIRONMENT
               value: "production"
@@ -68,7 +68,7 @@ spec:
                 secretKeyRef:
                   name: one-data-secrets
                   key: JWT_SECRET_KEY
-            {{- range $key, $value := .Values.alldataApi.env }}
+            {{- range $key, $value := .Values.dataApi.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
@@ -76,42 +76,42 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "one-data-studio.fullname" . }}-alldata-api
+  name: {{ include "one-data-studio.fullname" . }}-data-api
   labels:
     {{- include "one-data-studio.labels" . | nindent 4 }}
-    app.kubernetes.io/component: alldata-api
+    app.kubernetes.io/component: data-api
 spec:
-  type: {{ .Values.alldataApi.service.type }}
+  type: {{ .Values.dataApi.service.type }}
   ports:
-    - port: {{ .Values.alldataApi.service.port }}
+    - port: {{ .Values.dataApi.service.port }}
       targetPort: http
       protocol: TCP
       name: http
   selector:
     {{- include "one-data-studio.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: alldata-api
-{{- if .Values.alldataApi.autoscaling.enabled }}
+    app.kubernetes.io/component: data-api
+{{- if .Values.dataApi.autoscaling.enabled }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "one-data-studio.fullname" . }}-alldata-api
+  name: {{ include "one-data-studio.fullname" . }}-data-api
   labels:
     {{- include "one-data-studio.labels" . | nindent 4 }}
-    app.kubernetes.io/component: alldata-api
+    app.kubernetes.io/component: data-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "one-data-studio.fullname" . }}-alldata-api
-  minReplicas: {{ .Values.alldataApi.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.alldataApi.autoscaling.maxReplicas }}
+    name: {{ include "one-data-studio.fullname" . }}-data-api
+  minReplicas: {{ .Values.dataApi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.dataApi.autoscaling.maxReplicas }}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.alldataApi.autoscaling.targetCPUUtilization }}
+          averageUtilization: {{ .Values.dataApi.autoscaling.targetCPUUtilization }}
 {{- end }}
 {{- end }}

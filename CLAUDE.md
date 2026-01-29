@@ -27,11 +27,11 @@ ONE-DATA-STUDIO 是一个**企业级 DataOps + MLOps + LLMOps 融合平台**，�
 ```
 one-data-studio/
 ├── services/                 # 后端服务
-│   ├── alldata-api/         # 数据治理 API (Flask)
-│   ├── bisheng-api/         # 应用编排 API (Flask)
+│   ├── data-api/            # 数据治理 API (Flask)
+│   ├── agent-api/           # 应用编排 API (Flask)
 │   ├── openai-proxy/        # OpenAI 兼容代理 (FastAPI)
 │   ├── admin-api/           # 管理后台 API
-│   ├── cube-api/            # MLOps 模型管理 API
+│   ├── model-api/           # MLOps 模型管理 API
 │   ├── ocr-service/         # OCR 文档识别服务
 │   ├── behavior-service/    # 用户行为分析服务
 │   └── shared/              # 共享模块（认证、存储）
@@ -79,30 +79,30 @@ pytest tests/
 
 ## 平台概念
 
-文档描述了三个平台的整合：
+平台包含三个核心层：
 
-1. **Alldata** - 数据治理与开发平台（DataOps 层）
-2. **Cube Studio** - 云原生 MLOps 平台（模型/计算层）
-3. **Bisheng** - 大模型应用开发平台（LLMOps 层）
+1. **Data** - 数据治理与开发平台（DataOps 层）
+2. **Model** - 云原生 MLOps 平台（模型/计算层）
+3. **Agent** - 大模型应用开发平台（LLMOps 层）
 
 ## 架构概览
 
 四层架构（从下到上）：
 
 - **L1 基础设施层**：基于 Kubernetes 的容器编排，包含 CPU/GPU 资源池
-- **L2 数据底座层（Alldata）**：数据集成、ETL、治理、特征存储、向量存储
-- **L3 算法引擎层（Cube Studio）**：Notebook 开发、分布式训练、支持 OpenAI 兼容 API 的模型服务
-- **L4 应用编排层（Bisheng）**：RAG 流水线、Agent 编排、Prompt 管理
+- **L2 数据底座层（Data）**：数据集成、ETL、治理、特征存储、向量存储
+- **L3 算法引擎层（Model）**：Notebook 开发、分布式训练、支持 OpenAI 兼容 API 的模型服务
+- **L4 应用编排层（Agent）**：RAG 流水线、Agent 编排、Prompt 管理
 
 ## 关键集成点
 
 三种关键集成模式：
 
-1. **Alldata → Cube Studio**：统一存储协议与数据集版本化。ETL 输出到 MinIO/HDFS，然后自动注册为可被训练任务消费的数据集对象。
+1. **Data → Model**：统一存储协议与数据集版本化。ETL 输出到 MinIO/HDFS，然后自动注册为可被训练任务消费的数据集对象。
 
-2. **Cube Studio → Bisheng**：使用 OpenAI 兼容 API 的模型即服务标准化。通过 vLLM/TGI 部署的模型经由 Istio 网关暴露。
+2. **Model → Agent**：使用 OpenAI 兼容 API 的模型即服务标准化。通过 vLLM/TGI 部署的模型经由 Istio 网关暴露。
 
-3. **Alldata → Bisheng**：基于元数据的 Text-to-SQL。Alldata 的元数据（表结构、关系）被注入到 Prompt 中用于生成 SQL。
+3. **Data → Agent**：基于元数据的 Text-to-SQL。Data 的元数据（表结构、关系）被注入到 Prompt 中用于生成 SQL。
 
 ## 开发规范
 

@@ -6,6 +6,7 @@ P5: 数据监控、BI、离线处理、资产、标准、服务
 """
 
 from .base import Base, engine, SessionLocal, get_db
+from .metadata_version import MetadataSnapshotModel, MetadataVersionModel, ColumnVersionModel
 from .datasource import DataSource
 from .dataset import Dataset, DatasetColumn, DatasetVersion
 from .metadata import MetadataDatabase, MetadataTable, MetadataColumn
@@ -128,4 +129,8 @@ __all__ = [
     "ApprovalTemplate",
     "ApprovalRequest",
     "ApprovalRecord",
+    # Metadata Version models (P3)
+    "MetadataSnapshotModel",
+    "MetadataVersionModel",
+    "ColumnVersionModel",
 ]

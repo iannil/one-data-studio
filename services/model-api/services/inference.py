@@ -4,9 +4,10 @@
 """
 
 import os
+import asyncio
 import logging
-from typing import Optional, Dict, Any, List, Union
-from dataclasses import dataclass
+from typing import Optional, Dict, Any, List, Union, AsyncIterator
+from dataclasses import dataclass, field
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,22 @@ class InferenceResult:
     tokens_used: Optional[int] = None
     latency_ms: Optional[float] = None
     backend: str = ""
+
+
+@dataclass
+class HealthCheckResult:
+    """健康检查结果"""
+    connected: bool
+    latency_ms: float
+    model_loaded: bool = False
+    backend: str = ""
+    endpoint: str = ""
+    error: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+# 可重试的 HTTP 状态码
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
 
 
 class ModelInferenceService:
@@ -38,7 +55,9 @@ class ModelInferenceService:
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         backend: str = "auto",
-        timeout: float = 120.0
+        timeout: float = 120.0,
+        max_retries: int = 3,
+        retry_backoff: float = 1.0
     ):
         """
         初始化推理服务
@@ -48,11 +67,15 @@ class ModelInferenceService:
             api_key: API 密钥
             backend: 推理后端类型 (vllm, tgi, openai, custom, auto)
             timeout: 请求超时时间（秒）
+            max_retries: 最大重试次数（针对 429/500/502/503 错误）
+            retry_backoff: 重试退避基数（秒），实际等待 = backoff * 2^attempt
         """
         self.endpoint = endpoint or os.getenv("MODEL_SERVING_ENDPOINT", "")
         self.api_key = api_key or os.getenv("MODEL_SERVING_API_KEY", "")
         self.backend = backend
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.retry_backoff = retry_backoff
 
         # OpenAI 配置
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
@@ -83,6 +106,89 @@ class ModelInferenceService:
     def is_available(self) -> bool:
         """检查推理服务是否可用"""
         return bool(self.endpoint) or bool(self.openai_api_key)
+
+    async def health_check(self, model: Optional[str] = None) -> HealthCheckResult:
+        """
+        对推理端点执行健康检查
+
+        通过请求 /v1/models 端点来检测连接性、延迟和模型加载状态。
+        如果指定了 model 参数，还会验证该模型是否已加载。
+
+        Args:
+            model: 可选的模型名称，用于验证模型是否已加载
+
+        Returns:
+            HealthCheckResult
+        """
+        import time
+
+        if not self.is_available():
+            return HealthCheckResult(
+                connected=False,
+                latency_ms=0.0,
+                backend=self.backend,
+                endpoint=self.endpoint,
+                error="推理服务未配置"
+            )
+
+        endpoint = self._get_endpoint("models")
+        start_time = time.time()
+
+        try:
+            async with httpx.AsyncClient(timeout=min(self.timeout, 10.0)) as client:
+                response = await client.get(endpoint, headers=self._get_headers())
+                latency_ms = (time.time() - start_time) * 1000
+                response.raise_for_status()
+                data = response.json()
+
+            # 检测模型是否已加载
+            model_loaded = False
+            available_models = []
+            if "data" in data:
+                available_models = [m.get("id", "") for m in data["data"]]
+                if model:
+                    model_loaded = model in available_models
+                else:
+                    model_loaded = len(available_models) > 0
+
+            return HealthCheckResult(
+                connected=True,
+                latency_ms=latency_ms,
+                model_loaded=model_loaded,
+                backend=self.backend,
+                endpoint=self.endpoint,
+                details={
+                    "status_code": response.status_code,
+                    "available_models": available_models,
+                }
+            )
+        except httpx.TimeoutException:
+            latency_ms = (time.time() - start_time) * 1000
+            return HealthCheckResult(
+                connected=False,
+                latency_ms=latency_ms,
+                backend=self.backend,
+                endpoint=self.endpoint,
+                error="连接超时"
+            )
+        except httpx.HTTPStatusError as e:
+            latency_ms = (time.time() - start_time) * 1000
+            return HealthCheckResult(
+                connected=True,
+                latency_ms=latency_ms,
+                backend=self.backend,
+                endpoint=self.endpoint,
+                error=f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+            )
+        except Exception as e:
+            latency_ms = (time.time() - start_time) * 1000
+            return HealthCheckResult(
+                connected=False,
+                latency_ms=latency_ms,
+                backend=self.backend,
+                endpoint=self.endpoint,
+                error=str(e)
+            )
 
     async def infer(
         self,
@@ -120,13 +226,76 @@ class ModelInferenceService:
         else:
             return await self._generic_inference(model, input_data, model_type, parameters)
 
+    async def infer_batch(
+        self,
+        model: str,
+        inputs: List[Union[str, List[Dict[str, Any]]]],
+        model_type: str = "text-generation",
+        parameters: Optional[Dict[str, Any]] = None,
+        batch_size: int = 8,
+        max_concurrency: int = 4
+    ) -> List[InferenceResult]:
+        """
+        批量执行模型推理
+
+        将输入列表按 batch_size 分组，使用信号量控制并发数，
+        异步并行处理每个输入并返回结果列表。
+
+        Args:
+            model: 模型名称或 ID
+            inputs: 输入数据列表
+            model_type: 模型类型
+            parameters: 推理参数
+            batch_size: 每批处理的输入数量
+            max_concurrency: 最大并发请求数
+
+        Returns:
+            与 inputs 顺序对应的 InferenceResult 列表
+        """
+        if not inputs:
+            return []
+
+        parameters = parameters or {}
+        semaphore = asyncio.Semaphore(max_concurrency)
+        results: List[Optional[InferenceResult]] = [None] * len(inputs)
+
+        async def _process_single(index: int, input_data: Union[str, List[Dict[str, Any]]]) -> None:
+            async with semaphore:
+                try:
+                    result = await self.infer(model, input_data, model_type, parameters)
+                    results[index] = result
+                except Exception as e:
+                    logger.error(f"批量推理第 {index} 项失败: {e}")
+                    results[index] = InferenceResult(
+                        output={"error": str(e)},
+                        model=model,
+                        backend=self.backend
+                    )
+
+        # 按 batch_size 分批处理
+        for batch_start in range(0, len(inputs), batch_size):
+            batch_end = min(batch_start + batch_size, len(inputs))
+            batch_tasks = [
+                _process_single(i, inputs[i])
+                for i in range(batch_start, batch_end)
+            ]
+            await asyncio.gather(*batch_tasks)
+            logger.info(f"批量推理进度: {batch_end}/{len(inputs)}")
+
+        return results
+
     async def _text_generation(
         self,
         model: str,
         input_data: Union[str, List[str], List[Dict[str, Any]]],
         parameters: Dict[str, Any]
     ) -> InferenceResult:
-        """文本生成推理"""
+        """
+        文本生成推理
+
+        包含自动重试逻辑：对 429/500/502/503 状态码使用指数退避重试。
+        重试次数和退避基数通过实例属性 max_retries / retry_backoff 配置。
+        """
         import time
         start_time = time.time()
 
@@ -146,28 +315,57 @@ class ModelInferenceService:
             "stream": False
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                endpoint,
-                json=payload,
-                headers=self._get_headers()
-            )
-            response.raise_for_status()
-            data = response.json()
+        last_exception: Optional[Exception] = None
 
-        latency_ms = (time.time() - start_time) * 1000
+        for attempt in range(self.max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        endpoint,
+                        json=payload,
+                        headers=self._get_headers()
+                    )
+                    response.raise_for_status()
+                    data = response.json()
 
-        # 解析响应
-        generated_text = data["choices"][0]["message"]["content"]
-        tokens_used = data.get("usage", {}).get("total_tokens")
+                latency_ms = (time.time() - start_time) * 1000
 
-        return InferenceResult(
-            output={"generated_text": generated_text},
-            model=model,
-            tokens_used=tokens_used,
-            latency_ms=latency_ms,
-            backend=self.backend
-        )
+                # 解析响应
+                generated_text = data["choices"][0]["message"]["content"]
+                tokens_used = data.get("usage", {}).get("total_tokens")
+
+                return InferenceResult(
+                    output={"generated_text": generated_text},
+                    model=model,
+                    tokens_used=tokens_used,
+                    latency_ms=latency_ms,
+                    backend=self.backend
+                )
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                if e.response.status_code in RETRYABLE_STATUS_CODES and attempt < self.max_retries:
+                    wait_time = self.retry_backoff * (2 ** attempt)
+                    logger.warning(
+                        f"文本生成请求失败 (HTTP {e.response.status_code})，"
+                        f"第 {attempt + 1}/{self.max_retries} 次重试，等待 {wait_time:.1f}s"
+                    )
+                    await asyncio.sleep(wait_time)
+                    continue
+                raise
+            except (httpx.ConnectError, httpx.ReadTimeout) as e:
+                last_exception = e
+                if attempt < self.max_retries:
+                    wait_time = self.retry_backoff * (2 ** attempt)
+                    logger.warning(
+                        f"文本生成请求连接异常 ({type(e).__name__})，"
+                        f"第 {attempt + 1}/{self.max_retries} 次重试，等待 {wait_time:.1f}s"
+                    )
+                    await asyncio.sleep(wait_time)
+                    continue
+                raise
+
+        # 所有重试用尽后抛出最后的异常
+        raise last_exception
 
     async def _text_classification(
         self,
@@ -372,6 +570,73 @@ class ModelInferenceService:
                 latency_ms=(time.time() - start_time) * 1000,
                 backend=self.backend
             )
+
+    async def stream_generate(
+        self,
+        model: str,
+        input_data: Union[str, List[str], List[Dict[str, Any]]],
+        parameters: Optional[Dict[str, Any]] = None
+    ) -> AsyncIterator[str]:
+        """
+        流式文本生成（异步生成器）
+
+        连接 OpenAI 兼容 API 的 SSE 流式端点，逐 token 返回生成内容。
+        每次 yield 一个部分 token 字符串；流结束时自动退出。
+
+        Args:
+            model: 模型名称或 ID
+            input_data: 输入数据（字符串、字符串列表或消息列表）
+            parameters: 推理参数（temperature, max_tokens, top_p 等）
+
+        Yields:
+            str: 每次生成的部分 token 文本
+        """
+        if not self.is_available():
+            raise RuntimeError("Model inference service not configured. Please set MODEL_SERVING_ENDPOINT or OPENAI_API_KEY.")
+
+        parameters = parameters or {}
+        messages = self._prepare_messages(input_data)
+        endpoint = self._get_endpoint("chat/completions")
+
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": parameters.get("temperature", 0.7),
+            "max_tokens": parameters.get("max_tokens", parameters.get("max_new_tokens", 512)),
+            "top_p": parameters.get("top_p", 0.9),
+            "stream": True
+        }
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with client.stream(
+                "POST",
+                endpoint,
+                json=payload,
+                headers=self._get_headers()
+            ) as response:
+                response.raise_for_status()
+
+                async for line in response.aiter_lines():
+                    # SSE 格式：以 "data: " 开头
+                    if not line.startswith("data: "):
+                        continue
+
+                    data_str = line[len("data: "):]
+
+                    # 流结束标记
+                    if data_str.strip() == "[DONE]":
+                        return
+
+                    try:
+                        import json
+                        chunk = json.loads(data_str)
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content")
+                        if content:
+                            yield content
+                    except (ValueError, KeyError, IndexError) as e:
+                        logger.debug(f"跳过无法解析的 SSE 数据块: {e}")
+                        continue
 
     def _prepare_messages(
         self,

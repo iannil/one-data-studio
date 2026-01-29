@@ -729,25 +729,71 @@ class SensitivityAutoScanService:
 
         # 敏感数据正则模式
         content_patterns = {
+            # === PII 个人身份信息 ===
             ("pii", "phone"): [
-                r"^1[3-9]\d{9}$",
-                r"^(?:\+86)?1[3-9]\d{9}$",
+                r"^1[3-9]\d{9}$",                          # 中国手机号
+                r"^(?:\+86)?1[3-9]\d{9}$",                 # 带国际区号
+                r"^(?:\+?1)?[2-9]\d{2}[2-9]\d{6}$",       # 北美电话号码
+                r"^0\d{2,3}-?\d{7,8}$",                    # 中国固定电话
             ],
             ("pii", "email"): [
                 r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$",
             ],
             ("pii", "id_card"): [
-                r"^\d{17}[\dXx]$",
-                r"^\d{15}$",
+                r"^\d{17}[\dXx]$",                          # 18位身份证
+                r"^\d{15}$",                                 # 15位身份证（旧版）
+                r"^[A-Z]\d{6}\(?[0-9A-Z]\)?$",             # 香港身份证
+                r"^[A-Z][12]\d{8}$",                        # 台湾身份证
             ],
-            ("financial", "bank_card"): [
-                r"^\d{16,19}$",
-            ],
-            ("credential", "password"): [
-                # 不太适合正则检测，跳过
+            ("pii", "name"): [
+                r"^[\u4e00-\u9fa5]{2,4}$",                  # 中文姓名（2-4个汉字）
             ],
             ("pii", "address"): [
                 r".*(?:省|市|区|县|镇|村|路|街|号|栋|单元|室).*",
+                r".*(?:大道|广场|花园|小区|公寓|大厦|工业园).*",
+            ],
+            ("pii", "passport"): [
+                r"^[EeGg]\d{8}$",                           # 中国护照
+                r"^[A-Z]{1,2}\d{6,9}$",                     # 通用护照格式
+            ],
+            ("pii", "ip_address"): [
+                r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$",   # IPv4
+                r"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$",  # IPv6
+            ],
+            # === 金融信息 ===
+            ("financial", "bank_card"): [
+                r"^\d{16,19}$",                              # 银行卡号
+                r"^62\d{14,17}$",                            # 银联卡
+            ],
+            ("financial", "credit_card"): [
+                r"^4\d{12}(?:\d{3})?$",                      # Visa
+                r"^5[1-5]\d{14}$",                           # MasterCard
+                r"^3[47]\d{13}$",                            # American Express
+                r"^6(?:011|5\d{2})\d{12}$",                  # Discover
+            ],
+            # === 凭证信息 ===
+            ("credential", "password"): [
+                # 密码不适合正则检测，依赖列名匹配和 AI 分析
+            ],
+            ("credential", "api_key"): [
+                r"^sk-[A-Za-z0-9]{32,}$",                   # OpenAI API Key
+                r"^(?:AKIA|ASIA)[A-Z0-9]{16}$",             # AWS Access Key
+                r"^ghp_[A-Za-z0-9]{36}$",                   # GitHub Personal Token
+                r"^gho_[A-Za-z0-9]{36}$",                   # GitHub OAuth Token
+                r"^xox[bps]-[A-Za-z0-9-]+$",                # Slack Token
+            ],
+            ("credential", "token"): [
+                r"^eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$",  # JWT
+                r"^[A-Fa-f0-9]{32,64}$",                    # Hex token (32-64 chars)
+            ],
+            ("credential", "secret_key"): [
+                r"^-----BEGIN (?:RSA |EC )?PRIVATE KEY-----",  # PEM private key
+                r"^[A-Za-z0-9/+=]{40,}$",                   # Base64 secret (40+ chars)
+            ],
+            # === 健康信息 ===
+            ("health", "medical_record"): [
+                r"^\d{2}-\d{5,8}$",                          # 病历号格式
+                r"^MR\d{6,10}$",                             # Medical Record ID
             ],
         }
 

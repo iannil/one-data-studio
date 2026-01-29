@@ -18,6 +18,7 @@ import os
 import json
 import hashlib
 import time
+import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from functools import lru_cache
 from pymilvus import (
@@ -220,11 +221,12 @@ class VectorStore:
                 except Exception:
                     pass
 
+            current_host, current_port = self._endpoints[self._current_endpoint_index]
             return {
                 "status": "healthy" if is_connected else "unhealthy",
                 "connected": is_connected,
-                "host": MILVUS_HOST,
-                "port": MILVUS_PORT,
+                "host": current_host,
+                "port": current_port,
                 "server_version": server_version,
                 "collections_count": len(collections),
                 "collections": collections[:10],  # 最多返回10个
@@ -236,12 +238,13 @@ class VectorStore:
             }
         except Exception as e:
             logger.error(f"Health check failed: {e}")
+            current_host, current_port = self._endpoints[self._current_endpoint_index]
             return {
                 "status": "error",
                 "connected": False,
                 "error": str(e),
-                "host": MILVUS_HOST,
-                "port": MILVUS_PORT
+                "host": current_host,
+                "port": current_port
             }
 
     def create_collection(self, name: str, dimension: int = EMBEDDING_DIM, drop_existing: bool = False):
@@ -354,7 +357,7 @@ class VectorStore:
         collection = Collection(collection_name)
 
         # 准备数据
-        ids = [f"{collection_name}-{i}" for i in range(len(texts))]
+        ids = [uuid.uuid4().hex for _ in range(len(texts))]
         metadata_json = [json.dumps(m or {}, ensure_ascii=False) for m in (metadata or [{}] * len(texts))]
         # 从 metadata 中提取 doc_id（如果存在）
         doc_ids = [m.get("doc_id", "") for m in (metadata or [{}] * len(texts))]
@@ -540,6 +543,125 @@ class VectorStore:
         except Exception as e:
             logger.error(f"删除向量失败: collection={collection_name}, doc_id={doc_id}, error={e}")
             return False
+
+    def batch_insert(self, collection_name: str, texts: List[str],
+                     embeddings: List[List[float]], metadata: List[Dict] = None,
+                     batch_size: int = 1000) -> int:
+        """
+        批量插入大规模文档向量，按分块逐批写入
+
+        Args:
+            collection_name: 集合名称
+            texts: 文本列表
+            embeddings: 向量列表
+            metadata: 元数据列表（每个元数据应包含 doc_id 用于按文档删除）
+            batch_size: 每批插入的数量，默认 1000
+
+        Returns:
+            插入的文档总数量
+        """
+        total = len(texts)
+        if total == 0:
+            return 0
+
+        if metadata is None:
+            metadata = [{}] * total
+
+        inserted = 0
+        num_batches = (total + batch_size - 1) // batch_size
+
+        logger.info(f"Batch insert started: {total} vectors into '{collection_name}' "
+                     f"in {num_batches} batches (batch_size={batch_size})")
+
+        for batch_idx in range(num_batches):
+            start = batch_idx * batch_size
+            end = min(start + batch_size, total)
+
+            batch_texts = texts[start:end]
+            batch_embeddings = embeddings[start:end]
+            batch_metadata = metadata[start:end]
+
+            count = self.insert(collection_name, batch_texts, batch_embeddings, batch_metadata)
+            inserted += count
+
+            logger.info(f"Batch {batch_idx + 1}/{num_batches} inserted: "
+                         f"{count} vectors ({inserted}/{total} total)")
+
+        logger.info(f"Batch insert completed: {inserted}/{total} vectors into '{collection_name}'")
+        return inserted
+
+    def get_collection_stats(self, collection_name: str) -> Dict[str, Any]:
+        """
+        获取集合的详细统计信息
+
+        Args:
+            collection_name: 集合名称
+
+        Returns:
+            Dict: 包含行数、索引信息和内存使用的统计字典
+        """
+        self._ensure_connection()
+
+        if not utility.has_collection(collection_name):
+            return {"exists": False, "collection_name": collection_name}
+
+        collection = Collection(collection_name)
+        collection.load()
+
+        # 基本信息
+        num_entities = collection.num_entities
+
+        # 字段信息
+        fields = []
+        for f in collection.schema.fields:
+            field_info = {
+                "name": f.name,
+                "type": str(f.dtype),
+                "is_primary": f.is_primary,
+            }
+            if hasattr(f, "dim") and f.dim is not None:
+                field_info["dim"] = f.dim
+            if hasattr(f, "max_length") and f.max_length is not None:
+                field_info["max_length"] = f.max_length
+            fields.append(field_info)
+
+        # 索引信息
+        indexes = []
+        for f in collection.schema.fields:
+            try:
+                index = collection.index(f.name)
+                indexes.append({
+                    "field": f.name,
+                    "index_type": index.params.get("index_type", "unknown"),
+                    "metric_type": index.params.get("metric_type", ""),
+                    "params": {k: v for k, v in index.params.items()
+                               if k not in ("index_type", "metric_type")},
+                })
+            except Exception:
+                # 该字段没有索引
+                pass
+
+        # 内存使用估算（基于实体数量和向量维度）
+        embedding_dim = EMBEDDING_DIM
+        for f in collection.schema.fields:
+            if hasattr(f, "dim") and f.dim is not None:
+                embedding_dim = f.dim
+                break
+
+        # 粗略估算：每个 float32 向量 = dim * 4 字节
+        estimated_vector_bytes = num_entities * embedding_dim * 4
+        estimated_memory_mb = estimated_vector_bytes / (1024 * 1024)
+
+        return {
+            "exists": True,
+            "collection_name": collection_name,
+            "row_count": num_entities,
+            "fields": fields,
+            "indexes": indexes,
+            "estimated_memory_mb": round(estimated_memory_mb, 2),
+            "embedding_dim": embedding_dim,
+            "description": collection.schema.description,
+        }
 
     def drop_collection(self, collection_name: str):
         """删除集合"""
