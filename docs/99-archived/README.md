@@ -8,7 +8,11 @@
 
 ```
 99-archived/
-└── README.md                    # 本文件
+├── README.md                    # 本文件
+├── helm-chart-backup/           # Helm Chart 备份
+├── k8s-config-backup/           # K8s 配置备份
+├── testing-2025/                # 2025 年测试文档归档
+└── code-audit-2026-01-28.md     # 代码审计报告
 ```
 
 ---
@@ -32,21 +36,9 @@
 
 ---
 
-## 如何恢复归档内容
+## 归档文档说明
 
-归档文件仅供参考和历史记录用途。如需恢复 Mock 服务用于测试，可以从 Git 历史记录中获取：
-
-```bash
-# 查看 Git 历史中的文件
-git log --all --full-history -- docs/99-archived/mock-services/
-
-# 恢复特定版本的文件
-git checkout <commit-hash> -- docs/99-archived/mock-services/
-```
-
----
-
-## implementation-status.md (已归档)
+### implementation-status.md (已删除)
 
 **归档日期**: 2025-01-24
 
@@ -54,14 +46,50 @@ git checkout <commit-hash> -- docs/99-archived/mock-services/
 - 内容已合并到 `docs/03-progress/current-status.md`
 - 避免重复维护两份进度文档
 
-**原包含内容**:
-- 前端实现状态（项目基础、页面实现）
-- 后端实现状态（API 端点、服务清单）
-- 部署配置状态
-- 待完成功能清单
-- 已知问题和限制
-
 **替代方案**: 使用 `docs/03-progress/current-status.md` 作为唯一进度追踪文档。
+
+### testing-2025/ (新增)
+
+**归档日期**: 2026-01-29
+
+**归档原因**:
+- 过时的测试执行报告和改进文档
+- 测试功能已完成，这些是临时报告文档
+
+**包含文件**:
+- `test-final-improvements.md` - 最终改进建议（已过时）
+- `test-final-report.md` - 最终测试报告（已过时）
+- `test-final-summary.md` - 最终测试总结（已过时）
+- `test-fix-summary.md` - 修复总结（已过时）
+- `test-improvement-summary.md` - 改进总结（已过时）
+- `test-execution-report.md` - 执行报告（已过时）
+- `final-test-summary.md` - 测试总结（已过时）
+
+**替代方案**: 使用 `docs/04-testing/test-plan.md` 和 `docs/04-testing/final-improvements.md` 作为当前测试文档。
+
+### code-audit-2026-01-28.md (已归档)
+
+**归档日期**: 2026-01-29
+
+**归档原因**:
+- 内容已合并到 `docs/03-progress/current-status.md`
+- 避免重复维护
+
+**替代方案**: 使用 `docs/03-progress/current-status.md` 和 `docs/03-progress/tech-debt.md` 作为代码状态和技术债务追踪。
+
+---
+
+## 如何恢复归档内容
+
+归档文件仅供参考和历史记录用途。如需恢复，可以从 Git 历史记录中获取：
+
+```bash
+# 查看 Git 历史中的文件
+git log --all --full-history -- docs/99-archived/
+
+# 恢复特定版本的文件
+git checkout <commit-hash> -- docs/99-archived/<file>
+```
 
 ---
 

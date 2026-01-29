@@ -97,15 +97,35 @@ logging.basicConfig(level=logging.DEBUG)
 
 def pytest_configure(config):
     """Pytest 初始化配置"""
+    # 测试类型标记
     config.addinivalue_line("markers", "unit: 单元测试")
     config.addinivalue_line("markers", "integration: 集成测试")
-    config.addinivalue_line("markers", "slow: 慢速测试")
     config.addinivalue_line("markers", "e2e: 端到端测试")
+    config.addinivalue_line("markers", "slow: 慢速测试")
     config.addinivalue_line("markers", "benchmark: 性能基准测试")
+    config.addinivalue_line("markers", "security: 安全测试")
+
+    # 依赖标记
     config.addinivalue_line("markers", "requires_db: 需要数据库")
     config.addinivalue_line("markers", "requires_milvus: 需要 Milvus")
     config.addinivalue_line("markers", "requires_minio: 需要 MinIO")
-    config.addinivalue_line("markers", "security: 安全测试")
+    config.addinivalue_line("markers", "requires_auth: 需要认证服务")
+    config.addinivalue_line("markers", "requires_redis: 需要 Redis")
+    config.addinivalue_line("markers", "requires_vllm: 需要 vLLM 服务")
+    config.addinivalue_line("markers", "requires_kettle: 需要 Kettle")
+    config.addinivalue_line("markers", "asyncio: 异步测试")
+
+    # 优先级标记
+    config.addinivalue_line("markers", "p0: P0 优先级测试（核心功能，阻塞发布）")
+    config.addinivalue_line("markers", "p1: P1 优先级测试（重要功能，应该修复）")
+    config.addinivalue_line("markers", "p2: P2 优先级测试（一般功能，可延后）")
+
+    # 角色标记
+    config.addinivalue_line("markers", "data_administrator: 数据管理员测试")
+    config.addinivalue_line("markers", "data_engineer: 数据工程师测试")
+    config.addinivalue_line("markers", "ai_engineer: 算法工程师测试")
+    config.addinivalue_line("markers", "business_user: 业务用户测试")
+    config.addinivalue_line("markers", "system_admin: 系统管理员测试")
 
 
 def pytest_collection_modifyitems(config, items):

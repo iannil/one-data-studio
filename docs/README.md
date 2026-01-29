@@ -53,6 +53,7 @@ docs/
 | [四层架构](01-architecture/four-layer-stack.md) | L1-L4 架构详解 |
 | [应用场景](01-architecture/use-cases.md) | 典型应用场景介绍 |
 | [技术栈](01-architecture/tech-stack.md) | 技术选型与版本决策 |
+| [依赖评估](01-architecture/dependency-assessment.md) | 项目依赖全面评估报告 |
 
 ---
 
@@ -64,6 +65,7 @@ docs/
 | [Alldata - Cube](02-integration/alldata-cube.md) | 数据与训练连接 |
 | [Cube - Bisheng](02-integration/cube-bisheng.md) | 模型与应用连接 |
 | [Alldata - Bisheng](02-integration/alldata-bisheng.md) | 结构化数据与LLM |
+| [Behavior Service](02-integration/behavior-service.md) | 用户行为分析服务 |
 | [时序图](02-integration/sequence-diagrams.md) | 研发态/运行态流程图 |
 | [API 规范](02-integration/api-specifications.md) | 三大集成点 API 接口规范 |
 | [API 参考](02-integration/api-reference.md) | API 端点参考文档 |
@@ -78,7 +80,7 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [当前状态](03-progress/current-status.md) | 项目进度、里程碑、待办事项 |
-| [代码审计报告](03-progress/code-audit-2026-01-28.md) | 2026-01-28 代码审计报告 |
+| [技术债务清单](03-progress/tech-debt.md) | 技术债务追踪和偿还计划 |
 
 ---
 
@@ -86,7 +88,9 @@ docs/
 
 | 文档 | 说明 |
 |------|------|
+| [测试计划](04-testing/test-plan.md) | 测试计划和测试策略 |
 | [用户生命周期测试用例](04-testing/user-lifecycle-test-cases.md) | 用户生命周期端到端测试用例 |
+| [最终改进建议](04-testing/final-improvements.md) | 测试改进建议总结 |
 
 ---
 
@@ -95,7 +99,7 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [路线图](05-planning/roadmap.md) | 开发计划、里程碑、版本规划 |
-| [功能增强实施计划](05-planning/implementation-plan.md) | 智能大数据平台功能增强实施计划 |
+| [功能增强计划](05-planning/implementation-plan.md) | 智能大数据平台功能增强计划 (26天工作量) |
 
 ---
 
@@ -105,6 +109,7 @@ docs/
 |------|------|
 | [PoC 实施手册](06-development/poc-playbook.md) | PoC 环境搭建指南 |
 | [API 测试指南](06-development/api-testing-guide.md) | API 测试用例与方法 |
+| [代码清理指南](06-development/cleanup-guide.md) | 代码清理最佳实践 |
 | [K8s 故障排查](06-development/troubleshooting-k8s.md) | Kubernetes 环境故障排查 |
 | [Demo 指南](06-development/demo-guide.md) | 演示环境准备指南 |
 | [环境检查清单](06-development/environment-checklist.md) | 开发环境检查清单 |
@@ -148,6 +153,8 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-01-29 | 新增项目依赖全面评估报告 `01-architecture/dependency-assessment.md` |
+| 2026-01-29 | 文档整理：归档过时测试文档，创建技术债务清单，添加 Behavior Service 文档，创建代码清理指南 |
 | 2026-01-28 | 文档整理：修复目录编号冲突，归类散落文档，更新代码统计，创建代码审计报告 |
 | 2025-01-24 | 删除重复文档 `99-archived/implementation-status.md`，内容已合并到 `03-progress/current-status.md` |
 | 2025-01-24 | 更新 Sprint 计划，基于代码实际状态重评估 |

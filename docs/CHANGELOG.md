@@ -4,6 +4,52 @@
 
 ---
 
+## [1.3.2] - 2026-01-29
+
+### Added
+
+- `docs/01-architecture/dependency-assessment.md` - 项目依赖全面评估报告
+  - 基础设施层依赖（K8s、Docker、Istio、监控栈）
+  - 数据库与存储（MySQL、Redis、Milvus、MinIO、ES）
+  - 数据处理与 ETL（Flink、Spark、Kettle）
+  - AI/ML 推理与框架（vLLM、PyTorch、PaddlePaddle）
+  - OCR 与文档处理（PaddleOCR、PyMuPDF）
+  - Python 后端依赖（50+ 库）
+  - 前端技术栈（40+ 库）
+  - 许可证风险评估与注意事项
+
+---
+
+## [1.3.1] - 2026-01-29
+
+### Changed
+
+#### 文档整理与项目梳理
+
+**文档归档**
+- 归档过时测试文档到 `docs/99-archived/testing-2025/`（7个文件）
+- 更新 `docs/04-testing/README.md`，移除已归档文档链接
+- 合并代码审计报告到 `docs/03-progress/current-status.md`
+
+**新增文档**
+- `docs/03-progress/tech-debt.md` - 技术债务清单
+- `docs/02-integration/behavior-service.md` - Behavior Service 集成文档
+- `docs/06-development/cleanup-guide.md` - 代码清理指南
+
+**文档索引更新**
+- 更新 `docs/README.md`，添加 Behavior Service 链接
+- 更新测试文档索引，添加测试统计信息
+
+### Removed
+
+- `tests/run_tests.py` - 与 `tests/run_tests.sh` 功能重复，删除 Python 版本
+
+### Fixed
+
+- 更新 `.gitignore`，添加 `coverage.xml`、`*.xml`、`reports/` 等测试生成文件
+
+---
+
 ## [1.3.0] - 2026-01-28
 
 ### Changed
@@ -631,6 +677,8 @@
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| 1.3.2 | 2026-01-29 | 新增项目依赖全面评估报告 |
+| 1.3.1 | 2026-01-29 | 文档整理：归档过时测试文档，创建技术债务清单 |
 | 1.3.0 | 2026-01-28 | 文档整理：目录编号修复、散落文档归类、代码统计更新、代码审计报告 |
 | 1.2.0 | 2025-01-24 | Sprint 32 完成：工作流版本控制、Token 成本追踪 |
 | 1.0.0-rc | 2025-01-24 | Sprint 23 完成：GitOps、TLS 自动化、备份恢复、用户文档 |

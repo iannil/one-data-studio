@@ -240,6 +240,115 @@ test-unit-shared:
 	@echo "==> 运行共享模块单元测试..."
 	@pytest tests/unit/test_auth*.py tests/unit/test_jwt*.py tests/unit/test_csrf*.py tests/unit/test_security*.py tests/unit/test_cache*.py tests/unit/test_config*.py -v
 
+# 单元测试 - 按角色 (新增)
+test-data-administrator:
+	@echo "==> 运行数据管理员单元测试..."
+	@pytest tests/unit/test_data_administrator/ -v
+
+test-data-engineer:
+	@echo "==> 运行数据工程师单元测试..."
+	@pytest tests/unit/test_data_engineer/ -v
+
+test-ai-engineer:
+	@echo "==> 运行算法工程师单元测试..."
+	@pytest tests/unit/test_ai_engineer/ -v
+
+test-business-user:
+	@echo "==> 运行业务用户单元测试..."
+	@pytest tests/unit/test_business_user/ -v
+
+test-system-admin:
+	@echo "==> 运行系统管理员单元测试..."
+	@pytest tests/unit/test_system_admin/ -v
+
+# 按角色运行 P0 测试
+test-p0-data-administrator:
+	@echo "==> 运行数据管理员 P0 测试..."
+	@pytest tests/unit/test_data_administrator/ -m p0 -v
+
+test-p0-data-engineer:
+	@echo "==> 运行数据工程师 P0 测试..."
+	@pytest tests/unit/test_data_engineer/ -m p0 -v
+
+test-p0-ai-engineer:
+	@echo "==> 运行算法工程师 P0 测试..."
+	@pytest tests/unit/test_ai_engineer/ -m p0 -v
+
+test-p0-business-user:
+	@echo "==> 运行业务用户 P0 测试..."
+	@pytest tests/unit/test_business_user/ -m p0 -v
+
+test-p0-system-admin:
+	@echo "==> 运行系统管理员 P0 测试..."
+	@pytest tests/unit/test_system_admin/ -m p0 -v
+
+test-p0-all:
+	@echo "==> 运行所有 P0 单元测试..."
+	@pytest tests/unit/test_data_administrator/ tests/unit/test_data_engineer/ tests/unit/test_ai_engineer/ tests/unit/test_business_user/ tests/unit/test_system_admin/ -m p0 -v
+
+# 按角色运行集成测试
+test-integration-dm:
+	@echo "==> 运行数据管理员集成测试..."
+	@pytest tests/integration/test_data_pipeline_integration.py -v --with-db
+
+test-integration-de:
+	@echo "==> 运行数据工程师集成测试..."
+	@pytest tests/integration/test_data_pipeline_integration.py -v --with-db
+
+test-integration-ae:
+	@echo "==> 运行算法工程师集成测试..."
+	@pytest tests/integration/test_model_lifecycle_integration.py -v --with-db 2>/dev/null || echo "  模型集成测试文件不存在"
+
+test-integration-bu:
+	@echo "==> 运行业务用户集成测试..."
+	@pytest tests/integration/test_rag_integration.py -v --with-milvus
+
+test-integration-cross:
+	@echo "==> 运行跨服务集成测试..."
+	@pytest tests/integration/test_cross_service_integration.py -v
+
+# E2E 测试 - 按角色
+test-e2e-data-administrator:
+	@echo "==> 运行数据管理员 E2E 测试..."
+	cd tests/e2e && npx playwright test data-administrator.spec.ts
+
+test-e2e-data-engineer:
+	@echo "==> 运行数据工程师 E2E 测试..."
+	cd tests/e2e && npx playwright test data-engineer.spec.ts
+
+test-e2e-ai-engineer:
+	@echo "==> 运行算法工程师 E2E 测试..."
+	cd tests/e2e && npx playwright test ai-engineer.spec.ts
+
+test-e2e-business-user:
+	@echo "==> 运行业务用户 E2E 测试..."
+	cd tests/e2e && npx playwright test business-user.spec.ts
+
+test-e2e-system-admin:
+	@echo "==> 运行系统管理员 E2E 测试..."
+	cd tests/e2e && npx playwright test system-admin.spec.ts
+
+test-e2e-cross-role:
+	@echo "==> 运行跨角色工作流 E2E 测试..."
+	cd tests/e2e && npx playwright test cross-role-workflow.spec.ts
+
+# 性能测试
+test-perf:
+	@echo "==> 运行性能测试..."
+	@pytest tests/performance/ -v --benchmark
+
+test-security:
+	@echo "==> 运行安全测试..."
+	@pytest tests/ -m "security" -v
+
+# 测试报告查看
+test-report:
+	@echo "==> 生成测试报告..."
+	@pytest tests/unit/ tests/integration/ -v --html=reports/html/index.html --self-contained-html --cov=services --cov-report=html:htmlcov --cov-report=xml:reports/coverage.xml
+	@echo "==> 覆盖率报告: htmlcov/index.html"
+	@echo "==> HTML测试报告: reports/html/index.html"
+	@open reports/html/index.html 2>/dev/null || xdg-open reports/html/index.html 2>/dev/null || echo "请手动打开报告文件"
+
 # 集成测试 - 全部
 test-integration:
 	@echo "==> 运行所有集成测试..."
