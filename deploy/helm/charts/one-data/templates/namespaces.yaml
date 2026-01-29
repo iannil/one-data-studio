@@ -1,37 +1,37 @@
 # ONE-DATA-STUDIO Namespace Definitions
 # Creates namespaces for all platform components
 
-{{- if .Values.alldata.enabled }}
+{{- if .Values.data.enabled }}
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.alldata.namespace | default "one-data-data" }}
+  name: {{ .Values.data.namespace | default "one-data-data" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
-    component: alldata
+    component: data
 {{- end }}
 
-{{- if .Values.bisheng.enabled }}
+{{- if .Values.agent.enabled }}
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.bisheng.namespace | default "one-data-agent" }}
+  name: {{ .Values.agent.namespace | default "one-data-agent" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
-    component: bisheng
+    component: agent
 {{- end }}
 
-{{- if .Values.cube.enabled }}
+{{- if .Values.model.enabled }}
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.cube.namespace | default "one-data-model" }}
+  name: {{ .Values.model.namespace | default "one-data-model" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
-    component: cube
+    component: model
 {{- end }}
 
 {{- if .Values.monitoring.enabled }}

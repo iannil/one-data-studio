@@ -93,7 +93,7 @@ def health():
     return jsonify({
         "code": 0,
         "message": "healthy" if db_healthy else "degraded",
-        "service": "alldata-api",
+        "service": "data-api",
         "version": "1.1.0",
         "database": "connected" if db_healthy else "disconnected",
         "storage": "initialized" if minio_client._initialized else "unavailable"
@@ -7472,7 +7472,7 @@ def lineage_upstream():
     获取数据集上游依赖
 
     Query Parameters:
-    - namespace: 数据集命名空间 (默认 alldata-service)
+    - namespace: 数据集命名空间 (默认 data-service)
     - name: 数据集名称
     - max_depth: 最大深度 (默认 3)
     """
@@ -7483,7 +7483,7 @@ def lineage_upstream():
 
         service = get_openlineage_event_service()
 
-        namespace = request.args.get("namespace", "alldata-service")
+        namespace = request.args.get("namespace", "data-service")
         name = request.args.get("name")
         max_depth = int(request.args.get("max_depth", 3))
 
@@ -7519,7 +7519,7 @@ def lineage_downstream():
     获取数据集下游依赖
 
     Query Parameters:
-    - namespace: 数据集命名空间 (默认 alldata-service)
+    - namespace: 数据集命名空间 (默认 data-service)
     - name: 数据集名称
     - max_depth: 最大深度 (默认 3)
     """
@@ -7530,7 +7530,7 @@ def lineage_downstream():
 
         service = get_openlineage_event_service()
 
-        namespace = request.args.get("namespace", "alldata-service")
+        namespace = request.args.get("namespace", "data-service")
         name = request.args.get("name")
         max_depth = int(request.args.get("max_depth", 3))
 
@@ -7579,9 +7579,9 @@ def lineage_path():
 
         service = get_openlineage_event_service()
 
-        source_namespace = request.args.get("source_namespace", "alldata-service")
+        source_namespace = request.args.get("source_namespace", "data-service")
         source_name = request.args.get("source_name")
-        target_namespace = request.args.get("target_namespace", "alldata-service")
+        target_namespace = request.args.get("target_namespace", "data-service")
         target_name = request.args.get("target_name")
         max_depth = int(request.args.get("max_depth", 5))
 
@@ -7621,7 +7621,7 @@ def lineage_impact():
     影响分析 - 评估数据集变更的影响范围
 
     Query Parameters:
-    - namespace: 数据集命名空间 (默认 alldata-service)
+    - namespace: 数据集命名空间 (默认 data-service)
     - name: 数据集名称
     - max_depth: 分析深度 (默认 5)
     """
@@ -7632,7 +7632,7 @@ def lineage_impact():
 
         service = get_openlineage_event_service()
 
-        namespace = request.args.get("namespace", "alldata-service")
+        namespace = request.args.get("namespace", "data-service")
         name = request.args.get("name")
         max_depth = int(request.args.get("max_depth", 5))
 

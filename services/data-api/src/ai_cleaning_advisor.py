@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
 AI_CLEANING_MODEL = os.getenv("AI_CLEANING_MODEL", "gpt-4o-mini")
 AI_CLEANING_ENABLED = os.getenv("AI_CLEANING_ENABLED", "true").lower() in ("true", "1", "yes")
 
@@ -144,7 +144,7 @@ class AICleaningAdvisor:
 
     def __init__(self, api_url: str = None):
         """初始化服务"""
-        self.api_url = api_url or CUBE_API_URL
+        self.api_url = api_url or MODEL_API_URL
         self.model = AI_CLEANING_MODEL
         self.enabled = AI_CLEANING_ENABLED
         self._recommendation_counter = 0

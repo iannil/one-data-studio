@@ -13,11 +13,11 @@ data:
   MYSQL_HOST: "mysql.one-data-infra.svc.cluster.local"
   MYSQL_PORT: "3306"
   MYSQL_USER: "one_data"
-  MYSQL_DATABASE: "one_data_alldata"
+  MYSQL_DATABASE: "one_data_studio"
 
   # MinIO 配置
   MINIO_ENDPOINT: "minio.one-data-infra.svc.cluster.local:9000"
-  MINIO_DEFAULT_BUCKET: "alldata"
+  MINIO_DEFAULT_BUCKET: "one-data-studio"
   MINIO_USE_SSL: "false"
 
   # OpenMetadata 配置

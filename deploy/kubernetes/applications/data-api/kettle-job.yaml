@@ -35,7 +35,7 @@ spec:
         - |
           mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
             ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
-          mc cp minio/alldata-kettle-jobs/${JOB_FILE} /tmp/job/
+          mc cp minio/data-kettle-jobs/${JOB_FILE} /tmp/job/
         env:
         - name: MINIO_ACCESS_KEY
           valueFrom:
@@ -168,7 +168,7 @@ spec:
             - |
               mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
                 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
-              mc cp minio/alldata-kettle-jobs/daily-sync.kjb /tmp/job/
+              mc cp minio/data-kettle-jobs/daily-sync.kjb /tmp/job/
             env:
             - name: MINIO_ACCESS_KEY
               valueFrom:

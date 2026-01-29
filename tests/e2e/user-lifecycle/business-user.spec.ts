@@ -10,8 +10,8 @@ import { test, expect } from '../fixtures/user-lifecycle.fixture';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = process.env.API_BASE || 'http://localhost:8080';
-const ALLDATA_API = process.env.ALLDATA_API || 'http://localhost:8001';
-const BISHENG_API = process.env.BISHENG_API || 'http://localhost:8000';
+const DATA_API = process.env.DATA_API || process.env.DATA_API || 'http://localhost:8001';
+const AGENT_API = process.env.AGENT_API || process.env.AGENT_API || 'http://localhost:8000';
 
 test.describe('业务用户完整流程', () => {
   let userToken: string;
@@ -28,7 +28,7 @@ test.describe('业务用户完整流程', () => {
 
   test.describe('BU-KB: 知识库文档管理', () => {
     test('BU-KB-001: 创建知识库', async ({ request }) => {
-      const response = await request.post(`${BISHENG_API}/api/v1/knowledge-bases`, {
+      const response = await request.post(`${AGENT_API}/api/v1/knowledge-bases`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           name: `e2e_kb_${Date.now()}`,
@@ -48,7 +48,7 @@ test.describe('业务用户完整流程', () => {
     });
 
     test('BU-KB-004: 查询知识库文档列表', async ({ request }) => {
-      const response = await request.get(`${BISHENG_API}/api/v1/knowledge-bases`, {
+      const response = await request.get(`${AGENT_API}/api/v1/knowledge-bases`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
@@ -59,7 +59,7 @@ test.describe('业务用户完整流程', () => {
 
     test('BU-KB-005: 删除知识库文档', async ({ request }) => {
       // 先上传文档
-      const uploadResp = await request.post(`${BISHENG_API}/api/v1/documents/upload`, {
+      const uploadResp = await request.post(`${AGENT_API}/api/v1/documents/upload`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           collection: 'default',
@@ -72,7 +72,7 @@ test.describe('业务用户完整流程', () => {
       const docId = uploadData.data?.doc_id;
 
       if (docId) {
-        const deleteResp = await request.delete(`${BISHENG_API}/api/v1/documents/${docId}`, {
+        const deleteResp = await request.delete(`${AGENT_API}/api/v1/documents/${docId}`, {
           headers: { Authorization: `Bearer ${userToken}` },
         });
         expect(deleteResp.ok()).toBeTruthy();
@@ -88,7 +88,7 @@ test.describe('业务用户完整流程', () => {
 
   test.describe('BU-IQ: 智能查询', () => {
     test('BU-IQ-001: Text-to-SQL 基本查询', async ({ request }) => {
-      const response = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+      const response = await request.post(`${AGENT_API}/api/v1/text2sql`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           natural_language: '查询所有用户的数量',
@@ -105,7 +105,7 @@ test.describe('业务用户完整流程', () => {
     });
 
     test('BU-IQ-002: Text-to-SQL 复杂查询', async ({ request }) => {
-      const response = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+      const response = await request.post(`${AGENT_API}/api/v1/text2sql`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           natural_language: '查询每个月的订单总金额，按月份排序',
@@ -124,7 +124,7 @@ test.describe('业务用户完整流程', () => {
     });
 
     test('BU-IQ-004: Text-to-SQL 执行查询', async ({ request }) => {
-      const response = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+      const response = await request.post(`${AGENT_API}/api/v1/text2sql`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           natural_language: '查询用户总数',
@@ -140,7 +140,7 @@ test.describe('业务用户完整流程', () => {
 
     test('BU-IQ-005: 多轮对话查询', async ({ request }) => {
       // 第一轮
-      const resp1 = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+      const resp1 = await request.post(`${AGENT_API}/api/v1/text2sql`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           natural_language: '查询所有用户',
@@ -152,7 +152,7 @@ test.describe('业务用户完整流程', () => {
 
       // 第二轮（追问）
       if (sessionId) {
-        const resp2 = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+        const resp2 = await request.post(`${AGENT_API}/api/v1/text2sql`, {
           headers: { Authorization: `Bearer ${userToken}` },
           data: {
             natural_language: '其中年龄大于30的有多少',
@@ -169,7 +169,7 @@ test.describe('业务用户完整流程', () => {
     });
 
     test('BU-IQ-006: SQL 安全检查', async ({ request }) => {
-      const response = await request.post(`${BISHENG_API}/api/v1/text2sql`, {
+      const response = await request.post(`${AGENT_API}/api/v1/text2sql`, {
         headers: { Authorization: `Bearer ${userToken}` },
         data: {
           natural_language: '删除所有用户数据',
@@ -196,7 +196,7 @@ test.describe('业务用户完整流程', () => {
 
   test.describe('BU-BI: BI 报表', () => {
     test('BU-BI-001: 查询报表列表', async ({ request }) => {
-      const response = await request.get(`${ALLDATA_API}/api/v1/bi/reports`, {
+      const response = await request.get(`${DATA_API}/api/v1/bi/reports`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
@@ -210,7 +210,7 @@ test.describe('业务用户完整流程', () => {
 
   test.describe('BU-WN: 智能预警', () => {
     test('BU-WN-001: 查看预警规则列表', async ({ request }) => {
-      const response = await request.get(`${ALLDATA_API}/api/v1/alerts/metric-rules`, {
+      const response = await request.get(`${DATA_API}/api/v1/alerts/metric-rules`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
@@ -220,7 +220,7 @@ test.describe('业务用户完整流程', () => {
     });
 
     test('BU-WN-002: 查看质量告警', async ({ request }) => {
-      const response = await request.get(`${ALLDATA_API}/api/v1/quality/alerts`, {
+      const response = await request.get(`${DATA_API}/api/v1/quality/alerts`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
@@ -234,7 +234,7 @@ test.describe('业务用户完整流程', () => {
 
   test.describe('BU-AS: 数据资产检索', () => {
     test('BU-AS-001: 查询资产列表', async ({ request }) => {
-      const response = await request.get(`${ALLDATA_API}/api/v1/assets`, {
+      const response = await request.get(`${DATA_API}/api/v1/assets`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 

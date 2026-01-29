@@ -8,7 +8,7 @@ import * as agentService from '@/services/agent-service';
 import * as model from '@/services/model';
 
 // Mock 服务
-vi.mock('@/services/bisheng', () => ({
+vi.mock('@/services/agent-service', () => ({
   default: {
     getConversations: vi.fn(),
     getConversation: vi.fn(),

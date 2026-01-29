@@ -1,20 +1,20 @@
-# ONE-DATA-STUDIO Bisheng 数据库初始化 Job
+# ONE-DATA-STUDIO Agent 数据库初始化 Job
 # Phase 5: 端到端集成配置
 # 安全加固: 使用 Kubernetes Secrets 存储凭据
 
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: bisheng-db-init
+  name: agent-db-init
   namespace: one-data-agent
   labels:
-    app: bisheng-db-init
+    app: agent-db-init
     phase: "5"
 spec:
   template:
     metadata:
       labels:
-        app: bisheng-db-init
+        app: agent-db-init
     spec:
       restartPolicy: OnFailure
       containers:
@@ -35,8 +35,13 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: bisheng-db-credentials
+              name: agent-db-credentials
               key: database-url
+        - name: DATA_API_URL
+          value: "http://data-api.one-data-data.svc.cluster.local:8080"
+        - name: MODEL_API_URL
+          value: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
+        # 兼容旧环境变量名
         - name: ALDATA_API_URL
           value: "http://data-api.one-data-data.svc.cluster.local:8080"
         - name: CUBE_API_URL
@@ -44,7 +49,7 @@ spec:
         - name: JWT_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: bisheng-jwt-credentials
+              name: agent-jwt-credentials
               key: secret-key
         resources:
           requests:
@@ -58,16 +63,16 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: bisheng-init-wait
+  name: agent-init-wait
   namespace: one-data-agent
   labels:
-    app: bisheng-init-wait
+    app: agent-init-wait
     phase: "5"
 spec:
   template:
     metadata:
       labels:
-        app: bisheng-init-wait
+        app: agent-init-wait
     spec:
       restartPolicy: OnFailure
       containers:
@@ -77,7 +82,7 @@ spec:
           - sh
           - -c
           - |
-            echo "等待 Bisheng 数据库初始化完成..."
+            echo "等待 Agent 数据库初始化完成..."
             sleep 30
             echo "初始化检查完成"
         resources:

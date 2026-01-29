@@ -7,7 +7,7 @@ import DocumentsPage from './DocumentsPage';
 import * as agentService from '@/services/agent-service';
 
 // Mock 服务
-vi.mock('@/services/bisheng', () => ({
+vi.mock('@/services/agent-service', () => ({
   default: {
     getDocuments: vi.fn(),
     uploadDocument: vi.fn(),

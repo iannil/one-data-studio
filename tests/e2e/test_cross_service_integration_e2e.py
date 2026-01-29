@@ -1,11 +1,11 @@
 """
 跨服务集成端到端测试
-测试 Alldata、Bisheng、Cube Studio 三个平台之间的集成
+测试 Data、Agent、Model 三个平台之间的集成
 
 测试覆盖:
-- Alldata → Cube Studio 数据集集成
-- Cube Studio → Bisheng 模型服务集成
-- Alldata → Bisheng 元数据/向量集成
+- Data → Model 数据集集成
+- Model → Agent 模型服务集成
+- Data → Agent 元数据/向量集成
 - 完整的 MLOps 工作流程
 """
 
@@ -18,10 +18,15 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# 服务 URL 配置
-ALLDATA_URL = os.getenv("TEST_ALLDATA_URL", "http://localhost:8082")
-BISHENG_URL = os.getenv("TEST_BISHENG_URL", "http://localhost:8081")
-CUBE_URL = os.getenv("TEST_CUBE_URL", "http://localhost:8083")
+# 服务 URL 配置 (兼容旧的环境变量名)
+DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_ALLDATA_URL", "http://localhost:8082"))
+AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_BISHENG_URL", "http://localhost:8081"))
+MODEL_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
+
+# 兼容旧变量名
+ALLDATA_URL = DATA_URL
+BISHENG_URL = AGENT_URL
+CUBE_URL = MODEL_URL
 
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
@@ -33,15 +38,15 @@ if AUTH_TOKEN:
     HEADERS["Authorization"] = f"Bearer {AUTH_TOKEN}"
 
 
-class TestAlldataCubeIntegration:
-    """Alldata → Cube Studio 集成测试"""
+class TestDataModelIntegration:
+    """Data → Model 集成测试"""
 
     dataset_id: Optional[str] = None
     cube_dataset_id: Optional[str] = None
 
     @pytest.mark.e2e
     def test_01_create_alldata_dataset(self):
-        """在 Alldata 创建数据集"""
+        """在 Data 创建数据集"""
         response = requests.post(
             f"{ALLDATA_URL}/api/v1/datasets",
             headers=HEADERS,
@@ -64,29 +69,29 @@ class TestAlldataCubeIntegration:
 
         if response.status_code == 201:
             data = response.json()
-            TestAlldataCubeIntegration.dataset_id = data["data"]["dataset_id"]
-            logger.info("Created Alldata dataset: %s", TestAlldataCubeIntegration.dataset_id)
+            TestDataModelIntegration.dataset_id = data["data"]["dataset_id"]
+            logger.info("Created Data dataset: %s", TestDataModelIntegration.dataset_id)
 
     @pytest.mark.e2e
     def test_02_register_dataset_in_cube(self):
-        """在 Cube Studio 注册数据集"""
-        if not TestAlldataCubeIntegration.dataset_id:
-            pytest.skip("No Alldata dataset created")
+        """在 Model 注册数据集"""
+        if not TestDataModelIntegration.dataset_id:
+            pytest.skip("No Data dataset created")
 
-        # 从 Alldata 获取数据集信息
+        # 从 Data 获取数据集信息
         alldata_response = requests.get(
-            f"{ALLDATA_URL}/api/v1/datasets/{TestAlldataCubeIntegration.dataset_id}",
+            f"{ALLDATA_URL}/api/v1/datasets/{TestDataModelIntegration.dataset_id}",
             headers=HEADERS
         )
 
         if alldata_response.status_code != 200:
-            pytest.skip("Cannot get Alldata dataset info")
+            pytest.skip("Cannot get Data dataset info")
 
         alldata_dataset = alldata_response.json()["data"]
 
-        # 在 Cube Studio 注册
+        # 在 Model 注册
         response = requests.post(
-            f"{CUBE_URL}/api/v1/datasets",
+            f"{MODEL_URL}/api/v1/datasets",
             headers=HEADERS,
             json={
                 "name": alldata_dataset["name"],
@@ -102,17 +107,17 @@ class TestAlldataCubeIntegration:
 
         if response.status_code == 201:
             data = response.json()
-            TestAlldataCubeIntegration.cube_dataset_id = data["data"]["dataset_id"]
+            TestDataModelIntegration.cube_dataset_id = data["data"]["dataset_id"]
 
     @pytest.mark.e2e
     def test_03_use_dataset_for_training(self):
         """使用数据集创建训练任务"""
-        if not TestAlldataCubeIntegration.cube_dataset_id:
+        if not TestDataModelIntegration.cube_dataset_id:
             pytest.skip("No Cube dataset registered")
 
         # 先创建模型
         model_response = requests.post(
-            f"{CUBE_URL}/api/v1/models",
+            f"{MODEL_URL}/api/v1/models",
             headers=HEADERS,
             json={
                 "name": f"Integration Test Model {int(time.time())}",
@@ -128,12 +133,12 @@ class TestAlldataCubeIntegration:
 
         # 创建训练任务
         response = requests.post(
-            f"{CUBE_URL}/api/v1/training-jobs",
+            f"{MODEL_URL}/api/v1/training-jobs",
             headers=HEADERS,
             json={
                 "name": f"Integration Training {int(time.time())}",
                 "model_id": model_id,
-                "dataset_id": TestAlldataCubeIntegration.cube_dataset_id,
+                "dataset_id": TestDataModelIntegration.cube_dataset_id,
                 "hyperparameters": {
                     "learning_rate": 0.0001,
                     "epochs": 1
@@ -146,7 +151,7 @@ class TestAlldataCubeIntegration:
     @pytest.mark.e2e
     def test_04_verify_data_lineage(self):
         """验证数据血缘追踪"""
-        if not TestAlldataCubeIntegration.dataset_id:
+        if not TestDataModelIntegration.dataset_id:
             pytest.skip("No dataset created")
 
         response = requests.get(
@@ -154,7 +159,7 @@ class TestAlldataCubeIntegration:
             headers=HEADERS,
             params={
                 "source": "alldata",
-                "source_id": TestAlldataCubeIntegration.dataset_id,
+                "source_id": TestDataModelIntegration.dataset_id,
                 "direction": "downstream"
             }
         )
@@ -162,8 +167,8 @@ class TestAlldataCubeIntegration:
         assert response.status_code in [200, 401, 404]
 
 
-class TestCubeBishengIntegration:
-    """Cube Studio → Bisheng 集成测试"""
+class TestModelAgentIntegration:
+    """Model → Agent 集成测试"""
 
     model_id: Optional[str] = None
     deployment_id: Optional[str] = None
@@ -174,10 +179,10 @@ class TestCubeBishengIntegration:
         """创建并部署模型"""
         # 创建模型
         model_response = requests.post(
-            f"{CUBE_URL}/api/v1/models",
+            f"{MODEL_URL}/api/v1/models",
             headers=HEADERS,
             json={
-                "name": f"Bisheng Integration Model {int(time.time())}",
+                "name": f"Agent Integration Model {int(time.time())}",
                 "model_type": "text-generation",
                 "framework": "transformers",
                 "status": "ready"
@@ -187,11 +192,11 @@ class TestCubeBishengIntegration:
         if model_response.status_code != 201:
             pytest.skip("Cannot create model")
 
-        TestCubeBishengIntegration.model_id = model_response.json()["data"]["model_id"]
+        TestModelAgentIntegration.model_id = model_response.json()["data"]["model_id"]
 
         # 部署模型
         deploy_response = requests.post(
-            f"{CUBE_URL}/api/v1/models/{TestCubeBishengIntegration.model_id}/deploy",
+            f"{MODEL_URL}/api/v1/models/{TestModelAgentIntegration.model_id}/deploy",
             headers=HEADERS,
             json={
                 "replicas": 1,
@@ -202,19 +207,19 @@ class TestCubeBishengIntegration:
         assert deploy_response.status_code in [201, 400, 401, 404]
 
         if deploy_response.status_code == 201:
-            TestCubeBishengIntegration.deployment_id = deploy_response.json()["data"]["deployment_id"]
-            logger.info("Created deployment: %s", TestCubeBishengIntegration.deployment_id)
+            TestModelAgentIntegration.deployment_id = deploy_response.json()["data"]["deployment_id"]
+            logger.info("Created deployment: %s", TestModelAgentIntegration.deployment_id)
 
     @pytest.mark.e2e
     def test_02_get_model_endpoint(self):
         """获取模型服务端点"""
-        if not TestCubeBishengIntegration.deployment_id:
+        if not TestModelAgentIntegration.deployment_id:
             pytest.skip("No deployment created")
 
         response = requests.get(
-            f"{CUBE_URL}/api/v1/deployments",
+            f"{MODEL_URL}/api/v1/deployments",
             headers=HEADERS,
-            params={"model_id": TestCubeBishengIntegration.model_id}
+            params={"model_id": TestModelAgentIntegration.model_id}
         )
 
         assert response.status_code in [200, 401]
@@ -228,16 +233,16 @@ class TestCubeBishengIntegration:
 
     @pytest.mark.e2e
     def test_03_create_bisheng_workflow_with_model(self):
-        """创建使用 Cube 模型的 Bisheng 工作流"""
-        if not TestCubeBishengIntegration.deployment_id:
+        """创建使用 Cube 模型的 Agent 工作流"""
+        if not TestModelAgentIntegration.deployment_id:
             pytest.skip("No deployment created")
 
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/workflows",
+            f"{AGENT_URL}/api/v1/workflows",
             headers=HEADERS,
             json={
                 "name": f"Cube Integration Workflow {int(time.time())}",
-                "description": "使用 Cube Studio 模型的工作流",
+                "description": "使用 Model 模型的工作流",
                 "type": "rag"
             }
         )
@@ -245,7 +250,7 @@ class TestCubeBishengIntegration:
         assert response.status_code in [201, 401]
 
         if response.status_code == 201:
-            TestCubeBishengIntegration.workflow_id = response.json()["data"]["workflow_id"]
+            TestModelAgentIntegration.workflow_id = response.json()["data"]["workflow_id"]
 
             # 更新工作流定义
             workflow_def = {
@@ -261,7 +266,7 @@ class TestCubeBishengIntegration:
                         "type": "llm",
                         "config": {
                             "model_source": "cube",
-                            "deployment_id": TestCubeBishengIntegration.deployment_id,
+                            "deployment_id": TestModelAgentIntegration.deployment_id,
                             "temperature": 0.7
                         }
                     },
@@ -278,7 +283,7 @@ class TestCubeBishengIntegration:
             }
 
             update_response = requests.put(
-                f"{BISHENG_URL}/api/v1/workflows/{TestCubeBishengIntegration.workflow_id}",
+                f"{AGENT_URL}/api/v1/workflows/{TestModelAgentIntegration.workflow_id}",
                 headers=HEADERS,
                 json={"definition": workflow_def}
             )
@@ -288,11 +293,11 @@ class TestCubeBishengIntegration:
     @pytest.mark.e2e
     def test_04_execute_workflow(self):
         """执行工作流"""
-        if not TestCubeBishengIntegration.workflow_id:
+        if not TestModelAgentIntegration.workflow_id:
             pytest.skip("No workflow created")
 
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/workflows/{TestCubeBishengIntegration.workflow_id}/start",
+            f"{AGENT_URL}/api/v1/workflows/{TestModelAgentIntegration.workflow_id}/start",
             headers=HEADERS,
             json={
                 "inputs": {
@@ -306,27 +311,27 @@ class TestCubeBishengIntegration:
     @pytest.mark.e2e
     def test_05_cleanup(self):
         """清理测试资源"""
-        if TestCubeBishengIntegration.workflow_id:
+        if TestModelAgentIntegration.workflow_id:
             requests.delete(
-                f"{BISHENG_URL}/api/v1/workflows/{TestCubeBishengIntegration.workflow_id}",
+                f"{AGENT_URL}/api/v1/workflows/{TestModelAgentIntegration.workflow_id}",
                 headers=HEADERS
             )
 
-        if TestCubeBishengIntegration.deployment_id:
+        if TestModelAgentIntegration.deployment_id:
             requests.delete(
-                f"{CUBE_URL}/api/v1/deployments/{TestCubeBishengIntegration.deployment_id}",
+                f"{MODEL_URL}/api/v1/deployments/{TestModelAgentIntegration.deployment_id}",
                 headers=HEADERS
             )
 
-        if TestCubeBishengIntegration.model_id:
+        if TestModelAgentIntegration.model_id:
             requests.delete(
-                f"{CUBE_URL}/api/v1/models/{TestCubeBishengIntegration.model_id}",
+                f"{MODEL_URL}/api/v1/models/{TestModelAgentIntegration.model_id}",
                 headers=HEADERS
             )
 
 
-class TestAlldataBishengIntegration:
-    """Alldata → Bisheng 集成测试（Text2SQL、RAG）"""
+class TestDataAgentIntegration:
+    """Data → Agent 集成测试（Text2SQL、RAG）"""
 
     @pytest.mark.e2e
     def test_01_metadata_query(self):
@@ -358,7 +363,7 @@ class TestAlldataBishengIntegration:
 
         # 创建对话
         conv_response = requests.post(
-            f"{BISHENG_URL}/api/v1/conversations",
+            f"{AGENT_URL}/api/v1/conversations",
             headers=HEADERS,
             json={"title": "Text2SQL Test"}
         )
@@ -370,7 +375,7 @@ class TestAlldataBishengIntegration:
 
         # 发送 Text-to-SQL 请求
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/chat",
+            f"{AGENT_URL}/api/v1/chat",
             headers=HEADERS,
             json={
                 "conversation_id": conversation_id,
@@ -399,10 +404,10 @@ class TestAlldataBishengIntegration:
 
     @pytest.mark.e2e
     def test_04_rag_with_alldata_vector(self):
-        """测试使用 Alldata 向量库的 RAG"""
+        """测试使用 Data 向量库的 RAG"""
         # 创建对话
         conv_response = requests.post(
-            f"{BISHENG_URL}/api/v1/conversations",
+            f"{AGENT_URL}/api/v1/conversations",
             headers=HEADERS,
             json={"title": "RAG Test"}
         )
@@ -414,7 +419,7 @@ class TestAlldataBishengIntegration:
 
         # 发送 RAG 请求
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/chat",
+            f"{AGENT_URL}/api/v1/chat",
             headers=HEADERS,
             json={
                 "conversation_id": conversation_id,
@@ -432,7 +437,7 @@ class TestAlldataBishengIntegration:
         """测试混合查询（RAG + SQL）"""
         # 创建对话
         conv_response = requests.post(
-            f"{BISHENG_URL}/api/v1/conversations",
+            f"{AGENT_URL}/api/v1/conversations",
             headers=HEADERS,
             json={"title": "Hybrid Query Test"}
         )
@@ -444,7 +449,7 @@ class TestAlldataBishengIntegration:
 
         # 发送混合查询请求
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/chat",
+            f"{AGENT_URL}/api/v1/chat",
             headers=HEADERS,
             json={
                 "conversation_id": conversation_id,
@@ -465,8 +470,8 @@ class TestCompleteMLOpsWorkflow:
     @pytest.mark.slow
     def test_complete_workflow(self):
         """测试完整的 MLOps 工作流程"""
-        # 步骤 1: 在 Alldata 准备数据集
-        logger.info("Step 1: Creating dataset in Alldata")
+        # 步骤 1: 在 Data 准备数据集
+        logger.info("Step 1: Creating dataset in Data")
         dataset_response = requests.post(
             f"{ALLDATA_URL}/api/v1/datasets",
             headers=HEADERS,
@@ -483,10 +488,10 @@ class TestCompleteMLOpsWorkflow:
         dataset_id = dataset_response.json()["data"]["dataset_id"]
         logger.info("Created dataset: %s", dataset_id)
 
-        # 步骤 2: 在 Cube Studio 注册并训练模型
-        logger.info("Step 2: Creating and training model in Cube Studio")
+        # 步骤 2: 在 Model 注册并训练模型
+        logger.info("Step 2: Creating and training model in Model")
         model_response = requests.post(
-            f"{CUBE_URL}/api/v1/models",
+            f"{MODEL_URL}/api/v1/models",
             headers=HEADERS,
             json={
                 "name": f"MLOps Workflow Model {int(time.time())}",
@@ -503,13 +508,13 @@ class TestCompleteMLOpsWorkflow:
         # 步骤 3: 部署模型
         logger.info("Step 3: Deploying model")
         model_update = requests.put(
-            f"{CUBE_URL}/api/v1/models/{model_id}",
+            f"{MODEL_URL}/api/v1/models/{model_id}",
             headers=HEADERS,
             json={"status": "ready"}
         )
 
         deploy_response = requests.post(
-            f"{CUBE_URL}/api/v1/models/{model_id}/deploy",
+            f"{MODEL_URL}/api/v1/models/{model_id}/deploy",
             headers=HEADERS,
             json={"replicas": 1}
         )
@@ -520,10 +525,10 @@ class TestCompleteMLOpsWorkflow:
 
         deployment_id = deploy_response.json()["data"]["deployment_id"]
 
-        # 步骤 4: 在 Bisheng 创建使用模型的工作流
-        logger.info("Step 4: Creating workflow in Bisheng")
+        # 步骤 4: 在 Agent 创建使用模型的工作流
+        logger.info("Step 4: Creating workflow in Agent")
         workflow_response = requests.post(
-            f"{BISHENG_URL}/api/v1/workflows",
+            f"{AGENT_URL}/api/v1/workflows",
             headers=HEADERS,
             json={
                 "name": f"MLOps Complete Workflow {int(time.time())}",
@@ -540,7 +545,7 @@ class TestCompleteMLOpsWorkflow:
         # 步骤 5: 执行工作流
         logger.info("Step 5: Executing workflow")
         exec_response = requests.post(
-            f"{BISHENG_URL}/api/v1/workflows/{workflow_id}/start",
+            f"{AGENT_URL}/api/v1/workflows/{workflow_id}/start",
             headers=HEADERS,
             json={"inputs": {"query": "测试查询"}}
         )
@@ -549,9 +554,9 @@ class TestCompleteMLOpsWorkflow:
 
         # 清理
         logger.info("Cleaning up...")
-        requests.delete(f"{BISHENG_URL}/api/v1/workflows/{workflow_id}", headers=HEADERS)
-        requests.delete(f"{CUBE_URL}/api/v1/deployments/{deployment_id}", headers=HEADERS)
-        requests.delete(f"{CUBE_URL}/api/v1/models/{model_id}", headers=HEADERS)
+        requests.delete(f"{AGENT_URL}/api/v1/workflows/{workflow_id}", headers=HEADERS)
+        requests.delete(f"{MODEL_URL}/api/v1/deployments/{deployment_id}", headers=HEADERS)
+        requests.delete(f"{MODEL_URL}/api/v1/models/{model_id}", headers=HEADERS)
         requests.delete(f"{ALLDATA_URL}/api/v1/datasets/{dataset_id}", headers=HEADERS)
 
 
@@ -560,29 +565,29 @@ class TestServiceHealthCheck:
 
     @pytest.mark.e2e
     def test_data_health(self):
-        """测试 Alldata 服务健康"""
+        """测试 Data 服务健康"""
         response = requests.get(f"{ALLDATA_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
     def test_agent_health(self):
-        """测试 Bisheng 服务健康"""
-        response = requests.get(f"{BISHENG_URL}/api/v1/health")
+        """测试 Agent 服务健康"""
+        response = requests.get(f"{AGENT_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
     def test_model_health(self):
-        """测试 Cube Studio 服务健康"""
-        response = requests.get(f"{CUBE_URL}/api/v1/health")
+        """测试 Model 服务健康"""
+        response = requests.get(f"{MODEL_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
     def test_all_services_healthy(self):
         """测试所有服务都健康"""
         services = [
-            (ALLDATA_URL, "Alldata"),
-            (BISHENG_URL, "Bisheng"),
-            (CUBE_URL, "Cube Studio")
+            (ALLDATA_URL, "Data"),
+            (AGENT_URL, "Agent"),
+            (MODEL_URL, "Model")
         ]
 
         healthy_count = 0

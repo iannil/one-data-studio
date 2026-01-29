@@ -45,42 +45,42 @@ test.describe('综合验收测试 - 平台架构验证', () => {
       '/workflows',           // 工作流列表
       '/workflows/new',       // 新建工作流
 
-      // L2 数据底座层 - Alldata (14个)
-      '/alldata/datasources',
-      '/alldata/etl',
-      '/alldata/quality',
-      '/alldata/lineage',
-      '/alldata/features',
-      '/alldata/standards',
-      '/alldata/assets',
-      '/alldata/services',
-      '/alldata/bi',
-      '/alldata/monitoring',
-      '/alldata/streaming',
-      '/alldata/streaming-ide',
-      '/alldata/offline',
-      '/alldata/metrics',
+      // L2 数据底座层 - Data (14个)
+      '/data/datasources',
+      '/data/etl',
+      '/data/quality',
+      '/data/lineage',
+      '/data/features',
+      '/data/standards',
+      '/data/assets',
+      '/data/services',
+      '/data/bi',
+      '/data/monitoring',
+      '/data/streaming',
+      '/data/streaming-ide',
+      '/data/offline',
+      '/data/metrics',
 
-      // L3 算法引擎层 - Cube Studio (12个)
-      '/cube/notebooks',
-      '/cube/experiments',
-      '/cube/experiments/compare', // 新增：实验对比
-      '/cube/models',
-      '/cube/training',
-      '/cube/serving',
-      '/cube/resources',
-      '/cube/monitoring',
-      '/cube/aihub',
-      '/cube/pipelines',
-      '/cube/llm-tuning',
-      '/cube/sql-lab',
+      // L3 算法引擎层 - Model (12个)
+      '/model/notebooks',
+      '/model/experiments',
+      '/model/experiments/compare', // 新增：实验对比
+      '/model/models',
+      '/model/training',
+      '/model/serving',
+      '/model/resources',
+      '/model/monitoring',
+      '/model/aihub',
+      '/model/pipelines',
+      '/model/llm-tuning',
+      '/model/sql-lab',
 
-      // L4 应用编排层 - Bisheng (5个)
-      '/bisheng/prompts',
-      '/bisheng/knowledge',
-      '/bisheng/apps',
-      '/bisheng/evaluation',
-      '/bisheng/sft',
+      // L4 应用编排层 - Agent (5个)
+      '/agent/prompts',
+      '/agent/knowledge',
+      '/agent/apps',
+      '/agent/evaluation',
+      '/agent/sft',
 
       // 管理后台 - Admin (6个)
       '/admin/users',
@@ -166,8 +166,8 @@ test.describe('综合验收测试 - 关键集成点验证', () => {
       });
     });
 
-    // 导航到 Alldata 数据源页面
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    // 导航到 Data 数据源页面
+    await page.goto(`${BASE_URL}/data/datasources`);
     await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
 
     // 验证页面加载
@@ -238,7 +238,7 @@ test.describe('综合验收测试 - UI/UX 一致性验证', () => {
     setupCommonMocks(page);
     await setupAuth(page);
 
-    const pages = ['/datasets', '/workflows', '/bisheng/apps'];
+    const pages = ['/datasets', '/workflows', '/agent/apps'];
 
     for (const pagePath of pages) {
       await page.goto(`${BASE_URL}${pagePath}`);
@@ -320,7 +320,7 @@ test.describe('综合验收测试 - 性能基准验证', () => {
       });
     });
 
-    const pages = ['/', '/datasets', '/workflows', '/bisheng/apps'];
+    const pages = ['/', '/datasets', '/workflows', '/agent/apps'];
     const loadTimes: number[] = [];
 
     for (const pagePath of pages) {

@@ -57,12 +57,12 @@ test.describe('核心页面测试', () => {
 
     test('应能访问数据治理页面', async ({ page }) => {
       await page.click('text=数据治理');
-      await expect(page).toHaveURL(/\/alldata/);
+      await expect(page).toHaveURL(/\/data/);
     });
 
     test('应能访问应用编排页面', async ({ page }) => {
       await page.click('text=应用编排');
-      await expect(page).toHaveURL(/\/bisheng/);
+      await expect(page).toHaveURL(/\/agent/);
     });
 
     test('应能访问算法引擎页面', async ({ page }) => {

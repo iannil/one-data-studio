@@ -75,7 +75,7 @@ class DatasetType(str, Enum):
 @dataclass
 class DatasetIdentifier:
     """数据集标识符 (OpenLineage Dataset)"""
-    namespace: str                    # 命名空间 (如: alldata-service)
+    namespace: str                    # 命名空间 (如: data-service)
     name: str                          # 数据集名称
     type: DatasetType = DatasetType.TABLE
     facets: Dict[str, Any] = field(default_factory=dict)  # schema/ownership/statistics
@@ -85,7 +85,7 @@ class DatasetIdentifier:
         return f"{self.namespace}.{self.name}"
 
     @classmethod
-    def from_fqn(cls, fqn: str, default_namespace: str = "alldata-service") -> "DatasetIdentifier":
+    def from_fqn(cls, fqn: str, default_namespace: str = "data-service") -> "DatasetIdentifier":
         """从 FQN 解析"""
         parts = fqn.split(".")
         if len(parts) >= 2:
@@ -133,7 +133,7 @@ class LineageEvent:
     source: EventSource = EventSource.MANUAL_ENTRY
 
     # 任务信息
-    job_namespace: str = "alldata"
+    job_namespace: str = "data"
     job_name: str = ""
     job_facets: Dict[str, Any] = field(default_factory=dict)
 
@@ -262,7 +262,7 @@ class LineageEventModel(Base):
         if self.input_datasets:
             for ds in self.input_datasets:
                 input_datasets.append(DatasetIdentifier(
-                    namespace=ds.get("namespace", "alldata"),
+                    namespace=ds.get("namespace", "data"),
                     name=ds.get("name", ""),
                     type=DatasetType(ds.get("type", "table")),
                     facets=ds.get("facets", {}),
@@ -272,7 +272,7 @@ class LineageEventModel(Base):
         if self.output_datasets:
             for ds in self.output_datasets:
                 output_datasets.append(DatasetIdentifier(
-                    namespace=ds.get("namespace", "alldata"),
+                    namespace=ds.get("namespace", "data"),
                     name=ds.get("name", ""),
                     type=DatasetType(ds.get("type", "table")),
                     facets=ds.get("facets", {}),
@@ -408,7 +408,7 @@ def create_etl_lineage_event(
     """
     return LineageEvent(
         event_type=EventType.JOB_STARTED,
-        job_namespace="alldata",
+        job_namespace="data",
         job_name=job_name,
         run_id=run_id or str(uuid4()),
         source=EventSource.KETTLE_ETL,
@@ -440,13 +440,13 @@ def create_scan_lineage_event(
     """
     return LineageEvent(
         event_type=EventType.DATASET_SCANNED,
-        job_namespace="alldata",
+        job_namespace="data",
         job_name=f"metadata_scan_{database}",
         run_id=scan_id or str(uuid4()),
         source=EventSource.METADATA_SCAN,
         output_datasets=[
             DatasetIdentifier(
-                namespace="alldata-service",
+                namespace="data-service",
                 name=f"{database}.{tbl}",
                 type=DatasetType.TABLE,
             )
@@ -474,7 +474,7 @@ def create_column_masked_event(
     """
     return DatasetOperationEvent(
         event_type=EventType.COLUMN_MASKED,
-        job_namespace="alldata",
+        job_namespace="data",
         job_name=f"masking_{table}",
         source=EventSource.API_OPERATION,
         dataset=DatasetIdentifier.from_fqn(table),

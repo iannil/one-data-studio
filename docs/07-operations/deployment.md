@@ -93,7 +93,7 @@ MYSQL_HOST=mysql
 MYSQL_PORT=3306
 MYSQL_USER=one_data
 MYSQL_PASSWORD=YourSecurePassword123!
-MYSQL_DATABASE=one_data_bisheng
+MYSQL_DATABASE=one_data_studio
 
 # ==================== Redis 配置 ====================
 REDIS_HOST=redis

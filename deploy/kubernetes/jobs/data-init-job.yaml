@@ -1,20 +1,20 @@
-# ONE-DATA-STUDIO Alldata 数据库初始化 Job
+# ONE-DATA-STUDIO Data 数据库初始化 Job
 # Phase 5: 端到端集成配置
 # 安全加固: 使用 Kubernetes Secrets 存储凭据
 
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: alldata-db-init
+  name: data-db-init
   namespace: one-data-data
   labels:
-    app: alldata-db-init
+    app: data-db-init
     phase: "5"
 spec:
   template:
     metadata:
       labels:
-        app: alldata-db-init
+        app: data-db-init
     spec:
       restartPolicy: OnFailure
       containers:
@@ -35,7 +35,7 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: alldata-db-credentials
+              name: data-db-credentials
               key: database-url
         - name: MINIO_ENDPOINT
           value: "minio.one-data-infra.svc.cluster.local:9000"
@@ -105,7 +105,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: alldata-db-credentials
+  name: data-db-credentials
   namespace: one-data-data
 type: Opaque
 stringData:

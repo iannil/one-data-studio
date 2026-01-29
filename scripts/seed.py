@@ -6,7 +6,7 @@ Seed Data Import Script
 用法:
     python scripts/seed.py                      # 导入所有数据
     python scripts/seed.py --service admin      # 仅导入 admin 数据
-    python scripts/seed.py --service alldata bisheng  # 导入指定服务
+    python scripts/seed.py --service data agent model  # 导入指定服务
     python scripts/seed.py --force              # 强制覆盖已有数据
     python scripts/seed.py --dry-run            # 预览模式
 """
@@ -39,12 +39,16 @@ logger = logging.getLogger(__name__)
 # 种子数据目录
 SEED_DATA_DIR = PROJECT_ROOT / "data" / "seed"
 
-# 支持的服务
-SERVICES = ["admin", "alldata", "bisheng", "cube"]
+# 支持的服务 (兼容旧名称: alldata, bisheng, cube)
+SERVICES = ["admin", "data", "agent", "model", "alldata", "bisheng", "cube"]
 
 # 服务目录映射（使用连字符的目录名）
 SERVICE_DIR_MAP = {
     "admin": "admin-api",
+    "data": "data-api",
+    "agent": "agent-api",
+    "model": "model-api",
+    # 兼容旧名称
     "alldata": "data-api",
     "bisheng": "agent-api",
     "cube": "model-api",
@@ -53,6 +57,10 @@ SERVICE_DIR_MAP = {
 # 导入顺序（按依赖关系）
 IMPORT_ORDER = {
     "admin": ["permissions", "roles", "users", "settings"],
+    "data": ["datasources", "datasets", "metadata", "quality_rules", "asset_categories"],
+    "agent": ["tools", "knowledge_bases", "prompt_templates", "agent_templates", "workflows"],
+    "model": ["resource_pools", "aihub_categories", "pipeline_templates", "aihub_models"],
+    # 兼容旧名称
     "alldata": ["datasources", "datasets", "metadata", "quality_rules", "asset_categories"],
     "bisheng": ["tools", "knowledge_bases", "prompt_templates", "agent_templates", "workflows"],
     "cube": ["resource_pools", "aihub_categories", "pipeline_templates", "aihub_models"],

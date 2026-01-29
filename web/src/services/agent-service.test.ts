@@ -1,9 +1,9 @@
 /**
- * Bisheng Service 单元测试
+ * Agent Service 单元测试
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as agentService from './bisheng';
+import * as agentService from './agent-service';
 
 // Mock apiClient
 vi.mock('./api', () => ({
@@ -17,7 +17,7 @@ vi.mock('./api', () => ({
 
 import { apiClient } from './api';
 
-describe('Bisheng Service', () => {
+describe('Agent Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

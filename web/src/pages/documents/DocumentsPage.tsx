@@ -27,7 +27,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UploadFile } from 'antd';
 import dayjs from 'dayjs';
-import bisheng, { type IndexedDocument } from '@/services/agent-service';
+import agentService, { type IndexedDocument } from '@/services/agent-service';
 
 const { Dragger } = Upload;
 const { Option } = Select;

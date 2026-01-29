@@ -8,9 +8,13 @@ echo "==> ONE-DATA-STUDIO 端到端测试脚本"
 echo ""
 
 # 默认端口配置
-BISHENG_API_URL="${BISHENG_API_URL:-http://localhost:8000}"
-ALLDATA_API_URL="${ALLDATA_API_URL:-http://localhost:8001}"
-CUBE_API_URL="${CUBE_API_URL:-http://localhost:8002}"
+AGENT_API_URL="${AGENT_API_URL:-http://localhost:8000}"
+DATA_API_URL="${DATA_API_URL:-http://localhost:8001}"
+MODEL_API_URL="${MODEL_API_URL:-http://localhost:8002}"
+# 兼容旧名称
+BISHENG_API_URL="${BISHENG_API_URL:-${AGENT_API_URL}}"
+ALLDATA_API_URL="${ALLDATA_API_URL:-${DATA_API_URL}}"
+CUBE_API_URL="${CUBE_API_URL:-${MODEL_API_URL}}"
 
 # 测试计数器
 PASSED=0
@@ -40,7 +44,7 @@ skip() {
 
 # 检查服务是否可用
 echo "==> 检查服务状态..."
-for service in "Bisheng:${BISHENG_API_URL}/health" "Alldata:${ALLDATA_API_URL}/health" "Cube:${CUBE_API_URL}/api/v1/health"; do
+for service in "Agent:${AGENT_API_URL}/health" "Data:${DATA_API_URL}/health" "Model:${MODEL_API_URL}/api/v1/health"; do
     name="${service%%:*}"
     url="${service#*:}"
     echo -n "  ${name} API... "
@@ -55,7 +59,7 @@ echo ""
 # E2E 场景 1: 创建并执行工作流
 echo "==> E2E 场景 1: 工作流生命周期"
 echo -n "  1.1 创建工作流... "
-workflow_response=$(curl -s -X POST "${BISHENG_API_URL}/api/v1/workflows" \
+workflow_response=$(curl -s -X POST "${AGENT_API_URL}/api/v1/workflows" \
     -H "Content-Type: application/json" \
     -d '{
         "name": "E2E Test Workflow",
@@ -75,14 +79,14 @@ fi
 
 if [ -n "${workflow_id}" ]; then
     echo -n "  1.2 获取工作流详情... "
-    if curl -s -f "${BISHENG_API_URL}/api/v1/workflows/${workflow_id}" > /dev/null 2>&1; then
+    if curl -s -f "${AGENT_API_URL}/api/v1/workflows/${workflow_id}" > /dev/null 2>&1; then
         pass
     else
         fail "无法获取工作流"
     fi
 
     echo -n "  1.3 删除工作流... "
-    if curl -s -X DELETE "${BISHENG_API_URL}/api/v1/workflows/${workflow_id}" > /dev/null 2>&1; then
+    if curl -s -X DELETE "${AGENT_API_URL}/api/v1/workflows/${workflow_id}" > /dev/null 2>&1; then
         pass
     else
         fail "无法删除工作流"
@@ -93,7 +97,7 @@ echo ""
 # E2E 场景 2: 聊天对话
 echo "==> E2E 场景 2: 聊天对话流程"
 echo -n "  2.1 发送聊天消息... "
-chat_response=$(curl -s -X POST "${BISHENG_API_URL}/api/v1/chat" \
+chat_response=$(curl -s -X POST "${AGENT_API_URL}/api/v1/chat" \
     -H "Content-Type: application/json" \
     -d '{"message": "你好，请介绍一下你自己"}' 2>/dev/null || echo '{"error": true}')
 

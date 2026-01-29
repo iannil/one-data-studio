@@ -37,7 +37,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import bisheng, { type WorkflowExecution, type HumanTask } from '@/services/agent-service';
+import agentService, { type WorkflowExecution, type HumanTask } from '@/services/agent-service';
 import WorkflowLogViewer from '@/components/WorkflowLogViewer';
 // import './WorkflowsPage.less';
 

@@ -32,7 +32,7 @@ info:
 servers:
   - url: http://localhost:8081
     description: 开发环境
-  - url: https://api.example.com/bisheng
+  - url: https://api.example.com/agent
     description: 生产环境
 
 tags:

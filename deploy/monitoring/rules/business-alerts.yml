@@ -5,15 +5,15 @@ groups:
   # ============================================
   # Data API 业务告警
   # ============================================
-  - name: alldata_business_alerts
+  - name: data_business_alerts
     interval: 30s
     rules:
       # 数据扫描异常
-      - alert: AlldataScanFailureRateHigh
+      - alert: DataScanFailureRateHigh
         expr: |
           (
-            sum(rate(alldata_scan_errors_total[5m])) /
-            sum(rate(alldata_scan_total[5m]))
+            sum(rate(data_scan_errors_total[5m])) /
+            sum(rate(data_scan_total[5m]))
           ) > 0.1
         for: 5m
         labels:
@@ -25,9 +25,9 @@ groups:
           description: "过去 5 分钟数据扫描失败率为 {{ $value | humanizePercentage }}，超过 10% 阈值"
 
       # 数据同步延迟
-      - alert: AlldataSyncLagHigh
+      - alert: DataSyncLagHigh
         expr: |
-          alldata_metadata_sync_lag_seconds > 3600
+          data_metadata_sync_lag_seconds > 3600
         for: 10m
         labels:
           severity: warning
@@ -38,7 +38,7 @@ groups:
           description: "元数据同步延迟 {{ $value | humanizeDuration }}，超过 1 小时"
 
       # ETL 作业失败
-      - alert: AlldataETLJobFailure
+      - alert: DataETLJobFailure
         expr: |
           kettle_job_status{status="failed"} > 0
         for: 1m
@@ -51,7 +51,7 @@ groups:
           description: "作业 {{ $labels.job_name }} 执行失败"
 
       # ETL 作业积压
-      - alert: AlldataETLJobBacklog
+      - alert: DataETLJobBacklog
         expr: |
           kettle_job_queue_length > 50
         for: 10m
@@ -64,9 +64,9 @@ groups:
           description: "当前队列中有 {{ $value }} 个作业等待执行"
 
       # 资产价值计算延迟
-      - alert: AlldataAssetValueCalculationLag
+      - alert: DataAssetValueCalculationLag
         expr: |
-          time() - alldata_asset_value_last_calculation_timestamp > 86400
+          time() - data_asset_value_last_calculation_timestamp > 86400
         for: 15m
         labels:
           severity: info
@@ -77,7 +77,7 @@ groups:
           description: "资产价值已超过 24 小时未更新"
 
       # 敏感数据扫描异常
-      - alert: AlldataSensitivityScanError
+      - alert: DataSensitivityScanError
         expr: |
           increase(alldata_sensitivity_scan_errors[1h]) > 10
         for: 5m

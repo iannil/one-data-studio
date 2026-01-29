@@ -189,9 +189,9 @@ check_service() {
     return 1
 }
 
-check_service "http://localhost:${BISHENG_API_PORT:-8000}/api/v1/health" "Bisheng API" 60
-check_service "http://localhost:${ALLDATA_API_PORT:-8001}/api/v1/health" "Alldata API" 60
-check_service "http://localhost:${CUBE_API_PORT:-8002}/api/v1/health" "Cube API" 60
+check_service "http://localhost:${AGENT_API_PORT:-8000}/api/v1/health" "Agent API" 60
+check_service "http://localhost:${DATA_API_PORT:-8001}/api/v1/health" "Data API" 60
+check_service "http://localhost:${MODEL_API_PORT:-8002}/api/v1/health" "Model API" 60
 check_service "http://localhost:${KEYCLOAK_PORT:-8080}/health/ready" "Keycloak" 120
 
 # ============================================
@@ -250,9 +250,13 @@ fi
 # 设置环境变量
 export HEADED=$([ "$HEADLESS" = false ] && echo "true" || echo "false")
 export BASE_URL="http://localhost:${WEB_PORT:-3000}"
-export BISHENG_API_URL="http://localhost:${BISHENG_API_PORT:-8000}"
-export ALLDATA_API_URL="http://localhost:${ALLDATA_API_PORT:-8001}"
-export CUBE_API_URL="http://localhost:${CUBE_API_PORT:-8002}"
+export AGENT_API_URL="http://localhost:${AGENT_API_PORT:-8000}"
+export DATA_API_URL="http://localhost:${DATA_API_PORT:-8001}"
+export MODEL_API_URL="http://localhost:${MODEL_API_PORT:-8002}"
+# 兼容旧名称
+export BISHENG_API_URL="${AGENT_API_URL}"
+export ALLDATA_API_URL="${DATA_API_URL}"
+export CUBE_API_URL="${MODEL_API_URL}"
 export OPENAI_API_URL="http://localhost:${OPENAI_PROXY_PORT:-8003}"
 export KEYCLOAK_URL="http://localhost:${KEYCLOAK_PORT:-8080}"
 

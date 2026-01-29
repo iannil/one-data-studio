@@ -7,7 +7,7 @@ import MetadataPage from './MetadataPage';
 import data from '@/services/data';
 
 // Mock 服务
-vi.mock('@/services/alldata', () => ({
+vi.mock('@/services/data-service', () => ({
   default: {
     getDatabases: vi.fn(),
     getTables: vi.fn(),

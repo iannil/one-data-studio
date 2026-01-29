@@ -53,7 +53,7 @@ npm run dev
 
 ### 2. 访问OCR页面
 
-打开浏览器访问: `http://localhost:5173/alldata/ocr`
+打开浏览器访问: `http://localhost:5173/data/ocr`
 
 ### 3. 上传文档
 

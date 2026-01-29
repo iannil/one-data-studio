@@ -32,7 +32,7 @@ class MinIOClient:
         self.endpoint = os.getenv('MINIO_ENDPOINT', 'minio.one-data-infra.svc.cluster.local:9000')
         self.access_key = os.getenv('MINIO_ACCESS_KEY')
         self.secret_key = os.getenv('MINIO_SECRET_KEY')
-        self.default_bucket = os.getenv('MINIO_DEFAULT_BUCKET', 'alldata')
+        self.default_bucket = os.getenv('MINIO_DEFAULT_BUCKET', 'one-data-studio')
         self.use_ssl = os.getenv('MINIO_USE_SSL', 'false').lower() == 'true'
 
         # 检查必需的凭据

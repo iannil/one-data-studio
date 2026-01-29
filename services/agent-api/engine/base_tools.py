@@ -20,8 +20,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
-ALDATA_API_URL = os.getenv("ALDATA_API_URL", "http://alldata-api:8080")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
 
 # SSL verification for HTTP requests
 # In production, this should always be True. Only disable for local development with self-signed certs.
@@ -949,7 +949,7 @@ class TextToSQLTool(BaseTool):
             """
 
             response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
+                f"{MODEL_API_URL}/v1/chat/completions",
                 json={
                     "model": "gpt-4o-mini",
                     "messages": [

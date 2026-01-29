@@ -10,7 +10,7 @@ import { test, expect } from '../fixtures/user-lifecycle.fixture';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = process.env.API_BASE || 'http://localhost:8080';
-const CUBE_API = process.env.CUBE_API || 'http://localhost:8002';
+const MODEL_API = process.env.MODEL_API || process.env.MODEL_API || 'http://localhost:8002';
 
 test.describe('算法工程师完整流程', () => {
   let aiToken: string;
@@ -27,7 +27,7 @@ test.describe('算法工程师完整流程', () => {
 
   test.describe('AE-NB: Notebook 环境', () => {
     test('AE-NB-001: 创建 Jupyter Notebook 实例', async ({ request }) => {
-      const response = await request.post(`${CUBE_API}/api/v1/notebooks`, {
+      const response = await request.post(`${MODEL_API}/api/v1/notebooks`, {
         headers: { Authorization: `Bearer ${aiToken}` },
         data: {
           name: `e2e_notebook_${Date.now()}`,
@@ -55,7 +55,7 @@ test.describe('算法工程师完整流程', () => {
 
   test.describe('AE-TR: 模型训练', () => {
     test('AE-TR-001: 创建训练实验', async ({ request }) => {
-      const response = await request.post(`${CUBE_API}/api/v1/experiments`, {
+      const response = await request.post(`${MODEL_API}/api/v1/experiments`, {
         headers: { Authorization: `Bearer ${aiToken}` },
         data: {
           name: `e2e_experiment_${Date.now()}`,
@@ -76,14 +76,14 @@ test.describe('算法工程师完整流程', () => {
     });
 
     test('AE-TR-005: 查看训练日志', async ({ request }) => {
-      const response = await request.get(`${CUBE_API}/api/v1/experiments?status=completed&limit=1`, {
+      const response = await request.get(`${MODEL_API}/api/v1/experiments?status=completed&limit=1`, {
         headers: { Authorization: `Bearer ${aiToken}` },
       });
 
       const json = await response.json();
       if (json.code === 0 && json.data?.length > 0) {
         const expId = json.data[0].id;
-        const logResp = await request.get(`${CUBE_API}/api/v1/experiments/${expId}/logs`, {
+        const logResp = await request.get(`${MODEL_API}/api/v1/experiments/${expId}/logs`, {
           headers: { Authorization: `Bearer ${aiToken}` },
         });
         expect(logResp.ok()).toBeTruthy();
@@ -99,7 +99,7 @@ test.describe('算法工程师完整流程', () => {
 
   test.describe('AE-EV: 模型评估', () => {
     test('AE-EV-001: 创建评估任务', async ({ request }) => {
-      const response = await request.post(`${CUBE_API}/api/v1/evaluation`, {
+      const response = await request.post(`${MODEL_API}/api/v1/evaluation`, {
         headers: { Authorization: `Bearer ${aiToken}` },
         data: {
           model_id: 'test-model-1',
@@ -122,7 +122,7 @@ test.describe('算法工程师完整流程', () => {
     });
 
     test('AE-DP-002: 查看部署状态', async ({ request }) => {
-      const response = await request.get(`${CUBE_API}/api/v1/deployments`, {
+      const response = await request.get(`${MODEL_API}/api/v1/deployments`, {
         headers: { Authorization: `Bearer ${aiToken}` },
       });
 
@@ -133,14 +133,14 @@ test.describe('算法工程师完整流程', () => {
 
     test('AE-DP-004: 调用模型推理 API', async ({ request }) => {
       // 查找已有部署
-      const listResp = await request.get(`${CUBE_API}/api/v1/deployments?status=running`, {
+      const listResp = await request.get(`${MODEL_API}/api/v1/deployments?status=running`, {
         headers: { Authorization: `Bearer ${aiToken}` },
       });
       const listData = await listResp.json();
 
       if (listData.data?.length > 0) {
         const deployId = listData.data[0].id;
-        const inferResp = await request.post(`${CUBE_API}/api/v1/deployments/${deployId}/predict`, {
+        const inferResp = await request.post(`${MODEL_API}/api/v1/deployments/${deployId}/predict`, {
           headers: { Authorization: `Bearer ${aiToken}` },
           data: {
             inputs: [{ text: 'test input data' }],
@@ -179,14 +179,14 @@ test.describe('算法工程师完整流程', () => {
     });
 
     test('AE-DP-006: 部署扩缩容', async ({ request }) => {
-      const listResp = await request.get(`${CUBE_API}/api/v1/deployments?status=running`, {
+      const listResp = await request.get(`${MODEL_API}/api/v1/deployments?status=running`, {
         headers: { Authorization: `Bearer ${aiToken}` },
       });
       const listData = await listResp.json();
 
       if (listData.data?.length > 0) {
         const deployId = listData.data[0].id;
-        const scaleResp = await request.patch(`${CUBE_API}/api/v1/deployments/${deployId}/scale`, {
+        const scaleResp = await request.patch(`${MODEL_API}/api/v1/deployments/${deployId}/scale`, {
           headers: { Authorization: `Bearer ${aiToken}` },
           data: { replicas: 2 },
         });

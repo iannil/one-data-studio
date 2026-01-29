@@ -19,7 +19,7 @@ from .base_tools import get_tool_registry, ToolRegistry
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 
 # ReAct Prompt 模板
 REACT_PROMPT_TEMPLATE = """你是一个智能助手，可以使用工具来帮助用户完成任务。
@@ -100,7 +100,7 @@ class ReActAgent:
         tool_registry: ToolRegistry = None,
         verbose: bool = True
     ):
-        self.llm_api_url = llm_api_url or CUBE_API_URL
+        self.llm_api_url = llm_api_url or MODEL_API_URL
         self.model = model
         self.max_iterations = max_iterations
         self.tool_registry = tool_registry or get_tool_registry()
@@ -477,7 +477,7 @@ class FunctionCallingAgent:
         tool_registry: ToolRegistry = None,
         verbose: bool = True
     ):
-        self.llm_api_url = llm_api_url or CUBE_API_URL
+        self.llm_api_url = llm_api_url or MODEL_API_URL
         self.model = model
         self.max_iterations = max_iterations
         self.tool_registry = tool_registry or get_tool_registry()
@@ -698,7 +698,7 @@ class PlanExecuteAgent:
         tool_registry: ToolRegistry = None,
         verbose: bool = True
     ):
-        self.llm_api_url = llm_api_url or CUBE_API_URL
+        self.llm_api_url = llm_api_url or MODEL_API_URL
         self.model = model
         self.tool_registry = tool_registry or get_tool_registry()
         self.verbose = verbose

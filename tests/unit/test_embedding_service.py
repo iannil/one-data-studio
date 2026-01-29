@@ -19,10 +19,10 @@ class TestEmbeddingService:
 
     def test_init_default_values(self):
         """测试默认初始化"""
-        from services.embedding import EmbeddingService, CUBE_API_URL, EMBEDDING_MODEL
+        from services.embedding import EmbeddingService, MODEL_API_URL, EMBEDDING_MODEL
 
         service = EmbeddingService()
-        assert service.api_url == CUBE_API_URL
+        assert service.api_url == MODEL_API_URL
         assert service.model == EMBEDDING_MODEL
 
     def test_init_custom_url(self):

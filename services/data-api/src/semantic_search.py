@@ -22,7 +22,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
 MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
 MILVUS_PORT = int(os.getenv("MILVUS_PORT", "19530"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
@@ -123,7 +123,7 @@ class EmbeddingService:
     """向量嵌入服务"""
 
     def __init__(self, api_url: str = None, model: str = None):
-        self.api_url = api_url or CUBE_API_URL
+        self.api_url = api_url or MODEL_API_URL
         self.model = model or EMBEDDING_MODEL
         self._cache: Dict[str, List[float]] = {}
 
@@ -232,7 +232,7 @@ class SemanticSearchService:
         """
         self.milvus_host = milvus_host or MILVUS_HOST
         self.milvus_port = milvus_port or MILVUS_PORT
-        self.api_url = api_url or CUBE_API_URL
+        self.api_url = api_url or MODEL_API_URL
         self.embedding_service = EmbeddingService(api_url)
         self.enabled = SEMANTIC_SEARCH_ENABLED
 

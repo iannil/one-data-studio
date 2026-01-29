@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def init_database():
     """初始化数据库：创建表和加载示例数据"""
-    logger.info("开始初始化 Bisheng 数据库...")
+    logger.info("开始初始化 Agent 数据库...")
 
     # 创建所有表
     logger.info("创建数据库表...")

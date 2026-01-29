@@ -19,11 +19,11 @@ ONE-DATA-STUDIO API 接口文档
 | 服务 | 环境 | URL |
 |------|------|-----|
 | Data API | 开发 | http://localhost:8080 |
-| Data API | 生产 | https://api.example.com/alldata |
+| Data API | 生产 | https://api.example.com/data |
 | Agent API | 开发 | http://localhost:8081 |
-| Agent API | 生产 | https://api.example.com/bisheng |
+| Agent API | 生产 | https://api.example.com/agent |
 | Model API | 开发 | http://localhost:8000 |
-| Model API | 生产 | https://api.example.com/cube |
+| Model API | 生产 | https://api.example.com/model |
 
 ### 认证方式
 

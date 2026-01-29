@@ -18,7 +18,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
 # 是否启用模拟 embedding（仅用于开发测试）
@@ -57,7 +57,7 @@ class EmbeddingService:
         Args:
             api_url: Embedding API 地址
         """
-        self.api_url = api_url or CUBE_API_URL
+        self.api_url = api_url or MODEL_API_URL
         self.model = EMBEDDING_MODEL
 
     async def embed_text(self, text: str) -> List[float]:

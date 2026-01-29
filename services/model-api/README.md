@@ -1,4 +1,4 @@
-# Cube API
+# Model API
 
 云原生 MLOps 平台 API 服务。
 
@@ -17,7 +17,7 @@
 | 变量名 | 描述 | 默认值 |
 |--------|------|--------|
 | `DATABASE_URL` | 数据库连接 URL | *必需* |
-| `KUBERNETES_NAMESPACE` | K8s 命名空间 | `one-data-cube` |
+| `KUBERNETES_NAMESPACE` | K8s 命名空间 | `one-data-model` |
 | `MODEL_STORAGE_PATH` | 模型存储路径 | `/models` |
 | `VLLM_ENDPOINT` | vLLM 服务端点 | `http://localhost:8000` |
 | `PORT` | 服务端口 | `8082` |
@@ -57,7 +57,7 @@ pytest tests/
 
 ## 与其他服务集成
 
-Cube API 与其他服务的集成：
+Model API 与其他服务的集成：
 
 - **Bisheng API**: 提供模型推理服务
 - **Alldata API**: 获取训练数据集

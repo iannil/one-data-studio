@@ -1,9 +1,9 @@
 /**
- * Alldata Service 单元测试
+ * Data Service 单元测试
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as data from './alldata';
+import * as data from './data';
 import { apiClient } from './api';
 
 // Mock apiClient
@@ -16,7 +16,7 @@ vi.mock('./api', () => ({
   },
 }));
 
-describe('Alldata Service', () => {
+describe('Data Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

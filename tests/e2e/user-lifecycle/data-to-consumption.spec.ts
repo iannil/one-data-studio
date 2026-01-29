@@ -34,7 +34,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 1: [数据管理员] 注册数据源', async ({ page }) => {
     await login(page, USERS.dataAdmin.username, USERS.dataAdmin.password);
-    await page.goto('/alldata/datasources');
+    await page.goto('/data/datasources');
 
     // 新增数据源
     await page.click('button:has-text("新增数据源")');
@@ -56,7 +56,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 2: [数据管理员] 执行元数据扫描', async ({ page }) => {
     await login(page, USERS.dataAdmin.username, USERS.dataAdmin.password);
-    await page.goto('/alldata/metadata');
+    await page.goto('/data/metadata');
 
     // 选择数据源并扫描
     await page.click(`text=mysql_${testId}`);
@@ -68,7 +68,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 3: [数据管理员] 敏感数据识别', async ({ page }) => {
     await login(page, USERS.dataAdmin.username, USERS.dataAdmin.password);
-    await page.goto('/alldata/sensitive');
+    await page.goto('/data/sensitive');
 
     // 扫描敏感数据
     await page.click('button:has-text("扫描敏感数据")');
@@ -77,7 +77,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 4: [数据工程师] 创建并执行 ETL 任务', async ({ page }) => {
     await login(page, USERS.dataEngineer.username, USERS.dataEngineer.password);
-    await page.goto('/alldata/etl');
+    await page.goto('/data/etl');
 
     // 创建 ETL 任务
     await page.click('button:has-text("新建任务")');
@@ -97,7 +97,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 5: [算法工程师] 训练模型', async ({ page }) => {
     await login(page, USERS.algoEngineer.username, USERS.algoEngineer.password);
-    await page.goto('/cube/training');
+    await page.goto('/model/training');
 
     // 创建训练任务
     await page.click('button:has-text("新建任务")');
@@ -114,7 +114,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 6: [算法工程师] 部署模型服务', async ({ page }) => {
     await login(page, USERS.algoEngineer.username, USERS.algoEngineer.password);
-    await page.goto('/cube/deployment');
+    await page.goto('/model/deployment');
 
     // 创建部署
     await page.click('button:has-text("新建服务")');
@@ -127,7 +127,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 
   test('步骤 7: [业务用户] 智能查询', async ({ page }) => {
     await login(page, USERS.businessUser.username, USERS.businessUser.password);
-    await page.goto('/bisheng/chat');
+    await page.goto('/agent/chat');
 
     // 创建新会话
     await page.click('button:has-text("新建会话")');
@@ -144,7 +144,7 @@ test.describe.serial('数据从采集到消费完整链路', () => {
 test.describe('权限验证', () => {
   test('业务用户不能访问数据源管理', async ({ page }) => {
     await login(page, USERS.businessUser.username, USERS.businessUser.password);
-    await page.goto('/alldata/datasources');
+    await page.goto('/data/datasources');
 
     // 应该显示无权限
     await expect(

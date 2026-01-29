@@ -15,7 +15,7 @@ from typing import Dict, Any, List
 logger = logging.getLogger(__name__)
 
 # 配置
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
 
 # 导入向量检索服务
 try:
@@ -383,7 +383,7 @@ class LLMNode(BaseNode):
         # 调用 LLM API
         try:
             response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
+                f"{MODEL_API_URL}/v1/chat/completions",
                 json={
                     "model": self.model,
                     "messages": [
@@ -682,7 +682,7 @@ class ThinkNode(BaseNode):
         # 调用 LLM
         try:
             response = requests.post(
-                f"{CUBE_API_URL}/v1/chat/completions",
+                f"{MODEL_API_URL}/v1/chat/completions",
                 json={
                     "model": self.model,
                     "messages": [

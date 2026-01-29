@@ -24,7 +24,7 @@ class TestOpenMetadataSync:
                 'tables': 50,
                 'columns': 500
             },
-            'service_created': 'alldata-service',
+            'service_created': 'data-service',
             'duration_seconds': 30
         })
 
@@ -42,7 +42,7 @@ class TestOpenMetadataSync:
         mock_sync_service.sync_to_openmetadata = AsyncMock(return_value={
             'success': True,
             'service_created': True,
-            'service_name': 'alldata-service',
+            'service_name': 'data-service',
             'service_type': 'mysql'
         })
 

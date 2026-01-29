@@ -8,10 +8,14 @@ echo "==> ONE-DATA-STUDIO 完整测试脚本"
 echo ""
 
 # 默认端口配置 (与 docker-compose.yml 一致)
-BISHENG_API_URL="${BISHENG_API_URL:-http://localhost:8000}"
-ALLDATA_API_URL="${ALLDATA_API_URL:-http://localhost:8001}"
-CUBE_API_URL="${CUBE_API_URL:-http://localhost:8002}"
+AGENT_API_URL="${AGENT_API_URL:-http://localhost:8000}"
+DATA_API_URL="${DATA_API_URL:-http://localhost:8001}"
+MODEL_API_URL="${MODEL_API_URL:-http://localhost:8002}"
 OPENAI_PROXY_URL="${OPENAI_PROXY_URL:-http://localhost:8003}"
+# 兼容旧名称
+BISHENG_API_URL="${BISHENG_API_URL:-${AGENT_API_URL}}"
+ALLDATA_API_URL="${ALLDATA_API_URL:-${DATA_API_URL}}"
+CUBE_API_URL="${CUBE_API_URL:-${MODEL_API_URL}}"
 
 # 测试计数器
 PASSED=0
@@ -40,24 +44,24 @@ test_endpoint() {
 
 # 1. 健康检查测试
 echo "==> 1. 健康检查测试"
-test_endpoint "Bisheng API 健康检查" "${BISHENG_API_URL}/health"
-test_endpoint "Alldata API 健康检查" "${ALLDATA_API_URL}/health"
-test_endpoint "Cube API 健康检查" "${CUBE_API_URL}/api/v1/health"
+test_endpoint "Agent API 健康检查" "${AGENT_API_URL}/health"
+test_endpoint "Data API 健康检查" "${DATA_API_URL}/health"
+test_endpoint "Model API 健康检查" "${MODEL_API_URL}/api/v1/health"
 test_endpoint "OpenAI Proxy 健康检查" "${OPENAI_PROXY_URL}/health"
 echo ""
 
 # 2. API 端点测试
 echo "==> 2. API 端点测试"
-test_endpoint "Bisheng 工作流列表" "${BISHENG_API_URL}/api/v1/workflows"
-test_endpoint "Bisheng 会话列表" "${BISHENG_API_URL}/api/v1/conversations"
-test_endpoint "Alldata 元数据列表" "${ALLDATA_API_URL}/api/v1/metadata/databases"
-test_endpoint "Alldata 数据集列表" "${ALLDATA_API_URL}/api/v1/datasets"
+test_endpoint "Agent 工作流列表" "${AGENT_API_URL}/api/v1/workflows"
+test_endpoint "Agent 会话列表" "${AGENT_API_URL}/api/v1/conversations"
+test_endpoint "Data 元数据列表" "${DATA_API_URL}/api/v1/metadata/databases"
+test_endpoint "Data 数据集列表" "${DATA_API_URL}/api/v1/datasets"
 echo ""
 
 # 3. 聊天功能测试
 echo "==> 3. 聊天功能测试"
 echo -n "  测试简单聊天... "
-response=$(curl -s -X POST "${BISHENG_API_URL}/api/v1/chat" \
+response=$(curl -s -X POST "${AGENT_API_URL}/api/v1/chat" \
     -H "Content-Type: application/json" \
     -d '{"message": "你好"}' 2>/dev/null || echo '{"error": true}')
 

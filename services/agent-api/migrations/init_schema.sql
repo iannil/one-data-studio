@@ -1,13 +1,13 @@
--- Bisheng API 数据库初始化脚本
+-- Agent API 数据库初始化脚本
 -- Sprint 4.2: 数据持久化
 -- Phase 6: Sprint 6.1-6.3 - 工作流执行、文档索引表
 
 -- 创建数据库（如果不存在）
-CREATE DATABASE IF NOT EXISTS one_data_bisheng
+CREATE DATABASE IF NOT EXISTS one_data_studio
     DEFAULT CHARACTER SET utf8mb4
     DEFAULT COLLATE utf8mb4_unicode_ci;
 
-USE one_data_bisheng;
+USE one_data_studio;
 
 -- 工作流表
 CREATE TABLE IF NOT EXISTS workflows (

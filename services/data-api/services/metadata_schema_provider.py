@@ -308,11 +308,11 @@ class SchemaProvider:
         # 延迟导入避免循环依赖
         if metadata_service is None:
             try:
-                from bisheng_api.services.alldata_integration import MetadataService
+                from services.metadata_integration import MetadataService
                 self.metadata = MetadataService()
             except ImportError:
-                from services.alldata_integration import MetadataService
-                self.metadata = MetadataService()
+                # 如果没有独立的元数据服务，使用本地实现
+                self.metadata = None
         else:
             self.metadata = metadata_service
 

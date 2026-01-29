@@ -1,9 +1,9 @@
 """
 元数据同步服务
 
-实现 Alldata 和 OpenMetadata 之间的双向元数据同步:
-- Alldata -> OpenMetadata: 将本地元数据推送到 OpenMetadata
-- OpenMetadata -> Alldata: 从 OpenMetadata 拉取元数据更新
+实现 Data 和 OpenMetadata 之间的双向元数据同步:
+- Data -> OpenMetadata: 将本地元数据推送到 OpenMetadata
+- OpenMetadata -> Data: 从 OpenMetadata 拉取元数据更新
 - 增量同步: 检测并同步变更部分
 - 自定义属性: 支持扩展属性同步
 - 敏感标签: 完整的敏感数据标签映射
@@ -66,7 +66,7 @@ class SyncResult:
 class MetadataSyncService:
     """元数据同步服务"""
 
-    # Alldata 数据类型到 OpenMetadata 数据类型的映射
+    # Data 数据类型到 OpenMetadata 数据类型的映射
     TYPE_MAPPING = {
         "varchar": "VARCHAR",
         "char": "CHAR",
@@ -125,7 +125,7 @@ class MetadataSyncService:
         """
         self.config = config or get_config()
         self.client = client or get_client()
-        self._service_name = "alldata-service"
+        self._service_name = "data-service"
 
     def is_available(self) -> bool:
         """检查同步服务是否可用"""

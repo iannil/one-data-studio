@@ -10,7 +10,7 @@
 
 ```mermaid
 graph TB
-    subgraph "L4 应用编排层 (Bisheng)"
+    subgraph "L4 应用编排层 (Agent)"
         B1[提示词管理]
         B2[知识库]
         B3[应用管理]
@@ -18,7 +18,7 @@ graph TB
         B5[SFT微调]
     end
 
-    subgraph "L3 算法引擎层 (Cube Studio)"
+    subgraph "L3 算法引擎层 (Model)"
         C1[Notebook]
         C2[实验管理]
         C3[模型管理]
@@ -32,7 +32,7 @@ graph TB
         C11[SQL Lab]
     end
 
-    subgraph "L2 数据底座层 (Alldata)"
+    subgraph "L2 数据底座层 (Data)"
         A1[数据源]
         A2[ETL]
         A3[数据质量]
@@ -62,9 +62,9 @@ graph TB
 | 文件 | 描述 | 测试数量 |
 |------|------|---------|
 | `core-pages.spec.ts` | 核心页面测试 (首页、登录、数据集、文档、聊天、工作流等) | 30+ |
-| `cube-pages.spec.ts` | Cube Studio MLOps 页面测试 | 35+ |
-| `alldata-pages.spec.ts` | Alldata DataOps 页面测试 | 45+ |
-| `bisheng-pages.spec.ts` | Bisheng LLMOps 页面测试 | 25+ |
+| `model-pages.spec.ts` | Model MLOps 页面测试 | 35+ |
+| `data-pages.spec.ts` | Data DataOps 页面测试 | 45+ |
+| `agent-pages.spec.ts` | Agent LLMOps 页面测试 | 25+ |
 | `admin-pages.spec.ts` | 管理后台页面测试 | 25+ |
 | `acceptance-test.spec.ts` | 综合验收测试 | 10+ |
 | `chat.spec.ts` | 聊天功能详细测试 | 15+ |
@@ -92,11 +92,14 @@ npm test
 # 核心页面
 npm run test:core
 
-# Cube Studio
-npm run test:cube
+# Model
+npm run test:model
 
-# Alldata
-npm run test:alldata
+# Data
+npm run test:data
+
+# Agent
+npm run test:agent
 
 # Bisheng
 npm run test:bisheng

@@ -31,8 +31,8 @@ class TestFullLifecycleE2E:
     def config(self) -> Dict[str, str]:
         """测试配置"""
         return {
-            "data_api_url": os.getenv("ALDATA_API_URL", "http://localhost:8080"),
-            "agent_api_url": os.getenv("BISHENG_API_URL", "http://localhost:8000"),
+            "data_api_url": os.getenv("DATA_API_URL") or os.getenv("ALLDATA_API_URL", "http://localhost:8080"),
+            "agent_api_url": os.getenv("AGENT_API_URL") or os.getenv("BISHENG_API_URL", "http://localhost:8000"),
             "openai_proxy_url": os.getenv("OPENAI_PROXY_URL", "http://localhost:8001"),
             "test_database": os.getenv("TEST_DATABASE", "test_dw"),
         }
@@ -591,12 +591,12 @@ class TestSmokeE2E:
     """冒烟测试 - 快速验证关键功能"""
 
     def test_data_api_health(self, config):
-        """测试 Alldata API 健康状态"""
+        """测试 Data API 健康状态"""
         response = requests.get(f"{config['data_api_url']}/health")
         assert response.status_code == 200
 
     def test_agent_api_health(self, config):
-        """测试 Bisheng API 健康状态"""
+        """测试 Agent API 健康状态"""
         response = requests.get(f"{config['agent_api_url']}/health")
         assert response.status_code == 200
 
@@ -607,11 +607,11 @@ class TestSmokeE2E:
 
     def test_api_versions(self, config):
         """测试 API 版本端点"""
-        alldata_response = requests.get(f"{config['data_api_url']}/api/version")
-        assert alldata_response.status_code == 200
+        data_response = requests.get(f"{config['data_api_url']}/api/version")
+        assert data_response.status_code == 200
 
-        bisheng_response = requests.get(f"{config['agent_api_url']}/api/version")
-        assert bisheng_response.status_code == 200
+        agent_response = requests.get(f"{config['agent_api_url']}/api/version")
+        assert agent_response.status_code == 200
 
 
 @pytest.mark.performance

@@ -24,34 +24,34 @@ metadata:
     pod-security.kubernetes.io/enforce: baseline
 
 ---
-# Alldata 平台命名空间
+# Data 平台命名空间
 apiVersion: v1
 kind: Namespace
 metadata:
   name: one-data-data
   labels:
     name: one-data-data
-    app: alldata
+    app: data
     istio-injection: enabled
 
 ---
-# Cube Studio 平台命名空间
+# Model 平台命名空间
 apiVersion: v1
 kind: Namespace
 metadata:
   name: one-data-model
   labels:
     name: one-data-model
-    app: cube-studio
+    app: model
     istio-injection: enabled
 
 ---
-# Bisheng 平台命名空间
+# Agent 平台命名空间
 apiVersion: v1
 kind: Namespace
 metadata:
   name: one-data-agent
   labels:
     name: one-data-agent
-    app: bisheng
+    app: agent
     istio-injection: enabled

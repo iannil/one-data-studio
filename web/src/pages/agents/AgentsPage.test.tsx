@@ -7,7 +7,7 @@ import AgentsPage from './AgentsPage';
 import * as agentService from '@/services/agent-service';
 
 // Mock 服务
-vi.mock('@/services/bisheng', () => ({
+vi.mock('@/services/agent-service', () => ({
   default: {
     listTools: vi.fn(),
     getToolSchemas: vi.fn(),

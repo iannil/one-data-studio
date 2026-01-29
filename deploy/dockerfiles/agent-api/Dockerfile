@@ -1,4 +1,4 @@
-# Bisheng API Dockerfile
+# Agent API Dockerfile
 # Sprint 1.3 + Sprint 3.1: 添加 JWT 认证
 # 多阶段构建 - 减少镜像体积和攻击面
 
@@ -10,7 +10,7 @@ FROM python:3.10.14-slim AS builder
 WORKDIR /build
 
 # 复制依赖文件
-COPY services/bisheng-api/requirements.txt .
+COPY services/agent-api/requirements.txt .
 
 # 创建虚拟环境并安装依赖
 RUN python -m venv /opt/venv
@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.10.14-slim AS runtime
 
 # Image labels for traceability
-LABEL org.opencontainers.image.title="Bisheng API"
+LABEL org.opencontainers.image.title="Agent API"
 LABEL org.opencontainers.image.description="ONE-DATA-STUDIO LLMOps Application Orchestration API"
 LABEL org.opencontainers.image.version="1.1.0"
 LABEL org.opencontainers.image.vendor="ONE-DATA-STUDIO"
@@ -37,7 +37,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY services/shared/ /app/shared/
 
 # 复制应用代码（包含所有模块）
-COPY services/bisheng-api/ /app/
+COPY services/agent-api/ /app/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

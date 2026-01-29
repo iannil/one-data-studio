@@ -46,7 +46,7 @@ class DatabaseManager:
         db_port = int(os.getenv('MYSQL_PORT', '3306'))
         db_user = os.getenv('MYSQL_USER', 'one_data')
         db_password = os.getenv('MYSQL_PASSWORD')
-        db_name = os.getenv('MYSQL_DATABASE', 'one_data_alldata')
+        db_name = os.getenv('MYSQL_DATABASE', 'one_data_studio')
 
         # 检查必需的凭据
         if not db_password:

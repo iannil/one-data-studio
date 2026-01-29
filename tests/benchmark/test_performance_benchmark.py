@@ -26,9 +26,9 @@ import requests
 logger = logging.getLogger(__name__)
 
 # 测试配置
-BISHENG_URL = os.getenv("TEST_BISHENG_URL", "http://localhost:8081")
-ALLDATA_URL = os.getenv("TEST_ALLDATA_URL", "http://localhost:8082")
-CUBE_URL = os.getenv("TEST_CUBE_URL", "http://localhost:8083")
+AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_BISHENG_URL", "http://localhost:8081"))
+DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_ALLDATA_URL", "http://localhost:8082"))
+MODEL_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {

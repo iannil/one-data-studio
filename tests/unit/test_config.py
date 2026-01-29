@@ -37,7 +37,7 @@ class TestDatabaseConfig:
         assert config.host == "mysql.one-data-infra.svc.cluster.local"
         assert config.port == 3306
         assert config.user == "one_data"
-        assert config.database == "one_data_bisheng"
+        assert config.database == "one_data_studio"
         assert config.pool_size == 10
         assert config.max_overflow == 20
 

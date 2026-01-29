@@ -7,7 +7,7 @@ import WorkflowEditorPage from './WorkflowEditorPage';
 import * as agentServiceService from '../../services/agent-service';
 
 // Mock 服务
-vi.mock('../../services/bisheng', () => ({
+vi.mock('../../services/agent-service', () => ({
   getWorkflow: vi.fn(),
   createWorkflow: vi.fn(),
   updateWorkflow: vi.fn(),
@@ -228,7 +228,7 @@ describe('WorkflowEditorPage 保存功能', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bishengService.createWorkflow).mockResolvedValue({
+    vi.mocked(agentService.createWorkflow).mockResolvedValue({
       code: 0,
       data: { workflow_id: 'wf-new' },
     });
@@ -245,7 +245,7 @@ describe('WorkflowEditorPage 保存功能', () => {
     await user.click(screen.getByRole('button', { name: /保存/i }));
 
     await waitFor(() => {
-      expect(bishengService.createWorkflow).toHaveBeenCalled();
+      expect(agentService.createWorkflow).toHaveBeenCalled();
     });
   });
 });

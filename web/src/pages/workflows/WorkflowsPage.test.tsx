@@ -5,7 +5,7 @@ import WorkflowsPage from './WorkflowsPage';
 import * as agentService from '@/services/agent-service';
 
 // Mock 服务
-vi.mock('@/services/bisheng', () => ({
+vi.mock('@/services/agent-service', () => ({
   default: {
     getWorkflows: vi.fn(),
     createWorkflow: vi.fn(),

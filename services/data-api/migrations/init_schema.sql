@@ -1,12 +1,12 @@
--- Alldata API 数据库初始化脚本
+-- Data API 数据库初始化脚本
 -- 用于 Sprint 1.1 持久化改造
 
 -- 创建数据库（如果不存在）
-CREATE DATABASE IF NOT EXISTS one_data_alldata
+CREATE DATABASE IF NOT EXISTS one_data_studio
     DEFAULT CHARACTER SET utf8mb4
     DEFAULT COLLATE utf8mb4_unicode_ci;
 
-USE one_data_alldata;
+USE one_data_studio;
 
 -- 数据集表
 CREATE TABLE IF NOT EXISTS datasets (

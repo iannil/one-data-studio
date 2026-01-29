@@ -1,10 +1,10 @@
-"""Initial migration for alldata-api
+"""Initial migration for data-api
 
 Revision ID: 001_initial
 Revises:
 Create Date: 2026-01-24
 
-ONE-DATA-STUDIO - Alldata API Initial Schema
+ONE-DATA-STUDIO - Data API Initial Schema
 """
 from typing import Sequence, Union
 

@@ -1,5 +1,5 @@
 """
-Alembic Environment Configuration for Bisheng-API
+Alembic Environment Configuration for Agent-API
 ONE-DATA-STUDIO Database Migration Management
 """
 
@@ -40,7 +40,7 @@ def get_url():
     """Get database URL from environment variables."""
     return os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://bisheng:bisheng@localhost:3306/bisheng"
+        "mysql+pymysql://agent:agent@localhost:3306/one_data_studio"
     )
 
 

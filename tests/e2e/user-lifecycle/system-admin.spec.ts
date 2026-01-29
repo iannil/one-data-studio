@@ -12,7 +12,7 @@ import { navigateToUserManagement, generateTestUserData } from '../helpers/user-
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = process.env.API_BASE || 'http://localhost:8080';
 const ADMIN_API = process.env.ADMIN_API || 'http://localhost:8004';
-const BISHENG_API = process.env.BISHENG_API || 'http://localhost:8000';
+const AGENT_API = process.env.AGENT_API || process.env.BISHENG_API || 'http://localhost:8000';
 
 test.describe('系统管理员完整流程', () => {
   let adminToken: string;

@@ -59,63 +59,63 @@ export const metadataApi = {
    * 获取元数据表列表
    */
   getTables: async (params?: { page?: number; page_size?: number; keyword?: string }) => {
-    return api.get('/alldata/metadata/tables', { params });
+    return api.get('/data/metadata/tables', { params });
   },
 
   /**
    * 获取表详情
    */
   getTableDetail: async (tableId: string) => {
-    return api.get(`/alldata/metadata/tables/${tableId}`);
+    return api.get(`/data/metadata/tables/${tableId}`);
   },
 
   /**
    * 获取表的列信息
    */
   getTableColumns: async (tableId: string) => {
-    return api.get(`/alldata/metadata/tables/${tableId}/columns`);
+    return api.get(`/data/metadata/tables/${tableId}/columns`);
   },
 
   /**
    * 获取表的关系
    */
   getTableRelations: async (tableId: string) => {
-    return api.get(`/alldata/metadata/tables/${tableId}/relations`);
+    return api.get(`/data/metadata/tables/${tableId}/relations`);
   },
 
   /**
    * 获取元数据图谱数据
    */
   getGraphData: async (params?: { center_table_id?: string; depth?: number }) => {
-    return api.get('/alldata/metadata/graph', { params });
+    return api.get('/data/metadata/graph', { params });
   },
 
   /**
    * 搜索表
    */
   searchTables: async (keyword: string) => {
-    return api.get('/alldata/metadata/search', { params: { keyword } });
+    return api.get('/data/metadata/search', { params: { keyword } });
   },
 
   /**
    * 获取数据血缘
    */
   getLineage: async (tableId: string) => {
-    return api.get(`/alldata/metadata/tables/${tableId}/lineage`);
+    return api.get(`/data/metadata/tables/${tableId}/lineage`);
   },
 
   /**
    * 获取 OpenMetadata 集成状态
    */
   getOpenMetadataStatus: async () => {
-    return api.get('/alldata/openmetadata/status');
+    return api.get('/data/openmetadata/status');
   },
 
   /**
    * 触发 OpenMetadata 元数据同步
    */
   syncToOpenMetadata: async (params?: { database_name?: string; table_names?: string[] }) => {
-    return api.post('/alldata/openmetadata/sync', params || {});
+    return api.post('/data/openmetadata/sync', params || {});
   },
 
   /**
@@ -127,14 +127,14 @@ export const metadataApi = {
     upstream_depth?: number;
     downstream_depth?: number;
   }) => {
-    return api.get('/alldata/openmetadata/lineage', { params });
+    return api.get('/data/openmetadata/lineage', { params });
   },
 
   /**
    * 通过 OpenMetadata 搜索元数据
    */
   searchOpenMetadata: async (params: { q: string; limit?: number; offset?: number }) => {
-    return api.get('/alldata/openmetadata/search', { params });
+    return api.get('/data/openmetadata/search', { params });
   },
 };
 

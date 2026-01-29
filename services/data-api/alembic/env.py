@@ -48,7 +48,7 @@ def get_url():
     db_port = os.getenv("MYSQL_PORT", "3306")
     db_user = os.getenv("MYSQL_USER", "root")
     db_password = os.getenv("MYSQL_PASSWORD")
-    db_name = os.getenv("MYSQL_DATABASE", "alldata")
+    db_name = os.getenv("MYSQL_DATABASE", "one_data_studio")
 
     if not db_password:
         raise ValueError(

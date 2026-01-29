@@ -74,9 +74,9 @@ spec:
   secretName: data-api-tls
   duration: 2160h  # 90 days
   renewBefore: 720h  # 30 days before expiration
-  commonName: alldata.example.com
+  commonName: data.example.com
   dnsNames:
-  - alldata.example.com
+  - data.example.com
   - data-api.one-data-data.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod
@@ -93,9 +93,9 @@ spec:
   secretName: agent-api-tls
   duration: 2160h
   renewBefore: 720h
-  commonName: bisheng.example.com
+  commonName: agent.example.com
   dnsNames:
-  - bisheng.example.com
+  - agent.example.com
   - agent-api.one-data-agent.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod

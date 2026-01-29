@@ -273,11 +273,11 @@ test.describe('用户删除阶段', () => {
     const user = await userManager.createUser(userData);
 
     // 在各服务中创建资源
-    const bishengResponse = await request.post(`${process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations`, {
+    const agentResponse = await request.post(`${process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations`, {
       data: { title: 'Test', user_id: user.id },
     });
 
-    const alldataResponse = await request.post(`${process.env.ALLDATA_API_URL || 'http://localhost:8001'}/api/v1/datasets`, {
+    const dataResponse = await request.post(`${process.env.DATA_API_URL || process.env.ALLDATA_API_URL || 'http://localhost:8001'}/api/v1/datasets`, {
       data: { name: 'Test', user_id: user.id },
     });
 
@@ -285,11 +285,11 @@ test.describe('用户删除阶段', () => {
     await userManager.deleteUser(user.id);
 
     // 验证各服务中的资源都已处理
-    if (bishengResponse.ok()) {
-      const bishengJson = await bishengResponse.json();
-      const conversationId = bishengJson.data?.id;
+    if (agentResponse.ok()) {
+      const agentJson = await agentResponse.json();
+      const conversationId = agentJson.data?.id;
       if (conversationId) {
-        const checkResponse = await request.get(`${process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations/${conversationId}`);
+        const checkResponse = await request.get(`${process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations/${conversationId}`);
         // 资源可能被删除或标记为已删除
         expect([404, 403, 410]).toContain(checkResponse.status());
       }
@@ -304,7 +304,7 @@ test.describe('用户删除阶段', () => {
     const user = await userManager.createUser(userData);
 
     // 创建一个运行中的任务（模拟）
-    const taskResponse = await request.post(`${process.env.CUBE_API_URL || 'http://localhost:8002'}/api/v1/training/jobs`, {
+    const taskResponse = await request.post(`${process.env.MODEL_API_URL || process.env.CUBE_API_URL || 'http://localhost:8002'}/api/v1/training/jobs`, {
       data: {
         name: 'Running Job',
         status: 'running',

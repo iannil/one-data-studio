@@ -562,7 +562,7 @@ class KafkaStreamService:
 
         return KafkaConsumerConfig(
             bootstrap_servers=connection_config.get("bootstrap_servers", "localhost:9092"),
-            group_id=connection_config.get("group_id", "alldata-consumer-group"),
+            group_id=connection_config.get("group_id", "data-consumer-group"),
             topics=connection_config.get("topics", []),
             auto_offset_reset=OffsetReset(connection_config.get("auto_offset_reset", "latest")),
             enable_auto_commit=connection_config.get("enable_auto_commit", True),

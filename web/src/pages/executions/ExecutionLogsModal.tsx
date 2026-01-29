@@ -3,7 +3,7 @@ import { Modal, Spin, Empty, Tag, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng, { type ExecutionLog } from '@/services/agent-service';
+import agentService, { type ExecutionLog } from '@/services/agent-service';
 
 const { Text } = Typography;
 

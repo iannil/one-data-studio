@@ -38,7 +38,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleRetryConfig } from '@/services/agent-service';
+import agentService, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleRetryConfig } from '@/services/agent-service';
 
 const { Option } = Select;
 

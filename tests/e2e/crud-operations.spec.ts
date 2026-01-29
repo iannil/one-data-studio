@@ -345,13 +345,13 @@ test.describe('CRUD - 提示词模板 (Bisheng)', () => {
   });
 
   test('访问提示词模板页面', async ({ page }) => {
-    await page.goto(`${BASE_URL}/bisheng/prompts`);
+    await page.goto(`${BASE_URL}/agent/prompts`);
     await expect(page.locator('body')).toBeVisible();
     await waitForPageLoad(page);
   });
 });
 
-test.describe('CRUD - 知识库管理 (Bisheng)', () => {
+test.describe('CRUD - 知识库管理 (Agent)', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);
@@ -395,7 +395,7 @@ test.describe('CRUD - 知识库管理 (Bisheng)', () => {
   });
 
   test('访问知识库页面', async ({ page }) => {
-    await page.goto(`${BASE_URL}/bisheng/knowledge`);
+    await page.goto(`${BASE_URL}/agent/knowledge`);
     await expect(page.locator('body')).toBeVisible();
     await waitForPageLoad(page);
   });
@@ -525,13 +525,13 @@ test.describe('CRUD - 数据源管理 (Alldata)', () => {
   });
 
   test('访问数据源页面', async ({ page }) => {
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    await page.goto(`${BASE_URL}/data/datasources`);
     await expect(page.locator('body')).toBeVisible();
     await waitForPageLoad(page);
   });
 
   test('点击新建数据源按钮', async ({ page }) => {
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    await page.goto(`${BASE_URL}/data/datasources`);
     await waitForPageLoad(page);
 
     const createButton = page.locator('button:has-text("新建"), button:has-text("添加数据源"), button:has-text("创建")').first();

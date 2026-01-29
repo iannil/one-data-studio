@@ -481,7 +481,7 @@ export function useModels() {
     queryKey: QueryKeys.models(),
     queryFn: async () => {
       return await apiClient.get<{ data: Model[]; object: string }>('/v1/models', {
-        baseURL: import.meta.env.VITE_CUBE_API_URL || '',
+        baseURL: import.meta.env.VITE_API_MODEL_URL || import.meta.env.VITE_CUBE_API_URL || '',
       });
     },
     staleTime: CacheTime.LONG,

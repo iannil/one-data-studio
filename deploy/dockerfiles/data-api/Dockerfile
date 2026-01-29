@@ -1,4 +1,4 @@
-# Alldata API - 持久化版本
+# Data API - 持久化版本
 # Sprint 1.1: MySQL + SQLAlchemy 实现
 # 多阶段构建 - 减少镜像体积和攻击面
 
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
-COPY services/alldata-api/requirements.txt .
+COPY services/data-api/requirements.txt .
 
 # 创建虚拟环境并安装依赖
 RUN python -m venv /opt/venv
@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.10.14-slim AS runtime
 
 # Image labels for traceability
-LABEL org.opencontainers.image.title="Alldata API"
+LABEL org.opencontainers.image.title="Data API"
 LABEL org.opencontainers.image.description="ONE-DATA-STUDIO Data Governance API"
 LABEL org.opencontainers.image.version="2.0.0"
 LABEL org.opencontainers.image.vendor="ONE-DATA-STUDIO"
@@ -49,7 +49,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY services/shared/ /app/shared/
 
 # 复制应用代码（完整目录结构）
-COPY services/alldata-api/ /app/
+COPY services/data-api/ /app/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

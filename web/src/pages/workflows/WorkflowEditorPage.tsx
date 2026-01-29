@@ -191,7 +191,7 @@ function WorkflowEditorPage() {
   const loadWorkflow = async (id: string) => {
     setLoading(true);
     try {
-      const response = await bishengService.getWorkflow(id);
+      const response = await agentService.getWorkflow(id);
       if (response.code === 0 && response.data) {
         const wf = response.data;
         setWorkflowName(wf.name || '');
@@ -251,7 +251,7 @@ function WorkflowEditorPage() {
 
       if (isCreateMode) {
         // 创建新工作流
-        const response = await bishengService.createWorkflow({
+        const response = await agentService.createWorkflow({
           name: workflowName || '未命名工作流',
           description: workflowDescription,
           type: 'custom',
@@ -264,7 +264,7 @@ function WorkflowEditorPage() {
         }
       } else {
         // 更新现有工作流
-        const response = await bishengService.updateWorkflow(workflowId ?? '', {
+        const response = await agentService.updateWorkflow(workflowId ?? '', {
           name: workflowName || '未命名工作流',
           description: workflowDescription,
           type: 'custom',
@@ -290,7 +290,7 @@ function WorkflowEditorPage() {
     }
 
     try {
-      const response = await bishengService.startWorkflow(workflowId ?? '', {
+      const response = await agentService.startWorkflow(workflowId ?? '', {
         inputs: { query: '测试查询' },
       });
       if (response.code === 0) {

@@ -23,7 +23,7 @@ const apiLatency = new Trend('api_latency', true);
 
 // 环境配置
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
-const ALLDATA_URL = __ENV.ALLDATA_URL || 'http://localhost:8080';
+const DATA_URL = __ENV.DATA_URL || __ENV.ALLDATA_URL || 'http://localhost:8080';
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 
 // 测试配置

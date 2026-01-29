@@ -2,7 +2,7 @@
 OpenLineage 血缘集成服务
 
 实现与 OpenMetadata 的血缘关系集成:
-- 将 Alldata LineageNode/LineageEdge 转换为 OpenLineage 格式
+- 将 Data LineageNode/LineageEdge 转换为 OpenLineage 格式
 - 推送血缘关系到 OpenMetadata
 - 从 OpenMetadata 获取血缘图谱
 - 导出 DAG 可视化（Mermaid、JSON 等）
@@ -140,7 +140,7 @@ class OpenLineageService:
         """
         self.config = config or get_config()
         self.client = client or get_client()
-        self._service_name = "alldata-service"
+        self._service_name = "data-service"
 
     def is_available(self) -> bool:
         """检查服务是否可用"""
@@ -369,7 +369,7 @@ class OpenLineageService:
 
         elif node_type == "job":
             # Pipeline FQN
-            return f"alldata-pipelines.{lineage_node.name}"
+            return f"data-pipelines.{lineage_node.name}"
 
         return None
 

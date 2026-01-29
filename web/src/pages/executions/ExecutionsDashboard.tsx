@@ -28,7 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import bisheng, { type WorkflowExecution, type Workflow } from '@/services/agent-service';
+import agentService, { type WorkflowExecution, type Workflow } from '@/services/agent-service';
 import ExecutionLogsModal from './ExecutionLogsModal';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 

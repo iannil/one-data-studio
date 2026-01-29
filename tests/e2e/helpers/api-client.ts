@@ -13,7 +13,7 @@ const DATA_API_URL = process.env.DATA_API_URL || 'http://localhost:8001';
 const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:8002';
 const OPENAI_API_URL = process.env.OPENAI_API_URL || 'http://localhost:8003';
 
-// 兼容旧的环境变量名
+// 兼容旧的环境变量名 (已废弃，建议使用新的环境变量名)
 const BISHENG_API_URL = process.env.BISHENG_API_URL || AGENT_API_URL;
 const ALLDATA_API_URL = process.env.ALLDATA_API_URL || DATA_API_URL;
 const CUBE_API_URL = process.env.CUBE_API_URL || MODEL_API_URL;

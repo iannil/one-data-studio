@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 # 共享常量
 # ---------------------------------------------------------------------------
 
-CUBE_API_URL = "http://localhost:8083"
-EXPERIMENTS_ENDPOINT = f"{CUBE_API_URL}/api/v1/experiments"
-TRAINING_JOBS_ENDPOINT = f"{CUBE_API_URL}/api/v1/training-jobs"
+MODEL_API_URL = "http://localhost:8083"
+EXPERIMENTS_ENDPOINT = f"{MODEL_API_URL}/api/v1/experiments"
+TRAINING_JOBS_ENDPOINT = f"{MODEL_API_URL}/api/v1/training-jobs"
 
 
 # ===========================================================================
@@ -54,7 +54,7 @@ def mock_k8s_client():
     # 默认：创建 Job 成功
     mock_job = MagicMock()
     mock_job.metadata.name = "training-job-test-001"
-    mock_job.metadata.namespace = "cube-studio"
+    mock_job.metadata.namespace = "one-data-model"
     mock_job.status.active = 1
     mock_job.status.succeeded = None
     mock_job.status.failed = None
@@ -88,7 +88,7 @@ def mock_k8s_client():
     # 列出 Pod
     mock_pod = MagicMock()
     mock_pod.metadata.name = "training-job-test-001-worker-0"
-    mock_pod.metadata.namespace = "cube-studio"
+    mock_pod.metadata.namespace = "one-data-model"
     mock_pod.status.phase = "Running"
     mock_pod.spec.containers = [MagicMock()]
     mock_pod.spec.containers[0].resources.limits = {
@@ -151,7 +151,7 @@ def mock_training_job():
     job.job_type = "training"
     job.status = "pending"
     job.dataset_id = f"ds-{uuid.uuid4().hex[:8]}"
-    job.dataset_path = "s3://cube-studio/datasets/train.jsonl"
+    job.dataset_path = "s3://one-data-model/datasets/train.jsonl"
     job.framework = "pytorch"
     job.base_model = "Qwen/Qwen2-7B"
     job.progress = 0.0
@@ -236,7 +236,7 @@ def sample_training_config():
         "framework": "pytorch",
         "base_model": "Qwen/Qwen2-7B",
         "dataset_id": f"ds-{uuid.uuid4().hex[:8]}",
-        "dataset_path": "s3://cube-studio/datasets/train.jsonl",
+        "dataset_path": "s3://one-data-model/datasets/train.jsonl",
         "hyperparameters": {
             "learning_rate": 2e-5,
             "batch_size": 16,
@@ -368,9 +368,9 @@ class TestSubmitDistributedTraining:
             "kind": "Job",
             "metadata": {
                 "name": job_id,
-                "namespace": "cube-studio",
+                "namespace": "one-data-model",
                 "labels": {
-                    "app": "cube-studio",
+                    "app": "one-data-model",
                     "job-type": "training",
                     "experiment": sample_training_config["name"],
                 },
@@ -380,7 +380,7 @@ class TestSubmitDistributedTraining:
                     "spec": {
                         "containers": [{
                             "name": "trainer",
-                            "image": "cube-studio/trainer:latest",
+                            "image": "one-data-model/trainer:latest",
                             "resources": {
                                 "limits": {
                                     "nvidia.com/gpu": str(sample_training_config["resources"]["gpu_count"]),
@@ -403,18 +403,18 @@ class TestSubmitDistributedTraining:
 
         # 调用 K8s API 创建 Job
         result = batch_api.create_namespaced_job(
-            namespace="cube-studio",
+            namespace="one-data-model",
             body=job_body,
         )
 
         # 断言：K8s Job 成功创建
         batch_api.create_namespaced_job.assert_called_once()
         assert result.metadata.name == "training-job-test-001"
-        assert result.metadata.namespace == "cube-studio"
+        assert result.metadata.namespace == "one-data-model"
 
         # 断言：调用时传入了正确的命名空间
         call_args = batch_api.create_namespaced_job.call_args
-        assert call_args.kwargs["namespace"] == "cube-studio"
+        assert call_args.kwargs["namespace"] == "one-data-model"
 
         logger.info("AE-TR-001: K8s Job 创建成功, job_name=%s", result.metadata.name)
 
@@ -481,7 +481,7 @@ class TestSubmitDistributedTraining:
         batch_api = mock_k8s_client.batch_api
 
         batch_api.create_namespaced_job(
-            namespace="cube-studio",
+            namespace="one-data-model",
             body={"spec": {"template": {"spec": {"containers": [{
                 "resources": {
                     "limits": {
@@ -556,15 +556,15 @@ class TestLoRAFineTuning:
         ]
 
         job_body = {
-            "metadata": {"name": "lora-training-test", "namespace": "cube-studio"},
+            "metadata": {"name": "lora-training-test", "namespace": "one-data-model"},
             "spec": {"template": {"spec": {"containers": [{
                 "name": "trainer",
-                "image": "cube-studio/trainer:latest",
+                "image": "one-data-model/trainer:latest",
                 "env": env_vars,
             }]}}},
         }
 
-        result = batch_api.create_namespaced_job(namespace="cube-studio", body=job_body)
+        result = batch_api.create_namespaced_job(namespace="one-data-model", body=job_body)
 
         assert result is not None
         call_body = batch_api.create_namespaced_job.call_args.kwargs["body"]
@@ -607,7 +607,7 @@ class TestLoRAFineTuning:
         """LoRA 训练完成后输出路径应包含 adapter 标识"""
         mock_training_job.status = "completed"
         mock_training_job.output_model_path = (
-            f"s3://cube-studio/models/{mock_training_job.model_id}/lora-adapter/"
+            f"s3://one-data-model/models/{mock_training_job.model_id}/lora-adapter/"
         )
 
         assert "lora-adapter" in mock_training_job.output_model_path
@@ -648,10 +648,10 @@ class TestFullFineTuning:
         batch_api = mock_k8s_client.batch_api
 
         job_body = {
-            "metadata": {"name": "full-ft-test", "namespace": "cube-studio"},
+            "metadata": {"name": "full-ft-test", "namespace": "one-data-model"},
             "spec": {"template": {"spec": {"containers": [{
                 "name": "trainer",
-                "image": "cube-studio/trainer:latest",
+                "image": "one-data-model/trainer:latest",
                 "resources": {
                     "limits": {
                         "nvidia.com/gpu": str(full_finetune_config["resources"]["gpu_count"]),
@@ -665,7 +665,7 @@ class TestFullFineTuning:
             }]}}},
         }
 
-        result = batch_api.create_namespaced_job(namespace="cube-studio", body=job_body)
+        result = batch_api.create_namespaced_job(namespace="one-data-model", body=job_body)
         assert result is not None
 
         call_body = batch_api.create_namespaced_job.call_args.kwargs["body"]
@@ -707,7 +707,7 @@ class TestAutoMountTrainingData:
     def test_training_pod_has_data_volume_mount(self, mock_k8s_client):
         """训练 Pod 应包含数据卷挂载"""
         core_api = mock_k8s_client.core_api
-        pod_list = core_api.list_namespaced_pod(namespace="cube-studio", label_selector="job-type=training")
+        pod_list = core_api.list_namespaced_pod(namespace="one-data-model", label_selector="job-type=training")
 
         assert len(pod_list.items) > 0
         pod = pod_list.items[0]
@@ -727,7 +727,7 @@ class TestAutoMountTrainingData:
         core_api = mock_k8s_client.core_api
         pvc = core_api.read_namespaced_persistent_volume_claim(
             name="training-data-pvc",
-            namespace="cube-studio",
+            namespace="one-data-model",
         )
 
         assert pvc.status.phase == "Bound", "PVC 应处于 Bound 状态"
@@ -746,7 +746,7 @@ class TestAutoMountTrainingData:
         with patch.object(core_api, "connect_get_namespaced_pod_exec", return_value=mock_exec_response):
             result = core_api.connect_get_namespaced_pod_exec(
                 name="training-job-test-001-worker-0",
-                namespace="cube-studio",
+                namespace="one-data-model",
                 command=["ls", "/data/training/"],
                 container="trainer",
                 stdout=True,
@@ -820,7 +820,7 @@ class TestTrainingProgressMonitoring:
 
         logs = core_api.read_namespaced_pod_log(
             name="training-job-test-001-worker-0",
-            namespace="cube-studio",
+            namespace="one-data-model",
             container="trainer",
         )
 
@@ -890,13 +890,13 @@ class TestTrainingPauseResume:
 
         batch_api.patch_namespaced_job(
             name="training-job-test-001",
-            namespace="cube-studio",
+            namespace="one-data-model",
             body=patch_body,
         )
 
         batch_api.patch_namespaced_job.assert_called_once_with(
             name="training-job-test-001",
-            namespace="cube-studio",
+            namespace="one-data-model",
             body={"spec": {"suspend": True}},
         )
         assert mock_training_job.status == "paused"
@@ -915,7 +915,7 @@ class TestTrainingPauseResume:
 
         batch_api.patch_namespaced_job(
             name="training-job-test-001",
-            namespace="cube-studio",
+            namespace="one-data-model",
             body=patch_body,
         )
 
@@ -933,7 +933,7 @@ class TestTrainingPauseResume:
 
         # 验证 checkpoint 已保存
         saved_objects = mock_minio_storage.list_objects(
-            bucket_name="cube-studio",
+            bucket_name="one-data-model",
             prefix=f"checkpoints/{mock_training_job.job_id}/",
         )
 
@@ -999,7 +999,7 @@ class TestTrainingTermination:
 
         batch_api.delete_namespaced_job(
             name="training-job-test-001",
-            namespace="cube-studio",
+            namespace="one-data-model",
             propagation_policy="Background",
         )
 
@@ -1032,7 +1032,7 @@ class TestTrainingTermination:
         core_api.list_namespaced_pod.return_value = empty_pod_list
 
         pod_list = core_api.list_namespaced_pod(
-            namespace="cube-studio",
+            namespace="one-data-model",
             label_selector=f"job-name={mock_training_job.job_id}",
         )
 
@@ -1081,7 +1081,7 @@ class TestSaveModelWeights:
     @pytest.mark.integration
     def test_save_checkpoint_to_minio(self, mock_minio_storage, mock_training_job):
         """训练完成后应将模型权重保存到 MinIO"""
-        bucket = "cube-studio"
+        bucket = "one-data-model"
         checkpoint_path = f"checkpoints/{mock_training_job.job_id}/final/pytorch_model.bin"
 
         # 模拟保存 checkpoint
@@ -1103,7 +1103,7 @@ class TestSaveModelWeights:
     def test_checkpoint_metadata_recorded(self, mock_minio_storage, mock_training_job):
         """保存 checkpoint 后应能查询元数据"""
         stat = mock_minio_storage.stat_object(
-            bucket_name="cube-studio",
+            bucket_name="one-data-model",
             object_name=f"checkpoints/{mock_training_job.job_id}/final/pytorch_model.bin",
         )
 
@@ -1117,7 +1117,7 @@ class TestSaveModelWeights:
     def test_intermediate_checkpoints_saved(self, mock_minio_storage, mock_training_job):
         """训练过程中应保存中间 checkpoint"""
         objects = list(mock_minio_storage.list_objects(
-            bucket_name="cube-studio",
+            bucket_name="one-data-model",
             prefix=f"checkpoints/{mock_training_job.job_id}/",
         ))
 
@@ -1137,7 +1137,7 @@ class TestSaveModelWeights:
     @pytest.mark.integration
     def test_model_output_path_updated(self, mock_training_job, mock_db_session):
         """训练完成后数据库中的 output_model_path 应更新"""
-        expected_path = f"s3://cube-studio/checkpoints/{mock_training_job.job_id}/final/"
+        expected_path = f"s3://one-data-model/checkpoints/{mock_training_job.job_id}/final/"
         mock_training_job.output_model_path = expected_path
         mock_training_job.status = "completed"
 
@@ -1201,7 +1201,7 @@ class TestMultiNodeDistributedTraining:
         core_api.list_namespaced_pod.return_value = mock_pod_list
 
         pod_list = core_api.list_namespaced_pod(
-            namespace="cube-studio",
+            namespace="one-data-model",
             label_selector="job-name=training-job-test-001",
         )
 
@@ -1262,7 +1262,7 @@ class TestMultiNodeDistributedTraining:
 
         svc = core_api.read_namespaced_service(
             name="training-job-test-001-headless",
-            namespace="cube-studio",
+            namespace="one-data-model",
         )
 
         assert svc.spec.cluster_ip == "None", "应为 headless Service"
@@ -1291,7 +1291,7 @@ class TestModelEvaluation:
         eval_job.status = "pending"
         eval_job.model_id = mock_training_job.model_id
         eval_job.dataset_id = f"ds-eval-{uuid.uuid4().hex[:8]}"
-        eval_job.dataset_path = "s3://cube-studio/datasets/test.jsonl"
+        eval_job.dataset_path = "s3://one-data-model/datasets/test.jsonl"
         eval_job.base_model = mock_training_job.base_model
         eval_job.framework = mock_training_job.framework
 
@@ -1321,21 +1321,21 @@ class TestModelEvaluation:
         eval_body = {
             "metadata": {
                 "name": mock_evaluation_job.job_id,
-                "namespace": "cube-studio",
+                "namespace": "one-data-model",
                 "labels": {"job-type": "evaluation"},
             },
             "spec": {"template": {"spec": {"containers": [{
                 "name": "evaluator",
-                "image": "cube-studio/evaluator:latest",
+                "image": "one-data-model/evaluator:latest",
                 "env": [
-                    {"name": "MODEL_PATH", "value": f"s3://cube-studio/models/{mock_evaluation_job.model_id}/"},
+                    {"name": "MODEL_PATH", "value": f"s3://one-data-model/models/{mock_evaluation_job.model_id}/"},
                     {"name": "EVAL_DATASET", "value": mock_evaluation_job.dataset_path},
                     {"name": "JOB_TYPE", "value": "evaluation"},
                 ],
             }]}}},
         }
 
-        result = batch_api.create_namespaced_job(namespace="cube-studio", body=eval_body)
+        result = batch_api.create_namespaced_job(namespace="one-data-model", body=eval_body)
         assert result is not None
         batch_api.create_namespaced_job.assert_called_once()
 
@@ -1369,7 +1369,7 @@ class TestModelEvaluation:
         model_path = f"checkpoints/{mock_evaluation_job.model_id}/final/pytorch_model.bin"
 
         stat = mock_minio_storage.stat_object(
-            bucket_name="cube-studio",
+            bucket_name="one-data-model",
             object_name=model_path,
         )
 

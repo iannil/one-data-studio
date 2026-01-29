@@ -10,7 +10,7 @@ data:
   TEMP_DIR: "/tmp/ocr"
 
   # 数据库配置（连接字符串从Secret获取）
-  DB_NAME: "alldata"
+  DB_NAME: "one_data_studio"
 
   # Redis配置
   REDIS_DB: "0"

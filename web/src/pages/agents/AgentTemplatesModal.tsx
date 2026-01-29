@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import bisheng, { type AgentTemplate, type CreateAgentTemplateRequest } from '@/services/agent-service';
+import agentService, { type AgentTemplate, type CreateAgentTemplateRequest } from '@/services/agent-service';
 
 const { TextArea } = Input;
 const { Option } = Select;

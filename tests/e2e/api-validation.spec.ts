@@ -95,7 +95,7 @@ test.describe('API响应验证 - Alldata 数据治理', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/alldata/datasources`);
+    await page.goto(`${BASE_URL}/data/datasources`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -116,7 +116,7 @@ test.describe('API响应验证 - Alldata 数据治理', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/alldata/etl`);
+    await page.goto(`${BASE_URL}/data/etl`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -137,7 +137,7 @@ test.describe('API响应验证 - Alldata 数据治理', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/alldata/quality`);
+    await page.goto(`${BASE_URL}/data/quality`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -156,7 +156,7 @@ test.describe('API响应验证 - Alldata 数据治理', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/alldata/lineage`);
+    await page.goto(`${BASE_URL}/data/lineage`);
     await expect(page.locator('body')).toBeVisible();
   });
 });
@@ -296,7 +296,7 @@ test.describe('API响应验证 - Bisheng LLMOps', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/bisheng/prompts`);
+    await page.goto(`${BASE_URL}/agent/prompts`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -317,7 +317,7 @@ test.describe('API响应验证 - Bisheng LLMOps', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/bisheng/knowledge`);
+    await page.goto(`${BASE_URL}/agent/knowledge`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -338,7 +338,7 @@ test.describe('API响应验证 - Bisheng LLMOps', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/bisheng/apps`);
+    await page.goto(`${BASE_URL}/agent/apps`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -359,7 +359,7 @@ test.describe('API响应验证 - Bisheng LLMOps', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/bisheng/evaluation`);
+    await page.goto(`${BASE_URL}/agent/evaluation`);
     await expect(page.locator('body')).toBeVisible();
   });
 });

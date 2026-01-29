@@ -19,10 +19,14 @@ import { test, expect } from '@playwright/test';
 const CONFIG = {
   BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
   KEYCLOAK_URL: process.env.KEYCLOAK_URL || 'http://localhost:8080',
+  AGENT_API: process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000',
+  DATA_API: process.env.DATA_API_URL || process.env.ALLDATA_API_URL || 'http://localhost:8001',
+  MODEL_API: process.env.MODEL_API_URL || process.env.CUBE_API_URL || 'http://localhost:8002',
+  OPENAI_API: process.env.OPENAI_API_URL || 'http://localhost:8003',
+  // 兼容旧名称
   BISHENG_API: process.env.BISHENG_API_URL || 'http://localhost:8000',
   ALLDATA_API: process.env.ALLDATA_API_URL || 'http://localhost:8001',
   CUBE_API: process.env.CUBE_API_URL || 'http://localhost:8002',
-  OPENAI_API: process.env.OPENAI_API_URL || 'http://localhost:8003',
 };
 
 // ============================================
@@ -217,17 +221,17 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Alldata 平台测试
+  // Data 平台测试
   // ============================================
-  test.describe('Alldata 数据治理平台', () => {
+  test.describe('Data 数据治理平台', () => {
     const pages = [
-      { path: '/alldata/datasources', name: '数据源管理' },
-      { path: '/alldata/etl', name: 'ETL任务' },
-      { path: '/alldata/quality', name: '数据质量' },
-      { path: '/alldata/lineage', name: '数据血缘' },
-      { path: '/alldata/features', name: '特征存储' },
-      { path: '/alldata/offline', name: '离线开发' },
-      { path: '/alldata/streaming', name: '实时开发' },
+      { path: '/data/datasources', name: '数据源管理' },
+      { path: '/data/etl', name: 'ETL任务' },
+      { path: '/data/quality', name: '数据质量' },
+      { path: '/data/lineage', name: '数据血缘' },
+      { path: '/data/features', name: '特征存储' },
+      { path: '/data/offline', name: '离线开发' },
+      { path: '/data/streaming', name: '实时开发' },
     ];
 
     for (const pageConfig of pages) {
@@ -247,17 +251,17 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Cube Studio 平台测试
+  // Model 平台测试
   // ============================================
-  test.describe('Cube Studio MLOps 平台', () => {
+  test.describe('Model MLOps 平台', () => {
     const pages = [
-      { path: '/cube/notebooks', name: 'Notebook开发' },
-      { path: '/cube/experiments', name: '实验管理' },
-      { path: '/cube/models', name: '模型仓库' },
-      { path: '/cube/training', name: '训练任务' },
-      { path: '/cube/serving', name: '模型服务' },
-      { path: '/cube/resources', name: '资源管理' },
-      { path: '/cube/sqllab', name: 'SQLLab' },
+      { path: '/model/notebooks', name: 'Notebook开发' },
+      { path: '/model/experiments', name: '实验管理' },
+      { path: '/model/models', name: '模型仓库' },
+      { path: '/model/training', name: '训练任务' },
+      { path: '/model/serving', name: '模型服务' },
+      { path: '/model/resources', name: '资源管理' },
+      { path: '/model/sqllab', name: 'SQLLab' },
     ];
 
     for (const pageConfig of pages) {
@@ -277,15 +281,15 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Bisheng 平台测试
+  // Agent 平台测试
   // ============================================
-  test.describe('Bisheng LLMOps 平台', () => {
+  test.describe('Agent LLMOps 平台', () => {
     const pages = [
-      { path: '/bisheng/prompts', name: 'Prompt管理' },
-      { path: '/bisheng/knowledge', name: '知识库' },
-      { path: '/bisheng/apps', name: 'AI应用' },
-      { path: '/bisheng/evaluation', name: '模型评估' },
-      { path: '/bisheng/sft', name: 'SFT微调' },
+      { path: '/agent/prompts', name: 'Prompt管理' },
+      { path: '/agent/knowledge', name: '知识库' },
+      { path: '/agent/apps', name: 'AI应用' },
+      { path: '/agent/evaluation', name: '模型评估' },
+      { path: '/agent/sft', name: 'SFT微调' },
     ];
 
     for (const pageConfig of pages) {

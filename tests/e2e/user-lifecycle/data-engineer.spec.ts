@@ -10,7 +10,7 @@ import { test, expect } from '../fixtures/user-lifecycle.fixture';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = process.env.API_BASE || 'http://localhost:8080';
-const ALLDATA_API = process.env.ALLDATA_API || 'http://localhost:8001';
+const DATA_API = process.env.DATA_API || process.env.DATA_API || 'http://localhost:8001';
 
 test.describe('数据工程师完整流程', () => {
   let deToken: string;
@@ -27,7 +27,7 @@ test.describe('数据工程师完整流程', () => {
 
   test.describe('DE-DC: 数据采集', () => {
     test('DE-DC-001: 创建全量采集任务', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/datasets/ingest`, {
+      const response = await request.post(`${DATA_API}/api/v1/datasets/ingest`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_ingest_full_${Date.now()}`,
@@ -45,7 +45,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-DC-002: 创建增量采集任务', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/datasets/ingest`, {
+      const response = await request.post(`${DATA_API}/api/v1/datasets/ingest`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_ingest_incr_${Date.now()}`,
@@ -67,7 +67,7 @@ test.describe('数据工程师完整流程', () => {
 
   test.describe('DE-ETL: ETL 编排与执行', () => {
     test('DE-ETL-001: 创建 ETL 任务', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/etl/tasks`, {
+      const response = await request.post(`${DATA_API}/api/v1/etl/tasks`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_etl_${Date.now()}`,
@@ -89,7 +89,7 @@ test.describe('数据工程师完整流程', () => {
 
     test('DE-ETL-002: 执行 ETL 任务', async ({ request }) => {
       // 创建任务
-      const createResp = await request.post(`${ALLDATA_API}/api/v1/etl/tasks`, {
+      const createResp = await request.post(`${DATA_API}/api/v1/etl/tasks`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_etl_exec_${Date.now()}`,
@@ -102,7 +102,7 @@ test.describe('数据工程师完整流程', () => {
       const taskId = createData.data?.id;
 
       // 执行任务
-      const execResp = await request.post(`${ALLDATA_API}/api/v1/etl/tasks/${taskId}/execute`, {
+      const execResp = await request.post(`${DATA_API}/api/v1/etl/tasks/${taskId}/execute`, {
         headers: { Authorization: `Bearer ${deToken}` },
       });
 
@@ -113,7 +113,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-ETL-003: 查询 ETL 执行状态', async ({ request }) => {
-      const response = await request.get(`${ALLDATA_API}/api/v1/etl/tasks?status=running`, {
+      const response = await request.get(`${DATA_API}/api/v1/etl/tasks?status=running`, {
         headers: { Authorization: `Bearer ${deToken}` },
       });
 
@@ -123,7 +123,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-ETL-004: ETL 任务调度配置', async ({ request }) => {
-      const createResp = await request.post(`${ALLDATA_API}/api/v1/etl/tasks`, {
+      const createResp = await request.post(`${DATA_API}/api/v1/etl/tasks`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_etl_sched_${Date.now()}`,
@@ -142,7 +142,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-ETL-005: ETL 错误处理与重试', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/etl/tasks`, {
+      const response = await request.post(`${DATA_API}/api/v1/etl/tasks`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_etl_retry_${Date.now()}`,
@@ -161,7 +161,7 @@ test.describe('数据工程师完整流程', () => {
 
   test.describe('DE-AI: 缺失值分析与填充', () => {
     test('DE-AI-001: 缺失模式分析', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/data/analyze-missing`, {
+      const response = await request.post(`${DATA_API}/api/v1/data/analyze-missing`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -177,7 +177,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-AI-002: 均值填充', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/data/impute-mean`, {
+      const response = await request.post(`${DATA_API}/api/v1/data/impute-mean`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -194,7 +194,7 @@ test.describe('数据工程师完整流程', () => {
 
   test.describe('DE-DM: 数据脱敏', () => {
     test('DE-DM-001: 应用手机号脱敏', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/masking/apply`, {
+      const response = await request.post(`${DATA_API}/api/v1/masking/apply`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -211,7 +211,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-DM-002: 应用身份证脱敏', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/masking/apply`, {
+      const response = await request.post(`${DATA_API}/api/v1/masking/apply`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -226,7 +226,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-DM-003: 应用银行卡脱敏', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/masking/apply`, {
+      const response = await request.post(`${DATA_API}/api/v1/masking/apply`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -241,7 +241,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-DM-004: 应用邮箱脱敏', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/masking/apply`, {
+      const response = await request.post(`${DATA_API}/api/v1/masking/apply`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           datasource_id: 'test-datasource-1',
@@ -260,7 +260,7 @@ test.describe('数据工程师完整流程', () => {
 
   test.describe('DE-FU: 多表融合', () => {
     test('DE-FU-001: 创建多表融合任务', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/etl/fusion`, {
+      const response = await request.post(`${DATA_API}/api/v1/etl/fusion`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_fusion_${Date.now()}`,
@@ -281,7 +281,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-FU-006: 融合任务预览', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/etl/fusion/preview`, {
+      const response = await request.post(`${DATA_API}/api/v1/etl/fusion/preview`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           tables: [
@@ -303,7 +303,7 @@ test.describe('数据工程师完整流程', () => {
     });
 
     test('DE-FU-008: 融合结果输出到新表', async ({ request }) => {
-      const response = await request.post(`${ALLDATA_API}/api/v1/etl/fusion`, {
+      const response = await request.post(`${DATA_API}/api/v1/etl/fusion`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_fusion_output_${Date.now()}`,
@@ -323,7 +323,7 @@ test.describe('数据工程师完整流程', () => {
 
     test('DE-FU-009: 融合任务执行与监控', async ({ request }) => {
       // 创建融合任务
-      const createResp = await request.post(`${ALLDATA_API}/api/v1/etl/fusion`, {
+      const createResp = await request.post(`${DATA_API}/api/v1/etl/fusion`, {
         headers: { Authorization: `Bearer ${deToken}` },
         data: {
           name: `e2e_fusion_monitor_${Date.now()}`,
@@ -337,7 +337,7 @@ test.describe('数据工程师完整流程', () => {
 
       if (taskId) {
         // 查询执行状态
-        const statusResp = await request.get(`${ALLDATA_API}/api/v1/etl/fusion/${taskId}/status`, {
+        const statusResp = await request.get(`${DATA_API}/api/v1/etl/fusion/${taskId}/status`, {
           headers: { Authorization: `Bearer ${deToken}` },
         });
 

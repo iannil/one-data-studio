@@ -42,9 +42,9 @@
       "lastName": "User",
       "realmRoles": ["admin"],
       "clientRoles": {
-        "bisheng-web": ["user"],
-        "alldata-api": ["user"],
-        "bisheng-api": ["user"]
+        "web": ["user"],
+        "data-api": ["user"],
+        "agent-api": ["user"]
       },
       "credentials": [
         {
@@ -63,9 +63,9 @@
       "lastName": "Engineer",
       "realmRoles": ["data_engineer"],
       "clientRoles": {
-        "bisheng-web": ["user"],
-        "alldata-api": ["user"],
-        "bisheng-api": ["user"]
+        "web": ["user"],
+        "data-api": ["user"],
+        "agent-api": ["user"]
       },
       "credentials": [
         {
@@ -84,9 +84,9 @@
       "lastName": "Analyst",
       "realmRoles": ["data_analyst"],
       "clientRoles": {
-        "bisheng-web": ["user"],
-        "alldata-api": ["user"],
-        "bisheng-api": ["user"]
+        "web": ["user"],
+        "data-api": ["user"],
+        "agent-api": ["user"]
       },
       "credentials": [
         {
@@ -99,11 +99,11 @@
   ],
   "clients": [
     {
-      "clientId": "bisheng-web",
-      "name": "Bisheng Web Frontend",
+      "clientId": "web",
+      "name": "ONE-DATA-STUDIO Web Frontend",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "bisheng-web-secret",
+      "secret": "web-secret",
       "redirectUris": ["http://localhost:5173/*", "http://localhost:3000/*"],
       "webOrigins": ["http://localhost:5173", "http://localhost:3000"],
       "publicClient": false,
@@ -131,11 +131,11 @@
       "defaultRoles": ["user"]
     },
     {
-      "clientId": "bisheng-api",
-      "name": "Bisheng API",
+      "clientId": "agent-api",
+      "name": "Agent API",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "bisheng-api-secret",
+      "secret": "agent-api-secret",
       "serviceAccountsEnabled": true,
       "bearerOnly": false,
       "consentRequired": false,
@@ -150,11 +150,11 @@
       "fullScopeAllowed": true
     },
     {
-      "clientId": "alldata-api",
-      "name": "Alldata API",
+      "clientId": "data-api",
+      "name": "Data API",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "alldata-api-secret",
+      "secret": "data-api-secret",
       "serviceAccountsEnabled": true,
       "bearerOnly": false,
       "consentRequired": false,

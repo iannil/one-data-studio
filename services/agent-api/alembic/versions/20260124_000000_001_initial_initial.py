@@ -1,10 +1,10 @@
-"""Initial migration for bisheng-api
+"""Initial migration for agent-api
 
 Revision ID: 001_initial
 Revises:
 Create Date: 2026-01-24
 
-ONE-DATA-STUDIO - Bisheng API Initial Schema
+ONE-DATA-STUDIO - Agent API Initial Schema
 """
 from typing import Sequence, Union
 

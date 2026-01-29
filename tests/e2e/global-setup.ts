@@ -13,9 +13,9 @@ async function globalSetup(config: FullConfig) {
   // 输出环境信息
   console.log('环境信息:');
   console.log(`  BASE_URL: ${process.env.BASE_URL || 'http://localhost:3000'}`);
-  console.log(`  BISHENG_API_URL: ${process.env.BISHENG_API_URL || 'http://localhost:8000'}`);
-  console.log(`  ALLDATA_API_URL: ${process.env.ALLDATA_API_URL || 'http://localhost:8001'}`);
-  console.log(`  CUBE_API_URL: ${process.env.CUBE_API_URL || 'http://localhost:8002'}`);
+  console.log(`  AGENT_API_URL: ${process.env.AGENT_API_URL || 'http://localhost:8000'}`);
+  console.log(`  DATA_API_URL: ${process.env.DATA_API_URL || 'http://localhost:8001'}`);
+  console.log(`  MODEL_API_URL: ${process.env.MODEL_API_URL || 'http://localhost:8002'}`);
   console.log(`  HEADLESS: ${process.env.HEADED === 'true' ? 'false' : 'true'}`);
   console.log(`  WORKERS: ${process.env.WORKERS || '4'}`);
   console.log('');

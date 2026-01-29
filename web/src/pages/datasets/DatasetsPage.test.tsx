@@ -7,7 +7,7 @@ import DatasetsPage from './DatasetsPage';
 import data from '@/services/data';
 
 // Mock 服务
-vi.mock('@/services/alldata', () => ({
+vi.mock('@/services/data-service', () => ({
   default: {
     getDatasets: vi.fn(),
     getDataset: vi.fn(),

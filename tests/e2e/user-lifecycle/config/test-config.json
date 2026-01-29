@@ -73,9 +73,9 @@
   },
   "apiEndpoints": {
     "baseURL": "http://localhost:3000",
-    "bisheng": "http://localhost:8000",
-    "alldata": "http://localhost:8001",
-    "cube": "http://localhost:8002",
+    "agent": "http://localhost:8000",
+    "data": "http://localhost:8001",
+    "model": "http://localhost:8002",
     "openai": "http://localhost:8003",
     "keycloak": "http://localhost:8080"
   },

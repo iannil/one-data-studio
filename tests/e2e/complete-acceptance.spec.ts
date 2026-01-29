@@ -19,9 +19,9 @@ import { test, expect } from '@playwright/test';
 const CONFIG = {
   BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
   KEYCLOAK_URL: process.env.KEYCLOAK_URL || 'http://localhost:8080',
-  BISHENG_API: process.env.BISHENG_API_URL || 'http://localhost:8000',
-  ALLDATA_API: process.env.ALLDATA_API_URL || 'http://localhost:8001',
-  CUBE_API: process.env.CUBE_API_URL || 'http://localhost:8002',
+  AGENT_API: process.env.AGENT_API_URL || 'http://localhost:8000',
+  DATA_API: process.env.DATA_API_URL || 'http://localhost:8001',
+  MODEL_API: process.env.MODEL_API_URL || 'http://localhost:8002',
   OPENAI_API: process.env.OPENAI_API_URL || 'http://localhost:8003',
 
   // 测试用户凭证（开发模式）
@@ -48,41 +48,41 @@ const PAGES = {
   TEXT2SQL: '/text2sql',
   EXECUTIONS: '/executions',
 
-  // Alldata 平台
-  ALLDATA_DATASOURCES: '/alldata/datasources',
-  ALLDATA_ETL: '/alldata/etl',
-  ALLDATA_QUALITY: '/alldata/quality',
-  ALLDATA_LINEAGE: '/alldata/lineage',
-  ALLDATA_FEATURES: '/alldata/features',
-  ALLDATA_STANDARDS: '/alldata/standards',
-  ALLDATA_ASSETS: '/alldata/assets',
-  ALLDATA_SERVICES: '/alldata/services',
-  ALLDATA_BI: '/alldata/bi',
-  ALLDATA_MONITORING: '/alldata/monitoring',
-  ALLDATA_STREAMING: '/alldata/streaming',
-  ALLDATA_STREAMING_IDE: '/alldata/streaming-ide',
-  ALLDATA_OFFLINE: '/alldata/offline',
-  ALLDATA_METRICS: '/alldata/metrics',
+  // Data 平台
+  DATA_DATASOURCES: '/data/datasources',
+  DATA_ETL: '/data/etl',
+  DATA_QUALITY: '/data/quality',
+  DATA_LINEAGE: '/data/lineage',
+  DATA_FEATURES: '/data/features',
+  DATA_STANDARDS: '/data/standards',
+  DATA_ASSETS: '/data/assets',
+  DATA_SERVICES: '/data/services',
+  DATA_BI: '/data/bi',
+  DATA_MONITORING: '/data/monitoring',
+  DATA_STREAMING: '/data/streaming',
+  DATA_STREAMING_IDE: '/data/streaming-ide',
+  DATA_OFFLINE: '/data/offline',
+  DATA_METRICS: '/data/metrics',
 
-  // Cube Studio 平台
-  CUBE_NOTEBOOKS: '/cube/notebooks',
-  CUBE_EXPERIMENTS: '/cube/experiments',
-  CUBE_MODELS: '/cube/models',
-  CUBE_TRAINING: '/cube/training',
-  CUBE_SERVING: '/cube/serving',
-  CUBE_RESOURCES: '/cube/resources',
-  CUBE_MONITORING: '/cube/monitoring',
-  CUBE_AIHUB: '/cube/aihub',
-  CUBE_PIPELINES: '/cube/pipelines',
-  CUBE_LLM_TUNING: '/cube/llm-tuning',
-  CUBE_SQL_LAB: '/cube/sqllab',
+  // Model 平台
+  MODEL_NOTEBOOKS: '/model/notebooks',
+  MODEL_EXPERIMENTS: '/model/experiments',
+  MODEL_MODELS: '/model/models',
+  MODEL_TRAINING: '/model/training',
+  MODEL_SERVING: '/model/serving',
+  MODEL_RESOURCES: '/model/resources',
+  MODEL_MONITORING: '/model/monitoring',
+  MODEL_AIHUB: '/model/aihub',
+  MODEL_PIPELINES: '/model/pipelines',
+  MODEL_LLM_TUNING: '/model/llm-tuning',
+  MODEL_SQL_LAB: '/model/sqllab',
 
-  // Bisheng 平台
-  BISHENG_PROMPTS: '/bisheng/prompts',
-  BISHENG_KNOWLEDGE: '/bisheng/knowledge',
-  BISHENG_APPS: '/bisheng/apps',
-  BISHENG_EVALUATION: '/bisheng/evaluation',
-  BISHENG_SFT: '/bisheng/sft',
+  // Agent 平台
+  AGENT_PROMPTS: '/agent/prompts',
+  AGENT_KNOWLEDGE: '/agent/knowledge',
+  AGENT_APPS: '/agent/apps',
+  AGENT_EVALUATION: '/agent/evaluation',
+  AGENT_SFT: '/agent/sft',
 
   // 管理后台
   ADMIN_USERS: '/admin/users',
@@ -619,7 +619,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据源管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_DATASOURCES}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_DATASOURCES}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '数据源');
@@ -637,7 +637,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('ETL 任务', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_ETL}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_ETL}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'ETL任务');
@@ -655,7 +655,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据质量', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_QUALITY}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_QUALITY}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '数据质量');
@@ -673,7 +673,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据血缘', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_LINEAGE}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_LINEAGE}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateBasicStructure(page, '数据血缘');
@@ -691,7 +691,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('特征存储', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_FEATURES}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_FEATURES}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '特征存储');
@@ -704,7 +704,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('离线开发', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_OFFLINE}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_OFFLINE}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateEditorPage(page, '离线开发');
@@ -717,7 +717,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('实时开发', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_STREAMING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_STREAMING}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateEditorPage(page, '实时开发');
@@ -730,7 +730,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('实时 IDE', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_STREAMING_IDE}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_STREAMING_IDE}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateEditorPage(page, '实时IDE');
@@ -743,7 +743,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据标准', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_STANDARDS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_STANDARDS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '数据标准');
@@ -756,7 +756,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据资产', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_ASSETS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_ASSETS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '数据资产');
@@ -769,7 +769,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('数据服务', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_SERVICES}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_SERVICES}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '数据服务');
@@ -782,7 +782,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('BI 报表', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_BI}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_BI}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateBasicStructure(page, 'BI报表');
@@ -800,7 +800,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('系统监控', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_MONITORING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_MONITORING}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateBasicStructure(page, '系统监控');
@@ -818,7 +818,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('指标体系', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.ALLDATA_METRICS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.DATA_METRICS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '指标体系');
@@ -836,7 +836,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('Notebook 开发', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_NOTEBOOKS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_NOTEBOOKS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'Notebook');
@@ -854,7 +854,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('实验管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_EXPERIMENTS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_EXPERIMENTS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '实验管理');
@@ -872,7 +872,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('模型仓库', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_MODELS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_MODELS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '模型仓库');
@@ -890,7 +890,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('训练任务', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_TRAINING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_TRAINING}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '训练任务');
@@ -908,7 +908,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('模型服务', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_SERVING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_SERVING}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '模型服务');
@@ -926,7 +926,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('资源管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_RESOURCES}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_RESOURCES}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateBasicStructure(page, '资源管理');
@@ -944,7 +944,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('监控告警', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_MONITORING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_MONITORING}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateBasicStructure(page, '监控告警');
@@ -962,7 +962,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('AI Hub', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_AIHUB}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_AIHUB}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'AIHub');
@@ -980,7 +980,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('Pipeline 管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_PIPELINES}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_PIPELINES}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'Pipeline');
@@ -993,7 +993,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('LLM 微调', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_LLM_TUNING}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_LLM_TUNING}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'LLM微调');
@@ -1006,7 +1006,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('SQL Lab', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.CUBE_SQL_LAB}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.MODEL_SQL_LAB}`);
         await page.waitForLoadState('networkidle');
 
         await PageValidator.validateEditorPage(page, 'SQLLab');
@@ -1029,7 +1029,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('Prompt 管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.BISHENG_PROMPTS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.AGENT_PROMPTS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'Prompt管理');
@@ -1047,7 +1047,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('知识库', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.BISHENG_KNOWLEDGE}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.AGENT_KNOWLEDGE}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '知识库');
@@ -1069,7 +1069,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('AI 应用', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.BISHENG_APPS}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.AGENT_APPS}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'AI应用');
@@ -1087,7 +1087,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('模型评估', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.BISHENG_EVALUATION}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.AGENT_EVALUATION}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, '模型评估');
@@ -1100,7 +1100,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     test('SFT 微调', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
-        await page.goto(`${CONFIG.BASE_URL}${PAGES.BISHENG_SFT}`);
+        await page.goto(`${CONFIG.BASE_URL}${PAGES.AGENT_SFT}`);
         await page.waitForLoadState('networkidle');
 
         const valid = await PageValidator.validateListPage(page, 'SFT微调');
@@ -1221,21 +1221,21 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 test.describe('API 服务健康检查', () => {
   test('Bisheng API', async ({ request }) => {
     console.log('\n[API] 检查 Bisheng API...');
-    const response = await request.get(`${CONFIG.BISHENG_API}/api/v1/health`);
+    const response = await request.get(`${CONFIG.AGENT_API}/api/v1/health`);
     console.log(`[API] Bisheng API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('Alldata API', async ({ request }) => {
     console.log('\n[API] 检查 Alldata API...');
-    const response = await request.get(`${CONFIG.ALLDATA_API}/api/v1/health`);
+    const response = await request.get(`${CONFIG.DATA_API}/api/v1/health`);
     console.log(`[API] Alldata API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('Cube API', async ({ request }) => {
     console.log('\n[API] 检查 Cube API...');
-    const response = await request.get(`${CONFIG.CUBE_API}/api/v1/health`);
+    const response = await request.get(`${CONFIG.MODEL_API}/api/v1/health`);
     console.log(`[API] Cube API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });

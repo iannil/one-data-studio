@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
 OPENAI_PROXY_URL = os.getenv("TEST_OPENAI_PROXY_URL", "http://localhost:8080")
-ALLDATA_API_URL = os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082")
+DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082"))
+# 兼容旧名称
+ALLDATA_API_URL = DATA_API_URL
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {

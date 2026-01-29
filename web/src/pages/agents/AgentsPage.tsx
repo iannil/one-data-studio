@@ -30,7 +30,7 @@ import {
   AppstoreOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import bisheng, { type Tool, type AgentStep, type AgentTemplate } from '@/services/agent-service';
+import agentService, { type Tool, type AgentStep, type AgentTemplate } from '@/services/agent-service';
 import StepsViewer from './StepsViewer';
 import ToolExecuteModal from './ToolExecuteModal';
 import SchemaViewer from './SchemaViewer';

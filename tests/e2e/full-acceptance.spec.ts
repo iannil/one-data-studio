@@ -282,11 +282,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Alldata 平台页面测试
+  // Data 平台页面测试
   // ============================================
-  test.describe('Alldata 数据治理平台', () => {
+  test.describe('Data 数据治理平台', () => {
     test('数据源管理', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/datasources`);
+      await page.goto(`${BASE_URL}/data/datasources`);
       await page.waitForLoadState('networkidle');
 
       console.log('[数据源] 验证页面内容...');
@@ -302,7 +302,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('ETL 任务', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/etl`);
+      await page.goto(`${BASE_URL}/data/etl`);
       await page.waitForLoadState('networkidle');
 
       console.log('[ETL] 验证页面内容...');
@@ -314,7 +314,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('数据质量', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/quality`);
+      await page.goto(`${BASE_URL}/data/quality`);
       await page.waitForLoadState('networkidle');
 
       console.log('[数据质量] 验证页面内容...');
@@ -326,7 +326,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('数据血缘', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/lineage`);
+      await page.goto(`${BASE_URL}/data/lineage`);
       await page.waitForLoadState('networkidle');
 
       console.log('[数据血缘] 验证页面内容...');
@@ -338,7 +338,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('特征存储', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/features`);
+      await page.goto(`${BASE_URL}/data/features`);
       await page.waitForLoadState('networkidle');
 
       console.log('[特征存储] 验证页面内容...');
@@ -350,7 +350,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('离线开发', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/offline`);
+      await page.goto(`${BASE_URL}/data/offline`);
       await page.waitForLoadState('networkidle');
 
       console.log('[离线开发] 验证页面内容...');
@@ -362,7 +362,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('实时开发', async ({ page }) => {
-      await page.goto(`${BASE_URL}/alldata/streaming`);
+      await page.goto(`${BASE_URL}/data/streaming`);
       await page.waitForLoadState('networkidle');
 
       console.log('[实时开发] 验证页面内容...');
@@ -375,11 +375,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Cube Studio 平台页面测试
+  // Model 平台页面测试
   // ============================================
-  test.describe('Cube Studio MLOps 平台', () => {
+  test.describe('Model MLOps 平台', () => {
     test('Notebook 开发', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/notebooks`);
+      await page.goto(`${BASE_URL}/model/notebooks`);
       await page.waitForLoadState('networkidle');
 
       console.log('[Notebook] 验证页面内容...');
@@ -391,7 +391,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('实验管理', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/experiments`);
+      await page.goto(`${BASE_URL}/model/experiments`);
       await page.waitForLoadState('networkidle');
 
       console.log('[实验管理] 验证页面内容...');
@@ -403,7 +403,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('训练任务', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/training`);
+      await page.goto(`${BASE_URL}/model/training`);
       await page.waitForLoadState('networkidle');
 
       console.log('[训练任务] 验证页面内容...');
@@ -415,7 +415,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('模型仓库', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/models`);
+      await page.goto(`${BASE_URL}/model/models`);
       await page.waitForLoadState('networkidle');
 
       console.log('[模型仓库] 验证页面内容...');
@@ -427,7 +427,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('模型服务', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/serving`);
+      await page.goto(`${BASE_URL}/model/serving`);
       await page.waitForLoadState('networkidle');
 
       console.log('[模型服务] 验证页面内容...');
@@ -439,7 +439,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('资源管理', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/resources`);
+      await page.goto(`${BASE_URL}/model/resources`);
       await page.waitForLoadState('networkidle');
 
       console.log('[资源管理] 验证页面内容...');
@@ -451,7 +451,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('AI Hub', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/aihub`);
+      await page.goto(`${BASE_URL}/model/aihub`);
       await page.waitForLoadState('networkidle');
 
       console.log('[AI Hub] 验证页面内容...');
@@ -463,7 +463,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('SQL Lab', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/sqllab`);
+      await page.goto(`${BASE_URL}/model/sqllab`);
       await page.waitForLoadState('networkidle');
 
       console.log('[SQL Lab] 验证页面内容...');
@@ -475,7 +475,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('Pipeline 管理', async ({ page }) => {
-      await page.goto(`${BASE_URL}/cube/pipelines`);
+      await page.goto(`${BASE_URL}/model/pipelines`);
       await page.waitForLoadState('networkidle');
 
       console.log('[Pipeline] 验证页面内容...');
@@ -488,11 +488,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Bisheng 平台页面测试
+  // Agent 平台页面测试
   // ============================================
-  test.describe('Bisheng LLMOps 平台', () => {
+  test.describe('Agent LLMOps 平台', () => {
     test('Prompt 管理', async ({ page }) => {
-      await page.goto(`${BASE_URL}/bisheng/prompts`);
+      await page.goto(`${BASE_URL}/agent/prompts`);
       await page.waitForLoadState('networkidle');
 
       console.log('[Prompt] 验证页面内容...');
@@ -504,7 +504,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('知识库', async ({ page }) => {
-      await page.goto(`${BASE_URL}/bisheng/knowledge`);
+      await page.goto(`${BASE_URL}/agent/knowledge`);
       await page.waitForLoadState('networkidle');
 
       console.log('[知识库] 验证页面内容...');
@@ -516,7 +516,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('AI 应用', async ({ page }) => {
-      await page.goto(`${BASE_URL}/bisheng/apps`);
+      await page.goto(`${BASE_URL}/agent/apps`);
       await page.waitForLoadState('networkidle');
 
       console.log('[AI应用] 验证页面内容...');
@@ -528,7 +528,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('模型评估', async ({ page }) => {
-      await page.goto(`${BASE_URL}/bisheng/evaluation`);
+      await page.goto(`${BASE_URL}/agent/evaluation`);
       await page.waitForLoadState('networkidle');
 
       console.log('[模型评估] 验证页面内容...');
@@ -540,7 +540,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     });
 
     test('SFT 微调', async ({ page }) => {
-      await page.goto(`${BASE_URL}/bisheng/sft`);
+      await page.goto(`${BASE_URL}/agent/sft`);
       await page.waitForLoadState('networkidle');
 
       console.log('[SFT微调] 验证页面内容...');
@@ -609,22 +609,22 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   // API 健康检查
   // ============================================
   test.describe('API 服务健康检查', () => {
-    test('Bisheng API 健康检查', async ({ request }) => {
-      const response = await request.get(`${process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/health`);
+    test('Agent API 健康检查', async ({ request }) => {
+      const response = await request.get(`${process.env.AGENT_API_URL || 'http://localhost:8000'}/api/v1/health`);
       expect(response.status()).toBe(200);
-      console.log('[API] Bisheng API ✓ 健康正常');
+      console.log('[API] Agent API ✓ 健康正常');
     });
 
-    test('Alldata API 健康检查', async ({ request }) => {
-      const response = await request.get(`${process.env.ALLDATA_API_URL || 'http://localhost:8001'}/api/v1/health`);
+    test('Data API 健康检查', async ({ request }) => {
+      const response = await request.get(`${process.env.DATA_API_URL || 'http://localhost:8001'}/api/v1/health`);
       expect(response.status()).toBe(200);
-      console.log('[API] Alldata API ✓ 健康正常');
+      console.log('[API] Data API ✓ 健康正常');
     });
 
-    test('Cube API 健康检查', async ({ request }) => {
-      const response = await request.get(`${process.env.CUBE_API_URL || 'http://localhost:8002'}/api/v1/health`);
+    test('Model API 健康检查', async ({ request }) => {
+      const response = await request.get(`${process.env.MODEL_API_URL || 'http://localhost:8002'}/api/v1/health`);
       expect(response.status()).toBe(200);
-      console.log('[API] Cube API ✓ 健康正常');
+      console.log('[API] Model API ✓ 健康正常');
     });
 
     test('OpenAI Proxy 健康检查', async ({ request }) => {

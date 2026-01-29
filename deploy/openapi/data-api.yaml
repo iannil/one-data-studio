@@ -26,7 +26,7 @@ info:
 servers:
   - url: http://localhost:8080
     description: 开发环境
-  - url: https://api.example.com/alldata
+  - url: https://api.example.com/data
     description: 生产环境
 
 tags:

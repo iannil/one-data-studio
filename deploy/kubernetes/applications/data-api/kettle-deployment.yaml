@@ -50,7 +50,7 @@ spec:
         - |
           mc alias set minio http://minio.one-data-infra.svc.cluster.local:9000 \
             ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY}
-          mc mirror minio/alldata-kettle-jobs/ /opt/kettle/jobs/ || true
+          mc mirror minio/data-kettle-jobs/ /opt/kettle/jobs/ || true
         env:
         - name: MINIO_ACCESS_KEY
           valueFrom:

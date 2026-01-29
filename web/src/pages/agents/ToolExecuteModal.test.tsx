@@ -5,7 +5,7 @@ import ToolExecuteModal from './ToolExecuteModal';
 import agentService from '@/services/agent-service';
 
 // Mock 服务
-vi.mock('@/services/bisheng', () => ({
+vi.mock('@/services/agent-service', () => ({
   default: {
     executeTool: vi.fn(),
   },

@@ -31,7 +31,7 @@ data:
   # OpenLineage 配置
   OPENLINEAGE_ENABLED: "true"
   OPENLINEAGE_API_URL: "http://data-api.one-data-data.svc.cluster.local:8080/api/v1/lineage/events"
-  OPENLINEAGE_NAMESPACE: "alldata"
+  OPENLINEAGE_NAMESPACE: "data"
 
   # OpenMetadata 集成
   OPENMETADATA_SYNC_ENABLED: "true"

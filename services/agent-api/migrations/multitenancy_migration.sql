@@ -1,6 +1,6 @@
 -- ONE-DATA-STUDIO 多租户迁移脚本
 -- Sprint 13: 添加 tenant_id 字段到所有业务表
--- 运行方式: mysql -u root -p one_data_bisheng < multitenancy_migration.sql
+-- 运行方式: mysql -u root -p one_data_studio < multitenancy_migration.sql
 
 -- 1. 为 workflows 表添加 tenant_id
 ALTER TABLE workflows

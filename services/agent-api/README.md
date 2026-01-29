@@ -1,4 +1,4 @@
-# Bisheng API
+# Agent API
 
 大模型应用开发平台 API 服务。
 
@@ -20,8 +20,8 @@
 | 变量名 | 描述 | 默认值 |
 |--------|------|--------|
 | `DATABASE_URL` | 数据库连接 URL | *必需* |
-| `CUBE_API_URL` | Cube API 地址 | `http://vllm-serving:8000` |
-| `ALDATA_API_URL` | Alldata API 地址 | `http://alldata-api:8080` |
+| `MODEL_API_URL` | Model API 地址 | `http://vllm-serving:8000` |
+| `DATA_API_URL` | Data API 地址 | `http://data-api:8080` |
 | `MILVUS_HOST` | Milvus 向量库地址 | `localhost` |
 | `MILVUS_PORT` | Milvus 端口 | `19530` |
 | `OPENAI_API_KEY` | OpenAI API 密钥 | *可选* |

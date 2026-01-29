@@ -1,5 +1,5 @@
 """
-Bisheng API 认证模块
+Agent API 认证模块
 P5: 使用 Keycloak JWT 进行身份验证和授权
 
 功能：
@@ -197,7 +197,7 @@ def _introspect_token(token: str) -> Optional[Dict]:
     使用 Keycloak token introspection 端点验证 token
     """
     try:
-        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "bisheng-api")
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "agent-api")
         client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
         if not client_secret:
             logger.warning("KEYCLOAK_CLIENT_SECRET not set, token introspection may fail")
@@ -404,7 +404,7 @@ def refresh_token(refresh_token: str) -> Optional[Dict]:
         新的 Token 信息或 None
     """
     try:
-        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "bisheng-web")
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "web")
         client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
         if not client_secret:
             logger.warning("KEYCLOAK_CLIENT_SECRET not set, token refresh may fail")
@@ -440,7 +440,7 @@ def logout_user(token: str) -> bool:
         response = requests.post(
             f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/logout",
             data={
-                "client_id": os.getenv("KEYCLOAK_CLIENT_ID", "bisheng-web"),
+                "client_id": os.getenv("KEYCLOAK_CLIENT_ID", "web"),
                 "refresh_token": token,
             },
             timeout=5
