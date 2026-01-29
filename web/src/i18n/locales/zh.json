@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "ONE-DATA-STUDIO",
+    "title": "数据 + AI + LLM 融合平台",
+    "description": "企业级数据智能平台"
+  },
+  "nav": {
+    "home": "首页",
+    "chat": "智能对话",
+    "workflows": "工作流",
+    "agents": "Agent",
+    "documents": "文档管理",
+    "datasets": "数据集",
+    "metadata": "元数据",
+    "text2sql": "Text-to-SQL",
+    "executions": "执行监控",
+    "schedules": "调度管理",
+    "settings": "设置"
+  },
+  "sidebar": {
+    "dataPlatform": "数据平台",
+    "modelPlatform": "模型平台",
+    "agentPlatform": "应用平台",
+    "systemManagement": "系统管理"
+  },
+  "buttons": {
+    "submit": "提交",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "search": "搜索",
+    "confirm": "确认",
+    "create": "创建",
+    "edit": "编辑",
+    "refresh": "刷新",
+    "upload": "上传",
+    "download": "下载",
+    "export": "导出",
+    "import": "导入",
+    "copy": "复制",
+    "reset": "重置",
+    "run": "运行",
+    "stop": "停止",
+    "retry": "重试",
+    "preview": "预览",
+    "back": "返回",
+    "next": "下一步",
+    "finish": "完成",
+    "close": "关闭"
+  },
+  "status": {
+    "success": "成功",
+    "failed": "失败",
+    "inProgress": "进行中",
+    "pending": "待处理",
+    "loading": "加载中...",
+    "saving": "保存中...",
+    "error": "错误",
+    "warning": "警告",
+    "running": "运行中",
+    "completed": "已完成",
+    "cancelled": "已取消",
+    "paused": "已暂停"
+  },
+  "pages": {
+    "home": "首页",
+    "dataPlatform": "数据平台",
+    "modelPlatform": "模型平台",
+    "agentPlatform": "应用平台",
+    "systemManagement": "系统管理"
+  },
+  "platform": {
+    "datasource": "数据源",
+    "metadata": "元数据",
+    "lineageAnalysis": "血缘分析",
+    "dataQuality": "数据质量",
+    "etl": "ETL",
+    "modelTraining": "模型训练",
+    "modelDeployment": "模型部署",
+    "knowledgeBase": "知识库",
+    "workflow": "工作流",
+    "application": "应用",
+    "dataAssets": "数据资产",
+    "dataStandards": "数据标准",
+    "dataMonitoring": "数据监控",
+    "dataServices": "数据服务",
+    "featureStore": "特征存储",
+    "modelRegistry": "模型注册",
+    "modelServing": "模型服务",
+    "notebook": "Notebook",
+    "experiment": "实验",
+    "pipeline": "流水线",
+    "promptManagement": "Prompt 管理",
+    "evaluation": "评测",
+    "sft": "微调训练"
+  },
+  "form": {
+    "required": "此字段必填",
+    "optional": "可选",
+    "placeholder": "请输入...",
+    "selectPlaceholder": "请选择..."
+  },
+  "table": {
+    "noData": "暂无数据",
+    "total": "共 {{total}} 条",
+    "selected": "已选 {{count}} 项"
+  },
+  "confirm": {
+    "title": "确认操作",
+    "deleteTitle": "确认删除",
+    "deleteMessage": "确定要删除吗？此操作不可撤销。"
+  },
+  "user": {
+    "login": "登录",
+    "logout": "退出登录",
+    "profile": "个人资料",
+    "settings": "账户设置"
+  },
+  "language": {
+    "switch": "切换语言",
+    "current": "当前语言"
+  }
+}

@@ -17,6 +17,37 @@
     "schedules": "调度管理",
     "settings": "设置"
   },
+  "sidebar": {
+    "dataPlatform": "数据平台",
+    "modelPlatform": "模型平台",
+    "agentPlatform": "应用平台",
+    "systemManagement": "系统管理"
+  },
+  "platform": {
+    "datasource": "数据源",
+    "metadata": "元数据",
+    "lineageAnalysis": "血缘分析",
+    "dataQuality": "数据质量",
+    "etl": "ETL",
+    "modelTraining": "模型训练",
+    "modelDeployment": "模型部署",
+    "knowledgeBase": "知识库",
+    "workflow": "工作流",
+    "application": "应用",
+    "dataAssets": "数据资产",
+    "dataStandards": "数据标准",
+    "dataMonitoring": "数据监控",
+    "dataServices": "数据服务",
+    "featureStore": "特征存储",
+    "modelRegistry": "模型注册",
+    "modelServing": "模型服务",
+    "notebook": "Notebook",
+    "experiment": "实验",
+    "pipeline": "流水线",
+    "promptManagement": "Prompt 管理",
+    "evaluation": "评测",
+    "sft": "微调训练"
+  },
   "actions": {
     "create": "创建",
     "edit": "编辑",

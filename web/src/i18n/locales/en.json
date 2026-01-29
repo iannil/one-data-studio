@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "ONE-DATA-STUDIO",
+    "title": "Data + AI + LLM Integration Platform",
+    "description": "Enterprise-grade Data Intelligence Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "chat": "AI Chat",
+    "workflows": "Workflows",
+    "agents": "Agents",
+    "documents": "Documents",
+    "datasets": "Datasets",
+    "metadata": "Metadata",
+    "text2sql": "Text-to-SQL",
+    "executions": "Executions",
+    "schedules": "Schedules",
+    "settings": "Settings"
+  },
+  "sidebar": {
+    "dataPlatform": "Data Platform",
+    "modelPlatform": "Model Platform",
+    "agentPlatform": "Agent Platform",
+    "systemManagement": "System Management"
+  },
+  "buttons": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "search": "Search",
+    "confirm": "Confirm",
+    "create": "Create",
+    "edit": "Edit",
+    "refresh": "Refresh",
+    "upload": "Upload",
+    "download": "Download",
+    "export": "Export",
+    "import": "Import",
+    "copy": "Copy",
+    "reset": "Reset",
+    "run": "Run",
+    "stop": "Stop",
+    "retry": "Retry",
+    "preview": "Preview",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "close": "Close"
+  },
+  "status": {
+    "success": "Success",
+    "failed": "Failed",
+    "inProgress": "In Progress",
+    "pending": "Pending",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "error": "Error",
+    "warning": "Warning",
+    "running": "Running",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "paused": "Paused"
+  },
+  "pages": {
+    "home": "Home",
+    "dataPlatform": "Data Platform",
+    "modelPlatform": "Model Platform",
+    "agentPlatform": "Agent Platform",
+    "systemManagement": "System Management"
+  },
+  "platform": {
+    "datasource": "Data Source",
+    "metadata": "Metadata",
+    "lineageAnalysis": "Lineage Analysis",
+    "dataQuality": "Data Quality",
+    "etl": "ETL",
+    "modelTraining": "Model Training",
+    "modelDeployment": "Model Deployment",
+    "knowledgeBase": "Knowledge Base",
+    "workflow": "Workflow",
+    "application": "Application",
+    "dataAssets": "Data Assets",
+    "dataStandards": "Data Standards",
+    "dataMonitoring": "Data Monitoring",
+    "dataServices": "Data Services",
+    "featureStore": "Feature Store",
+    "modelRegistry": "Model Registry",
+    "modelServing": "Model Serving",
+    "notebook": "Notebook",
+    "experiment": "Experiment",
+    "pipeline": "Pipeline",
+    "promptManagement": "Prompt Management",
+    "evaluation": "Evaluation",
+    "sft": "Fine-tuning"
+  },
+  "form": {
+    "required": "This field is required",
+    "optional": "Optional",
+    "placeholder": "Enter...",
+    "selectPlaceholder": "Select..."
+  },
+  "table": {
+    "noData": "No data",
+    "total": "Total {{total}} items",
+    "selected": "{{count}} selected"
+  },
+  "confirm": {
+    "title": "Confirm Action",
+    "deleteTitle": "Confirm Delete",
+    "deleteMessage": "Are you sure you want to delete? This action cannot be undone."
+  },
+  "user": {
+    "login": "Login",
+    "logout": "Logout",
+    "profile": "Profile",
+    "settings": "Account Settings"
+  },
+  "language": {
+    "switch": "Switch Language",
+    "current": "Current Language"
+  }
+}

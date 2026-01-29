@@ -17,6 +17,37 @@
     "schedules": "Schedules",
     "settings": "Settings"
   },
+  "sidebar": {
+    "dataPlatform": "Data Platform",
+    "modelPlatform": "Model Platform",
+    "agentPlatform": "Agent Platform",
+    "systemManagement": "System Management"
+  },
+  "platform": {
+    "datasource": "Data Source",
+    "metadata": "Metadata",
+    "lineageAnalysis": "Lineage Analysis",
+    "dataQuality": "Data Quality",
+    "etl": "ETL",
+    "modelTraining": "Model Training",
+    "modelDeployment": "Model Deployment",
+    "knowledgeBase": "Knowledge Base",
+    "workflow": "Workflow",
+    "application": "Application",
+    "dataAssets": "Data Assets",
+    "dataStandards": "Data Standards",
+    "dataMonitoring": "Data Monitoring",
+    "dataServices": "Data Services",
+    "featureStore": "Feature Store",
+    "modelRegistry": "Model Registry",
+    "modelServing": "Model Serving",
+    "notebook": "Notebook",
+    "experiment": "Experiment",
+    "pipeline": "Pipeline",
+    "promptManagement": "Prompt Management",
+    "evaluation": "Evaluation",
+    "sft": "Fine-tuning"
+  },
   "actions": {
     "create": "Create",
     "edit": "Edit",
