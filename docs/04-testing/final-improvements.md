@@ -105,9 +105,9 @@
 | 角色 | `/api/v1/roles` | ADMIN_API 8004 | 返回 `data.roles` |
 | 用户管理 | `/api/v1/users` | ADMIN_API 8004 | POST/PUT/DELETE |
 | 角色分配 | `/api/v1/users/{id}` | ADMIN_API 8004 | PUT with `role_ids` |
-| Notebook | `/api/v1/notebooks` | CUBE_API 8002 | 返回 `notebook_id` |
-| 实验 | `/api/v1/experiments` | CUBE_API 8002 | - |
-| 训练任务 | `/api/v1/training/jobs` | CUBE_API 8002 | - |
+| Notebook | `/api/v1/notebooks` | MODEL_API 8002 | 返回 `notebook_id` |
+| 实验 | `/api/v1/experiments` | MODEL_API 8002 | - |
+| 训练任务 | `/api/v1/training/jobs` | MODEL_API 8002 | - |
 
 ---
 

@@ -194,7 +194,7 @@ test.describe('综合验收测试 - 关键集成点验证', () => {
     });
 
     // 导航到模型服务页面
-    await page.goto(`${BASE_URL}/cube/serving`);
+    await page.goto(`${BASE_URL}/model/serving`);
     await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
   });
 

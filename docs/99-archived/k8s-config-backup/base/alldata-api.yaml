@@ -1,23 +1,23 @@
-# Alldata API Deployment
+# Data API Deployment
 # DataOps data governance layer
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alldata-api
+  name: data-api
   namespace: one-data-studio
   labels:
-    app.kubernetes.io/name: alldata-api
+    app.kubernetes.io/name: data-api
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: one-data-studio
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: alldata-api
+      app.kubernetes.io/name: data-api
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: alldata-api
+        app.kubernetes.io/name: data-api
         app.kubernetes.io/component: api
     spec:
       serviceAccountName: one-data-api
@@ -27,8 +27,8 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: alldata-api
-          image: one-data-studio/alldata-api:latest
+        - name: data-api
+          image: one-data-studio/data-api:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -154,16 +154,16 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: alldata-api
+                    app.kubernetes.io/name: data-api
                 topologyKey: kubernetes.io/hostname
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: alldata-api
+  name: data-api
   namespace: one-data-studio
   labels:
-    app.kubernetes.io/name: alldata-api
+    app.kubernetes.io/name: data-api
 spec:
   type: ClusterIP
   ports:
@@ -172,4 +172,4 @@ spec:
       targetPort: http
       protocol: TCP
   selector:
-    app.kubernetes.io/name: alldata-api
+    app.kubernetes.io/name: data-api

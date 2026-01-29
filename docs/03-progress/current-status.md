@@ -316,8 +316,8 @@
 
 - ✅ API 规范设计（`docs/02-integration/api-specifications.md`）
   - ✅ 统一响应格式和错误码
-  - ✅ Data → Cube 数据集 API
-  - ✅ Cube → Agent 模型服务 API（OpenAI 兼容）
+  - ✅ Data → Model 数据集 API
+  - ✅ Model → Agent 模型服务 API（OpenAI 兼容）
   - ✅ Data → Agent 元数据查询 API
   - ✅ 统一认证/鉴权规范
 
@@ -428,8 +428,8 @@
    - [ ] 完善工作流编辑器
 
 2. **集成验证**
-   - [ ] Data → Cube 数据集注册/读取验证
-   - [ ] Cube → Agent 模型服务调用验证
+   - [ ] Data → Model 数据集注册/读取验证
+   - [ ] Model → Agent 模型服务调用验证
    - [ ] 端到端功能测试
 
 3. **文档完善**

@@ -1,5 +1,5 @@
 """
-Cube API 数据模型
+Model API 数据模型
 P4: 监控、LLM调优、SQL Lab、AI Hub
 """
 

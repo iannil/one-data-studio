@@ -122,8 +122,8 @@ KEYCLOAK_CLIENT_ID=one-data-studio
 
 # ==================== 服务端口 ====================
 ALDATA_API_PORT=8080
-agent_API_PORT=8081
-CUBE_API_PORT=8000
+AGENT_API_PORT=8081
+MODEL_API_PORT=8000
 WEB_PORT=3000
 
 # ==================== 认证配置 ====================

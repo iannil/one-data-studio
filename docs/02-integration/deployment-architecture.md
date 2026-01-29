@@ -68,10 +68,10 @@ one-data-data         # Data 平台
 
 one-data-model            # Model 平台
 ├── model-api
-├── cube-scheduler
+├── model-scheduler
 ├── jupyterhub
-├── cube-model-serving
-└── cube-training-jobs
+├── model-model-serving
+└── model-training-jobs
 
 one-data-agent         # Agent 平台
 ├── agent-api
@@ -81,7 +81,7 @@ one-data-agent         # Agent 平台
 
 tenant-{id}              # 租户命名空间（可选多租户隔离）
 ├── tenant-{id}-data
-├── tenant-{id}-cube
+├── tenant-{id}-model
 └── tenant-{id}-agent
 ```
 
@@ -294,7 +294,7 @@ spec:
     hosts:
     - "one-data.example.com"
     - "data.example.com"
-    - "cube.example.com"
+    - "model.example.com"
     - "agent.example.com"
 ```
 
@@ -329,17 +329,17 @@ spec:
           number: 80
 ```
 
-#### Cube 模型服务路由
+#### Model 模型服务路由
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: cube-serving-vs
+  name: model-serving-vs
   namespace: one-data-model
 spec:
   hosts:
-  - "cube.example.com"
+  - "model.example.com"
   gateways:
   - one-data-system/one-data-gateway
   http:
@@ -348,7 +348,7 @@ spec:
         prefix: /v1/
     route:
     - destination:
-        host: cube-model-serving
+        host: model-model-serving
         port:
           number: 8000
 ```
@@ -403,7 +403,7 @@ helm-charts/
 │       ├── metadata/
 │       └── frontend/
 │
-├── cube-studio/                 # Model Chart
+├── model-studio/                 # Model Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -638,9 +638,9 @@ helm install data one-data/data \
   -f data/values-prod.yaml
 
 # 5. 部署 Model
-helm install cube one-data/cube-studio \
+helm install model one-data/model-studio \
   -n one-data-model \
-  -f cube-studio/values-prod.yaml
+  -f model-studio/values-prod.yaml
 
 # 6. 部署 Agent
 helm install agent one-data/agent \

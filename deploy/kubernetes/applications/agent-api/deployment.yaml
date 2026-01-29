@@ -67,11 +67,6 @@ spec:
           value: "http://data-api.one-data-data.svc.cluster.local:8080"
         - name: MODEL_API_URL
           value: "http://openai-proxy.one-data-model.svc.cluster.local:8000"
-        # 兼容旧环境变量名
-        - name: data_API_URL
-          value: "http://data-api.one-data-data.svc.cluster.local:8080"
-        - name: CUBE_API_URL
-          value: "http://openai-proxy.one-data-model.svc.cluster.local:8000"
         ports:
         - name: http
           containerPort: 8080

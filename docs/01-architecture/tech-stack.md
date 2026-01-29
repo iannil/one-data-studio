@@ -13,7 +13,7 @@
 | | **LangChain** | 0.1+ | LLM 逻辑编排框架 |
 | | **LlamaIndex** | 0.9+ | LLM 数据框架 |
 | | **Unstructured.io** | 0.11+ | 文档解析引擎 |
-| **模型层 (Cube)** | **vLLM** | 0.3+ | LLM 高性能推理 |
+| **模型层 (Model)** | **vLLM** | 0.3+ | LLM 高性能推理 |
 | | **TGI** | 1.3+ | 文本生成推理（备选） |
 | | **Volcano** | 1.9+ | K8s 批调度器 |
 | | **JupyterHub** | 3.0+ | 在线开发环境 |

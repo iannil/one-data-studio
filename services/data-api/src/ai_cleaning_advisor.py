@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://openai-proxy:8000")
 AI_CLEANING_MODEL = os.getenv("AI_CLEANING_MODEL", "gpt-4o-mini")
 AI_CLEANING_ENABLED = os.getenv("AI_CLEANING_ENABLED", "true").lower() in ("true", "1", "yes")
 

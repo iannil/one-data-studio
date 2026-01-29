@@ -23,7 +23,7 @@
 
 ### 1. 新增 API 端点 (24 个)
 
-**Alldata API** (17 个端点):
+**Data API** (17 个端点):
 - ETL 任务管理: POST /api/v1/etl/tasks, execute, fusion
 - 元数据扫描: POST /api/v1/metadata/scan, results
 - 数据脱敏: POST /api/v1/masking/apply, auto-generate
@@ -32,11 +32,11 @@
 - 资产管理: catalog, evaluate
 - 血缘同步: POST /api/v1/lineage/sync
 
-**Bisheng API** (2 个端点):
+**Agent API** (2 个端点):
 - POST /api/v1/bi/generate
 - POST /api/v1/alerts/rules
 
-**Cube API** (2 个端点):
+**Model API** (2 个端点):
 - POST /api/v1/notebooks
 - POST /api/v1/evaluation
 
@@ -74,12 +74,12 @@
 
 | 端点 | 正确服务 | 端口 | 说明 |
 |------|----------|------|------|
-| `/api/v1/knowledge-bases` | BISHENG_API | 8000 | 知识库管理 |
-| `/api/v1/documents/upload` | BISHENG_API | 8000 | 文档上传 (需要 JWT) |
-| `/api/v1/text2sql` | BISHENG_API | 8000 | Text-to-SQL (需要 JWT+权限) |
-| `/api/v1/bi/dashboards` | ALLDATA_API | 8001 | BI 报表 |
-| `/api/v1/alerts/rules` | ALLDATA_API | 8001 | 预警规则 |
-| `/api/v1/assets/*` | ALLDATA_API | 8001 | 资产管理 |
+| `/api/v1/knowledge-bases` | AGENT_API | 8000 | 知识库管理 |
+| `/api/v1/documents/upload` | AGENT_API | 8000 | 文档上传 (需要 JWT) |
+| `/api/v1/text2sql` | AGENT_API | 8000 | Text-to-SQL (需要 JWT+权限) |
+| `/api/v1/bi/dashboards` | DATA_API | 8001 | BI 报表 |
+| `/api/v1/alerts/rules` | DATA_API | 8001 | 预警规则 |
+| `/api/v1/assets/*` | DATA_API | 8001 | 资产管理 |
 
 ### 需要修复的问题
 

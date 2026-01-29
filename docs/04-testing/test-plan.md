@@ -132,7 +132,7 @@ gantt
 
 | 子模块 | 用例数 | 现有测试文件 | 覆盖状态 |
 |--------|--------|--------------|----------|
-| 开发环境 (AE-NB) | 6 | `tests/unit/cube/test_notebook.py` | ⚠️ 部分覆盖 |
+| 开发环境 (AE-NB) | 6 | `tests/unit/model/test_notebook.py` | ⚠️ 部分覆盖 |
 | 模型训练 (AE-TR) | 9 | `tests/integration/test_model_training.py` | ✅ 已覆盖 |
 | 模型评估 (AE-EV) | 3 | 待新增 | ❌ 未覆盖 |
 | 模型部署 (AE-DP) | 9 | `tests/integration/test_model_deployment.py` | ✅ 已覆盖 |
@@ -254,7 +254,7 @@ pytest tests/unit/ -v --cov=services --cov-report=html
 # 按模块运行
 pytest tests/unit/data/ -v    # 数据治理模块
 pytest tests/unit/agent/ -v    # 应用编排模块
-pytest tests/unit/cube/ -v       # 算法引擎模块
+pytest tests/unit/model/ -v      # 算法引擎模块
 pytest tests/unit/shared/ -v     # 共享模块
 
 # 按优先级运行
@@ -527,7 +527,7 @@ npm run test:acceptance
 | ETL 编排流程 | `data-deep.spec.ts` | DE-ETL-* |
 | 知识库管理流程 | `agent-deep.spec.ts` | BU-KB-* |
 | 智能问答流程 | `agent-deep.spec.ts` | BU-IQ-* |
-| 模型训练部署 | `cube-deep.spec.ts` | AE-TR-*, AE-DP-* |
+| 模型训练部署 | `model-deep.spec.ts` | AE-TR-*, AE-DP-* |
 | 用户权限管理 | `admin-deep.spec.ts` | SA-UM-* |
 | 用户生命周期 | `user-lifecycle/` | 跨角色场景 |
 

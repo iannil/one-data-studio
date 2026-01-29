@@ -13,11 +13,6 @@ const DATA_API_URL = process.env.DATA_API_URL || 'http://localhost:8001';
 const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:8002';
 const OPENAI_API_URL = process.env.OPENAI_API_URL || 'http://localhost:8003';
 
-// 兼容旧的环境变量名 (已废弃，建议使用新的环境变量名)
-const agent_API_URL = process.env.agent_API_URL || AGENT_API_URL;
-const data_API_URL = process.env.data_API_URL || DATA_API_URL;
-const CUBE_API_URL = process.env.CUBE_API_URL || MODEL_API_URL;
-
 // 认证信息
 interface AuthInfo {
   accessToken?: string;
@@ -585,7 +580,7 @@ export class DataApiClient extends ApiClient {
 }
 
 /**
- * Model API 客户端 (原 Cube API)
+ * Model API 客户端
  */
 export class ModelApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
@@ -769,7 +764,7 @@ export class OpenAIProxyClient extends ApiClient {
  */
 export function createApiClient(
   request: APIRequestContext,
-  type: 'agent_api' | 'data_api' | 'model_api' | 'openai' | 'agent' | 'data' | 'cube',
+  type: 'agent_api' | 'data_api' | 'model_api' | 'openai' | 'agent' | 'data' | 'model',
   auth?: AuthInfo
 ): ApiClient {
   switch (type) {
@@ -780,7 +775,7 @@ export function createApiClient(
     case 'data':
       return new DataApiClient(request, auth);
     case 'model_api':
-    case 'cube':
+    case 'model':
       return new ModelApiClient(request, auth);
     case 'openai':
       return new OpenAIProxyClient(request, auth);
@@ -792,4 +787,4 @@ export function createApiClient(
 // 兼容性别名 - 支持旧的类名
 export const agentApiClient = AgentApiClient;
 export const dataApiClient = DataApiClient;
-export const CubeApiClient = ModelApiClient;
+export const modelApiClient = ModelApiClient;

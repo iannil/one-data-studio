@@ -110,14 +110,14 @@
 | 数据集注册接口开发 | Backend | 8h | ✅ |
 | 数据集查询接口开发 | Backend | 8h | ✅ |
 | MinIO 集成测试 | QA | 8h | ✅ |
-| Cube SDK 数据读取接口 | Backend | 12h | ✅ |
+| Model SDK 数据读取接口 | Backend | 12h | ✅ |
 | 端到端测试 | QA | 8h | ✅ |
 
 ### 交付物
 
 - [x] Data API 服务
 - [x] 数据集 CRUD 接口
-- [x] Cube 数据读取 SDK
+- [x] Model 数据读取 SDK
 
 ### 验收标准
 
@@ -129,8 +129,8 @@ curl -X POST http://data-api/api/v1/datasets \
 # 查询数据集
 curl http://data-api/api/v1/datasets/ds-001
 
-# Cube SDK 读取
-python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.read())"
+# Model SDK 读取
+python -c "from model_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.read())"
 ```
 
 ---
@@ -141,7 +141,7 @@ python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.re
 
 ### 目标
 
-验证 Cube 模型推理服务（OpenAI 兼容 API）
+验证 Model 模型推理服务（OpenAI 兼容 API）
 
 ### 任务清单
 
@@ -164,10 +164,10 @@ python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.re
 
 ```bash
 # 列出模型
-curl http://cube-serving/v1/models
+curl http://model-serving/v1/models
 
 # 聊天补全
-curl -X POST http://cube-serving/v1/chat/completions \
+curl -X POST http://model-serving/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "qwen", "messages": [{"role": "user", "content": "你好"}]}'
 ```
@@ -205,7 +205,7 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 验收标准
 
-- Agent 可调用 Cube 模型服务
+- Agent 可调用 Model 模型服务
 - Agent 可查询 Data 数据集
 - RAG 流水线端到端可用
 
@@ -305,8 +305,8 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 验收标准
 
-- [x] Data → Cube：数据集注册与读取验证通过
-- [x] Cube → Agent：模型服务调用验证通过
+- [x] Data → Model：数据集注册与读取验证通过
+- [x] Model → Agent：模型服务调用验证通过
 - [x] Data → Agent：Text-to-SQL 元数据查询验证通过
 - [x] E2E 测试脚本可运行
 - [x] Demo 指南文档完整

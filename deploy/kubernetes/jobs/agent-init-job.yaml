@@ -41,11 +41,6 @@ spec:
           value: "http://data-api.one-data-data.svc.cluster.local:8080"
         - name: MODEL_API_URL
           value: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
-        # 兼容旧环境变量名
-        - name: ALDATA_API_URL
-          value: "http://data-api.one-data-data.svc.cluster.local:8080"
-        - name: CUBE_API_URL
-          value: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
         - name: JWT_SECRET_KEY
           valueFrom:
             secretKeyRef:

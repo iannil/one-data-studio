@@ -29,7 +29,7 @@ data:
                     "id": "gpt2",
                     "object": "model",
                     "created": 1234567890,
-                    "owned_by": "cube-studio"
+                    "owned_by": "one-data-studio"
                 }
             ]
         })
@@ -195,7 +195,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: cube.example.com
+  - host: model.example.com
     http:
       paths:
       - path: /v1

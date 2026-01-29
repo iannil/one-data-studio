@@ -10,8 +10,8 @@
 
 | 集成点 | 验证内容 | 成功标准 |
 |--------|----------|----------|
-| Data → Cube | 数据集注册与读取 | Cube 能读取 Data 产出的数据集 |
-| Cube → Agent | 模型服务调用 | Agent 能调用 Cube 的 OpenAI 兼容 API |
+| Data → Model | 数据集注册与读取 | Model 能读取 Data 产出的数据集 |
+| Model → Agent | 模型服务调用 | Agent 能调用 Model 的 OpenAI 兼容 API |
 | Data → Agent | 元数据查询 | Agent 能获取 Data 的表结构信息 |
 | 端到端 | RAG + SQL 查询 | 用户提问能正确返回结果 |
 
@@ -552,7 +552,7 @@ spec:
               data = request.json
               message = data.get("message")
 
-              # 调用 Cube 模型服务
+              # 调用 Model 模型服务
               response = requests.post(
                   f"{MODEL_ENDPOINT}/v1/chat/completions",
                   json={
@@ -627,7 +627,7 @@ kubectl port-forward -n one-data-agent svc/agent-api 8081:8080 &
 # 测试健康检查
 curl http://localhost:8081/api/v1/health
 
-# 测试聊天（调用 Cube 模型服务）
+# 测试聊天（调用 Model 模型服务）
 curl -X POST http://localhost:8081/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "你好"}'
@@ -660,16 +660,16 @@ else
 fi
 echo
 
-# 测试 2: Cube 模型服务
-echo "[2/4] 测试 Cube 模型服务..."
-CUBE_URL="http://localhost:8000"
-response=$(curl -s $CUBE_URL/v1/models)
+# 测试 2: Model 模型服务
+echo "[2/4] 测试 Model 模型服务..."
+MODEL_URL="http://localhost:8002"
+response=$(curl -s $MODEL_URL/api/v1/models)
 if echo $response | grep -q "Qwen"; then
-    echo "✓ Cube 模型服务正常"
+    echo "✓ Model 模型服务正常"
     echo "  可用模型:"
-    curl -s $CUBE_URL/v1/models | grep -o '"id":"[^"]*"' | head -3
+    curl -s $MODEL_URL/api/v1/models | grep -o '"id":"[^"]*"' | head -3
 else
-    echo "✗ Cube 模型服务异常"
+    echo "✗ Model 模型服务异常"
 fi
 echo
 

@@ -13,7 +13,7 @@
     "test:mobile": "playwright test --project=mobile-chrome",
     "test:report": "playwright show-report",
     "test:core": "playwright test core-pages-deep.spec.ts",
-    "test:cube": "playwright test cube-deep.spec.ts",
+    "test:model": "playwright test model-deep.spec.ts",
     "test:data": "playwright test data-deep.spec.ts",
     "test:agent": "playwright test agent-deep.spec.ts",
     "test:admin": "playwright test admin-deep.spec.ts",

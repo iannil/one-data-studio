@@ -21,7 +21,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # 测试配置
-BASE_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
+BASE_URL = os.getenv("TEST_MODEL_URL", "http://localhost:8083")
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {

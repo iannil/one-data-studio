@@ -89,11 +89,11 @@ class OneDataTestClient:
     def __init__(
         self,
         data_url: str = "http://localhost:8080",
-        cube_url: str = "http://localhost:8000",
+        model_url: str = "http://localhost:8002",
         agent_url: str = "http://localhost:8081",
     ):
         self.data_url = data_url.rstrip("/")
-        self.cube_url = cube_url.rstrip("/")
+        self.model_url = model_url.rstrip("/")
         self.agent_url = agent_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
@@ -110,13 +110,13 @@ class OneDataTestClient:
             logger.debug(f"data health check failed: {e}")
         return {}
 
-    def check_cube_health(self) -> Dict:
+    def check_model_health(self) -> Dict:
         try:
-            r = self.session.get(f"{self.cube_url}/health", timeout=5)
+            r = self.session.get(f"{self.model_url}/api/v1/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
         except Exception as e:
-            logger.debug(f"Cube health check failed: {e}")
+            logger.debug(f"Model health check failed: {e}")
         return {}
 
     def check_agent_health(self) -> Dict:
@@ -261,11 +261,11 @@ class OneDataTestClient:
         return None
 
     # ============================================
-    # Cube 模型服务测试
+    # Model 模型服务测试
     # ============================================
     def list_models(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.cube_url}/v1/models", timeout=5)
+            r = self.session.get(f"{self.model_url}/v1/models", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
         except Exception as e:
@@ -287,7 +287,7 @@ class OneDataTestClient:
             }
 
             r = self.session.post(
-                f"{self.cube_url}/v1/chat/completions",
+                f"{self.model_url}/v1/chat/completions",
                 json=payload,
                 timeout=60
             )
@@ -299,7 +299,7 @@ class OneDataTestClient:
 
     def get_prompt_templates(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.cube_url}/api/v1/templates", timeout=5)
+            r = self.session.get(f"{self.model_url}/api/v1/templates", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("templates", [])
         except RequestException as e:
@@ -388,16 +388,16 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     else:
         result.fail_test("data API 健康检查", "服务未响应")
 
-    cube_health = client.check_cube_health()
-    if cube_health:
-        result.pass_test("OpenAI Proxy 健康检查")
-        openai_configured = cube_health.get("openai_configured", False)
+    model_health = client.check_model_health()
+    if model_health:
+        result.pass_test("Model API 健康检查")
+        openai_configured = model_health.get("openai_configured", False)
         if openai_configured:
-            result.pass_test("OpenAI API 已配置")
+            result.pass_test("Model API 已配置")
         else:
-            result.skip_test("OpenAI API 已配置", "未配置真实 API Key（将使用 Mock 模式）")
+            result.skip_test("Model API 已配置", "未配置真实 API Key（将使用 Mock 模式）")
     else:
-        result.fail_test("OpenAI Proxy 健康检查", "服务未响应")
+        result.fail_test("Model API 健康检查", "服务未响应")
 
     agent_health = client.check_agent_health()
     if agent_health:
@@ -606,7 +606,7 @@ def main():
     # 配置端点
     client = OneDataTestClient(
         data_url="http://localhost:8080",
-        cube_url="http://localhost:8000",
+        model_url="http://localhost:8000",
         agent_url="http://localhost:8081",
     )
 

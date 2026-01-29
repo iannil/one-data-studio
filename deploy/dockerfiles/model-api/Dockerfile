@@ -1,4 +1,4 @@
-# Cube API - MLOps 平台服务
+# Model API - MLOps 平台服务
 # 提供模型管理、训练任务、部署服务等功能
 # 多阶段构建 - 减少镜像体积和攻击面
 
@@ -10,7 +10,7 @@ FROM python:3.10.14-slim AS builder
 WORKDIR /build
 
 # 复制依赖文件
-COPY services/cube-api/requirements.txt .
+COPY services/model-api/requirements.txt .
 
 # 创建虚拟环境并安装依赖
 RUN python -m venv /opt/venv
@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.10.14-slim AS runtime
 
 # Image labels for traceability
-LABEL org.opencontainers.image.title="Cube API"
+LABEL org.opencontainers.image.title="Model API"
 LABEL org.opencontainers.image.description="ONE-DATA-STUDIO MLOps Platform API"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.vendor="ONE-DATA-STUDIO"
@@ -34,7 +34,7 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # 复制应用代码
-COPY services/cube-api/ /app/
+COPY services/model-api/ /app/
 COPY services/shared/ /app/shared/
 
 # 创建非 root 用户

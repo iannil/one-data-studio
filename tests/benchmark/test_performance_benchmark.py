@@ -26,9 +26,9 @@ import requests
 logger = logging.getLogger(__name__)
 
 # 测试配置
-AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_agent_URL", "http://localhost:8081"))
-DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_data_URL", "http://localhost:8082"))
-MODEL_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
+AGENT_URL = os.getenv("TEST_AGENT_URL", "http://localhost:8081")
+DATA_URL = os.getenv("TEST_DATA_URL", "http://localhost:8082")
+MODEL_URL = os.getenv("TEST_MODEL_URL", "http://localhost:8083")
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {
@@ -292,7 +292,7 @@ class TestAPIResponseBenchmark:
         """列出模型接口延迟"""
         def request_func():
             response = requests.get(
-                f"{CUBE_URL}/api/v1/models",
+                f"{MODEL_URL}/api/v1/models",
                 headers=HEADERS,
                 params={"page": 1, "page_size": 20},
                 timeout=30
@@ -324,7 +324,7 @@ class TestDatabaseQueryBenchmark:
         """简单查询延迟"""
         def request_func():
             response = requests.post(
-                f"{CUBE_URL}/api/v1/sql-lab/execute",
+                f"{MODEL_URL}/api/v1/sql-lab/execute",
                 headers=HEADERS,
                 json={
                     "sql": "SELECT 1 as test",
@@ -352,7 +352,7 @@ class TestDatabaseQueryBenchmark:
         """聚合查询延迟"""
         def request_func():
             response = requests.post(
-                f"{CUBE_URL}/api/v1/sql-lab/execute",
+                f"{MODEL_URL}/api/v1/sql-lab/execute",
                 headers=HEADERS,
                 json={
                     "sql": "SELECT COUNT(*) as cnt FROM (SELECT 1 UNION ALL SELECT 2) t",
@@ -624,7 +624,7 @@ class TestInferenceBenchmark:
         """创建测试模型和部署"""
         # 创建模型
         model_response = requests.post(
-            f"{CUBE_URL}/api/v1/models",
+            f"{MODEL_URL}/api/v1/models",
             headers=HEADERS,
             json={
                 "name": f"Benchmark Model {int(time.time())}",
@@ -638,7 +638,7 @@ class TestInferenceBenchmark:
 
             # 部署模型
             deploy_response = requests.post(
-                f"{CUBE_URL}/api/v1/models/{TestInferenceBenchmark.model_id}/deploy",
+                f"{MODEL_URL}/api/v1/models/{TestInferenceBenchmark.model_id}/deploy",
                 headers=HEADERS,
                 json={"replicas": 1}
             )
@@ -651,12 +651,12 @@ class TestInferenceBenchmark:
         # 清理
         if TestInferenceBenchmark.deployment_id:
             requests.delete(
-                f"{CUBE_URL}/api/v1/deployments/{TestInferenceBenchmark.deployment_id}",
+                f"{MODEL_URL}/api/v1/deployments/{TestInferenceBenchmark.deployment_id}",
                 headers=HEADERS
             )
         if TestInferenceBenchmark.model_id:
             requests.delete(
-                f"{CUBE_URL}/api/v1/models/{TestInferenceBenchmark.model_id}",
+                f"{MODEL_URL}/api/v1/models/{TestInferenceBenchmark.model_id}",
                 headers=HEADERS
             )
 
@@ -669,7 +669,7 @@ class TestInferenceBenchmark:
 
         def request_func():
             response = requests.post(
-                f"{CUBE_URL}/api/v1/predict/{TestInferenceBenchmark.deployment_id}",
+                f"{MODEL_URL}/api/v1/predict/{TestInferenceBenchmark.deployment_id}",
                 headers=HEADERS,
                 json={"input": "This is a test input for classification."},
                 timeout=30

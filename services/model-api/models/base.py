@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # 数据库配置 - 必须从环境变量读取
 # 支持 DATABASE_URL 或 MODEL_DATABASE_URL 作为变量名
-DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MODEL_DATABASE_URL") or os.getenv("CUBE_DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MODEL_DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError(
         "DATABASE_URL environment variable is required. "

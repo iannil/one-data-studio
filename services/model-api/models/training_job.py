@@ -1,6 +1,6 @@
 """
 训练任务数据模型
-Cube API - TrainingJob 模型
+Model API - TrainingJob 模型
 """
 
 import json

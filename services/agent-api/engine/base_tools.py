@@ -20,7 +20,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
 DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
 
 # SSL verification for HTTP requests

@@ -8,7 +8,7 @@ global:
     - production-registry-secret
 
 # Production replicas and resources
-alldataApi:
+dataApi:
   replicaCount: 3
   autoscaling:
     enabled: true
@@ -23,7 +23,7 @@ alldataApi:
       cpu: "1000m"
       memory: "1Gi"
 
-bishengApi:
+agentApi:
   replicaCount: 3
   autoscaling:
     enabled: true
@@ -38,7 +38,7 @@ bishengApi:
       cpu: "2000m"
       memory: "2Gi"
 
-cubeApi:
+modelApi:
   replicaCount: 3
   autoscaling:
     enabled: true
@@ -103,19 +103,19 @@ ingress:
           service: web-frontend
         - path: /api/v1/datasets
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/metadata
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/workflows
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/chat
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/models
           pathType: Prefix
-          service: cube-api
+          service: model-api
         - path: /v1/
           pathType: Prefix
           service: openai-proxy

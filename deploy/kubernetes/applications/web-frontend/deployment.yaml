@@ -13,10 +13,6 @@ data:
   VITE_API_DATA_URL: "http://data-api.one-data-data.svc.cluster.local:8080"
   VITE_API_AGENT_URL: "http://agent-api.one-data-agent.svc.cluster.local:8081"
   VITE_API_MODEL_URL: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
-  # 兼容旧环境变量名
-  VITE_API_data_URL: "http://data-api.one-data-data.svc.cluster.local:8080"
-  VITE_API_agent_URL: "http://agent-api.one-data-agent.svc.cluster.local:8081"
-  VITE_API_CUBE_URL: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
 
   # 认证配置
   VITE_AUTH_MODE: "keycloak"
@@ -98,22 +94,6 @@ spec:
             configMapKeyRef:
               name: web-frontend-env
               key: VITE_API_MODEL_URL
-        # 兼容旧环境变量名
-        - name: VITE_API_data_URL
-          valueFrom:
-            configMapKeyRef:
-              name: web-frontend-env
-              key: VITE_API_data_URL
-        - name: VITE_API_agent_URL
-          valueFrom:
-            configMapKeyRef:
-              name: web-frontend-env
-              key: VITE_API_agent_URL
-        - name: VITE_API_CUBE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: web-frontend-env
-              key: VITE_API_CUBE_URL
         - name: VITE_AUTH_MODE
           valueFrom:
             configMapKeyRef:

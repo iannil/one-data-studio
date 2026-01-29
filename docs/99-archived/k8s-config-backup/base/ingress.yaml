@@ -47,28 +47,28 @@ spec:
                 name: web-frontend
                 port:
                   number: 80
-          # Bisheng API
-          - path: /api/bisheng
+          # Agent API
+          - path: /api/agent
             pathType: Prefix
             backend:
               service:
-                name: bisheng-api
+                name: agent-api
                 port:
                   number: 8000
-          # Alldata API
-          - path: /api/alldata
+          # Data API
+          - path: /api/data
             pathType: Prefix
             backend:
               service:
-                name: alldata-api
+                name: data-api
                 port:
                   number: 8001
-          # Cube API
-          - path: /api/cube
+          # Model API
+          - path: /api/model
             pathType: Prefix
             backend:
               service:
-                name: cube-api
+                name: model-api
                 port:
                   number: 8002
           # OpenAI Proxy

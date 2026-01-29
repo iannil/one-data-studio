@@ -67,7 +67,7 @@ test.describe('核心页面测试', () => {
 
     test('应能访问算法引擎页面', async ({ page }) => {
       await page.click('text=算法引擎');
-      await expect(page).toHaveURL(/\/cube/);
+      await expect(page).toHaveURL(/\/model/);
     });
 
     test('应能访问系统设置页面', async ({ page }) => {
@@ -121,11 +121,6 @@ test.describe('API 健康检查', () => {
 
   test('agent API 应可用', async ({ request }) => {
     const response = await request.get('http://localhost:8000/api/v1/health');
-    expect(response.ok()).toBeTruthy();
-  });
-
-  test('Cube API 应可用', async ({ request }) => {
-    const response = await request.get('http://localhost:8002/api/v1/health');
     expect(response.ok()).toBeTruthy();
   });
 });

@@ -153,7 +153,7 @@ class TestConfig:
         config = Config()
         assert config.get_service_url("data") == config.service.data_api_url
         assert config.get_service_url("agent") == config.service.agent_api_url
-        assert config.get_service_url("cube") == config.service.model_api_url
+        assert config.get_service_url("model") == config.service.model_api_url
         assert config.get_service_url("invalid") is None
 
 

@@ -1,5 +1,5 @@
 """
-Cube API Services
+Model API Services
 """
 
 from .huggingface import HuggingFaceService, get_huggingface_service, ModelInfo, DatasetInfo

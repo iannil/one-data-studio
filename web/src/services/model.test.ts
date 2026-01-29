@@ -1,9 +1,9 @@
 /**
- * Cube Service 单元测试
+ * Model Service 单元测试
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as model from './cube';
+import * as model from './model';
 
 // Mock apiClient
 vi.mock('./api', () => ({
@@ -17,7 +17,7 @@ vi.mock('./api', () => ({
 
 import { apiClient } from './api';
 
-describe('Cube Service', () => {
+describe('Model Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -870,7 +870,7 @@ describe('Cube Service', () => {
 
       const result = await model.getSqlLabConnections();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/connections');
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/connections');
       expect(result).toEqual(mockResponse);
     });
 
@@ -881,7 +881,7 @@ describe('Cube Service', () => {
       const request = { database_id: 'db-1', sql: 'SELECT * FROM users' };
       const result = await model.executeSqlQuery(request);
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/cube/sql-lab/execute', request);
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/model/sql-lab/execute', request);
       expect(result).toEqual(mockResponse);
     });
 
@@ -891,7 +891,7 @@ describe('Cube Service', () => {
 
       const result = await model.getQueryResult('q-1');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/queries/q-1/result');
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/queries/q-1/result');
       expect(result).toEqual(mockResponse);
     });
 
@@ -901,7 +901,7 @@ describe('Cube Service', () => {
 
       const result = await model.cancelQuery('q-1');
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/cube/sql-lab/queries/q-1/cancel');
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/model/sql-lab/queries/q-1/cancel');
       expect(result).toEqual(mockResponse);
     });
 
@@ -911,7 +911,7 @@ describe('Cube Service', () => {
 
       const result = await model.getQueryHistory({ database_id: 'db-1' });
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/history', { params: { database_id: 'db-1' } });
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/history', { params: { database_id: 'db-1' } });
       expect(result).toEqual(mockResponse);
     });
 
@@ -921,7 +921,7 @@ describe('Cube Service', () => {
 
       const result = await model.getSavedQueries({ search: 'test' });
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/saved', { params: { search: 'test' } });
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/saved', { params: { search: 'test' } });
       expect(result).toEqual(mockResponse);
     });
 
@@ -932,7 +932,7 @@ describe('Cube Service', () => {
       const request = { name: 'My Query', sql: 'SELECT * FROM users', database_id: 'db-1' };
       const result = await model.saveQuery(request);
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/cube/sql-lab/saved', request);
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/model/sql-lab/saved', request);
       expect(result).toEqual(mockResponse);
     });
 
@@ -942,7 +942,7 @@ describe('Cube Service', () => {
 
       const result = await model.deleteSavedQuery('sq-1');
 
-      expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/cube/sql-lab/saved/sq-1');
+      expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/model/sql-lab/saved/sq-1');
       expect(result).toEqual(mockResponse);
     });
 
@@ -952,7 +952,7 @@ describe('Cube Service', () => {
 
       const result = await model.getSqlLabTables('db-1');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/connections/db-1/tables');
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/connections/db-1/tables');
       expect(result).toEqual(mockResponse);
     });
 
@@ -962,7 +962,7 @@ describe('Cube Service', () => {
 
       const result = await model.getSqlLabTableSchema('db-1', 'users');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/cube/sql-lab/connections/db-1/tables/users/schema');
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/model/sql-lab/connections/db-1/tables/users/schema');
       expect(result).toEqual(mockResponse);
     });
 
@@ -972,7 +972,7 @@ describe('Cube Service', () => {
 
       const result = await model.formatSql('SELECT * FROM users');
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/cube/sql-lab/format', { sql: 'SELECT * FROM users' });
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/model/sql-lab/format', { sql: 'SELECT * FROM users' });
       expect(result).toEqual(mockResponse);
     });
 
@@ -982,7 +982,7 @@ describe('Cube Service', () => {
 
       const result = await model.validateSqlSyntax('db-1', 'SELECT * FROM users');
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/cube/sql-lab/validate', { database_id: 'db-1', sql: 'SELECT * FROM users' });
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/model/sql-lab/validate', { database_id: 'db-1', sql: 'SELECT * FROM users' });
       expect(result).toEqual(mockResponse);
     });
   });

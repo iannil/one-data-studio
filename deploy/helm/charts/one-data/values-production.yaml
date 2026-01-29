@@ -176,7 +176,7 @@ agent:
 # ============================================
 # model - 生产配置
 # ============================================
-cube:
+model:
   modelServing:
     replicaCount: 2
 
@@ -199,7 +199,7 @@ cube:
       annotations:
         cert-manager.io/cluster-issuer: "letsencrypt-prod"
         nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      tlsSecret: cube-tls
+      tlsSecret: model-tls
 
 # ============================================
 # 监控 - 生产环境建议启用

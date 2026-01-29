@@ -11,10 +11,10 @@ k8s/
 │   ├── configmap.yaml       # Non-sensitive configuration
 │   ├── secrets.yaml         # Secrets template (DO NOT commit real secrets!)
 │   ├── rbac.yaml            # Service account and RBAC
-│   ├── bisheng-api.yaml     # LLMOps API deployment
-│   ├── alldata-api.yaml     # DataOps API deployment
+│   ├── agent-api.yaml     # LLMOps API deployment
+│   ├── data-api.yaml     # DataOps API deployment
 │   ├── openai-proxy.yaml    # OpenAI-compatible proxy
-│   ├── cube-api.yaml        # MLOps API deployment
+│   ├── model-api.yaml        # MLOps API deployment
 │   ├── web-frontend.yaml    # Web frontend deployment
 │   ├── ingress.yaml         # Ingress configuration
 │   ├── hpa.yaml             # Horizontal Pod Autoscaler
@@ -104,7 +104,7 @@ kubectl get svc -n one-data-studio
 kubectl get ingress -n one-data-studio
 
 # View logs
-kubectl logs -f deployment/bisheng-api -n one-data-studio
+kubectl logs -f deployment/agent-api -n one-data-studio
 ```
 
 ## Configuration
@@ -115,7 +115,7 @@ Update image tags in overlay kustomization files:
 
 ```yaml
 images:
-  - name: one-data-studio/bisheng-api
+  - name: one-data-studio/agent-api
     newTag: v1.0.0
 ```
 

@@ -116,7 +116,7 @@ BASE_URL=http://localhost:3000
 # API URLs
 agent_API_URL=http://localhost:8000
 data_API_URL=http://localhost:8001
-CUBE_API_URL=http://localhost:8002
+MODEL_API_URL=http://localhost:8002
 OPENAI_API_URL=http://localhost:8003
 
 # 认证

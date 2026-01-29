@@ -22,7 +22,7 @@ data:
   # MinIO configuration
   MINIO_ENDPOINT: "minio.one-data-studio.svc.cluster.local:9000"
   MINIO_USE_SSL: "false"
-  MINIO_DEFAULT_BUCKET: "alldata"
+  MINIO_DEFAULT_BUCKET: "one-data"
 
   # Milvus configuration
   MILVUS_HOST: "milvus.one-data-studio.svc.cluster.local"
@@ -30,9 +30,9 @@ data:
   EMBEDDING_DIM: "1536"
 
   # Service URLs (internal)
-  ALLDATA_API_URL: "http://alldata-api.one-data-studio.svc.cluster.local:8001"
-  BISHENG_API_URL: "http://bisheng-api.one-data-studio.svc.cluster.local:8000"
-  CUBE_API_URL: "http://cube-api.one-data-studio.svc.cluster.local:8002"
+  DATA_API_URL: "http://data-api.one-data-studio.svc.cluster.local:8001"
+  AGENT_API_URL: "http://agent-api.one-data-studio.svc.cluster.local:8000"
+  MODEL_API_URL: "http://model-api.one-data-studio.svc.cluster.local:8002"
   OPENAI_PROXY_URL: "http://openai-proxy.one-data-studio.svc.cluster.local:8003"
 
   # Environment

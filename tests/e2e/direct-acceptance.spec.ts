@@ -21,12 +21,12 @@ const CONFIG = {
   KEYCLOAK_URL: process.env.KEYCLOAK_URL || 'http://localhost:8080',
   AGENT_API: process.env.AGENT_API_URL || process.env.agent_API_URL || 'http://localhost:8000',
   DATA_API: process.env.DATA_API_URL || process.env.data_API_URL || 'http://localhost:8001',
-  MODEL_API: process.env.MODEL_API_URL || process.env.CUBE_API_URL || 'http://localhost:8002',
+  MODEL_API: process.env.MODEL_API_URL || process.env.MODEL_API_URL || 'http://localhost:8002',
   OPENAI_API: process.env.OPENAI_API_URL || 'http://localhost:8003',
   // 兼容旧名称
   agent_API: process.env.agent_API_URL || 'http://localhost:8000',
   data_API: process.env.data_API_URL || 'http://localhost:8001',
-  CUBE_API: process.env.CUBE_API_URL || 'http://localhost:8002',
+  MODEL_API: process.env.MODEL_API_URL || 'http://localhost:8002',
 };
 
 // ============================================
@@ -354,10 +354,10 @@ test.describe('API 服务健康检查', () => {
     expect(response.status()).toBe(200);
   });
 
-  test('Cube API', async ({ request }) => {
-    console.log('\n[API] 检查 Cube API...');
-    const response = await request.get(`${CONFIG.CUBE_API}/api/v1/health`);
-    console.log(`[API] Cube API 状态: ${response.status()}`);
+  test('Model API', async ({ request }) => {
+    console.log('\n[API] 检查 Model API...');
+    const response = await request.get(`${CONFIG.MODEL_API}/api/v1/health`);
+    console.log(`[API] Model API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 

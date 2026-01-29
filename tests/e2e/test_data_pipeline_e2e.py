@@ -27,10 +27,10 @@ logger = logging.getLogger(__name__)
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8082")
 DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_data_API_URL", "http://localhost:8082"))
-MODEL_API_URL = os.getenv("TEST_MODEL_API_URL", os.getenv("TEST_CUBE_API_URL", "http://localhost:8083"))
+MODEL_API_URL = os.getenv("TEST_MODEL_API_URL", os.getenv("TEST_MODEL_API_URL", "http://localhost:8083"))
 # 兼容旧名称
 data_API_URL = DATA_API_URL
-CUBE_API_URL = MODEL_API_URL
+MODEL_API_URL = MODEL_API_URL
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {

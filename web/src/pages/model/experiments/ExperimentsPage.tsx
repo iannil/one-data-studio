@@ -260,7 +260,7 @@ function ExperimentsPage() {
           <Space>
             <Button
               icon={<LineChartOutlined />}
-              onClick={() => navigate('/cube/experiments/compare')}
+              onClick={() => navigate('/model/experiments/compare')}
             >
               对比实验
             </Button>
@@ -444,13 +444,13 @@ function ExperimentsPage() {
               <Space>
                 <Button
                   icon={<LineChartOutlined />}
-                  onClick={() => navigate(`/cube/experiments/${selectedExperiment.experiment_id}`)}
+                  onClick={() => navigate(`/model/experiments/${selectedExperiment.experiment_id}`)}
                 >
                   查看详情
                 </Button>
                 <Button
                   icon={<FileTextOutlined />}
-                  onClick={() => navigate(`/cube/experiments/${selectedExperiment.experiment_id}/logs`)}
+                  onClick={() => navigate(`/model/experiments/${selectedExperiment.experiment_id}/logs`)}
                 >
                   查看日志
                 </Button>

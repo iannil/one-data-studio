@@ -1,5 +1,5 @@
 """
-Alembic Environment Configuration for Cube-API
+Alembic Environment Configuration for Model-API
 ONE-DATA-STUDIO Database Migration Management
 """
 
@@ -35,7 +35,7 @@ def get_url():
     """Get database URL from environment variables."""
     return os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://cube:cube@localhost:3306/cube"
+        "mysql+pymysql://model:model@localhost:3306/model"
     )
 
 

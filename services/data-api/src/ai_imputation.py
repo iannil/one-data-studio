@@ -24,7 +24,7 @@ from statistics import mean, median, mode, stdev
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://openai-proxy:8000")
 AI_IMPUTATION_MODEL = os.getenv("AI_IMPUTATION_MODEL", "gpt-4o-mini")
 AI_IMPUTATION_ENABLED = os.getenv("AI_IMPUTATION_ENABLED", "true").lower() in ("true", "1", "yes")
 
@@ -168,7 +168,7 @@ class AIImputationService:
         Args:
             api_url: LLM API 地址
         """
-        self.api_url = api_url or CUBE_API_URL
+        self.api_url = api_url or MODEL_API_URL
         self.model = AI_IMPUTATION_MODEL
         self.enabled = AI_IMPUTATION_ENABLED
 

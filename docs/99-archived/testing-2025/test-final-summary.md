@@ -19,7 +19,7 @@
 
 ## 二、完成的修复工作
 
-### 2.1 第一轮修复 - Alldata API
+### 2.1 第一轮修复 - Data API
 
 **新增 17 个端点**:
 - ETL 任务管理 (5 个端点)
@@ -30,15 +30,15 @@
 
 **修复效果**: 数据管理员和工程师显著改善
 
-### 2.2 第二轮修复 - Bisheng/Cube/Admin API
+### 2.2 第二轮修复 - Agent/Model/Admin API
 
 **新增端点**:
-- Bisheng: `/api/v1/bi/generate`, `/api/v1/alerts/rules`
-- Cube: `/api/v1/notebooks`, `/api/v1/evaluation`
+- Agent: `/api/v1/bi/generate`, `/api/v1/alerts/rules`
+- Model: `/api/v1/notebooks`, `/api/v1/evaluation`
 - Admin: `/api/v1/settings/email`, `/api/v1/settings/ldap`, `/api/v1/settings/backup`
 
 **状态**: 端点已添加但测试回退，主要原因是：
-1. 数据库连接问题 (Bisheng API)
+1. 数据库连接问题 (Agent API)
 2. Milvus 连接失败
 3. 部分服务需要开发模式挂载
 
@@ -50,7 +50,7 @@
 ```
 Access denied for user 'onedata'@'192.168.107.12'
 ```
-影响 Bisheng API 的功能
+影响 Agent API 的功能
 
 ### 3.2 Milvus 连接
 ```
@@ -60,7 +60,7 @@ ipv4:192.168.107.13:19530: No route to host
 影响向量检索相关功能
 
 ### 3.3 开发模式配置
-部分 API (Admin, Cube) 需要源代码挂载才能正常工作
+部分 API (Admin, Model) 需要源代码挂载才能正常工作
 
 ---
 
@@ -68,5 +68,5 @@ ipv4:192.168.107.13:19530: No route to host
 
 1. **修复数据库连接** - 检查 MySQL 用户权限配置
 2. **修复 Milvus 连接** - 检查 Milvus 服务和网络
-3. **添加开发模式挂载** - 为 Bisheng/Cube API 添加源码挂载
+3. **添加开发模式挂载** - 为 Agent/Model API 添加源码挂载
 4. **完善认证流程** - 统一 JWT 认证机制

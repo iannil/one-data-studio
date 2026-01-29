@@ -21,8 +21,8 @@ python_functions = ["test_*"]
 pythonpath = [
     ".",
     "services",
-    "services/bisheng-api",
-    "services/alldata-api/src"
+    "services/agent-api",
+    "services/data-api/src"
 ]
 addopts = [
     "-v",

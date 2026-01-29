@@ -1,5 +1,5 @@
 """
-Cube API - MLOps 平台服务
+Model API - MLOps 平台服务
 提供模型管理、训练任务、部署服务等功能
 
 功能：
@@ -166,7 +166,7 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "service": "cube-api",
+        "service": "model-api",
         "version": "1.0.0",
         "huggingface_configured": hf_service.token is not None,
         "timestamp": datetime.now().isoformat()
@@ -721,7 +721,7 @@ def deploy_model(model_id: str):
     db.refresh(deployment)
 
     # 生成端点 URL
-    deployment.endpoint = f"http://cube-api.one-data.svc.cluster.local:8000/api/v1/predict/{deployment.deployment_id}"
+    deployment.endpoint = f"http://model-api.one-data.svc.cluster.local:8000/api/v1/predict/{deployment.deployment_id}"
     deployment.status = "running"
     db.commit()
     db.refresh(deployment)
@@ -3607,10 +3607,10 @@ def list_sql_lab_databases():
     })
 
 
-@app.route("/api/v1/cube/sql-lab/connections", methods=["GET"])
+@app.route("/api/v1/model/sql-lab/connections", methods=["GET"])
 @require_jwt(optional=True)
 def list_sql_lab_connections():
-    """获取 SQL Lab 数据库连接列表（别名）"""
+    """获取 SQL Lab 数据库连接列表"""
     db = get_db_session()
 
     connections = db.query(DatabaseConnection).filter(DatabaseConnection.is_active == True).all()
@@ -5679,5 +5679,5 @@ if __name__ == "__main__":
             "Debug mode exposes detailed error information and may enable remote code execution."
         )
 
-    logger.info(f"Starting Cube API on port {port}")
+    logger.info(f"Starting Model API on port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug)

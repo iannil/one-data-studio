@@ -18,13 +18,13 @@ commonLabels:
 
 # Staging image tags (use latest for testing)
 images:
-  - name: one-data-studio/bisheng-api
+  - name: one-data-studio/agent-api
     newTag: develop
-  - name: one-data-studio/alldata-api
+  - name: one-data-studio/data-api
     newTag: develop
   - name: one-data-studio/openai-proxy
     newTag: develop
-  - name: one-data-studio/cube-api
+  - name: one-data-studio/model-api
     newTag: develop
   - name: one-data-studio/web-frontend
     newTag: develop
@@ -33,7 +33,7 @@ images:
 patches:
   - target:
       kind: Deployment
-      name: bisheng-api
+      name: agent-api
     patch: |-
       - op: replace
         path: /spec/replicas
@@ -52,7 +52,7 @@ patches:
         value: "1Gi"
   - target:
       kind: Deployment
-      name: alldata-api
+      name: data-api
     patch: |-
       - op: replace
         path: /spec/replicas
@@ -66,7 +66,7 @@ patches:
         value: 1
   - target:
       kind: Deployment
-      name: cube-api
+      name: model-api
     patch: |-
       - op: replace
         path: /spec/replicas

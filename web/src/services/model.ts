@@ -1831,7 +1831,7 @@ export async function getMetricsOverview(): Promise<ApiResponse<{
  * 获取 SQL Lab 数据库连接列表
  */
 export async function getSqlLabConnections(): Promise<ApiResponse<{ connections: SqlDatabaseConnection[] }>> {
-  return apiClient.get('/api/v1/cube/sql-lab/connections');
+  return apiClient.get('/api/v1/model/sql-lab/connections');
 }
 
 /**
@@ -1842,21 +1842,21 @@ export async function executeSqlQuery(data: {
   sql: string;
   limit?: number;
 }): Promise<ApiResponse<QueryResult>> {
-  return apiClient.post('/api/v1/cube/sql-lab/execute', data);
+  return apiClient.post('/api/v1/model/sql-lab/execute', data);
 }
 
 /**
  * 获取查询结果
  */
 export async function getQueryResult(queryId: string): Promise<ApiResponse<QueryResult>> {
-  return apiClient.get(`/api/v1/cube/sql-lab/queries/${queryId}/result`);
+  return apiClient.get(`/api/v1/model/sql-lab/queries/${queryId}/result`);
 }
 
 /**
  * 取消查询
  */
 export async function cancelQuery(queryId: string): Promise<ApiResponse<void>> {
-  return apiClient.post(`/api/v1/cube/sql-lab/queries/${queryId}/cancel`);
+  return apiClient.post(`/api/v1/model/sql-lab/queries/${queryId}/cancel`);
 }
 
 /**
@@ -1866,7 +1866,7 @@ export async function getQueryHistory(params?: {
   database_id?: string;
   limit?: number;
 }): Promise<ApiResponse<{ history: QueryHistoryItem[] }>> {
-  return apiClient.get('/api/v1/cube/sql-lab/history', { params });
+  return apiClient.get('/api/v1/model/sql-lab/history', { params });
 }
 
 /**
@@ -1879,49 +1879,49 @@ export async function getSavedQueries(params?: {
   page?: number;
   page_size?: number;
 }): Promise<ApiResponse<{ queries: SavedQuery[]; total: number }>> {
-  return apiClient.get('/api/v1/cube/sql-lab/saved', { params });
+  return apiClient.get('/api/v1/model/sql-lab/saved', { params });
 }
 
 /**
  * 获取保存的查询详情
  */
 export async function getSavedQuery(savedQueryId: string): Promise<ApiResponse<SavedQuery>> {
-  return apiClient.get(`/api/v1/cube/sql-lab/saved/${savedQueryId}`);
+  return apiClient.get(`/api/v1/model/sql-lab/saved/${savedQueryId}`);
 }
 
 /**
  * 保存查询
  */
 export async function saveQuery(data: CreateSavedQueryRequest): Promise<ApiResponse<{ saved_query_id: string }>> {
-  return apiClient.post('/api/v1/cube/sql-lab/saved', data);
+  return apiClient.post('/api/v1/model/sql-lab/saved', data);
 }
 
 /**
  * 更新保存的查询
  */
 export async function updateSavedQuery(savedQueryId: string, data: Partial<CreateSavedQueryRequest>): Promise<ApiResponse<SavedQuery>> {
-  return apiClient.put(`/api/v1/cube/sql-lab/saved/${savedQueryId}`, data);
+  return apiClient.put(`/api/v1/model/sql-lab/saved/${savedQueryId}`, data);
 }
 
 /**
  * 删除保存的查询
  */
 export async function deleteSavedQuery(savedQueryId: string): Promise<ApiResponse<void>> {
-  return apiClient.delete(`/api/v1/cube/sql-lab/saved/${savedQueryId}`);
+  return apiClient.delete(`/api/v1/model/sql-lab/saved/${savedQueryId}`);
 }
 
 /**
  * 导出查询结果
  */
 export async function exportQueryResult(queryId: string, format: 'csv' | 'json' | 'excel'): Promise<ApiResponse<{ download_url: string }>> {
-  return apiClient.post(`/api/v1/cube/sql-lab/queries/${queryId}/export`, { format });
+  return apiClient.post(`/api/v1/model/sql-lab/queries/${queryId}/export`, { format });
 }
 
 /**
  * 获取数据库表列表
  */
 export async function getSqlLabTables(databaseId: string): Promise<ApiResponse<{ tables: string[] }>> {
-  return apiClient.get(`/api/v1/cube/sql-lab/connections/${databaseId}/tables`);
+  return apiClient.get(`/api/v1/model/sql-lab/connections/${databaseId}/tables`);
 }
 
 /**
@@ -1930,14 +1930,14 @@ export async function getSqlLabTables(databaseId: string): Promise<ApiResponse<{
 export async function getSqlLabTableSchema(databaseId: string, tableName: string): Promise<ApiResponse<{
   columns: Array<{ name: string; type: string; nullable: boolean }>;
 }>> {
-  return apiClient.get(`/api/v1/cube/sql-lab/connections/${databaseId}/tables/${tableName}/schema`);
+  return apiClient.get(`/api/v1/model/sql-lab/connections/${databaseId}/tables/${tableName}/schema`);
 }
 
 /**
  * 格式化 SQL
  */
 export async function formatSql(sql: string): Promise<ApiResponse<{ formatted_sql: string }>> {
-  return apiClient.post('/api/v1/cube/sql-lab/format', { sql });
+  return apiClient.post('/api/v1/model/sql-lab/format', { sql });
 }
 
 /**
@@ -1947,7 +1947,7 @@ export async function validateSqlSyntax(databaseId: string, sql: string): Promis
   valid: boolean;
   errors?: Array<{ line: number; column: number; message: string }>;
 }>> {
-  return apiClient.post('/api/v1/cube/sql-lab/validate', { database_id: databaseId, sql });
+  return apiClient.post('/api/v1/model/sql-lab/validate', { database_id: databaseId, sql });
 }
 
 export default {

@@ -97,7 +97,7 @@ scrape_configs:
           - localhost
         labels:
           job: model-api
-          service: cube
+          service: model
           env: production
 
     pipeline_stages:

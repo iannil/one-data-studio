@@ -4,24 +4,24 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: bisheng-api-pdb
+  name: agent-api-pdb
   namespace: one-data-studio
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: bisheng-api
+      app.kubernetes.io/name: agent-api
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: alldata-api-pdb
+  name: data-api-pdb
   namespace: one-data-studio
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: alldata-api
+      app.kubernetes.io/name: data-api
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -37,13 +37,13 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: cube-api-pdb
+  name: model-api-pdb
   namespace: one-data-studio
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: cube-api
+      app.kubernetes.io/name: model-api
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

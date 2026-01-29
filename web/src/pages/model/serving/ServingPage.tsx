@@ -592,13 +592,13 @@ function ServingPage() {
               <Space>
                 <Button
                   icon={<LineChartOutlined />}
-                  onClick={() => navigate(`/cube/serving/${selectedService.service_id}/metrics`)}
+                  onClick={() => navigate(`/model/serving/${selectedService.service_id}/metrics`)}
                 >
                   查看指标
                 </Button>
                 <Button
                   icon={<CloudServerOutlined />}
-                  onClick={() => navigate(`/cube/serving/${selectedService.service_id}/logs`)}
+                  onClick={() => navigate(`/model/serving/${selectedService.service_id}/logs`)}
                 >
                   查看日志
                 </Button>

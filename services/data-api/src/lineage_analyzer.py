@@ -21,7 +21,7 @@ import uuid
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://openai-proxy:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://openai-proxy:8000")
 AI_LINEAGE_MODEL = os.getenv("AI_LINEAGE_MODEL", "gpt-4o-mini")
 AI_LINEAGE_ENABLED = os.getenv("AI_LINEAGE_ENABLED", "true").lower() in ("true", "1", "yes")
 

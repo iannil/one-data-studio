@@ -24,10 +24,10 @@
 
 | 端点类型 | 错误路由 | 正确路由 | 服务 |
 |---------|---------|---------|------|
-| Text-to-SQL | API_BASE | BISHENG_API | 8000 |
-| BI 报表 | /api/v1/bi/dashboards | /api/v1/bi/reports | ALLDATA_API |
-| 预警规则 | /api/v1/alerts/rules | /api/v1/alerts/metric-rules | ALLDATA_API |
-| 资产列表 | /api/v1/assets/search | /api/v1/assets | ALLDATA_API |
+| Text-to-SQL | API_BASE | AGENT_API | 8000 |
+| BI 报表 | /api/v1/bi/dashboards | /api/v1/bi/reports | DATA_API |
+| 预警规则 | /api/v1/alerts/rules | /api/v1/alerts/metric-rules | DATA_API |
+| 资产列表 | /api/v1/assets/search | /api/v1/assets | DATA_API |
 | 资产分类 | /api/v1/assets/categories | (跳过-500错误) | - |
 
 ### 2. 字段名修复
@@ -44,12 +44,12 @@
 ### 3. 端点验证
 
 **有效端点**:
-- `/api/v1/knowledge-bases` (BISHENG_API)
-- `/api/v1/text2sql` (BISHENG_API)
-- `/api/v1/bi/reports` (ALLDATA_API)
-- `/api/v1/alerts/metric-rules` (ALLDATA_API)
-- `/api/v1/quality/alerts` (ALLDATA_API)
-- `/api/v1/assets` (ALLDATA_API)
+- `/api/v1/knowledge-bases` (AGENT_API)
+- `/api/v1/text2sql` (AGENT_API)
+- `/api/v1/bi/reports` (DATA_API)
+- `/api/v1/alerts/metric-rules` (DATA_API)
+- `/api/v1/quality/alerts` (DATA_API)
+- `/api/v1/assets` (DATA_API)
 
 **不存在或不可用的端点**:
 - `/api/v1/text2sql/execute` → 使用 `/api/v1/text2sql`

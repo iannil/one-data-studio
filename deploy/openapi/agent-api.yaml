@@ -492,7 +492,7 @@ components:
           properties:
             data_api:
               type: string
-            cube_api:
+            model_api:
               type: string
 
     ErrorResponse:

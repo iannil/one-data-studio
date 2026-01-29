@@ -278,7 +278,7 @@ def create_test_model():
     """创建测试模型"""
     logger.info("创建测试模型...")
 
-    api_url = os.getenv('MODEL_API_URL', os.getenv('CUBE_API_URL', 'http://localhost:8002'))
+    api_url = os.getenv('MODEL_API_URL', os.getenv('MODEL_API_URL', 'http://localhost:8002'))
     url = f"{api_url}/api/v1/models"
 
     data = {
@@ -338,7 +338,7 @@ def wait_for_services():
     services = [
         ('Agent API', os.getenv('AGENT_API_URL', os.getenv('agent_API_URL', 'http://localhost:8000')) + '/api/v1/health'),
         ('Data API', os.getenv('DATA_API_URL', os.getenv('data_API_URL', 'http://localhost:8001')) + '/api/v1/health'),
-        ('Model API', os.getenv('MODEL_API_URL', os.getenv('CUBE_API_URL', 'http://localhost:8002')) + '/api/v1/health'),
+        ('Model API', os.getenv('MODEL_API_URL', os.getenv('MODEL_API_URL', 'http://localhost:8002')) + '/api/v1/health'),
     ]
 
     for name, url in services:

@@ -18,13 +18,13 @@ commonLabels:
   app.kubernetes.io/managed-by: "{{ .Release.Service }}"
 
 # ===========================================
-# Alldata API Service
+# Data API Service
 # ===========================================
-alldataApi:
+dataApi:
   enabled: true
   replicaCount: 2
   image:
-    repository: one-data-studio/alldata-api
+    repository: one-data-studio/data-api
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
@@ -43,17 +43,17 @@ alldataApi:
     maxReplicas: 10
     targetCPUUtilization: 70
   env:
-    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/alldata"
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/onedata"
     REDIS_URL: "redis://:$(REDIS_PASSWORD)@redis:6379/0"
 
 # ===========================================
-# Bisheng API Service
+# Agent API Service
 # ===========================================
-bishengApi:
+agentApi:
   enabled: true
   replicaCount: 2
   image:
-    repository: one-data-studio/bisheng-api
+    repository: one-data-studio/agent-api
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
@@ -72,18 +72,18 @@ bishengApi:
     maxReplicas: 10
     targetCPUUtilization: 70
   env:
-    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/bisheng"
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/agent"
     REDIS_URL: "redis://:$(REDIS_PASSWORD)@redis:6379/1"
     MINIO_ENDPOINT: "minio:9000"
 
 # ===========================================
-# Cube API Service
+# Model API Service
 # ===========================================
-cubeApi:
+modelApi:
   enabled: true
   replicaCount: 2
   image:
-    repository: one-data-studio/cube-api
+    repository: one-data-studio/model-api
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
@@ -102,7 +102,7 @@ cubeApi:
     maxReplicas: 10
     targetCPUUtilization: 70
   env:
-    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/cube"
+    DATABASE_URL: "mysql+pymysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/model"
     USE_MOCK_INFERENCE: "false"
 
 # ===========================================
@@ -178,19 +178,19 @@ ingress:
           service: web-frontend
         - path: /api/v1/datasets
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/metadata
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/workflows
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/chat
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/models
           pathType: Prefix
-          service: cube-api
+          service: model-api
         - path: /v1/
           pathType: Prefix
           service: openai-proxy

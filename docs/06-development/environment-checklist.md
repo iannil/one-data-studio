@@ -86,7 +86,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 |------|----------|
 | 平台入口 | one-data.example.com |
 | Data | data.example.com |
-| Cube | cube.example.com |
+| Model | model.example.com |
 | Agent | agent.example.com |
 | MinIO | minio.example.com |
 

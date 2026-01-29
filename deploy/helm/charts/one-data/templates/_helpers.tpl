@@ -154,14 +154,14 @@ Warns if TLS is not enabled for ingress in production environment
 */}}
 {{- define "one-data.validateTLS" -}}
 {{- if include "one-data.isProduction" . }}
-{{- if and .Values.alldata.ingress.enabled (not .Values.alldata.ingress.tls) }}
-{{- fail "ERROR: TLS must be enabled for Alldata ingress in production. Set alldata.ingress.tls=true and configure cert-manager." }}
+{{- if and .Values.data.ingress.enabled (not .Values.data.ingress.tls) }}
+{{- fail "ERROR: TLS must be enabled for Data API ingress in production. Set data.ingress.tls=true and configure cert-manager." }}
 {{- end }}
-{{- if and .Values.bisheng.ingress.enabled (not .Values.bisheng.ingress.tls) }}
-{{- fail "ERROR: TLS must be enabled for Bisheng ingress in production. Set bisheng.ingress.tls=true and configure cert-manager." }}
+{{- if and .Values.agent.ingress.enabled (not .Values.agent.ingress.tls) }}
+{{- fail "ERROR: TLS must be enabled for Agent API ingress in production. Set agent.ingress.tls=true and configure cert-manager." }}
 {{- end }}
-{{- if and .Values.cube.modelServing.ingress.enabled (not .Values.cube.modelServing.ingress.tls) }}
-{{- fail "ERROR: TLS must be enabled for Cube ingress in production. Set cube.modelServing.ingress.tls=true and configure cert-manager." }}
+{{- if and .Values.model.modelServing.ingress.enabled (not .Values.model.modelServing.ingress.tls) }}
+{{- fail "ERROR: TLS must be enabled for Model Serving ingress in production. Set model.modelServing.ingress.tls=true and configure cert-manager." }}
 {{- end }}
 {{- end }}
 {{- end }}

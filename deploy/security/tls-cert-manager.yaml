@@ -112,9 +112,9 @@ spec:
   secretName: model-api-tls
   duration: 2160h
   renewBefore: 720h
-  commonName: cube.example.com
+  commonName: model.example.com
   dnsNames:
-  - cube.example.com
+  - model.example.com
   - vllm-serving.one-data-model.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod

@@ -19,7 +19,7 @@ from .base_tools import get_tool_registry, ToolRegistry
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL") or os.getenv("CUBE_API_URL", "http://vllm-serving:8000")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
 
 # ReAct Prompt 模板
 REACT_PROMPT_TEMPLATE = """你是一个智能助手，可以使用工具来帮助用户完成任务。

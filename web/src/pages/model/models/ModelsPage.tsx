@@ -471,7 +471,7 @@ function ModelsPage() {
               <Space>
                 <Button
                   icon={<RocketOutlined />}
-                  onClick={() => navigate(`/cube/serving/create?modelId=${selectedModel.model_id}`)}
+                  onClick={() => navigate(`/model/serving/create?modelId=${selectedModel.model_id}`)}
                 >
                   部署服务
                 </Button>

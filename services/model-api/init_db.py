@@ -1,6 +1,6 @@
 """
 数据库初始化脚本
-Cube API - 创建数据库表
+Model API - 创建数据库表
 """
 
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """初始化数据库"""
-    logger.info("开始初始化 Cube API 数据库...")
+    logger.info("开始初始化 Model API 数据库...")
     try:
         init_db()
         logger.info("数据库初始化成功!")

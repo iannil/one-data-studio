@@ -24,15 +24,15 @@
 **删除日期**: 2025-01-24
 
 **删除原因**:
-- Alldata API 真实服务已实现完成 (`services/alldata-api/`)
-- Bisheng API 真实服务已实现完成 (`services/bisheng-api/`)
+- Data API 真实服务已实现完成 (`services/data-api/`)
+- Agent API 真实服务已实现完成 (`services/agent-api/`)
 - Mock 服务不再需要，已被真实 API 替代
 
 **原包含文件**:
-- `alldata-api-mock.yaml` - Alldata API Mock 服务配置
-- `bisheng-api-mock.yaml` - Bisheng API Mock 服务配置
+- `data-api-mock.yaml` - Data API Mock 服务配置
+- `agent-api-mock.yaml` - Agent API Mock 服务配置
 
-**替代方案**: 使用 `services/alldata-api/` 和 `services/bisheng-api/` 中的真实 API 服务。
+**替代方案**: 使用 `services/data-api/` 和 `services/agent-api/` 中的真实 API 服务。
 
 ---
 

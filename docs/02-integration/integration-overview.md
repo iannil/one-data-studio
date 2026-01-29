@@ -62,7 +62,7 @@ POST /api/v1/datasets
 }
 
 # Model 侧：使用数据集
-from cube_sdk import Dataset
+from model_sdk import Dataset
 ds = Dataset.get("sales_data_v1.0")
 df = ds.read()  # 自动挂载，直接读取
 ```
@@ -108,8 +108,8 @@ Agent 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API
 models:
   - name: "enterprise-llama"
     type: "openai-compatible"
-    base_url: "http://cube-serving/v1"
-    api_key: "${CUBE_API_KEY}"
+    base_url: "http://model-serving/v1"
+    api_key: "${MODEL_API_KEY}"
     features: ["chat", "completion"]
 ```
 
@@ -167,6 +167,6 @@ models:
 
 | 阶段 | 集成点 | 优先级 | 说明 |
 |------|--------|--------|------|
-| 第一阶段 | Data → Cube | P0 | 数据是基础，先打通数据链路 |
-| 第二阶段 | Cube → Agent | P0 | 模型服务是核心能力 |
+| 第一阶段 | Data → Model | P0 | 数据是基础，先打通数据链路 |
+| 第二阶段 | Model → Agent | P0 | 模型服务是核心能力 |
 | 第三阶段 | Data → Agent | P1 | Text-to-SQL 是增强功能 |

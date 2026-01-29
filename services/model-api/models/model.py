@@ -1,6 +1,6 @@
 """
 模型管理数据模型
-Cube API - MLModel 和 ModelVersion 模型
+Model API - MLModel 和 ModelVersion 模型
 """
 
 import json

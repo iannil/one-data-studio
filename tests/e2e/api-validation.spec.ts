@@ -184,7 +184,7 @@ test.describe('API响应验证 - model', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/cube/notebooks`);
+    await page.goto(`${BASE_URL}/model/notebooks`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -205,7 +205,7 @@ test.describe('API响应验证 - model', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/cube/experiments`);
+    await page.goto(`${BASE_URL}/model/experiments`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -226,7 +226,7 @@ test.describe('API响应验证 - model', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/cube/models`);
+    await page.goto(`${BASE_URL}/model/models`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -247,7 +247,7 @@ test.describe('API响应验证 - model', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/cube/training`);
+    await page.goto(`${BASE_URL}/model/training`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -268,7 +268,7 @@ test.describe('API响应验证 - model', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/cube/serving`);
+    await page.goto(`${BASE_URL}/model/serving`);
     await expect(page.locator('body')).toBeVisible();
   });
 });

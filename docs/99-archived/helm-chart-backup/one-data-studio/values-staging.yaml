@@ -6,7 +6,7 @@ global:
   imageRegistry: "registry.staging.example.com/"
 
 # Reduce replicas for staging
-alldataApi:
+dataApi:
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -18,7 +18,7 @@ alldataApi:
       cpu: "250m"
       memory: "256Mi"
 
-bishengApi:
+agentApi:
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -30,7 +30,7 @@ bishengApi:
       cpu: "500m"
       memory: "512Mi"
 
-cubeApi:
+modelApi:
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -65,19 +65,19 @@ ingress:
           service: web-frontend
         - path: /api/v1/datasets
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/metadata
           pathType: Prefix
-          service: alldata-api
+          service: data-api
         - path: /api/v1/workflows
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/chat
           pathType: Prefix
-          service: bisheng-api
+          service: agent-api
         - path: /api/v1/models
           pathType: Prefix
-          service: cube-api
+          service: model-api
         - path: /v1/
           pathType: Prefix
           service: openai-proxy

@@ -523,8 +523,8 @@ useEffect(() => {
 | 工作台 | `/` | 查看 |
 | 数据管理 | `/data/*` | 全部 |
 | 数据开发 | `/data/etl`, `/data/quality` 等 | 全部 |
-| 模型开发 | `/cube/*` | 全部 |
-| 模型服务 | `/cube/serving` | 全部 |
+| 模型开发 | `/model/*` | 全部 |
+| 模型服务 | `/model/serving` | 全部 |
 | AI 应用 | `/agent/*`, `/chat`, `/agents` | 全部 |
 | 运维中心 | `/schedules`, `/executions` | 全部 |
 | **用户管理** | `/admin/users` | CRUD |
@@ -553,17 +553,17 @@ useEffect(() => {
 | **离线开发** | `/data/offline` | Read/Execute |
 | **实时开发** | `/data/streaming` | Read/Execute |
 | **实时 IDE** | `/data/streaming-ide` | Read/Execute |
-| **Notebook** | `/cube/notebooks` | Read/Execute |
-| **SQL Lab** | `/cube/sql-lab` | Read/Execute |
-| **实验管理** | `/cube/experiments` | Read |
-| **训练任务** | `/cube/training` | Read |
-| **模型仓库** | `/cube/models` | Read |
-| **AIHub** | `/cube/aihub` | Read |
-| **Pipeline** | `/cube/pipelines` | Read |
-| **LLM 微调** | `/cube/llm-tuning` | Read |
-| **在线服务** | `/cube/serving` | Read |
-| **资源管理** | `/cube/resources` | Read |
-| **监控告警** | `/cube/monitoring` | Read |
+| **Notebook** | `/model/notebooks` | Read/Execute |
+| **SQL Lab** | `/model/sql-lab` | Read/Execute |
+| **实验管理** | `/model/experiments` | Read |
+| **训练任务** | `/model/training` | Read |
+| **模型仓库** | `/model/models` | Read |
+| **AIHub** | `/model/aihub` | Read |
+| **Pipeline** | `/model/pipelines` | Read |
+| **LLM 微调** | `/model/llm-tuning` | Read |
+| **在线服务** | `/model/serving` | Read |
+| **资源管理** | `/model/resources` | Read |
+| **监控告警** | `/model/monitoring` | Read |
 | **AI 对话** | `/chat` | Execute |
 | **Prompt 管理** | `/agent/prompts` | Read |
 | **知识库** | `/agent/knowledge` | Read |
@@ -585,17 +585,17 @@ useEffect(() => {
 | 工作台 | `/` | 查看 |
 | 数据集 | `/datasets` | Read |
 | 元数据 | `/metadata` | Read |
-| Notebook | `/cube/notebooks` | Read/Execute |
-| SQL Lab | `/cube/sql-lab` | Read/Execute |
-| **实验管理** | `/cube/experiments` | CRUD |
-| **训练任务** | `/cube/training` | CRUD |
-| 模型仓库 | `/cube/models` | Read |
-| **AIHub** | `/cube/aihub` | Read/Execute |
-| **Pipeline** | `/cube/pipelines` | CRUD/Execute |
-| **LLM 微调** | `/cube/llm-tuning` | CRUD |
-| **在线服务** | `/cube/serving` | CRUD |
-| 资源管理 | `/cube/resources` | Read |
-| 监控告警 | `/cube/monitoring` | Read |
+| Notebook | `/model/notebooks` | Read/Execute |
+| SQL Lab | `/model/sql-lab` | Read/Execute |
+| **实验管理** | `/model/experiments` | CRUD |
+| **训练任务** | `/model/training` | CRUD |
+| 模型仓库 | `/model/models` | Read |
+| **AIHub** | `/model/aihub` | Read/Execute |
+| **Pipeline** | `/model/pipelines` | CRUD/Execute |
+| **LLM 微调** | `/model/llm-tuning` | CRUD |
+| **在线服务** | `/model/serving` | CRUD |
+| 资源管理 | `/model/resources` | Read |
+| 监控告警 | `/model/monitoring` | Read |
 | **AI 对话** | `/chat` | Execute |
 | **Prompt 管理** | `/agent/prompts` | CRUD |
 | **知识库** | `/agent/knowledge` | CRUD |
@@ -621,8 +621,8 @@ useEffect(() => {
 | 特征存储 | `/data/features` | Read |
 | BI 报表 | `/data/bi` | Read |
 | 指标体系 | `/data/metrics` | Read |
-| SQL Lab | `/cube/sql-lab` | Execute |
-| 模型仓库 | `/cube/models` | Read |
+| SQL Lab | `/model/sql-lab` | Execute |
+| 模型仓库 | `/model/models` | Read |
 | 工作流 | `/workflows` | Read |
 
 ### 5.5 User（普通用户）

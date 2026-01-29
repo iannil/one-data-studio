@@ -304,7 +304,7 @@ test.describe('用户删除阶段', () => {
     const user = await userManager.createUser(userData);
 
     // 创建一个运行中的任务（模拟）
-    const taskResponse = await request.post(`${process.env.MODEL_API_URL || process.env.CUBE_API_URL || 'http://localhost:8002'}/api/v1/training/jobs`, {
+    const taskResponse = await request.post(`${process.env.MODEL_API_URL || process.env.MODEL_API_URL || 'http://localhost:8002'}/api/v1/training/jobs`, {
       data: {
         name: 'Running Job',
         status: 'running',

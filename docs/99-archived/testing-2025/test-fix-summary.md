@@ -21,7 +21,7 @@
 
 ### 2.1 添加的 API 端点
 
-在 `services/alldata-api/src/main.py` 中添加了以下端点:
+在 `services/data-api/src/main.py` 中添加了以下端点:
 
 **ETL 任务管理:**
 - `POST /api/v1/etl/tasks` - 创建 ETL 任务
@@ -58,9 +58,9 @@
 
 ### 2.2 端口配置修复
 
-- Bisheng API: 8000 (原 8081)
-- Alldata API: 8001 (原 8082)
-- Cube API: 8002 (原 8083)
+- Agent API: 8000 (原 8081)
+- Data API: 8001 (原 8082)
+- Model API: 8002 (原 8083)
 - Admin API: 8004 (原 8084)
 
 ### 2.3 测试文件修复
@@ -73,14 +73,14 @@
 ## 三、仍需修复的问题
 
 ### 3.1 数据库连接问题
-- Alldata API 与 MySQL 连接错误影响部分端点
+- Data API 与 MySQL 连接错误影响部分端点
 - ETLTask 模型字段不匹配
 
-### 3.2 Bisheng API (8000)
+### 3.2 Agent API (8000)
 - 知识库端点 `/api/v1/knowledge_bases` 未实现或路径错误
 - RAG 查询端点未实现
 
-### 3.3 Cube API (8002)
+### 3.3 Model API (8002)
 - Notebook 端点 `/api/v1/notebooks` 未实现
 - 训练实验端点未实现
 - 部署端点未实现
@@ -93,5 +93,5 @@
 ## 四、后续建议
 
 1. **短期** - 修复 ETLTask 模型字段问题，完善数据库连接
-2. **中期** - 实现 Bisheng 和 Cube API 的缺失端点
+2. **中期** - 实现 Agent 和 Model API 的缺失端点
 3. **长期** - 统一 API 响应格式，完善错误处理

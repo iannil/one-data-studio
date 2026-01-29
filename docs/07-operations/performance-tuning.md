@@ -227,7 +227,7 @@ export const queryClient = new QueryClient({
     queries: {
       // 根据数据类型设置不同的缓存时间
       staleTime: (query) => {
-        if (query.queryKey[0] === 'cube' && query.queryKey[1] === 'models') {
+        if (query.queryKey[0] === 'model' && query.queryKey[1] === 'models') {
           return 15 * 60 * 1000;  // 模型列表：15 分钟
         }
         if (query.queryKey[0] === 'auth' && query.queryKey[1] === 'permissions') {

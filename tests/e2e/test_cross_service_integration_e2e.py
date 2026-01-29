@@ -18,15 +18,10 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# 服务 URL 配置 (兼容旧的环境变量名)
-DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_data_URL", "http://localhost:8082"))
-AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_agent_URL", "http://localhost:8081"))
-MODEL_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
-
-# 兼容旧变量名
-data_URL = DATA_URL
-agent_URL = AGENT_URL
-CUBE_URL = MODEL_URL
+# 服务 URL 配置
+DATA_URL = os.getenv("TEST_DATA_URL", "http://localhost:8082")
+AGENT_URL = os.getenv("TEST_AGENT_URL", "http://localhost:8081")
+MODEL_URL = os.getenv("TEST_MODEL_URL", "http://localhost:8083")
 
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
@@ -42,13 +37,13 @@ class TestDataModelIntegration:
     """Data → Model 集成测试"""
 
     dataset_id: Optional[str] = None
-    cube_dataset_id: Optional[str] = None
+    model_dataset_id: Optional[str] = None
 
     @pytest.mark.e2e
     def test_01_create_data_dataset(self):
         """在 Data 创建数据集"""
         response = requests.post(
-            f"{data_URL}/api/v1/datasets",
+            f"{DATA_URL}/api/v1/datasets",
             headers=HEADERS,
             json={
                 "name": f"Integration Test Dataset {int(time.time())}",
@@ -73,14 +68,14 @@ class TestDataModelIntegration:
             logger.info("Created Data dataset: %s", TestDataModelIntegration.dataset_id)
 
     @pytest.mark.e2e
-    def test_02_register_dataset_in_cube(self):
+    def test_02_register_dataset_in_model(self):
         """在 Model 注册数据集"""
         if not TestDataModelIntegration.dataset_id:
             pytest.skip("No Data dataset created")
 
         # 从 Data 获取数据集信息
         data_response = requests.get(
-            f"{data_URL}/api/v1/datasets/{TestDataModelIntegration.dataset_id}",
+            f"{DATA_URL}/api/v1/datasets/{TestDataModelIntegration.dataset_id}",
             headers=HEADERS
         )
 
@@ -107,13 +102,13 @@ class TestDataModelIntegration:
 
         if response.status_code == 201:
             data = response.json()
-            TestDataModelIntegration.cube_dataset_id = data["data"]["dataset_id"]
+            TestDataModelIntegration.model_dataset_id = data["data"]["dataset_id"]
 
     @pytest.mark.e2e
     def test_03_use_dataset_for_training(self):
         """使用数据集创建训练任务"""
-        if not TestDataModelIntegration.cube_dataset_id:
-            pytest.skip("No Cube dataset registered")
+        if not TestDataModelIntegration.model_dataset_id:
+            pytest.skip("No Model dataset registered")
 
         # 先创建模型
         model_response = requests.post(
@@ -138,7 +133,7 @@ class TestDataModelIntegration:
             json={
                 "name": f"Integration Training {int(time.time())}",
                 "model_id": model_id,
-                "dataset_id": TestDataModelIntegration.cube_dataset_id,
+                "dataset_id": TestDataModelIntegration.model_dataset_id,
                 "hyperparameters": {
                     "learning_rate": 0.0001,
                     "epochs": 1
@@ -155,7 +150,7 @@ class TestDataModelIntegration:
             pytest.skip("No dataset created")
 
         response = requests.get(
-            f"{data_URL}/api/v1/lineage/table",
+            f"{DATA_URL}/api/v1/lineage/table",
             headers=HEADERS,
             params={
                 "source": "data",
@@ -233,7 +228,7 @@ class TestModelAgentIntegration:
 
     @pytest.mark.e2e
     def test_03_create_agent_workflow_with_model(self):
-        """创建使用 Cube 模型的 Agent 工作流"""
+        """创建使用 Model 模型的 Agent 工作流"""
         if not TestModelAgentIntegration.deployment_id:
             pytest.skip("No deployment created")
 
@@ -241,7 +236,7 @@ class TestModelAgentIntegration:
             f"{AGENT_URL}/api/v1/workflows",
             headers=HEADERS,
             json={
-                "name": f"Cube Integration Workflow {int(time.time())}",
+                "name": f"Model Integration Workflow {int(time.time())}",
                 "description": "使用 Model 模型的工作流",
                 "type": "rag"
             }
@@ -265,7 +260,7 @@ class TestModelAgentIntegration:
                         "id": "llm",
                         "type": "llm",
                         "config": {
-                            "model_source": "cube",
+                            "model_source": "model",
                             "deployment_id": TestModelAgentIntegration.deployment_id,
                             "temperature": 0.7
                         }
@@ -337,7 +332,7 @@ class TestDataAgentIntegration:
     def test_01_metadata_query(self):
         """测试元数据查询"""
         response = requests.get(
-            f"{data_URL}/api/v1/metadata/tables",
+            f"{DATA_URL}/api/v1/metadata/tables",
             headers=HEADERS,
             params={"keywords": "sales,orders"}
         )
@@ -353,7 +348,7 @@ class TestDataAgentIntegration:
         """测试带元数据的 Text-to-SQL"""
         # 先获取元数据
         meta_response = requests.get(
-            f"{data_URL}/api/v1/metadata/tables",
+            f"{DATA_URL}/api/v1/metadata/tables",
             headers=HEADERS,
             params={"keywords": "orders"}
         )
@@ -391,7 +386,7 @@ class TestDataAgentIntegration:
     def test_03_vector_search(self):
         """测试向量检索"""
         response = requests.post(
-            f"{data_URL}/api/v1/vector/search",
+            f"{DATA_URL}/api/v1/vector/search",
             headers=HEADERS,
             json={
                 "query": "销售政策变化",
@@ -473,7 +468,7 @@ class TestCompleteMLOpsWorkflow:
         # 步骤 1: 在 Data 准备数据集
         logger.info("Step 1: Creating dataset in Data")
         dataset_response = requests.post(
-            f"{data_URL}/api/v1/datasets",
+            f"{DATA_URL}/api/v1/datasets",
             headers=HEADERS,
             json={
                 "name": f"MLOps Workflow Dataset {int(time.time())}",
@@ -557,7 +552,7 @@ class TestCompleteMLOpsWorkflow:
         requests.delete(f"{AGENT_URL}/api/v1/workflows/{workflow_id}", headers=HEADERS)
         requests.delete(f"{MODEL_URL}/api/v1/deployments/{deployment_id}", headers=HEADERS)
         requests.delete(f"{MODEL_URL}/api/v1/models/{model_id}", headers=HEADERS)
-        requests.delete(f"{data_URL}/api/v1/datasets/{dataset_id}", headers=HEADERS)
+        requests.delete(f"{DATA_URL}/api/v1/datasets/{dataset_id}", headers=HEADERS)
 
 
 class TestServiceHealthCheck:
@@ -566,7 +561,7 @@ class TestServiceHealthCheck:
     @pytest.mark.e2e
     def test_data_health(self):
         """测试 Data 服务健康"""
-        response = requests.get(f"{data_URL}/api/v1/health")
+        response = requests.get(f"{DATA_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
@@ -585,7 +580,7 @@ class TestServiceHealthCheck:
     def test_all_services_healthy(self):
         """测试所有服务都健康"""
         services = [
-            (data_URL, "Data"),
+            (DATA_URL, "Data"),
             (AGENT_URL, "Agent"),
             (MODEL_URL, "Model")
         ]

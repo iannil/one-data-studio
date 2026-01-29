@@ -19,7 +19,7 @@ vi.mock('@/services/agent-service', () => ({
   },
 }));
 
-vi.mock('@/services/cube', () => ({
+vi.mock('@/services/model', () => ({
   default: {
     getModels: vi.fn(),
     streamChatCompletion: vi.fn(),

@@ -36,7 +36,7 @@ show_shell_help() {
 服务别名:
   b, agent     = agent-api
   a, data     = data-api
-  c, cube        = model-api
+  m, model       = model-api
   o, openai      = openai-proxy
   w, web         = web-frontend
   m, db, mysql   = mysql

@@ -1,7 +1,7 @@
 {
   "dashboard": {
-    "title": "ONE-DATA Cube (vLLM) 监控",
-    "tags": ["cube", "vllm", "mlops", "inference"],
+    "title": "ONE-DATA Model (vLLM) 监控",
+    "tags": ["model", "vllm", "mlops", "inference"],
     "timezone": "browser",
     "refresh": "30s",
     "time": {

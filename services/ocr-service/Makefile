@@ -177,7 +177,7 @@ db-migrate: ## 运行数据库迁移
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) exec ocr-service python -c "from models.base import Base; from app import engine; Base.metadata.create_all(bind=engine)"
 
 db-shell: ## 进入数据库Shell
-	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) exec mysql mysql -uroot -p${MYSQL_PASSWORD} alldata
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) exec mysql mysql -uroot -p${MYSQL_PASSWORD} data
 
 # Redis相关
 redis-cli: ## 进入Redis CLI

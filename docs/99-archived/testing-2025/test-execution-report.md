@@ -51,7 +51,7 @@
 - 其余 5 个测试为 AI 相关功能的非完全测试
 
 **失败原因:**
-- Cube API (8002) 部分端点未实现
+- Model API (8002) 部分端点未实现
 - `/api/v1/notebooks` - Notebook 端点未实现
 - `/api/v1/experiments` - 实验端点未实现
 - `/api/v1/deployments` - 部署端点未实现
@@ -66,7 +66,7 @@
 - 其他 3 个基础功能测试
 
 **失败原因:**
-- Bisheng API (8000) 部分端点未实现
+- Agent API (8000) 部分端点未实现
 - `/api/v1/knowledge_bases` - 知识库端点未实现
 - `/api/v1/rag/query` - RAG 查询端点未实现
 - `/api/v1/bi/generate` - BI 报表生成端点未实现
@@ -96,9 +96,9 @@
 | MySQL | 3306 | ✅ Healthy | - |
 | Redis | 6379 | ✅ Healthy | - |
 | Keycloak | 8080 | ✅ Running | 认证服务运行中 |
-| Bisheng API | 8000 | ⚠️ Unhealthy | Milvus 连接失败 |
-| Alldata API | 8001 | ✅ Healthy | `{"service":"alldata-api"}` |
-| Cube API | 8002 | ✅ Healthy | `{"service":"cube-api"}` |
+| Agent API | 8000 | ⚠️ Unhealthy | Milvus 连接失败 |
+| Data API | 8001 | ✅ Healthy | `{"service":"data-api"}` |
+| Model API | 8002 | ✅ Healthy | `{"service":"model-api"}` |
 | OpenAI Proxy | 8003 | ✅ Healthy | - |
 | Admin API | 8004 | ✅ Healthy | `{"service":"admin-api"}` |
 | Web Frontend | 3000 | ✅ Healthy | - |
@@ -110,7 +110,7 @@
 ### 4.1 API 端点未实现
 以下 API 端点在对应服务中尚未实现或返回错误状态码:
 
-**Alldata API (8001):**
+**Data API (8001):**
 - 数据采集: `/api/v1/datasets/ingest`
 - ETL 任务: `/api/v1/etl/tasks`, `/api/v1/etl/fusion`
 - 元数据扫描: `/api/v1/metadata/scan`
@@ -118,12 +118,12 @@
 - 资产管理: `/api/v1/assets/*`
 - 血缘同步: `/api/v1/lineage/*`
 
-**Bisheng API (8000):**
+**Agent API (8000):**
 - 知识库: `/api/v1/knowledge_bases`
 - RAG 查询: `/api/v1/rag/query`
 - BI 报表: `/api/v1/bi/*`
 
-**Cube API (8002):**
+**Model API (8002):**
 - Notebook: `/api/v1/notebooks`
 - 实验管理: `/api/v1/experiments`
 - 模型部署: `/api/v1/deployments`
@@ -136,7 +136,7 @@
 - 用户管理: `/api/v1/users` (部分功能)
 
 ### 4.2 Milvus 连接问题
-Bisheng API 无法连接到 Milvus (192.168.107.13:19530)，影响向量存储相关功能。
+Agent API 无法连接到 Milvus (192.168.107.13:19530)，影响向量存储相关功能。
 
 ### 4.3 UI 元素定位问题
 部分 UI 测试失败，因为页面元素选择器无法找到对应元素。

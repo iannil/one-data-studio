@@ -425,8 +425,8 @@ bash scripts/upload_demo_docs.sh
 
 ### 集成验证检查
 
-- [ ] Data → Cube 数据集可访问
-- [ ] Cube → Agent 模型调用成功
+- [ ] Data → Model 数据集可访问
+- [ ] Model → Agent 模型调用成功
 - [ ] Data → Agent 元数据获取成功
 
 ### 结束后检查

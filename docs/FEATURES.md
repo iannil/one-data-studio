@@ -308,7 +308,7 @@ ONE-DATA-STUDIO 企业级智能大数据平台
 │   │   │   ├─── 支持 T4/V100/A100 等 GPU 卡型 ✅
 │   │   │   ├─── 支持 vGPU 模式占用 ✅
 │   │   │   ├─── 支持多资源组/多集群 ✅
-│   │   │   ├─── cube-studio 前后端支持 arm64 ✅
+│   │   │   ├─── one-data-studio 前后端支持 arm64 ✅
 │   │   │   ├─── 依赖基础组件支持 arm64 ✅
 │   │   │   ├─── 任务模板支持 arm64 ✅
 │   │   │   ├─── 在线 jupyter/vscode 支持 arm64 ✅

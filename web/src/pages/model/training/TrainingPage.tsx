@@ -532,13 +532,13 @@ function TrainingPage() {
               <Space>
                 <Button
                   icon={<FileTextOutlined />}
-                  onClick={() => navigate(`/cube/training/${selectedJob.job_id}/logs`)}
+                  onClick={() => navigate(`/model/training/${selectedJob.job_id}/logs`)}
                 >
                   查看日志
                 </Button>
                 <Button
                   icon={<ThunderboltOutlined />}
-                  onClick={() => navigate(`/cube/training/${selectedJob.job_id}/metrics`)}
+                  onClick={() => navigate(`/model/training/${selectedJob.job_id}/metrics`)}
                 >
                   查看指标
                 </Button>

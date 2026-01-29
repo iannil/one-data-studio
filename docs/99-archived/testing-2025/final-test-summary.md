@@ -23,10 +23,10 @@
 ### 1. 业务用户测试 (12/17 = 70.6%)
 
 **API 路由修复**:
-- `text2sql` → BISHENG_API (8000)
-- `/api/v1/bi/dashboards` → `/api/v1/bi/reports` (ALLDATA_API)
-- `/api/v1/alerts/rules` → `/api/v1/alerts/metric-rules` (ALLDATA_API)
-- `/api/v1/assets/search` → `/api/v1/assets` (ALLDATA_API)
+- `text2sql` → AGENT_API (8000)
+- `/api/v1/bi/dashboards` → `/api/v1/bi/reports` (DATA_API)
+- `/api/v1/alerts/rules` → `/api/v1/alerts/metric-rules` (DATA_API)
+- `/api/v1/assets/search` → `/api/v1/assets` (DATA_API)
 
 **字段名修复**:
 - `question` → `natural_language`
@@ -57,12 +57,12 @@
 
 ## 有效端点列表
 
-### BISHENG_API (8000)
+### AGENT_API (8000)
 - `/api/v1/knowledge-bases` - 知识库管理
 - `/api/v1/text2sql` - Text-to-SQL
 - `/api/v1/rag/query` - RAG 查询 (需要嵌入服务)
 
-### ALLDATA_API (8001)
+### DATA_API (8001)
 - `/api/v1/bi/reports` - BI 报表
 - `/api/v1/alerts/metric-rules` - 预警规则
 - `/api/v1/quality/alerts` - 质量告警

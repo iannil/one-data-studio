@@ -1,19 +1,19 @@
 # Horizontal Pod Autoscaler Configuration
 # Enables automatic scaling based on CPU/Memory utilization
 
-# Bisheng API HPA
+# Agent API HPA
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: bisheng-api-hpa
+  name: agent-api-hpa
   namespace: one-data-studio
   labels:
-    app.kubernetes.io/name: bisheng-api
+    app.kubernetes.io/name: agent-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: bisheng-api
+    name: agent-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -47,19 +47,19 @@ spec:
           periodSeconds: 15
       selectPolicy: Max
 ---
-# Alldata API HPA
+# Data API HPA
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: alldata-api-hpa
+  name: data-api-hpa
   namespace: one-data-studio
   labels:
-    app.kubernetes.io/name: alldata-api
+    app.kubernetes.io/name: data-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: alldata-api
+    name: data-api
   minReplicas: 2
   maxReplicas: 8
   metrics:
@@ -109,19 +109,19 @@ spec:
           value: 100
           periodSeconds: 10
 ---
-# Cube API HPA
+# Model API HPA
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: cube-api-hpa
+  name: model-api-hpa
   namespace: one-data-studio
   labels:
-    app.kubernetes.io/name: cube-api
+    app.kubernetes.io/name: model-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: cube-api
+    name: model-api
   minReplicas: 2
   maxReplicas: 8
   metrics:

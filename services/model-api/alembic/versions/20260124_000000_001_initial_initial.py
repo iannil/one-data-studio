@@ -1,10 +1,10 @@
-"""Initial migration for cube-api
+"""Initial migration for model-api
 
 Revision ID: 001_initial
 Revises:
 Create Date: 2026-01-24
 
-ONE-DATA-STUDIO - Cube API Initial Schema
+ONE-DATA-STUDIO - Model API Initial Schema
 """
 from typing import Sequence, Union
 

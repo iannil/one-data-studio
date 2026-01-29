@@ -462,7 +462,7 @@ test.describe('CRUD - 模型管理 (model)', () => {
   });
 
   test('访问模型管理页面', async ({ page }) => {
-    await page.goto(`${BASE_URL}/cube/models`);
+    await page.goto(`${BASE_URL}/model/models`);
     await expect(page.locator('body')).toBeVisible();
     await waitForPageLoad(page);
   });

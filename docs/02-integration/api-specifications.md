@@ -225,7 +225,7 @@ Authorization: Bearer {api_key}
             "id": "qwen-14b-chat",
             "object": "model",
             "created": 1705992000,
-            "owned_by": "cube-studio",
+            "owned_by": "model-studio",
             "permission": [],
             "root": "qwen-14b-chat",
             "parent": null
@@ -234,7 +234,7 @@ Authorization: Bearer {api_key}
             "id": "llama3-70b-instruct",
             "object": "model",
             "created": 1705992000,
-            "owned_by": "cube-studio",
+            "owned_by": "model-studio",
             "permission": [],
             "root": "llama3-70b-instruct",
             "parent": null
@@ -432,7 +432,7 @@ Authorization: Bearer {token}
         "model_id": "model-123",
         "model_name": "qwen-14b-chat",
         "status": "running",
-        "endpoint": "http://cube-serving/v1",
+        "endpoint": "http://model-serving/v1",
         "replicas": {
             "ready": 2,
             "total": 2
@@ -785,7 +785,7 @@ X-RateLimit-Reset: 1705992000
     "data": {
         "model_id": "model-123",
         "model_name": "qwen-14b-chat",
-        "endpoint": "http://cube-serving/v1"
+        "endpoint": "http://model-serving/v1"
     }
 }
 ```

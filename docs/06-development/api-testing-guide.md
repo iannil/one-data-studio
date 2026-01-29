@@ -26,9 +26,9 @@ echo $TOKEN
 
 ```bash
 # API 端点
-export ALDATA_API_URL="http://localhost:8080"
-export CUBE_API_URL="http://localhost:8000"
-export agent_API_URL="http://localhost:8081"
+export DATA_API_URL="http://localhost:8080"
+export MODEL_API_URL="http://localhost:8000"
+export AGENT_API_URL="http://localhost:8081"
 
 # 认证信息（如需要）
 export API_TOKEN="your-api-token"
@@ -59,7 +59,7 @@ brew install httpie
 ### 2.1 健康检查
 
 ```bash
-curl $ALDATA_API_URL/api/v1/health
+curl $DATA_API_URL/api/v1/health
 ```
 
 **预期响应：**
@@ -73,7 +73,7 @@ curl $ALDATA_API_URL/api/v1/health
 ### 2.2 数据集注册
 
 ```bash
-curl -X POST $ALDATA_API_URL/api/v1/datasets \
+curl -X POST $DATA_API_URL/api/v1/datasets \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -101,11 +101,11 @@ curl -X POST $ALDATA_API_URL/api/v1/datasets \
 
 ```bash
 # 获取数据集列表
-curl $ALDATA_API_URL/api/v1/datasets $CURL_AUTH | jq '.'
+curl $DATA_API_URL/api/v1/datasets $CURL_AUTH | jq '.'
 
 # 获取特定数据集
 DATASET_ID="ds-001"
-curl $ALDATA_API_URL/api/v1/datasets/$DATASET_ID $CURL_AUTH | jq '.'
+curl $DATA_API_URL/api/v1/datasets/$DATASET_ID $CURL_AUTH | jq '.'
 ```
 
 **验证点：**
@@ -115,7 +115,7 @@ curl $ALDATA_API_URL/api/v1/datasets/$DATASET_ID $CURL_AUTH | jq '.'
 ### 2.4 更新数据集
 
 ```bash
-curl -X PUT $ALDATA_API_URL/api/v1/datasets/$DATASET_ID \
+curl -X PUT $DATA_API_URL/api/v1/datasets/$DATASET_ID \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -127,14 +127,14 @@ curl -X PUT $ALDATA_API_URL/api/v1/datasets/$DATASET_ID \
 ### 2.5 删除数据集
 
 ```bash
-curl -X DELETE $ALDATA_API_URL/api/v1/datasets/$DATASET_ID \
+curl -X DELETE $DATA_API_URL/api/v1/datasets/$DATASET_ID \
   $CURL_AUTH | jq '.'
 ```
 
 ### 2.6 获取访问凭证
 
 ```bash
-curl -X POST $ALDATA_API_URL/api/v1/datasets/$DATASET_ID/credentials \
+curl -X POST $DATA_API_URL/api/v1/datasets/$DATASET_ID/credentials \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -149,12 +149,12 @@ curl -X POST $ALDATA_API_URL/api/v1/datasets/$DATASET_ID/credentials \
 
 ---
 
-## 集成点二：Cube 模型服务 API 测试
+## 集成点二：Model 模型服务 API 测试
 
 ### 3.1 列出可用模型
 
 ```bash
-curl $CUBE_API_URL/v1/models $CURL_AUTH | jq '.'
+curl $MODEL_API_URL/v1/models $CURL_AUTH | jq '.'
 ```
 
 **预期响应：**
@@ -165,7 +165,7 @@ curl $CUBE_API_URL/v1/models $CURL_AUTH | jq '.'
         {
             "id": "Qwen/Qwen-0.5B-Chat",
             "object": "model",
-            "owned_by": "cube-studio"
+            "owned_by": "one-data-studio"
         }
     ]
 }
@@ -174,7 +174,7 @@ curl $CUBE_API_URL/v1/models $CURL_AUTH | jq '.'
 ### 3.2 聊天补全（非流式）
 
 ```bash
-curl -X POST $CUBE_API_URL/v1/chat/completions \
+curl -X POST $MODEL_API_URL/v1/chat/completions \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -197,7 +197,7 @@ curl -X POST $CUBE_API_URL/v1/chat/completions \
 ### 3.3 聊天补全（流式）
 
 ```bash
-curl -X POST $CUBE_API_URL/v1/chat/completions \
+curl -X POST $MODEL_API_URL/v1/chat/completions \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -217,7 +217,7 @@ curl -X POST $CUBE_API_URL/v1/chat/completions \
 ### 3.4 文本补全
 
 ```bash
-curl -X POST $CUBE_API_URL/v1/completions \
+curl -X POST $MODEL_API_URL/v1/completions \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -230,7 +230,7 @@ curl -X POST $CUBE_API_URL/v1/completions \
 ### 3.5 嵌入向量
 
 ```bash
-curl -X POST $CUBE_API_URL/v1/embeddings \
+curl -X POST $MODEL_API_URL/v1/embeddings \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -246,7 +246,7 @@ curl -X POST $CUBE_API_URL/v1/embeddings \
 ### 3.6 模型部署
 
 ```bash
-curl -X POST $CUBE_API_URL/api/v1/models/deploy \
+curl -X POST $MODEL_API_URL/api/v1/models/deploy \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -265,7 +265,7 @@ curl -X POST $CUBE_API_URL/api/v1/models/deploy \
 
 ```bash
 MODEL_ID="model-123"
-curl $CUBE_API_URL/api/v1/models/$MODEL_ID/status \
+curl $MODEL_API_URL/api/v1/models/$MODEL_ID/status \
   $CURL_AUTH | jq '.'
 ```
 
@@ -276,21 +276,21 @@ curl $CUBE_API_URL/api/v1/models/$MODEL_ID/status \
 ### 4.1 获取数据库列表
 
 ```bash
-curl $ALDATA_API_URL/api/v1/metadata/databases \
+curl $DATA_API_URL/api/v1/metadata/databases \
   $CURL_AUTH | jq '.'
 ```
 
 ### 4.2 获取表列表
 
 ```bash
-curl $ALDATA_API_URL/api/v1/metadata/databases/sales_dw/tables \
+curl $DATA_API_URL/api/v1/metadata/databases/sales_dw/tables \
   $CURL_AUTH | jq '.'
 ```
 
 ### 4.3 获取表详情
 
 ```bash
-curl $ALDATA_API_URL/api/v1/metadata/databases/sales_dw/tables/orders \
+curl $DATA_API_URL/api/v1/metadata/databases/sales_dw/tables/orders \
   $CURL_AUTH | jq '.'
 ```
 
@@ -302,7 +302,7 @@ curl $ALDATA_API_URL/api/v1/metadata/databases/sales_dw/tables/orders \
 ### 4.4 智能表搜索
 
 ```bash
-curl -X POST $ALDATA_API_URL/api/v1/metadata/tables/search \
+curl -X POST $DATA_API_URL/api/v1/metadata/tables/search \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -314,7 +314,7 @@ curl -X POST $ALDATA_API_URL/api/v1/metadata/tables/search \
 ### 4.5 SQL 验证
 
 ```bash
-curl -X POST $ALDATA_API_URL/api/v1/query/validate \
+curl -X POST $DATA_API_URL/api/v1/query/validate \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -330,7 +330,7 @@ curl -X POST $ALDATA_API_URL/api/v1/query/validate \
 ### 4.6 SQL 执行
 
 ```bash
-curl -X POST $ALDATA_API_URL/api/v1/query/execute \
+curl -X POST $DATA_API_URL/api/v1/query/execute \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -359,7 +359,7 @@ echo "=== 端到端集成测试 ==="
 
 # 1. Data 注册数据集
 echo "[1/5] 注册数据集..."
-DS_RESPONSE=$(curl -s -X POST $ALDATA_API_URL/api/v1/datasets \
+DS_RESPONSE=$(curl -s -X POST $DATA_API_URL/api/v1/datasets \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -371,9 +371,9 @@ DS_RESPONSE=$(curl -s -X POST $ALDATA_API_URL/api/v1/datasets \
 DATASET_ID=$(echo $DS_RESPONSE | jq -r '.data.dataset_id')
 echo "数据集 ID: $DATASET_ID"
 
-# 2. Cube 调用模型
+# 2. Model 调用模型
 echo "[2/5] 测试模型服务..."
-CHAT_RESPONSE=$(curl -s -X POST $CUBE_API_URL/v1/chat/completions \
+CHAT_RESPONSE=$(curl -s -X POST $MODEL_API_URL/v1/chat/completions \
   -H "Content-Type: application/json" \
   $CURL_AUTH \
   -d '{
@@ -397,7 +397,7 @@ curl -s -X POST $agent_API_URL/api/v1/chat \
 
 # 5. 清理测试数据
 echo "[5/5] 清理测试数据..."
-curl -s -X DELETE $ALDATA_API_URL/api/v1/datasets/$DATASET_ID \
+curl -s -X DELETE $DATA_API_URL/api/v1/datasets/$DATASET_ID \
   $CURL_AUTH | jq '.'
 
 echo "=== 测试完成 ==="
@@ -449,7 +449,7 @@ class TestDataAPI:
         assert isinstance(data["data"], list)
 
 
-class TestCubeAPI:
+class TestModelAPI:
     base_url = "http://localhost:8000"
 
     def test_list_models(self):
@@ -544,7 +544,7 @@ brew install httpd  # macOS 包含 ab
 # 测试健康检查接口
 ab -n 1000 -c 10 \
    -H "Authorization: Bearer $API_TOKEN" \
-   $ALDATA_API_URL/api/v1/health
+   $DATA_API_URL/api/v1/health
 
 # 测试聊天接口（创建 JSON 文件）
 cat << 'EOF' > chat_payload.json
@@ -557,7 +557,7 @@ EOF
 
 ab -n 100 -c 5 -p chat_payload.json -T application/json \
    -H "Authorization: Bearer $API_TOKEN" \
-   $CUBE_API_URL/v1/chat/completions
+   $MODEL_API_URL/v1/chat/completions
 ```
 
 ### 7.2 使用 wrk
@@ -569,7 +569,7 @@ brew install wrk
 # 测试 GET 接口
 wrk -t4 -c100 -d30s --latency \
     -H "Authorization: Bearer $API_TOKEN" \
-    $ALDATA_API_URL/api/v1/datasets
+    $DATA_API_URL/api/v1/datasets
 ```
 
 ---
@@ -586,8 +586,8 @@ wrk -t4 -c100 -d30s --latency \
 
 ### 集成测试
 
-- [ ] Data → Cube 数据集可读取
-- [ ] Cube → Agent 模型调用成功
+- [ ] Data → Model 数据集可读取
+- [ ] Model → Agent 模型调用成功
 - [ ] Data → Agent 元数据查询成功
 - [ ] 端到端流程完整通过
 

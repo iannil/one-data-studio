@@ -15,13 +15,13 @@ commonLabels:
 
 # Production image tags (replace with actual versions)
 images:
-  - name: one-data-studio/bisheng-api
+  - name: one-data-studio/agent-api
     newTag: v1.0.0
-  - name: one-data-studio/alldata-api
+  - name: one-data-studio/data-api
     newTag: v1.0.0
   - name: one-data-studio/openai-proxy
     newTag: v1.0.0
-  - name: one-data-studio/cube-api
+  - name: one-data-studio/model-api
     newTag: v1.0.0
   - name: one-data-studio/web-frontend
     newTag: v1.0.0
@@ -31,14 +31,14 @@ patches:
   # Increase replicas for production
   - target:
       kind: Deployment
-      name: bisheng-api
+      name: agent-api
     patch: |-
       - op: replace
         path: /spec/replicas
         value: 3
   - target:
       kind: Deployment
-      name: alldata-api
+      name: data-api
     patch: |-
       - op: replace
         path: /spec/replicas
@@ -52,7 +52,7 @@ patches:
         value: 3
   - target:
       kind: Deployment
-      name: cube-api
+      name: model-api
     patch: |-
       - op: replace
         path: /spec/replicas
@@ -67,7 +67,7 @@ patches:
   # Increase resource limits for production
   - target:
       kind: Deployment
-      name: bisheng-api
+      name: agent-api
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/cpu

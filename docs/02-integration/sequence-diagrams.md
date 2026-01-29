@@ -27,9 +27,9 @@ sequenceDiagram
     end
 
     box "Model (AI中台)" #e8f5e9
-        participant Cube_NB as Notebook/开发环境
-        participant Cube_Job as 训练任务(K8s)
-        participant Cube_Serving as 模型服务(API)
+        participant Model_NB as Notebook/开发环境
+        participant Model_Job as 训练任务(K8s)
+        participant Model_Serving as 模型服务(API)
     end
 
     %% --- 阶段1：数据准备 ---
@@ -40,21 +40,21 @@ sequenceDiagram
     AD_ETL->>AD_Meta: 5. 注册数据集元数据 (版本v1.0)
 
     %% --- 阶段2：模型开发与微调 ---
-    AlgoEng->>Cube_NB: 6. 启动开发环境
-    Cube_NB->>AD_Meta: 7. 查询可用数据集路径
-    AD_Meta-->>Cube_NB: 返回 S3/HDFS 路径
+    AlgoEng->>Model_NB: 6. 启动开发环境
+    Model_NB->>AD_Meta: 7. 查询可用数据集路径
+    AD_Meta-->>Model_NB: 返回 S3/HDFS 路径
 
-    Cube_NB->>Cube_Job: 8. 提交分布式微调任务 (Fine-tuning)
-    activate Cube_Job
-    Cube_Job->>Storage: 9. 挂载/读取清洗后的数据
-    Cube_Job->>Cube_Job: 10. 执行训练 (LoRA/Full)
-    Cube_Job->>Storage: 11. 保存模型权重文件
-    deactivate Cube_Job
+    Model_NB->>Model_Job: 8. 提交分布式微调任务 (Fine-tuning)
+    activate Model_Job
+    Model_Job->>Storage: 9. 挂载/读取清洗后的数据
+    Model_Job->>Model_Job: 10. 执行训练 (LoRA/Full)
+    Model_Job->>Storage: 11. 保存模型权重文件
+    deactivate Model_Job
 
     %% --- 阶段3：模型服务化 ---
-    AlgoEng->>Cube_Serving: 12. 一键部署模型 (Model Deploy)
-    Cube_Serving->>Storage: 13. 加载模型权重
-    Cube_Serving-->>AlgoEng: 14. 返回 API Endpoint (OpenAI兼容接口)
+    AlgoEng->>Model_Serving: 12. 一键部署模型 (Model Deploy)
+    Model_Serving->>Storage: 13. 加载模型权重
+    Model_Serving-->>AlgoEng: 14. 返回 API Endpoint (OpenAI兼容接口)
 ```
 
 ### 流程解析

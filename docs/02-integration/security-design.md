@@ -20,7 +20,7 @@
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                         服务层                             │  │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │  │
-│  │  │ Data  │  │  Cube    │  │ Agent  │                 │  │
+│  │  │ Data  │  │  Model  │  │ Agent  │                 │  │
 │  │  └──────────┘  └──────────┘  └──────────┘                 │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -89,7 +89,7 @@ sequenceDiagram
 {
     "iss": "https://keycloak.example.com/realms/one-data",
     "sub": "user-123",
-    "aud": ["data", "cube", "agent"],
+    "aud": ["data", "model", "agent"],
     "exp": 1705995600,
     "iat": 1705992000,
     "jti": "token-id-123",
@@ -283,7 +283,7 @@ graph TD
 | `one-data-system` | 系统组件 | platform_admin |
 | `tenant-{id}` | 租户资源 | tenant_admin |
 | `tenant-{id}-data` | Data 实例 | data_admin |
-| `tenant-{id}-cube` | Cube 实例 | ml_admin |
+| `tenant-{id}-model` | Model 实例 | ml_admin |
 | `tenant-{id}-agent` | Agent 实例 | app_admin |
 
 ---
@@ -306,7 +306,7 @@ graph TD
          ┌───────────┼───────────┐
          ↓           ↓           ↓
     ┌────────┐ ┌────────┐ ┌────────┐
-    │Data │ │  Cube  │ │Agent │
+    │Data │ │  Model │ │Agent │
     └────────┘ └────────┘ └────────┘
 ```
 

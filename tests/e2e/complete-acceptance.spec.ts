@@ -1233,10 +1233,10 @@ test.describe('API 服务健康检查', () => {
     expect(response.status()).toBe(200);
   });
 
-  test('Cube API', async ({ request }) => {
-    console.log('\n[API] 检查 Cube API...');
+  test('Model API', async ({ request }) => {
+    console.log('\n[API] 检查 Model API...');
     const response = await request.get(`${CONFIG.MODEL_API}/api/v1/health`);
-    console.log(`[API] Cube API 状态: ${response.status()}`);
+    console.log(`[API] Model API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 

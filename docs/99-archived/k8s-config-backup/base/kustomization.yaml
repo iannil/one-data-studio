@@ -21,10 +21,10 @@ resources:
   # Secrets must be created separately from the template with actual values
   # - secrets.yaml
   - rbac.yaml
-  - bisheng-api.yaml
-  - alldata-api.yaml
+  - agent-api.yaml
+  - data-api.yaml
   - openai-proxy.yaml
-  - cube-api.yaml
+  - model-api.yaml
   - web-frontend.yaml
   - ingress.yaml
   - hpa.yaml
@@ -39,13 +39,13 @@ commonLabels:
 # NEVER use 'latest' in production to ensure reproducible deployments
 # Update these tags for each release
 images:
-  - name: one-data-studio/bisheng-api
+  - name: one-data-studio/agent-api
     newTag: v1.0.0
-  - name: one-data-studio/alldata-api
+  - name: one-data-studio/data-api
     newTag: v1.0.0
   - name: one-data-studio/openai-proxy
     newTag: v1.0.0
-  - name: one-data-studio/cube-api
+  - name: one-data-studio/model-api
     newTag: v1.0.0
   - name: one-data-studio/web-frontend
     newTag: v1.0.0
