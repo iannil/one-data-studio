@@ -6,7 +6,7 @@
 
 import { test, expect } from './fixtures/real-auth.fixture';
 import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
-import type { BishengApiClient } from './helpers/api-client';
+import type { AgentApiClient } from './helpers/api-client';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -604,7 +604,7 @@ test.describe('管理后台 - 权限验证', () => {
 // ============================================
 test.describe('管理后台 - API 端点验证', () => {
   test('should verify admin API endpoints', async ({ request }) => {
-    const apiClient = createApiClient(request, 'bisheng') as BishengApiClient;
+    const apiClient = createApiClient(request, 'agent_api') as AgentApiClient;
     clearRequestLogs();
 
     // 用户列表

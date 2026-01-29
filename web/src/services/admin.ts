@@ -229,9 +229,9 @@ export interface SystemSettings {
 
   // 功能开关
   features_enabled: {
-    alldata: boolean;
-    cube: boolean;
-    bisheng: boolean;
+    data_api: boolean;
+    model_api: boolean;
+    agent_api: boolean;
     workflows: boolean;
   };
 
@@ -285,9 +285,9 @@ export interface UpdateSettingsRequest {
   max_login_attempts?: number;
   lockout_duration_minutes?: number;
   features_enabled?: {
-    alldata?: boolean;
-    cube?: boolean;
-    bisheng?: boolean;
+    data_api?: boolean;
+    model_api?: boolean;
+    agent_api?: boolean;
     workflows?: boolean;
   };
 }

@@ -8,10 +8,15 @@ import { APIRequestContext, APIResponse } from '@playwright/test';
 
 // API 基础 URL
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const BISHENG_API_URL = process.env.BISHENG_API_URL || 'http://localhost:8000';
-const ALLDATA_API_URL = process.env.ALLDATA_API_URL || 'http://localhost:8001';
-const CUBE_API_URL = process.env.CUBE_API_URL || 'http://localhost:8002';
+const AGENT_API_URL = process.env.AGENT_API_URL || 'http://localhost:8000';
+const DATA_API_URL = process.env.DATA_API_URL || 'http://localhost:8001';
+const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:8002';
 const OPENAI_API_URL = process.env.OPENAI_API_URL || 'http://localhost:8003';
+
+// 兼容旧的环境变量名
+const BISHENG_API_URL = process.env.BISHENG_API_URL || AGENT_API_URL;
+const ALLDATA_API_URL = process.env.ALLDATA_API_URL || DATA_API_URL;
+const CUBE_API_URL = process.env.CUBE_API_URL || MODEL_API_URL;
 
 // 认证信息
 interface AuthInfo {
@@ -284,11 +289,11 @@ export class ApiClient {
 }
 
 /**
- * Bisheng API 客户端
+ * Agent API 客户端 (原 Bisheng API)
  */
-export class BishengApiClient extends ApiClient {
+export class AgentApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
-    super(request, BISHENG_API_URL, auth);
+    super(request, AGENT_API_URL, auth);
   }
 
   // ============================================
@@ -409,11 +414,11 @@ export class BishengApiClient extends ApiClient {
 }
 
 /**
- * Alldata API 客户端
+ * Data API 客户端 (原 Alldata API)
  */
-export class AlldataApiClient extends ApiClient {
+export class DataApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
-    super(request, ALLDATA_API_URL, auth);
+    super(request, DATA_API_URL, auth);
   }
 
   // ============================================
@@ -580,11 +585,11 @@ export class AlldataApiClient extends ApiClient {
 }
 
 /**
- * Cube API 客户端
+ * Model API 客户端 (原 Cube API)
  */
-export class CubeApiClient extends ApiClient {
+export class ModelApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
-    super(request, CUBE_API_URL, auth);
+    super(request, MODEL_API_URL, auth);
   }
 
   // ============================================
@@ -764,19 +769,27 @@ export class OpenAIProxyClient extends ApiClient {
  */
 export function createApiClient(
   request: APIRequestContext,
-  type: 'bisheng' | 'alldata' | 'cube' | 'openai',
+  type: 'agent_api' | 'data_api' | 'model_api' | 'openai' | 'bisheng' | 'alldata' | 'cube',
   auth?: AuthInfo
 ): ApiClient {
   switch (type) {
+    case 'agent_api':
     case 'bisheng':
-      return new BishengApiClient(request, auth);
+      return new AgentApiClient(request, auth);
+    case 'data_api':
     case 'alldata':
-      return new AlldataApiClient(request, auth);
+      return new DataApiClient(request, auth);
+    case 'model_api':
     case 'cube':
-      return new CubeApiClient(request, auth);
+      return new ModelApiClient(request, auth);
     case 'openai':
       return new OpenAIProxyClient(request, auth);
     default:
       throw new Error(`Unknown API client type: ${type}`);
   }
 }
+
+// 兼容性别名 - 支持旧的类名
+export const BishengApiClient = AgentApiClient;
+export const AlldataApiClient = DataApiClient;
+export const CubeApiClient = ModelApiClient;

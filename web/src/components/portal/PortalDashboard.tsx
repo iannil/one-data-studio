@@ -310,10 +310,13 @@ const TodoList: React.FC = () => {
 
   const getSourceIcon = (source: string) => {
     const icons: Record<string, string> = {
-      alldata: '📊',
+      data_api: '📊',
+      alldata: '📊', // 兼容旧名称
       quality: '✅',
-      cube: '🤖',
-      bisheng: '⚙️',
+      model_api: '🤖',
+      cube: '🤖', // 兼容旧名称
+      agent_api: '⚙️',
+      bisheng: '⚙️', // 兼容旧名称
       api: '🔌',
       admin: '⚙️',
     };

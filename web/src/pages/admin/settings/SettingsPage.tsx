@@ -422,13 +422,13 @@ function SettingsPage() {
         style={{ marginBottom: 16 }}
       />
       <Form layout="vertical" form={form} initialValues={settings}>
-        <Form.Item label="Alldata (数据治理)" name={['features_enabled', 'alldata']} valuePropName="checked">
+        <Form.Item label="Data API (数据治理)" name={['features_enabled', 'data_api']} valuePropName="checked">
           <Switch />
         </Form.Item>
-        <Form.Item label="Cube Studio (MLOps)" name={['features_enabled', 'cube']} valuePropName="checked">
+        <Form.Item label="Model API (MLOps)" name={['features_enabled', 'model_api']} valuePropName="checked">
           <Switch />
         </Form.Item>
-        <Form.Item label="Bisheng (LLMOps)" name={['features_enabled', 'bisheng']} valuePropName="checked">
+        <Form.Item label="Agent API (LLMOps)" name={['features_enabled', 'agent_api']} valuePropName="checked">
           <Switch />
         </Form.Item>
         <Form.Item label="工作流编排" name={['features_enabled', 'workflows']} valuePropName="checked">

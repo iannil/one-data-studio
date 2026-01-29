@@ -1,0 +1,120 @@
+# SeaTunnel CDC 配置示例: MySQL 到 MinIO
+#
+# 用途：实时同步 MySQL 变更数据到 MinIO 对象存储
+# 适用场景：数据湖建设、Lambda 架构 ODS 层
+#
+# 使用方法：
+# 1. 复制本文件并修改数据库连接信息
+# 2. 通过 SeaTunnel API 提交任务
+
+env {
+  # 任务执行模式：STREAMING (流式) 或 BATCH (批处理)
+  job.mode = "STREAMING"
+
+  # 并行度
+  parallelism = 2
+
+  # Checkpoint 间隔（毫秒）
+  checkpoint.interval = 3000
+
+  # SeaTunnel 配置
+  # job.retry_times = 3
+  # job.queue.enable = true
+  # job.queue.type = "memory"
+  # job.queue.memory.max_bytes = 1gb
+}
+
+source {
+  # MySQL CDC 源配置
+  MySQL-CDC {
+    # 结果表名称
+    result_table_name = "mysql_cdc_source"
+
+    # MySQL 连接配置
+    host = "mysql"
+    port = 3306
+    username = "onedata"
+    password = "password"
+
+    # 数据库配置
+    database = "onedata"
+
+    # 表配置（支持正则表达式）
+    # 格式: database.table
+    # 示例: onedata.users, onedata.orders
+    table-names = [
+      "onedata.users",
+      "onedata.orders"
+    ]
+
+    # 服务器 ID（唯一标识 MySQL Slave）
+    server-id = 5700
+
+    # 服务器时区
+    server-time-zone = "UTC"
+
+    # 连接超时（毫秒）
+    connection.timeout = 30000
+
+    # 包含 DDL 变更
+    # include-schema-changes = true
+
+    # 快照模式：initial, schema_only, never
+    # snapshot.mode = "initial"
+  }
+}
+
+transform {
+  # 字段映射转换
+  FieldMapper {
+    source_table_name = "mysql_cdc_source"
+    result_table_name = "mapped_data"
+
+    # 字段映射规则
+    field_mapper = {
+      # user_id = id
+      # user_name = name
+      # created_time = created_at
+    }
+  }
+
+  # 可选：添加时间戳
+  # {
+  #   source_table_name = "mapped_data"
+  #   result_table_name = "enriched_data"
+  #
+  #   # 添加处理时间戳
+  #   add_field {
+  #     fields = [
+  #       { field_name = "processing_time", field_expression = "${now()}" }
+  #     ]
+  #   }
+  # }
+}
+
+sink {
+  # MinIO 对象存储目标（使用 AiO 连接器）
+  AiO {
+    source_table_name = "mapped_data"
+
+    # 存储路径 (S3A 协议)
+    path = "s3a://one-data-lake/cdc/mysql/"
+
+    # 文件格式
+    format.type = "json"
+    # 其他选项: json, csv, text, parquet, orc
+
+    # MinIO/S3 连接配置
+    fs.s3a.endpoint = "http://minio:9000"
+    fs.s3a.access.key = "minioadmin"
+    fs.s3a.secret.key = "minioadmin"
+
+    # 分区配置（可选）
+    # partition_by = ["database", "table"]
+    # partition_dir_expression = "${database}/${table}"
+
+    # 文件滚动策略
+    # sink.rollback.file.prefix = "cdc"
+    # sink.rollback.file.suffix = ".json"
+  }
+}

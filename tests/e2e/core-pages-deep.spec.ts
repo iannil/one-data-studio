@@ -6,7 +6,7 @@
 
 import { test, expect } from './fixtures/real-auth.fixture';
 import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
-import type { BishengApiClient, AlldataApiClient } from './helpers/api-client';
+import type { AgentApiClient, DataApiClient } from './helpers/api-client';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -18,7 +18,7 @@ test.describe('核心页面 - 首页统计卡片', () => {
 
   test('should display accurate statistics on home page', async ({ page, request }) => {
     // 创建真实 API 客户端
-    const apiClient = createApiClient(request, 'bisheng') as BishengApiClient;
+    const apiClient = createApiClient(request, 'bisheng') as AgentApiClient;
 
     // 获取真实统计数据
     const statsResponse = await apiClient.getStats();
@@ -60,7 +60,7 @@ test.describe('核心页面 - 数据集列表', () => {
   });
 
   test('should display datasets with pagination', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'bisheng') as BishengApiClient;
+    const apiClient = createApiClient(request, 'bisheng') as AgentApiClient;
 
     // 获取第一页数据
     const datasetsResponse = await apiClient.getDatasets({ page: 1, page_size: 10 });
@@ -495,7 +495,7 @@ test.describe('核心页面 - 边界条件', () => {
 // ============================================
 test.describe('核心页面 - API 验证', () => {
   test('should verify all critical API endpoints', async ({ request }) => {
-    const apiClient = createApiClient(request, 'bisheng') as BishengApiClient;
+    const apiClient = createApiClient(request, 'bisheng') as AgentApiClient;
 
     // 健康检查
     const health = await apiClient.healthCheck();

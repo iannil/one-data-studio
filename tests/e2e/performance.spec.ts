@@ -103,7 +103,7 @@ test.describe('性能 - API 响应时间', () => {
   test('should measure health check API response time', async ({ request }) => {
     clearRequestLogs();
 
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     const startTime = Date.now();
     await apiClient.get('/api/v1/health');
@@ -114,7 +114,7 @@ test.describe('性能 - API 响应时间', () => {
   });
 
   test('should measure user info API response time', async ({ request }) => {
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     const startTime = Date.now();
     await apiClient.get('/api/v1/user/info');
@@ -125,7 +125,7 @@ test.describe('性能 - API 响应时间', () => {
   });
 
   test('should measure datasets list API response time', async ({ request }) => {
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     const startTime = Date.now();
     await apiClient.get('/api/v1/datasets');
@@ -136,7 +136,7 @@ test.describe('性能 - API 响应时间', () => {
   });
 
   test('should measure workflows list API response time', async ({ request }) => {
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     const startTime = Date.now();
     await apiClient.get('/api/v1/workflows');
@@ -149,7 +149,7 @@ test.describe('性能 - API 响应时间', () => {
   test('should measure P50, P95, P99 response times', async ({ request }) => {
     clearRequestLogs();
 
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     // 发送多个请求
     const endpoints = [
@@ -256,7 +256,7 @@ test.describe('性能 - 并发操作', () => {
   test('should handle concurrent API requests', async ({ request }) => {
     clearRequestLogs();
 
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     // 并发发送10个请求
     const promises = Array.from({ length: 10 }, (_, i) =>
@@ -361,7 +361,7 @@ test.describe('性能 - 内存泄漏检测', () => {
   });
 
   test('should not leak memory during API calls', async ({ page, request }) => {
-    const apiClient = createApiClient(request, 'bisheng');
+    const apiClient = createApiClient(request, 'agent_api');
 
     const getMemoryUsage = async () => {
       return await page.evaluate(() => {

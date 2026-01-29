@@ -143,7 +143,7 @@ export class UserManager {
   private createdUsers: string[] = [];
 
   constructor(request: APIRequestContext, baseUrl?: string) {
-    this.apiClient = createApiClient(request, 'bisheng');
+    this.apiClient = createApiClient(request, 'agent_api');
   }
 
   /**

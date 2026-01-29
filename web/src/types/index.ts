@@ -114,7 +114,7 @@ export interface UploadProgressEvent {
 
 // ============= 模型类型 =============
 
-export type ModelProvider = 'openai' | 'anthropic' | 'cube' | 'custom';
+export type ModelProvider = 'openai' | 'anthropic' | 'model_api' | 'custom';
 
 export interface ModelInfo {
   id: string;

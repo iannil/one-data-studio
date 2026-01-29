@@ -64,16 +64,16 @@ interface ApiResponse<T = any> {
 
 export class TestDataManager {
   private apiClient: any;
-  private bishengClient: any;
-  private cubeClient: any;
+  private agentClient: any;
+  private modelClient: any;
   private createdDatasets: string[] = [];
   private createdWorkflows: string[] = [];
   private createdModels: string[] = [];
 
   constructor(request: APIRequestContext) {
-    this.apiClient = createApiClient(request, 'alldata');
-    this.bishengClient = createApiClient(request, 'bisheng');
-    this.cubeClient = createApiClient(request, 'cube');
+    this.apiClient = createApiClient(request, 'data_api');
+    this.agentClient = createApiClient(request, 'agent_api');
+    this.modelClient = createApiClient(request, 'model_api');
   }
 
   // ============================================
@@ -144,7 +144,7 @@ export class TestDataManager {
     type?: string;
     owner_id: string;
   }): Promise<TestWorkflow> {
-    const response = await this.bishengClient.post<ApiResponse<TestWorkflow>>('/api/v1/workflows', {
+    const response = await this.agentClient.post<ApiResponse<TestWorkflow>>('/api/v1/workflows', {
       name: data.name,
       description: data.description || `E2E 测试工作流: ${data.name}`,
       type: data.type || 'rag',
@@ -168,7 +168,7 @@ export class TestDataManager {
    * 获取工作流
    */
   async getWorkflow(workflowId: string): Promise<TestWorkflow | null> {
-    const response = await this.bishengClient.get<ApiResponse<TestWorkflow>>(`/api/v1/workflows/${workflowId}`);
+    const response = await this.agentClient.get<ApiResponse<TestWorkflow>>(`/api/v1/workflows/${workflowId}`);
 
     if (response.code === 0 && response.data) {
       return response.data;
@@ -181,7 +181,7 @@ export class TestDataManager {
    * 删除工作流
    */
   async deleteWorkflow(workflowId: string): Promise<void> {
-    const response = await this.bishengClient.delete<ApiResponse>(`/api/v1/workflows/${workflowId}`);
+    const response = await this.agentClient.delete<ApiResponse>(`/api/v1/workflows/${workflowId}`);
 
     if (response.code !== 0) {
       throw new Error(`删除工作流失败: ${response.message || response.error}`);
@@ -203,7 +203,7 @@ export class TestDataManager {
     experiment_id?: string;
     owner_id: string;
   }): Promise<TestModel> {
-    const response = await this.cubeClient.post<ApiResponse<TestModel>>('/api/v1/models', {
+    const response = await this.modelClient.post<ApiResponse<TestModel>>('/api/v1/models', {
       name: data.name,
       version: data.version || '1.0.0',
       experiment_id: data.experiment_id,
@@ -223,7 +223,7 @@ export class TestDataManager {
    * 获取模型
    */
   async getModel(modelId: string): Promise<TestModel | null> {
-    const response = await this.cubeClient.get<ApiResponse<TestModel>>(`/api/v1/models/${modelId}`);
+    const response = await this.modelClient.get<ApiResponse<TestModel>>(`/api/v1/models/${modelId}`);
 
     if (response.code === 0 && response.data) {
       return response.data;
@@ -236,7 +236,7 @@ export class TestDataManager {
    * 删除模型
    */
   async deleteModel(modelId: string): Promise<void> {
-    const response = await this.cubeClient.delete<ApiResponse>(`/api/v1/models/${modelId}`);
+    const response = await this.modelClient.delete<ApiResponse>(`/api/v1/models/${modelId}`);
 
     if (response.code !== 0) {
       throw new Error(`删除模型失败: ${response.message || response.error}`);
