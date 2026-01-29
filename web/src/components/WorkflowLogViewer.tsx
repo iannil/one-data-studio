@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Select, Space, Tag, Empty } from 'antd';
-import type { ExecutionLog } from '@/services/bisheng';
+import type { ExecutionLog } from '@/services/agent-service';
 
 const { Option } = Select;
 

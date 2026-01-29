@@ -36,12 +36,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { UploadFile } from 'antd';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 import type {
   KnowledgeBase,
   KnowledgeDocument,
   RetrievalTestResult,
-} from '@/services/bisheng';
+} from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -69,7 +69,7 @@ function KnowledgePage() {
   const { data: kbData, isLoading: isLoadingList } = useQuery({
     queryKey: ['knowledge-bases', page, pageSize, statusFilter],
     queryFn: () =>
-      bisheng.getKnowledgeBases({
+      agentService.getKnowledgeBases({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -79,13 +79,13 @@ function KnowledgePage() {
   // 获取知识库详情（包含文档列表）
   const { data: kbDetailData } = useQuery({
     queryKey: ['knowledge-base-detail', selectedKB?.kb_id],
-    queryFn: () => bisheng.getKnowledgeBase(selectedKB!.kb_id),
+    queryFn: () => agentService.getKnowledgeBase(selectedKB!.kb_id),
     enabled: !!selectedKB && isDetailDrawerOpen,
   });
 
   // 创建知识库
   const createMutation = useMutation({
-    mutationFn: bisheng.createKnowledgeBase,
+    mutationFn: agentService.createKnowledgeBase,
     onSuccess: () => {
       message.success('知识库创建成功');
       setIsCreateModalOpen(false);
@@ -99,8 +99,8 @@ function KnowledgePage() {
 
   // 更新知识库
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof bisheng.updateKnowledgeBase>[1] }) =>
-      bisheng.updateKnowledgeBase(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof agentService.updateKnowledgeBase>[1] }) =>
+      agentService.updateKnowledgeBase(id, data),
     onSuccess: () => {
       message.success('知识库更新成功');
       setIsEditModalOpen(false);
@@ -114,7 +114,7 @@ function KnowledgePage() {
 
   // 删除知识库
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deleteKnowledgeBase,
+    mutationFn: agentService.deleteKnowledgeBase,
     onSuccess: () => {
       message.success('知识库删除成功');
       setIsDetailDrawerOpen(false);
@@ -128,7 +128,7 @@ function KnowledgePage() {
   // 上传文档
   const uploadMutation = useMutation({
     mutationFn: ({ kbId, formData }: { kbId: string; formData: FormData }) =>
-      bisheng.uploadToKnowledgeBase(kbId, formData),
+      agentService.uploadToKnowledgeBase(kbId, formData),
     onSuccess: () => {
       message.success('文档上传成功');
       setIsUploadModalOpen(false);
@@ -143,7 +143,7 @@ function KnowledgePage() {
   // 删除文档
   const deleteDocMutation = useMutation({
     mutationFn: ({ kbId, docId }: { kbId: string; docId: string }) =>
-      bisheng.deleteKnowledgeDocument(kbId, docId),
+      agentService.deleteKnowledgeDocument(kbId, docId),
     onSuccess: () => {
       message.success('文档删除成功');
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-detail'] });
@@ -155,8 +155,8 @@ function KnowledgePage() {
 
   // 测试检索
   const testMutation = useMutation({
-    mutationFn: ({ kbId, data }: { kbId: string; data: Parameters<typeof bisheng.testRetrieval>[1] }) =>
-      bisheng.testRetrieval(kbId, data),
+    mutationFn: ({ kbId, data }: { kbId: string; data: Parameters<typeof agentService.testRetrieval>[1] }) =>
+      agentService.testRetrieval(kbId, data),
     onSuccess: (result) => {
       setTestResult(result.data);
     },
@@ -167,7 +167,7 @@ function KnowledgePage() {
 
   // 重建索引
   const rebuildMutation = useMutation({
-    mutationFn: (kbId: string) => bisheng.rebuildKnowledgeIndex(kbId),
+    mutationFn: (kbId: string) => agentService.rebuildKnowledgeIndex(kbId),
     onSuccess: () => {
       message.success('索引重建已启动');
       queryClient.invalidateQueries({ queryKey: ['knowledge-bases'] });

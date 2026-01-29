@@ -71,20 +71,20 @@ rules:
     verbs: ["*"]
 
 ---
-# Alldata API 服务账户
+# Data API 服务账户
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 automountServiceAccountToken: false
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 rules:
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
@@ -97,32 +97,32 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: alldata-api
+  name: data-api
 subjects:
   - kind: ServiceAccount
-    name: alldata-api
-    namespace: one-data-alldata
+    name: data-api
+    namespace: one-data-data
 
 ---
-# Bisheng API 服务账户
+# Agent API 服务账户
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 automountServiceAccountToken: false
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 rules:
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
@@ -135,16 +135,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: bisheng-api
+  name: agent-api
 subjects:
   - kind: ServiceAccount
-    name: bisheng-api
-    namespace: one-data-bisheng
+    name: agent-api
+    namespace: one-data-agent
 
 ---
 # Kettle ETL 服务账户
@@ -152,7 +152,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kettle
-  namespace: one-data-alldata
+  namespace: one-data-data
 automountServiceAccountToken: false
 
 ---
@@ -160,7 +160,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kettle
-  namespace: one-data-alldata
+  namespace: one-data-data
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs", "cronjobs"]
@@ -177,7 +177,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kettle
-  namespace: one-data-alldata
+  namespace: one-data-data
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -185,7 +185,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: kettle
-    namespace: one-data-alldata
+    namespace: one-data-data
 
 ---
 # 监控服务账户
@@ -232,7 +232,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: developer-binding
-  namespace: one-data-alldata
+  namespace: one-data-data
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -294,7 +294,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: default
-  namespace: one-data-alldata
+  namespace: one-data-data
 automountServiceAccountToken: false
 
 ---
@@ -302,7 +302,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: default
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 automountServiceAccountToken: false
 
 ---
@@ -310,7 +310,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: default
-  namespace: one-data-cube
+  namespace: one-data-model
 automountServiceAccountToken: false
 
 ---

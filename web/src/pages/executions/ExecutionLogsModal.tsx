@@ -3,7 +3,7 @@ import { Modal, Spin, Empty, Tag, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng, { type ExecutionLog } from '@/services/bisheng';
+import bisheng, { type ExecutionLog } from '@/services/agent-service';
 
 const { Text } = Typography;
 
@@ -25,7 +25,7 @@ function ExecutionLogsModal({ executionId, open, onClose }: ExecutionLogsModalPr
 
   const { data: logsData, isLoading } = useQuery({
     queryKey: ['execution-logs', executionId],
-    queryFn: () => bisheng.getExecutionLogs(executionId!),
+    queryFn: () => agentService.getExecutionLogs(executionId!),
     enabled: open && !!executionId,
     refetchInterval: (query) => {
       // 如果执行仍在运行，每3秒刷新一次

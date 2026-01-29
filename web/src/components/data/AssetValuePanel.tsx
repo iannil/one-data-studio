@@ -33,7 +33,7 @@ import {
   type AssetValueLevel,
   type AssetValueRanking,
   type AssetValueReport,
-} from '@/services/alldata';
+} from '@/services/data';
 
 const { Option } = Select;
 

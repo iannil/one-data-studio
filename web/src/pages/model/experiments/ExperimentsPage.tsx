@@ -26,8 +26,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
-import cube from '@/services/cube';
-import type { Experiment } from '@/services/cube';
+import model from '@/services/model';
+import type { Experiment } from '@/services/model';
 
 dayjs.extend(duration);
 
@@ -52,7 +52,7 @@ function ExperimentsPage() {
   const { data: experimentsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['experiments', page, pageSize, statusFilter, projectFilter],
     queryFn: () =>
-      cube.getExperiments({
+      model.getExperiments({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -62,7 +62,7 @@ function ExperimentsPage() {
 
   // 创建实验
   const createMutation = useMutation({
-    mutationFn: cube.createExperiment,
+    mutationFn: model.createExperiment,
     onSuccess: () => {
       message.success('实验创建成功');
       setIsCreateModalOpen(false);
@@ -76,7 +76,7 @@ function ExperimentsPage() {
 
   // 停止实验
   const stopMutation = useMutation({
-    mutationFn: cube.stopExperiment,
+    mutationFn: model.stopExperiment,
     onSuccess: () => {
       message.success('实验已停止');
       queryClient.invalidateQueries({ queryKey: ['experiments'] });
@@ -88,7 +88,7 @@ function ExperimentsPage() {
 
   // 删除实验
   const deleteMutation = useMutation({
-    mutationFn: cube.deleteExperiment,
+    mutationFn: model.deleteExperiment,
     onSuccess: () => {
       message.success('实验删除成功');
       setIsDetailDrawerOpen(false);

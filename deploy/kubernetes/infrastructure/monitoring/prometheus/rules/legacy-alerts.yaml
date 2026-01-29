@@ -6,61 +6,61 @@ groups:
     rules:
       # API 响应时间过高
       - alert: APIHighLatency
-        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="bisheng-api"}[5m])) by (le, path)) > 0.5
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="agent-api"}[5m])) by (le, path)) > 0.5
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "API 响应时间过高"
           description: "API 路径 {{ $labels.path }} 的 P95 响应时间超过 500ms (当前值: {{ $value | printf \"%.2f\" }}s)"
 
       # API 错误率过高
       - alert: APIHighErrorRate
-        expr: sum(rate(http_requests_total{service="bisheng-api", status=~"5.."}[5m])) / sum(rate(http_requests_total{service="bisheng-api"}[5m])) > 0.05
+        expr: sum(rate(http_requests_total{service="agent-api", status=~"5.."}[5m])) / sum(rate(http_requests_total{service="agent-api"}[5m])) > 0.05
         for: 5m
         labels:
           severity: critical
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "API 错误率过高"
-          description: "Bisheng API 5xx 错误率超过 5% (当前值: {{ $value | printf \"%.2f\" }}%)"
+          description: "Agent API 5xx 错误率超过 5% (当前值: {{ $value | printf \"%.2f\" }}%)"
 
       # API 请求量异常
       - alert: APIRequestSpikeOrDrop
         expr: |
           abs(
-            sum(rate(http_requests_total{service="bisheng-api"}[5m]))
-            - sum(rate(http_requests_total{service="bisheng-api"}[5m] offset 1h))
-          ) / sum(rate(http_requests_total{service="bisheng-api"}[5m] offset 1h)) > 0.5
+            sum(rate(http_requests_total{service="agent-api"}[5m]))
+            - sum(rate(http_requests_total{service="agent-api"}[5m] offset 1h))
+          ) / sum(rate(http_requests_total{service="agent-api"}[5m] offset 1h)) > 0.5
         for: 10m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "API 请求量异常波动"
-          description: "Bisheng API 请求量与 1 小时前相比变化超过 50%"
+          description: "Agent API 请求量与 1 小时前相比变化超过 50%"
 
   - name: one-data-studio-database
     rules:
       # 数据库连接池耗尽
       - alert: DatabaseConnectionPoolExhausted
-        expr: db_pool_available_connections{service="bisheng-api"} < 5
+        expr: db_pool_available_connections{service="agent-api"} < 5
         for: 2m
         labels:
           severity: critical
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "数据库连接池即将耗尽"
           description: "可用连接数不足 5 个 (当前值: {{ $value }})"
 
       # 数据库查询时间过长
       - alert: DatabaseSlowQueries
-        expr: histogram_quantile(0.99, sum(rate(db_query_duration_seconds_bucket{service="bisheng-api"}[5m])) by (le, operation)) > 1
+        expr: histogram_quantile(0.99, sum(rate(db_query_duration_seconds_bucket{service="agent-api"}[5m])) by (le, operation)) > 1
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "数据库查询时间过长"
           description: "数据库操作 {{ $labels.operation }} 的 P99 查询时间超过 1s"
@@ -69,11 +69,11 @@ groups:
     rules:
       # 向量检索延迟过高
       - alert: VectorSearchHighLatency
-        expr: histogram_quantile(0.95, sum(rate(vector_search_duration_seconds_bucket{service="bisheng-api"}[5m])) by (le, collection)) > 0.1
+        expr: histogram_quantile(0.95, sum(rate(vector_search_duration_seconds_bucket{service="agent-api"}[5m])) by (le, collection)) > 0.1
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "向量检索延迟过高"
           description: "向量集合 {{ $labels.collection }} 的 P95 检索延迟超过 100ms"
@@ -97,7 +97,7 @@ groups:
         for: 5m
         labels:
           severity: critical
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "LLM API 调用失败率过高"
           description: "LLM 调用失败率超过 10%"
@@ -108,7 +108,7 @@ groups:
         for: 1h
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "LLM Token 使用量过高"
           description: "过去 1 小时 Token 使用量超过 10 万"
@@ -121,7 +121,7 @@ groups:
         for: 30m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "工作流执行失败率过高"
           description: "工作流执行失败率超过 10%"
@@ -132,7 +132,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "工作流执行时间过长"
           description: "工作流 {{ $labels.workflow_id }} 的 P95 执行时间超过 5 分钟"
@@ -143,7 +143,7 @@ groups:
         for: 15m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "待处理工作流积压"
           description: "待处理工作流数量超过 100 个"
@@ -156,7 +156,7 @@ groups:
         for: 30m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "Agent 执行成功率过低"
           description: "Agent 执行成功率低于 80%"
@@ -167,7 +167,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "Agent 迭代次数过多"
           description: "90% 的 Agent 执行迭代次数超过 8 次"
@@ -180,7 +180,7 @@ groups:
         for: 30m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "RAG 检索相关性评分过低"
           description: "RAG 检索平均相关性评分低于 0.7"
@@ -191,7 +191,7 @@ groups:
         for: 30m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
         annotations:
           summary: "RAG 查询空结果率过高"
           description: "RAG 查询无结果的比例超过 20%"
@@ -200,7 +200,7 @@ groups:
     rules:
       # 服务实例健康
       - alert: ServiceInstanceUnhealthy
-        expr: up{job=~"bisheng-api|alldata-api|openai-proxy"} == 0
+        expr: up{job=~"agent-api|data-api|openai-proxy"} == 0
         for: 1m
         labels:
           severity: critical

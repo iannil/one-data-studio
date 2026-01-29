@@ -5,9 +5,9 @@ ONE-DATA-STUDIO API 接口文档
 ## 目录
 
 - [概述](#概述)
-- [Alldata API](#alldata-api)
-- [Bisheng API](#bisheng-api)
-- [Cube API](#cube-api)
+- [Data API](#data-api)
+- [Agent API](#agent-api)
+- [Model API](#model-api)
 - [错误码](#错误码)
 
 ---
@@ -18,12 +18,12 @@ ONE-DATA-STUDIO API 接口文档
 
 | 服务 | 环境 | URL |
 |------|------|-----|
-| Alldata API | 开发 | http://localhost:8080 |
-| Alldata API | 生产 | https://api.example.com/alldata |
-| Bisheng API | 开发 | http://localhost:8081 |
-| Bisheng API | 生产 | https://api.example.com/bisheng |
-| Cube API | 开发 | http://localhost:8000 |
-| Cube API | 生产 | https://api.example.com/cube |
+| Data API | 开发 | http://localhost:8080 |
+| Data API | 生产 | https://api.example.com/alldata |
+| Agent API | 开发 | http://localhost:8081 |
+| Agent API | 生产 | https://api.example.com/bisheng |
+| Model API | 开发 | http://localhost:8000 |
+| Model API | 生产 | https://api.example.com/cube |
 
 ### 认证方式
 
@@ -64,7 +64,7 @@ Authorization: Bearer your-access-token
 
 ---
 
-## Alldata API
+## Data API
 
 ### 数据集管理
 
@@ -198,7 +198,7 @@ GET /api/v1/metadata/databases/{database}/tables/{table}
 
 ---
 
-## Bisheng API
+## Agent API
 
 ### 工作流管理
 
@@ -572,7 +572,7 @@ Authorization: Bearer {token}
 
 ---
 
-## Cube API
+## Model API
 
 OpenAI 兼容的模型服务接口。
 
@@ -740,10 +740,10 @@ Authorization: Bearer {token}
 ### Python SDK
 
 ```python
-from one_data import BishengClient
+from one_data import AgentClient
 
 # 初始化客户端
-client = BishengClient(
+client = AgentClient(
     base_url="http://localhost:8081",
     api_key="your-api-key"
 )
@@ -765,9 +765,9 @@ print(result.output)
 ### JavaScript SDK
 
 ```typescript
-import { BishengClient } from '@one-data/sdk';
+import { AgentClient } from '@one-data/sdk';
 
-const client = new BishengClient({
+const client = new AgentClient({
   baseUrl: 'http://localhost:8081',
   apiKey: 'your-api-key'
 });
@@ -811,7 +811,7 @@ console.log(response.data.reply);
 {
   "code": 0,
   "message": "healthy",
-  "service": "bisheng-api",
+  "service": "agent-api",
   "version": "2.0.0",
   "checks": {
     "database": {
@@ -828,11 +828,11 @@ console.log(response.data.reply);
       "latency_ms": 5.8,
       "collection_count": 3
     },
-    "alldata_api": {
+    "data_api": {
       "status": "healthy",
       "latency_ms": 15.2
     },
-    "cube_api": {
+    "model_api": {
       "status": "healthy",
       "latency_ms": 8.5
     }
@@ -845,7 +845,7 @@ console.log(response.data.reply);
 {
   "code": 1,
   "message": "degraded",
-  "service": "bisheng-api",
+  "service": "agent-api",
   "checks": {
     "database": {
       "status": "healthy",

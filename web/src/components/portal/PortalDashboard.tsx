@@ -55,7 +55,7 @@ import {
   type PortalNotification,
   type TodoItem,
   type SystemStatus,
-} from '@/services/alldata';
+} from '@/services/data';
 import './PortalDashboard.css';
 
 const { Title, Text, Paragraph } = Typography;

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import ToolExecuteModal from './ToolExecuteModal';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -157,7 +157,7 @@ describe('ToolExecuteModal 执行功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.executeTool).mockResolvedValue({
+    vi.mocked(agentService.executeTool).mockResolvedValue({
       code: 0,
       data: {
         result: '42',
@@ -184,7 +184,7 @@ describe('ToolExecuteModal 执行功能', () => {
     await user.click(screen.getByRole('button', { name: /执行/i }));
 
     await waitFor(() => {
-      expect(bisheng.executeTool).toHaveBeenCalledWith('calculator', {
+      expect(agentService.executeTool).toHaveBeenCalledWith('calculator', {
         expression: '6 * 7',
         precision: 2,
       });
@@ -234,7 +234,7 @@ describe('ToolExecuteModal 错误处理', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.executeTool).mockRejectedValue(new Error('API 调用失败'));
+    vi.mocked(agentService.executeTool).mockRejectedValue(new Error('API 调用失败'));
   });
 
   it('应该显示执行错误', async () => {

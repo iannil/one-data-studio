@@ -6,7 +6,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.alldata.namespace | default "one-data-alldata" }}
+  name: {{ .Values.alldata.namespace | default "one-data-data" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
     component: alldata
@@ -17,7 +17,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.bisheng.namespace | default "one-data-bisheng" }}
+  name: {{ .Values.bisheng.namespace | default "one-data-agent" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
     component: bisheng
@@ -28,7 +28,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.cube.namespace | default "one-data-cube" }}
+  name: {{ .Values.cube.namespace | default "one-data-model" }}
   labels:
     {{- include "one-data.labels" . | nindent 4 }}
     component: cube

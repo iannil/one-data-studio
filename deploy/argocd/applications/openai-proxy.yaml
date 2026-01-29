@@ -26,7 +26,7 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: one-data-cube
+    namespace: one-data-model
 
   syncPolicy:
     automated:

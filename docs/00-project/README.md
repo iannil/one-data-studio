@@ -17,28 +17,28 @@
 
 文档描述了三个平台的整合：
 
-1. **Alldata** - 数据治理与开发平台（DataOps 层）
+1. **Data** - 数据治理与开发平台（DataOps 层）
 2. **Cube Studio** - 云原生 MLOps 平台（模型/计算层）
-3. **Bisheng** - 大模型应用开发平台（LLMOps 层）
+3. **Agent** - 大模型应用开发平台（LLMOps 层）
 
 ## 架构概览
 
 四层架构（从下到上）：
 
 - **L1 基础设施层**：基于 Kubernetes 的容器编排，包含 CPU/GPU 资源池
-- **L2 数据底座层（Alldata）**：数据集成、ETL、治理、特征存储、向量存储
+- **L2 数据底座层（Data）**：数据集成、ETL、治理、特征存储、向量存储
 - **L3 算法引擎层（Cube Studio）**：Notebook 开发、分布式训练、支持 OpenAI 兼容 API 的模型服务
-- **L4 应用编排层（Bisheng）**：RAG 流水线、Agent 编排、Prompt 管理
+- **L4 应用编排层（Agent）**：RAG 流水线、Agent 编排、Prompt 管理
 
 ## 关键集成点
 
 文档规定了三种关键集成模式：
 
-1. **Alldata → Cube Studio**：统一存储协议与数据集版本化。ETL 输出到 MinIO/HDFS，然后自动注册为可被训练任务消费的数据集对象。
+1. **Data → Cube Studio**：统一存储协议与数据集版本化。ETL 输出到 MinIO/HDFS，然后自动注册为可被训练任务消费的数据集对象。
 
-2. **Cube Studio → Bisheng**：使用 OpenAI 兼容 API 的模型即服务标准化。通过 vLLM/TGI 部署的模型经由 Istio 网关暴露。
+2. **Cube Studio → Agent**：使用 OpenAI 兼容 API 的模型即服务标准化。通过 vLLM/TGI 部署的模型经由 Istio 网关暴露。
 
-3. **Alldata → Bisheng**：基于元数据的 Text-to-SQL。Alldata 的元数据（表结构、关系）被注入到 Prompt 中用于生成 SQL。
+3. **Data → Agent**：基于元数据的 Text-to-SQL。Data 的元数据（表结构、关系）被注入到 Prompt 中用于生成 SQL。
 
 ## 内容语言
 

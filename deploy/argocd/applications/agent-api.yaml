@@ -1,10 +1,10 @@
-# Bisheng API ArgoCD Application
+# Agent API ArgoCD Application
 # Sprint 23: Production Readiness - GitOps
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bisheng-api
+  name: agent-api
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: one-data-studio
@@ -20,12 +20,12 @@ spec:
   source:
     repoURL: https://github.com/your-org/one-data-studio.git
     targetRevision: HEAD
-    path: deploy/kubernetes/applications/bisheng-api
+    path: deploy/kubernetes/applications/agent-api
 
     # Kustomize configuration (if using Kustomize)
     # kustomize:
     #   images:
-    #     - name: one-data-studio/bisheng-api
+    #     - name: one-data-studio/agent-api
     #       newTag: v1.0.0
 
     # Helm configuration (if using Helm)

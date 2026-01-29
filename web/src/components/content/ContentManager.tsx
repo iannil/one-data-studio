@@ -70,7 +70,7 @@ import {
   type ContentComment,
   type ContentType,
   type ContentStatus,
-} from '@/services/alldata';
+} from '@/services/data';
 import './ContentManager.css';
 
 const { Title, Text, Paragraph } = Typography;

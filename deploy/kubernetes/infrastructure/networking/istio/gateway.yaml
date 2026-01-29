@@ -31,12 +31,12 @@ spec:
       credentialName: api-gateway-tls  # 需要提前创建 Secret
 
 ---
-# VirtualService: Alldata API
+# VirtualService: Data API
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: alldata-api-vs
-  namespace: one-data-alldata
+  name: data-api-vs
+  namespace: one-data-data
 spec:
   hosts:
   - "api.one-data.local"
@@ -50,7 +50,7 @@ spec:
         prefix: /api/v1/metadata
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         port:
           number: 8080
       weight: 100
@@ -66,7 +66,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: openai-api-vs
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   hosts:
   - "api.one-data.local"
@@ -89,12 +89,12 @@ spec:
       retryOn: 5xx,connect-failure,refused-stream
 
 ---
-# VirtualService: Bisheng API
+# VirtualService: Agent API
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: bisheng-api-vs
-  namespace: one-data-bisheng
+  name: agent-api-vs
+  namespace: one-data-agent
 spec:
   hosts:
   - "api.one-data.local"
@@ -112,7 +112,7 @@ spec:
         prefix: /api/v1/sql
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         port:
           number: 8081
       weight: 100
@@ -123,14 +123,14 @@ spec:
       retryOn: 5xx,connect-failure,refused-stream
 
 ---
-# DestinationRule: Alldata API
+# DestinationRule: Data API
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: alldata-api-dr
-  namespace: one-data-alldata
+  name: data-api-dr
+  namespace: one-data-data
 spec:
-  host: alldata-api
+  host: data-api
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN
@@ -153,7 +153,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: openai-proxy-dr
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   host: openai-proxy
   trafficPolicy:
@@ -173,14 +173,14 @@ spec:
       maxEjectionPercent: 50
 
 ---
-# DestinationRule: Bisheng API
+# DestinationRule: Agent API
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: bisheng-api-dr
-  namespace: one-data-bisheng
+  name: agent-api-dr
+  namespace: one-data-agent
 spec:
-  host: bisheng-api
+  host: agent-api
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN

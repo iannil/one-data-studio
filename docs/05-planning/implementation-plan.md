@@ -46,8 +46,8 @@ graph LR
 
 **新增文件**:
 
-- `services/alldata-api/api/metadata_graph.py` - 图数据API
-- `services/alldata-api/services/metadata_graph_builder.py` - 图构建服务
+- `services/data-api/api/metadata_graph.py` - 图数据API
+- `services/data-api/services/metadata_graph_builder.py` - 图构建服务
 - `web/src/pages/metadata/MetadataGraphPage.tsx` - 可视化页面
 - `web/src/components/metadata/GraphVisualization.tsx` - 图组件
 
@@ -62,7 +62,7 @@ graph LR
 
 **新增文件**:
 
-- `services/alldata-api/services/metadata_diff.py` - 差异计算
+- `services/data-api/services/metadata_diff.py` - 差异计算
 - `web/src/components/metadata/MetadataDiffViewer.tsx` - 差异展示
 
 #### 1.3 Kettle联动增强 【VERIFY】
@@ -90,8 +90,8 @@ graph LR
 
 **新增文件**:
 
-- `services/alldata-api/services/smart_scheduler.py` - 智能调度
-- `services/alldata-api/models/schedule_priority.py` - 优先级模型
+- `services/data-api/services/smart_scheduler.py` - 智能调度
+- `services/data-api/models/schedule_priority.py` - 优先级模型
 
 #### 2.2 多源采集增强 【VERIFY】
 
@@ -116,7 +116,7 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant UI as 前端
-    participant API as Alldata API
+    participant API as Data API
     participant AI as AI分析服务
     participant Kettle as Kettle引擎
 
@@ -131,9 +131,9 @@ sequenceDiagram
 
 **新增文件**:
 
-- `services/alldata-api/services/ai_data_cleaning.py` - AI清洗分析
-- `services/alldata-api/services/cleaning_rule_generator.py` - 规则生成器
-- `services/alldata-api/models/cleaning_rule.py` - 清洗规则模型
+- `services/data-api/services/ai_data_cleaning.py` - AI清洗分析
+- `services/data-api/services/cleaning_rule_generator.py` - 规则生成器
+- `services/data-api/models/cleaning_rule.py` - 清洗规则模型
 - `web/src/pages/alldata/cleaning/CleaningRulePage.tsx` - 清洗规则配置页
 - `web/src/components/alldata/cleaning/RuleSuggestionPanel.tsx` - AI建议面板
 
@@ -143,8 +143,8 @@ sequenceDiagram
 
 **新增文件**:
 
-- `services/alldata-api/services/ai_field_mapper.py` - AI字段映射
-- `services/alldata-api/models/field_mapping.py` - 映射规则模型
+- `services/data-api/services/ai_field_mapper.py` - AI字段映射
+- `services/data-api/models/field_mapping.py` - 映射规则模型
 
 #### 3.3 OCR文档识别服务 【NEW】⭐
 
@@ -215,7 +215,7 @@ services/ocr-service/
 
 **新增文件**:
 
-- `services/alldata-api/services/ai_imputation.py` - AI填充算法
+- `services/data-api/services/ai_imputation.py` - AI填充算法
 - 支持策略: 均值/中位数/众数、KNN、回归预测、LLM推理
 
 ---
@@ -228,8 +228,8 @@ services/ocr-service/
 
 **新增文件**:
 
-- `services/alldata-api/services/anomaly_detector.py` - 异常检测
-- `services/alldata-api/services/alert_manager.py` - 告警管理
+- `services/data-api/services/anomaly_detector.py` - 异常检测
+- `services/data-api/services/alert_manager.py` - 告警管理
 - `web/src/pages/alldata/alerts/AlertPage.tsx` - 告警管理页
 
 ---
@@ -250,8 +250,8 @@ services/ocr-service/
 
 **新增文件**:
 
-- `services/alldata-api/services/asset_ai_search.py` - 增强版AI搜索
-- `services/alldata-api/services/asset_valuation.py` - 资产价值评估
+- `services/data-api/services/asset_ai_search.py` - 增强版AI搜索
+- `services/data-api/services/asset_valuation.py` - 资产价值评估
 - `web/src/pages/assets/AssetSearchPage.tsx` - 资产搜索页
 
 #### 5.2 数据服务接口 【ENHANCE】
@@ -260,9 +260,9 @@ services/ocr-service/
 
 **新增文件**:
 
-- `services/alldata-api/api/data_service.py` - 数据服务API
-- `services/alldata-api/models/data_service.py` - 服务模型
-- `services/alldata-api/models/service_call_log.py` - 调用日志
+- `services/data-api/api/data_service.py` - 数据服务API
+- `services/data-api/models/data_service.py` - 服务模型
+- `services/data-api/models/service_call_log.py` - 调用日志
 - `web/src/pages/alldata/services/DataServicePage.tsx` - 服务管理页
 
 ---
@@ -281,8 +281,8 @@ services/ocr-service/
 
 **增强文件**:
 
-- `services/alldata-api/src/ai_annotation.py` - 扩展识别能力
-- `services/alldata-api/src/sensitivity.py` - 增强扫描功能
+- `services/data-api/src/ai_annotation.py` - 扩展识别能力
+- `services/data-api/src/sensitivity.py` - 增强扫描功能
 
 #### 6.2 权限智能管控 【NEW】
 
@@ -469,9 +469,9 @@ graph TB
     end
 
     subgraph "业务服务层"
-        A1[Alldata API<br/>数据治理]
-        A2[Bisheng API<br/>AI应用]
-        A3[Cube API<br/>模型服务]
+        A1[Data API<br/>数据治理]
+        A2[Agent API<br/>AI应用]
+        A3[Model API<br/>模型服务]
         A4[Admin API<br/>平台管理]
         A5[OCR Service<br/>文档识别<br/>🆕]
         A6[Behavior Service<br/>行为分析<br/>🆕]

@@ -7,7 +7,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: tenant-isolation-policy
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector: {}
   policyTypes:
@@ -18,7 +18,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
           tenant_id: "default"  # 通过 Pod 标签识别租户
@@ -64,7 +64,7 @@ apiVersion: v1
 kind: ResourceQuota
 metadata:
   name: tenant-default-quota
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 spec:
@@ -90,7 +90,7 @@ apiVersion: v1
 kind: LimitRange
 metadata:
   name: tenant-default-limits
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 spec:
@@ -116,7 +116,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tenant-default-sa
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 automountServiceAccountToken: false
@@ -127,13 +127,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: tenant-default-binding
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 subjects:
 - kind: ServiceAccount
   name: tenant-default-sa
-  namespace: one-data-alldata
+  namespace: one-data-data
 roleRef:
   kind: ClusterRole
   name: one-data:developer
@@ -145,7 +145,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: tenant-default-config
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 data:
@@ -201,7 +201,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: tenant-default-data
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     tenant: default
 spec:
@@ -219,7 +219,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: deny-inter-tenant-traffic
-  namespace: one-data-alldata
+  namespace: one-data-data
   annotations:
     description: "拒绝不同租户 Pod 之间的直接通信"
 spec:
@@ -286,7 +286,7 @@ data:
         resources:
         - group: ""
           resources: ["pods", "services", "configmaps", "secrets"]
-        namespaces: ["one-data-alldata", "one-data-bisheng", "one-data-cube"]
+        namespaces: ["one-data-data", "one-data-agent", "one-data-model"]
 
       # 记录租户间访问尝试
       - level: Metadata
@@ -294,7 +294,7 @@ data:
         resources:
         - group: ""
           resources: ["pods"]
-        namespaces: ["one-data-alldata", "one-data-bisheng", "one-data-cube"]
+        namespaces: ["one-data-data", "one-data-agent", "one-data-model"]
 
 ---
 # 租户优先级类
@@ -302,7 +302,7 @@ apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
   name: tenant-default-high-priority
-  namespace: one-data-alldata
+  namespace: one-data-data
 value: 1000
 globalDefault: false
 description: "租户 default 的高优先级工作负载"
@@ -312,7 +312,7 @@ apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
   name: tenant-default-low-priority
-  namespace: one-data-alldata
+  namespace: one-data-data
 value: 100
 globalDefault: false
 description: "租户 default 的低优先级工作负载（如批处理作业）"

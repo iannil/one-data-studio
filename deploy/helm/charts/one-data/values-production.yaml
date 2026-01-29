@@ -295,6 +295,6 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - alldata-api
-                  - bisheng-api
+                  - data-api
+                  - agent-api
           topologyKey: kubernetes.io/hostname

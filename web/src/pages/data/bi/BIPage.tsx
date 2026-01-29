@@ -31,8 +31,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { Report, CreateReportRequest } from '@/services/alldata';
+import data from '@/services/data';
+import type { Report, CreateReportRequest } from '@/services/data';
 import AIChatPanel from '@/components/AIChatPanel';
 import SmartChart from '@/components/SmartChart';
 
@@ -66,7 +66,7 @@ function BIPage() {
   const { data: reportsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['reports', page, pageSize, typeFilter, statusFilter],
     queryFn: () =>
-      alldata.getReports({
+      data.getReports({
         page,
         page_size: pageSize,
         type: typeFilter || undefined,
@@ -76,7 +76,7 @@ function BIPage() {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: alldata.createReport,
+    mutationFn: data.createReport,
     onSuccess: () => {
       message.success('报表创建成功');
       setIsCreateModalOpen(false);
@@ -227,7 +227,7 @@ function BIPage() {
     }
 
     try {
-      const response = await alldata.executeQuery({
+      const response = await data.executeQuery({
         database: selectedDatabase,
         sql: sql,
       });
@@ -251,7 +251,7 @@ function BIPage() {
   // 获取报表图表数据（真实API调用）
   const fetchReportChartData = async (reportId: string) => {
     try {
-      const response = await alldata.getReportData(reportId);
+      const response = await data.getReportData(reportId);
       // 类型断言：API返回的data包含chart_data字段
       return (response.data as { chart_data?: any })?.chart_data || null;
     } catch (error) {
@@ -263,7 +263,7 @@ function BIPage() {
   // 获取数据库列表
   const { data: databasesData } = useQuery({
     queryKey: ['databases'],
-    queryFn: alldata.getDatabases,
+    queryFn: data.getDatabases,
   });
   const databases = databasesData?.data?.databases || [];
 

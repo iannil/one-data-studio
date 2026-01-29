@@ -9,11 +9,11 @@
 ## 项目架构说明
 
 本项目包含三个自研微服务（非外部依赖）：
-- `services/alldata-api/` - 数据治理 API（DataOps）
-- `services/cube-api/` - MLOps API
-- `services/bisheng-api/` - LLMOps API
+- `services/data-api/` - 数据治理 API（DataOps）
+- `services/model-api/` - MLOps API
+- `services/agent-api/` - LLMOps API
 
-这些是项目内部实现的服务，通过 HTTP 相互调用（如 `http://alldata-api:8080`）。
+这些是项目内部实现的服务，通过 HTTP 相互调用（如 `http://data-api:8080`）。
 
 ---
 
@@ -160,7 +160,7 @@
 ### Web 框架
 | 框架 | 版本 | 使用服务 |
 |-----|------|---------|
-| **Flask** | 3.0.0 | alldata-api, bisheng-api, cube-api, admin-api, openai-proxy |
+| **Flask** | 3.0.0 | data-api, agent-api, model-api, admin-api, openai-proxy |
 | **FastAPI** | 0.109.0 | behavior-service, ocr-service |
 | Uvicorn | 0.27.0 | ASGI 服务器 |
 | Werkzeug | 3.0.1 | WSGI 工具库 |

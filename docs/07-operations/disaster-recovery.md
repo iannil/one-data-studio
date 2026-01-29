@@ -48,13 +48,13 @@ kubectl create job --from=cronjob/mysql-backup manual-backup-$(date +%Y%m%d) -n 
 kubectl get pods -n one-data-system
 
 # View logs
-kubectl logs -n one-data-system deployment/bisheng-api --previous
+kubectl logs -n one-data-system deployment/agent-api --previous
 
 # Restart deployment
-kubectl rollout restart deployment/bisheng-api -n one-data-system
+kubectl rollout restart deployment/agent-api -n one-data-system
 
 # Watch rollout
-kubectl rollout status deployment/bisheng-api -n one-data-system
+kubectl rollout status deployment/agent-api -n one-data-system
 ```
 
 **Estimated Recovery Time**: 5 minutes
@@ -87,8 +87,8 @@ kubectl rollout status deployment/bisheng-api -n one-data-system
 kubectl create namespace one-data-system
 
 # Sync ArgoCD applications
-argocd app sync bisheng-api --force
-argocd app sync alldata-api --force
+argocd app sync agent-api --force
+argocd app sync data-api --force
 argocd app sync web-frontend --force
 
 # Restore secrets
@@ -141,7 +141,7 @@ kubectl apply -f argocd/applications/
 kubectl delete pods -n one-data-system --all
 
 # Review audit logs
-kubectl logs -n one-data-system -l app=bisheng-api | grep -i "login\|auth"
+kubectl logs -n one-data-system -l app=agent-api | grep -i "login\|auth"
 
 # Update external services
 # - Regenerate OpenAI API key

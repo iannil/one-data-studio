@@ -25,16 +25,16 @@ spec:
       port: 8080
 
 ---
-# Allow ingress to alldata-api from nginx ingress controller
+# Allow ingress to data-api from nginx ingress controller
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-alldata
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   policyTypes:
   - Ingress
   ingress:
@@ -47,16 +47,16 @@ spec:
       port: 8080
 
 ---
-# Allow ingress to bisheng-api from nginx ingress controller and other services
+# Allow ingress to agent-api from nginx ingress controller and other services
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-bisheng
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 spec:
   podSelector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   policyTypes:
   - Ingress
   ingress:
@@ -79,12 +79,12 @@ spec:
       port: 8080
 
 ---
-# Allow ingress to openai-proxy from bisheng-api
+# Allow ingress to openai-proxy from agent-api
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-openai-proxy
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   podSelector:
     matchLabels:
@@ -92,11 +92,11 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # From bisheng-api namespace
+  # From agent-api namespace
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-bisheng
+          kubernetes.io/metadata.name: one-data-agent
     ports:
     - protocol: TCP
       port: 8000

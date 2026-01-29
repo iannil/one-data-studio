@@ -29,7 +29,7 @@ import {
   RiseOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { assetsAI } from '@/services/alldata';
+import { assetsAI } from '@/services/data';
 import React from 'react';
 
 const { Text } = Typography;

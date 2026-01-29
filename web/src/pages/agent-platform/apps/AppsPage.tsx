@@ -34,12 +34,12 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 import type {
   PublishedApp,
   ApiKey,
   AppStatus,
-} from '@/services/bisheng';
+} from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -68,7 +68,7 @@ function AppsPage() {
   const { data: appsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['published-apps', page, pageSize, statusFilter, typeFilter],
     queryFn: () =>
-      bisheng.getPublishedApps({
+      agentService.getPublishedApps({
         page,
         page_size: pageSize,
         status: statusFilter as AppStatus || undefined,
@@ -78,7 +78,7 @@ function AppsPage() {
 
   // 创建应用
   const createMutation = useMutation({
-    mutationFn: bisheng.createApp,
+    mutationFn: agentService.createApp,
     onSuccess: () => {
       message.success('应用创建成功');
       setIsCreateModalOpen(false);
@@ -92,8 +92,8 @@ function AppsPage() {
 
   // 更新应用
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof bisheng.updateApp>[1] }) =>
-      bisheng.updateApp(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof agentService.updateApp>[1] }) =>
+      agentService.updateApp(id, data),
     onSuccess: () => {
       message.success('应用更新成功');
       setIsEditModalOpen(false);
@@ -107,8 +107,8 @@ function AppsPage() {
 
   // 发布应用
   const publishMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof bisheng.publishApp>[1] }) =>
-      bisheng.publishApp(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof agentService.publishApp>[1] }) =>
+      agentService.publishApp(id, data),
     onSuccess: (result) => {
       message.success('应用发布成功');
       setIsPublishModalOpen(false);
@@ -123,7 +123,7 @@ function AppsPage() {
 
   // 下线应用
   const unpublishMutation = useMutation({
-    mutationFn: bisheng.unpublishApp,
+    mutationFn: agentService.unpublishApp,
     onSuccess: () => {
       message.success('应用已下线');
       queryClient.invalidateQueries({ queryKey: ['published-apps'] });
@@ -136,7 +136,7 @@ function AppsPage() {
 
   // 删除应用
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deleteApp,
+    mutationFn: agentService.deleteApp,
     onSuccess: () => {
       message.success('应用删除成功');
       setIsDetailDrawerOpen(false);
@@ -149,7 +149,7 @@ function AppsPage() {
 
   // 创建 API Key
   const createKeyMutation = useMutation({
-    mutationFn: (appId: string) => bisheng.createApiKey(appId),
+    mutationFn: (appId: string) => agentService.createApiKey(appId),
     onSuccess: (result) => {
       message.success('API 密钥创建成功');
       setNewApiKey(result.data.key);
@@ -163,7 +163,7 @@ function AppsPage() {
   // 删除 API Key
   const deleteKeyMutation = useMutation({
     mutationFn: ({ appId, keyId }: { appId: string; keyId: string }) =>
-      bisheng.deleteApiKey(appId, keyId),
+      agentService.deleteApiKey(appId, keyId),
     onSuccess: () => {
       message.success('API 密钥删除成功');
       queryClient.invalidateQueries({ queryKey: ['app-api-keys', selectedApp?.app_id] });
@@ -176,14 +176,14 @@ function AppsPage() {
   // 获取应用 API Keys
   const { data: apiKeysData } = useQuery({
     queryKey: ['app-api-keys', selectedApp?.app_id],
-    queryFn: () => bisheng.getAppApiKeys(selectedApp!.app_id),
+    queryFn: () => agentService.getAppApiKeys(selectedApp!.app_id),
     enabled: !!selectedApp && isApiKeysModalOpen,
   });
 
   // 获取应用统计
   const { data: statsData } = useQuery({
     queryKey: ['app-statistics', selectedApp?.app_id],
-    queryFn: () => bisheng.getAppStatistics(selectedApp!.app_id),
+    queryFn: () => agentService.getAppStatistics(selectedApp!.app_id),
     enabled: !!selectedApp && isStatsModalOpen,
   });
 

@@ -52,7 +52,7 @@ import {
   ETLTask,
   Database,
   TableInfo,
-} from '../../../services/alldata';
+} from '../../../services/data';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;

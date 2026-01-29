@@ -15,7 +15,7 @@
 
 ## 服务启动问题
 
-### Alldata API 启动失败
+### Data API 启动失败
 
 #### 症状
 - Pod 状态为 `CrashLoopBackOff`
@@ -25,13 +25,13 @@
 
 ```bash
 # 查看 Pod 状态
-kubectl get pods -n one-data-alldata
+kubectl get pods -n one-data-data
 
 # 查看 Pod 日志
-kubectl logs -n one-data-alldata deployment/alldata-api --tail=100
+kubectl logs -n one-data-data deployment/data-api --tail=100
 
 # 查看 Pod 事件
-kubectl describe pod -n one-data-alldata <pod-name>
+kubectl describe pod -n one-data-data <pod-name>
 ```
 
 #### 常见原因与解决
@@ -47,14 +47,14 @@ kubectl describe pod -n one-data-alldata <pod-name>
 
 ```bash
 # 执行数据库迁移
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   python -m alembic upgrade head
 
 # 或使用初始化 Job
-kubectl apply -f deploy/kubernetes/applications/alldata-api/db-init-job.yaml
+kubectl apply -f deploy/kubernetes/applications/data-api/db-init-job.yaml
 ```
 
-### Bisheng API 启动失败
+### Agent API 启动失败
 
 #### 症状
 - LLM 调用超时
@@ -71,7 +71,7 @@ kubectl run -it --rm debug --image=nicolaka/netshoot --restart=Never -- \
   nc -zv milvus-proxy.one-data-infra.svc.cluster.local 19530
 
 # 检查环境变量
-kubectl exec -n one-data-bisheng deployment/bisheng-api -- env | grep -E "MILVUS|REDIS"
+kubectl exec -n one-data-agent deployment/agent-api -- env | grep -E "MILVUS|REDIS"
 ```
 
 #### 常见原因与解决
@@ -95,10 +95,10 @@ kubectl exec -n one-data-bisheng deployment/bisheng-api -- env | grep -E "MILVUS
 kubectl describe node | grep -A 5 "nvidia.com/gpu"
 
 # 查看 vLLM 日志
-kubectl logs -n one-data-cube statefulset/vllm-serving --tail=100
+kubectl logs -n one-data-model statefulset/vllm-serving --tail=100
 
 # 检查 GPU 内存使用
-kubectl exec -n one-data-cube statefulset/vllm-serving -- nvidia-smi
+kubectl exec -n one-data-model statefulset/vllm-serving -- nvidia-smi
 ```
 
 #### 常见原因与解决
@@ -119,10 +119,10 @@ kubectl exec -n one-data-cube statefulset/vllm-serving -- nvidia-smi
 
 ```bash
 # 查看资源使用情况
-kubectl top pods -n one-data-alldata
+kubectl top pods -n one-data-data
 
 # 查看数据库连接池
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl http://localhost:8080/metrics | grep db_connections
 
 # 查看 Prometheus 指标
@@ -208,10 +208,10 @@ for c in collections:
 
 ```bash
 # 检查同步服务状态
-kubectl logs -n one-data-alldata deployment/alldata-api -c metadata-sync
+kubectl logs -n one-data-data deployment/data-api -c metadata-sync
 
 # 查看同步延迟
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl http://localhost:8080/api/v1/metadata/sync-status
 ```
 
@@ -219,7 +219,7 @@ kubectl exec -n one-data-alldata deployment/alldata-api -- \
 
 ```bash
 # 手动触发同步
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl -X POST http://localhost:8080/api/v1/metadata/sync
 
 # 检查 OpenMetadata 连接
@@ -237,11 +237,11 @@ kubectl run -it --rm debug --image=nicolaka/netshoot --restart=Never -- \
 
 ```bash
 # 检查事件队列大小
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl http://localhost:8080/metrics | grep openlineage_queue
 
 # 检查持久化速率
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl http://localhost:8080/metrics | grep openlineage_persisted
 ```
 
@@ -270,14 +270,14 @@ service = OpenLineageEventService(
 
 ```bash
 # 查看 Kettle Worker 日志
-kubectl logs -n one-data-alldata deployment/kettle-worker
+kubectl logs -n one-data-data deployment/kettle-worker
 
 # 检查作业队列
-kubectl exec -n one-data-alldata deployment/alldata-api -- \
+kubectl exec -n one-data-data deployment/data-api -- \
   curl http://localhost:8080/api/v1/kettle/jobs
 
 # 检查 MinIO 连接
-kubectl exec -n one-data-alldata deployment/kettle-worker -- \
+kubectl exec -n one-data-data deployment/kettle-worker -- \
   curl http://minio.one-data-infra.svc.cluster.local:9000/minio/health/live
 ```
 
@@ -285,7 +285,7 @@ kubectl exec -n one-data-alldata deployment/kettle-worker -- \
 
 1. **增加 Worker 副本**
    ```bash
-   kubectl scale deployment/kettle-worker -n one-data-alldata --replicas=3
+   kubectl scale deployment/kettle-worker -n one-data-data --replicas=3
    ```
 
 2. **调整资源限制**
@@ -309,10 +309,10 @@ kubectl exec -n one-data-alldata deployment/kettle-worker -- \
 
 ```bash
 # 查看错误日志
-kubectl logs -n one-data-bisheng deployment/bisheng-api | grep -i "text2sql"
+kubectl logs -n one-data-agent deployment/agent-api | grep -i "text2sql"
 
 # 检查元数据上下文
-kubectl exec -n one-data-bisheng deployment/bisheng-api -- \
+kubectl exec -n one-data-agent deployment/agent-api -- \
   curl http://localhost:8081/api/v1/metadata/schema/test_db
 ```
 
@@ -405,7 +405,7 @@ kubectl exec -n one-data-infra statefulset/milvus-querynode -- \
 
 ```bash
 # 重建集合索引
-kubectl exec -n one-data-infra deployment/alldata-api -- python <<'EOF'
+kubectl exec -n one-data-infra deployment/data-api -- python <<'EOF'
 from pymilvus import connections, Collection
 connections.connect("default", host="milvus-proxy", port="19530")
 collection = Collection("your_collection")
@@ -433,11 +433,11 @@ kubectl apply -f deploy/kubernetes/infrastructure/databases/milvus-restore.yaml
 ```bash
 # 测试 DNS 解析
 kubectl run -it --rm debug --image=nicolaka/netshoot --restart=Never -- \
-  nslookup alldata-api.one-data-alldata.svc.cluster.local
+  nslookup data-api.one-data-data.svc.cluster.local
 
 # 测试端口连通性
 kubectl run -it --rm debug --image=nicolaka/netshoot --restart=Never -- \
-  nc -zv alldata-api.one-data-alldata.svc.cluster.local 8080
+  nc -zv data-api.one-data-data.svc.cluster.local 8080
 
 # 检查网络策略
 kubectl get networkpolicies --all-namespaces
@@ -448,7 +448,7 @@ kubectl get networkpolicies --all-namespaces
 1. **检查网络策略**
    ```bash
    # 查看是否允许通信
-   kubectl get networkpolicy -n one-data-alldata -o yaml
+   kubectl get networkpolicy -n one-data-data -o yaml
    ```
 
 2. **添加允许规则**
@@ -502,7 +502,7 @@ curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
            pathType: Prefix
            backend:
              service:
-               name: alldata-api
+               name: data-api
                port:
                  number: 8080  # 确保端口正确
    ```
@@ -510,7 +510,7 @@ curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
 2. **检查 TLS 证书**
    ```bash
    kubectl get certificate -A
-   kubectl describe certificate alldata-cert -n one-data-alldata
+   kubectl describe certificate alldata-cert -n one-data-data
    ```
 
 ---
@@ -519,8 +519,8 @@ curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
 
 ```bash
 # 快速重启所有服务
-kubectl rollout restart deployment -n one-data-alldata
-kubectl rollout restart deployment -n one-data-bisheng
+kubectl rollout restart deployment -n one-data-data
+kubectl rollout restart deployment -n one-data-agent
 kubectl rollout restart statefulset -n one-data-infra
 
 # 查看所有 Pod 状态
@@ -530,11 +530,11 @@ kubectl get pods -A | grep -E "one-data|NAME"
 kubectl get pvc -A -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,CAPACITY:.spec.resources.requests.storage
 
 # 端口转发到本地调试
-kubectl port-forward -n one-data-alldata svc/alldata-api 8080:8080
+kubectl port-forward -n one-data-data svc/data-api 8080:8080
 kubectl port-forward -n one-data-system svc/grafana 3000:3000
 
 # 进入容器调试
-kubectl exec -it -n one-data-alldata deployment/alldata-api -- /bin/sh
+kubectl exec -it -n one-data-data deployment/data-api -- /bin/sh
 
 # 查看资源使用
 kubectl top nodes
@@ -553,8 +553,8 @@ kubectl get events -A --sort-by='.lastTimestamp'
 ```bash
 # 收集诊断信息
 kubectl cluster-info dump > cluster-dump.txt
-kubectl logs -n one-data-alldata deployment/alldata-api --tail=500 > alldata-api.log
-kubectl logs -n one-data-bisheng deployment/bisheng-api --tail=500 > bisheng-api.log
+kubectl logs -n one-data-data deployment/data-api --tail=500 > data-api.log
+kubectl logs -n one-data-agent deployment/agent-api --tail=500 > agent-api.log
 kubectl get pods -A -o yaml > pods.yaml
 kubectl get svc -A -o yaml > services.yaml
 ```

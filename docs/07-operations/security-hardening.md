@@ -91,7 +91,7 @@ apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
   name: default
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   mtls:
     mode: STRICT
@@ -125,7 +125,7 @@ spec:
 kubectl create rolebinding developer-binding \
   --clusterrole=one-data:developer \
   --user=developer@example.com \
-  --namespace=one-data-alldata
+  --namespace=one-data-data
 
 # 为运维人员添加权限
 kubectl create clusterrolebinding ops-binding \
@@ -143,8 +143,8 @@ kubectl create clusterrolebinding ops-binding \
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 automountServiceAccountToken: false  # 禁用自动挂载
 ```
 
@@ -165,7 +165,7 @@ automountServiceAccountToken: false  # 禁用自动挂载
 | 策略 | 描述 |
 |------|------|
 | `default-deny-ingress` | 默认拒绝所有入站流量 |
-| `alldata-api-policy` | Alldata API 的网络访问规则 |
+| `data-api-policy` | Data API 的网络访问规则 |
 | `milvus-policy` | Milvus 组件间通信规则 |
 | `allow-dns` | 允许 DNS 查询 |
 
@@ -185,8 +185,8 @@ kubectl get networkpolicies --all-namespaces
 # 从 Pod 测试连接
 kubectl run test-pod --image=nicolaka/netshoot -i --rm -- sh
 # 在 Pod 中执行:
-# nslookup alldata-api.one-data-alldata.svc.cluster.local
-# nc -zv alldata-api.one-data-alldata.svc.cluster.local 8080
+# nslookup data-api.one-data-data.svc.cluster.local
+# nc -zv data-api.one-data-data.svc.cluster.local 8080
 ```
 
 ---
@@ -232,7 +232,7 @@ spec:
 
 ```bash
 # 扫描镜像漏洞
-trivy image alldata-api:v1.0.0
+trivy image data-api:v1.0.0
 ```
 
 ---

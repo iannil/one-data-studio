@@ -26,12 +26,12 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 import type {
   StandardLibrary,
   DataElement,
   CreateDataElementRequest,
-} from '@/services/alldata';
+} from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -66,27 +66,27 @@ function StandardsPage() {
   // Queries
   const { data: elementsData, isLoading: isLoadingElements } = useQuery({
     queryKey: ['data-elements', page, pageSize],
-    queryFn: () => alldata.getDataElements({ page, page_size: pageSize }),
+    queryFn: () => data.getDataElements({ page, page_size: pageSize }),
   });
 
   const { data: librariesData } = useQuery({
     queryKey: ['standard-libraries'],
-    queryFn: () => alldata.getStandardLibraries(),
+    queryFn: () => data.getStandardLibraries(),
   });
 
   const { data: documentsData } = useQuery({
     queryKey: ['standard-documents'],
-    queryFn: () => alldata.getStandardDocuments(),
+    queryFn: () => data.getStandardDocuments(),
   });
 
   const { data: mappingsData } = useQuery({
     queryKey: ['standard-mappings'],
-    queryFn: () => alldata.getStandardMappings(),
+    queryFn: () => data.getStandardMappings(),
   });
 
   // Mutations
   const createElementMutation = useMutation({
-    mutationFn: alldata.createDataElement,
+    mutationFn: data.createDataElement,
     onSuccess: () => {
       message.success('数据元创建成功');
       setIsElementModalOpen(false);
@@ -100,7 +100,7 @@ function StandardsPage() {
 
   const updateElementMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateDataElementRequest> }) =>
-      alldata.updateDataElement(id, data),
+      data.updateDataElement(id, data),
     onSuccess: () => {
       message.success('数据元更新成功');
       setIsElementModalOpen(false);
@@ -114,7 +114,7 @@ function StandardsPage() {
   });
 
   const deleteElementMutation = useMutation({
-    mutationFn: alldata.deleteDataElement,
+    mutationFn: data.deleteDataElement,
     onSuccess: () => {
       message.success('数据元删除成功');
       setIsDetailDrawerOpen(false);
@@ -126,7 +126,7 @@ function StandardsPage() {
   });
 
   const createLibraryMutation = useMutation({
-    mutationFn: alldata.createStandardLibrary,
+    mutationFn: data.createStandardLibrary,
     onSuccess: () => {
       message.success('词根库创建成功');
       setIsLibraryModalOpen(false);
@@ -139,7 +139,7 @@ function StandardsPage() {
   });
 
   const deleteLibraryMutation = useMutation({
-    mutationFn: alldata.deleteStandardLibrary,
+    mutationFn: data.deleteStandardLibrary,
     onSuccess: () => {
       message.success('词根库删除成功');
       queryClient.invalidateQueries({ queryKey: ['standard-libraries'] });

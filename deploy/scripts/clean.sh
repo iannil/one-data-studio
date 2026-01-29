@@ -26,7 +26,7 @@ echo "==> 删除基础设施..."
 kubectl delete -f deploy/kubernetes/infrastructure/ --ignore-not-found=true --recursive 2>/dev/null || true
 
 echo "==> 删除 PVC (持久化数据)..."
-for ns in one-data-alldata one-data-bisheng one-data-cube one-data-infra one-data-web one-data-monitoring; do
+for ns in one-data-data one-data-agent one-data-model one-data-infra one-data-web one-data-monitoring; do
     if kubectl get namespace "${ns}" &>/dev/null; then
         kubectl delete pvc --all -n "${ns}" --ignore-not-found=true 2>/dev/null || true
     fi
@@ -37,7 +37,7 @@ kubectl delete -f deploy/kubernetes/base/ --ignore-not-found=true 2>/dev/null ||
 
 # 删除命名空间
 echo "==> 删除命名空间..."
-for ns in one-data-alldata one-data-bisheng one-data-cube one-data-infra one-data-web one-data-monitoring one-data-system; do
+for ns in one-data-data one-data-agent one-data-model one-data-infra one-data-web one-data-monitoring one-data-system; do
     kubectl delete namespace "${ns}" --ignore-not-found=true 2>/dev/null || true
 done
 

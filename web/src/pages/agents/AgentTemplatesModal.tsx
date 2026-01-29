@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import bisheng, { type AgentTemplate, type CreateAgentTemplateRequest } from '@/services/bisheng';
+import bisheng, { type AgentTemplate, type CreateAgentTemplateRequest } from '@/services/agent-service';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -66,7 +66,7 @@ function AgentTemplatesModal({
   // 创建模板
   const createMutation = useMutation({
     mutationFn: (data: CreateAgentTemplateRequest) =>
-      bisheng.createAgentTemplate(data),
+      agentService.createAgentTemplate(data),
     onSuccess: () => {
       message.success('模板创建成功');
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });
@@ -80,7 +80,7 @@ function AgentTemplatesModal({
   // 更新模板
   const updateMutation = useMutation({
     mutationFn: ({ templateId, data }: { templateId: string; data: Partial<CreateAgentTemplateRequest> }) =>
-      bisheng.updateAgentTemplate(templateId, data),
+      agentService.updateAgentTemplate(templateId, data),
     onSuccess: () => {
       message.success('模板更新成功');
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });

@@ -24,13 +24,13 @@ client:
 
 # 采集配置
 scrape_configs:
-  # ==================== Alldata API 日志 ====================
-  - job_name: alldata-api
+  # ==================== Data API 日志 ====================
+  - job_name: data-api
     static_configs:
       - targets:
           - localhost
         labels:
-          job: alldata-api
+          job: data-api
           service: alldata
           env: production
 
@@ -57,15 +57,15 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [alldata-api]
+            values: [data-api]
 
-  # ==================== Bisheng API 日志 ====================
-  - job_name: bisheng-api
+  # ==================== Agent API 日志 ====================
+  - job_name: agent-api
     static_configs:
       - targets:
           - localhost
         labels:
-          job: bisheng-api
+          job: agent-api
           service: bisheng
           env: production
 
@@ -88,15 +88,15 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [bisheng-api]
+            values: [agent-api]
 
-  # ==================== Cube API (vLLM) 日志 ====================
-  - job_name: cube-api
+  # ==================== Model API (vLLM) 日志 ====================
+  - job_name: model-api
     static_configs:
       - targets:
           - localhost
         labels:
-          job: cube-api
+          job: model-api
           service: cube
           env: production
 
@@ -111,7 +111,7 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [vllm-serving, cube-api]
+            values: [vllm-serving, model-api]
 
   # ==================== 系统服务日志 ====================
   - job_name: system-services

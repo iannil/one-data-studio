@@ -9,7 +9,7 @@ import {
   ThunderboltFilled,
   SwapOutlined,
 } from '@ant-design/icons';
-import type { Text2SqlResponse } from '@/services/bisheng';
+import type { Text2SqlResponse } from '@/services/agent-service';
 
 const { Option } = Select;
 

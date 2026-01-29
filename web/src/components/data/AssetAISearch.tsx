@@ -15,12 +15,12 @@ import {
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { message } from 'antd';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 import type {
   AIAssetSearchResult,
   AutocompleteSuggestion,
   QueryIntent
-} from '@/services/alldata';
+} from '@/services/data';
 import './AssetAISearch.css';
 
 const { Search } = Input;
@@ -50,7 +50,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
   // 获取热门资产
   const { data: trendingData, isLoading: trendingLoading } = useQuery({
     queryKey: ['trending-assets'],
-    queryFn: () => alldata.getTrendingAssets({ days: 7, limit: 10 }),
+    queryFn: () => data.getTrendingAssets({ days: 7, limit: 10 }),
     enabled: showTrending,
   });
 
@@ -64,7 +64,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
 
     setIsSearching(true);
     try {
-      const response = await alldata.aiSearchAssets(query, { limit: 20 });
+      const response = await data.aiSearchAssets(query, { limit: 20 });
       const data = response.data?.data;
 
       if (data) {
@@ -113,7 +113,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
   // 获取补全建议
   const getAutocompleteSuggestions = async (prefix: string) => {
     try {
-      const response = await alldata.getAssetAutocomplete(prefix, { limit: 8 });
+      const response = await data.getAssetAutocomplete(prefix, { limit: 8 });
       const suggestions = response.data?.data?.suggestions || [];
 
       setAutocompleteOptions(

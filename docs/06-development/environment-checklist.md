@@ -85,9 +85,9 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 | 用途 | 示例域名 |
 |------|----------|
 | 平台入口 | one-data.example.com |
-| Alldata | alldata.example.com |
+| Data | alldata.example.com |
 | Cube | cube.example.com |
-| Bisheng | bisheng.example.com |
+| Agent | bisheng.example.com |
 | MinIO | minio.example.com |
 
 ### 网络连通性检查
@@ -282,7 +282,7 @@ export REDIS_PORT=6379
 export REDIS_PASSWORD="redis123"
 
 # 模型服务配置
-export MODEL_ENDPOINT="http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+export MODEL_ENDPOINT="http://vllm-serving.one-data-model.svc.cluster.local:8000"
 
 # Keycloak 配置
 export KEYCLOAK_URL="http://keycloak.one-data-system.svc.cluster.local:8080"

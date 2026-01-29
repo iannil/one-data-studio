@@ -159,9 +159,9 @@ data:
           - role: endpoints
           namespaces:
             names:
-              - one-data-alldata
-              - one-data-cube
-              - one-data-bisheng
+              - one-data-data
+              - one-data-model
+              - one-data-agent
               - one-data-system
         relabel_configs:
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
@@ -229,7 +229,7 @@ data:
               description: "{{ $labels.instance }} P95 延迟超过 1s"
 
           - alert: APIDown
-            expr: up{job=~"alldata-api|bisheng-api|openai-proxy"} == 0
+            expr: up{job=~"data-api|agent-api|openai-proxy"} == 0
             for: 2m
             labels:
               severity: critical

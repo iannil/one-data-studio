@@ -373,15 +373,15 @@ function getAssetUrl(path: string): string {
 
 ```bash
 # Python 性能分析
-docker-compose exec alldata-api python -m cProfile -o profile.stats your_script.py
-docker-compose exec alldata-api python -c "
+docker-compose exec data-api python -m cProfile -o profile.stats your_script.py
+docker-compose exec data-api python -c "
 import pstats
 p = pstats.Stats('profile.stats')
 p.sort_stats('cumulative').print_stats(20)
 "
 
 # Flask 延时分析
-docker-compose exec alldata-api python -c "
+docker-compose exec data-api python -c "
 from werkzeug.middleware.profiler import ProfilerMiddleware
 # 在 Flask 应用中添加 ProfilerMiddleware
 "

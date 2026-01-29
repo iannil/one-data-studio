@@ -59,9 +59,9 @@
 | 任务 | 优先级 | 状态 | 交付物 |
 |------|--------|------|--------|
 | PoC 环境搭建 | P0 | ✅ 完成 | K8s 测试环境 |
-| Alldata-Cube 集成 | P0 | ✅ 完成 | 数据集注册/读取 |
-| Cube-Bisheng 集成 | P0 | ✅ 完成 | 模型服务 API |
-| Alldata-Bisheng 集成 | P1 | ✅ 完成 | Text-to-SQL |
+| Data-Cube 集成 | P0 | ✅ 完成 | 数据集注册/读取 |
+| Cube-Agent 集成 | P0 | ✅ 完成 | 模型服务 API |
+| Data-Agent 集成 | P1 | ✅ 完成 | Text-to-SQL |
 | RAG 流水线验证 | P1 | ✅ 完成 | 知识检索 Demo |
 | 监控告警搭建 | P2 | ⚪ 待实现 | Prometheus + Grafana |
 
@@ -124,8 +124,8 @@
 graph TD
     A[架构设计] --> B[技术选型]
     B --> C[PoC 环境]
-    C --> D[Alldata-Cube 集成]
-    C --> E[Cube-Bisheng 集成]
+    C --> D[Data-Cube 集成]
+    C --> E[Cube-Agent 集成]
     D --> F[端到端验证]
     E --> F
     F --> G[功能完善]
@@ -149,12 +149,12 @@ graph TD
 | 功能模块 | 描述 | 优先级 |
 |----------|------|--------|
 | 基础设施 | K8s 集群 + MinIO + MySQL + Redis | P0 |
-| Alldata API | 数据集注册/查询（模拟服务） | P0 |
+| Data API | 数据集注册/查询（模拟服务） | P0 |
 | Cube 模型服务 | vLLM 推理服务（小模型测试） | P0 |
-| Bisheng API | 应用编排服务（模拟） | P0 |
-| Alldata → Cube | 数据集注册与读取验证 | P0 |
-| Cube → Bisheng | OpenAI 兼容 API 调用验证 | P0 |
-| Alldata → Bisheng | 元数据查询（P1，可延后） | P1 |
+| Agent API | 应用编排服务（模拟） | P0 |
+| Data → Cube | 数据集注册与读取验证 | P0 |
+| Cube → Agent | OpenAI 兼容 API 调用验证 | P0 |
+| Data → Agent | 元数据查询（P1，可延后） | P1 |
 
 ### v0.5 详细规划（核心功能）
 

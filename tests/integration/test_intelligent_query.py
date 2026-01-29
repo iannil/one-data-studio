@@ -30,7 +30,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch, PropertyMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/shared"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/bisheng-api"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/agent-api"))
 
 logger = logging.getLogger(__name__)
 

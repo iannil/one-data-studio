@@ -8,9 +8,9 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
-import { text2Sql } from '@/services/bisheng';
+import { text2Sql } from '@/services/agent-service';
 import { logError } from '@/services/logger';
-import type { Text2SqlResponse } from '@/services/bisheng';
+import type { Text2SqlResponse } from '@/services/agent-service';
 
 const { TextArea } = Input;
 

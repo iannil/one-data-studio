@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import WorkflowsPage from './WorkflowsPage';
-import * as bisheng from '@/services/bisheng';
+import * as agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -48,7 +48,7 @@ describe('WorkflowsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
@@ -103,14 +103,14 @@ describe('WorkflowsPage 工作流操作', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
   });
 
   it('应该能够创建新工作流', async () => {
-    vi.mocked(bisheng.default.createWorkflow).mockResolvedValue({
+    vi.mocked(agentService.default.createWorkflow).mockResolvedValue({
       code: 0,
       data: { workflow_id: 'wf-new', name: '新工作流' },
     });
@@ -126,7 +126,7 @@ describe('WorkflowsPage 工作流操作', () => {
   });
 
   it('应该能够删除工作流', async () => {
-    vi.mocked(bisheng.default.deleteWorkflow).mockResolvedValue({
+    vi.mocked(agentService.default.deleteWorkflow).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -156,7 +156,7 @@ describe('WorkflowsPage 搜索和筛选', () => {
     vi.clearAllMocks();
 
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
@@ -186,7 +186,7 @@ describe('WorkflowsPage 空状态', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: [], total: 0 },
     });
@@ -204,7 +204,7 @@ describe('WorkflowsPage 空状态', () => {
 
 describe('WorkflowsPage 加载状态', () => {
   it('应该显示加载状态', async () => {
-    vi.mocked(bisheng.default.getWorkflows).mockImplementation(
+    vi.mocked(agentService.default.getWorkflows).mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve({
         code: 0,
         data: { workflows: mockWorkflows, total: 2 },

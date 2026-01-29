@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowExecutePage from './WorkflowExecutePage';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -78,17 +78,17 @@ describe('WorkflowExecutePage', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflow).mockResolvedValue({
+    vi.mocked(agentService.getWorkflow).mockResolvedValue({
       code: 0,
       data: mockWorkflow,
     });
 
-    vi.mocked(bisheng.getWorkflowExecutions).mockResolvedValue({
+    vi.mocked(agentService.getWorkflowExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
 
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: [] },
     });
@@ -148,12 +148,12 @@ describe('WorkflowExecutePage 执行历史', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflow).mockResolvedValue({
+    vi.mocked(agentService.getWorkflow).mockResolvedValue({
       code: 0,
       data: mockWorkflow,
     });
 
-    vi.mocked(bisheng.getWorkflowExecutions).mockResolvedValue({
+    vi.mocked(agentService.getWorkflowExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -202,17 +202,17 @@ describe('WorkflowExecutePage 启动工作流', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflow).mockResolvedValue({
+    vi.mocked(agentService.getWorkflow).mockResolvedValue({
       code: 0,
       data: mockWorkflow,
     });
 
-    vi.mocked(bisheng.getWorkflowExecutions).mockResolvedValue({
+    vi.mocked(agentService.getWorkflowExecutions).mockResolvedValue({
       code: 0,
       data: { executions: [] },
     });
 
-    vi.mocked(bisheng.startWorkflow).mockResolvedValue({
+    vi.mocked(agentService.startWorkflow).mockResolvedValue({
       code: 0,
       data: { execution_id: 'exec-new' },
     });
@@ -254,12 +254,12 @@ describe('WorkflowExecutePage 空状态', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflow).mockResolvedValue({
+    vi.mocked(agentService.getWorkflow).mockResolvedValue({
       code: 0,
       data: mockWorkflow,
     });
 
-    vi.mocked(bisheng.getWorkflowExecutions).mockResolvedValue({
+    vi.mocked(agentService.getWorkflowExecutions).mockResolvedValue({
       code: 0,
       data: { executions: [] },
     });
@@ -279,14 +279,14 @@ describe('WorkflowExecutePage 状态提示', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflow).mockResolvedValue({
+    vi.mocked(agentService.getWorkflow).mockResolvedValue({
       code: 0,
       data: mockWorkflow,
     });
   });
 
   it('应该显示运行中提示', async () => {
-    vi.mocked(bisheng.getWorkflowExecutions).mockResolvedValue({
+    vi.mocked(agentService.getWorkflowExecutions).mockResolvedValue({
       code: 0,
       data: {
         executions: [

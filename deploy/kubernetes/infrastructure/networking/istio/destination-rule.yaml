@@ -3,14 +3,14 @@
 # Sprint 14: WebSocket 会话亲和性增强
 
 ---
-# DestinationRule: Alldata API with Subsets
+# DestinationRule: Data API with Subsets
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: alldata-api-dr
-  namespace: one-data-alldata
+  name: data-api-dr
+  namespace: one-data-data
 spec:
-  host: alldata-api
+  host: data-api
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN
@@ -51,15 +51,15 @@ spec:
       deployment: green
 
 ---
-# DestinationRule: Bisheng API with Subsets
+# DestinationRule: Agent API with Subsets
 # Sprint 14: 增强 WebSocket 会话亲和性
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: bisheng-api-dr
-  namespace: one-data-bisheng
+  name: agent-api-dr
+  namespace: one-data-agent
 spec:
-  host: bisheng-api
+  host: agent-api
   trafficPolicy:
     loadBalancer:
       # Sprint 14: 使用一致性哈希确保 WebSocket 会话亲和性
@@ -109,17 +109,17 @@ spec:
       ab-test: B
 
 ---
-# DestinationRule: Bisheng API WebSocket 专用
+# DestinationRule: Agent API WebSocket 专用
 # Sprint 14: WebSocket 连接的独立规则
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: bisheng-api-websocket-dr
-  namespace: one-data-bisheng
+  name: agent-api-websocket-dr
+  namespace: one-data-agent
   annotations:
     description: "WebSocket 专用目标规则 - 确保会话亲和性"
 spec:
-  host: bisheng-api
+  host: agent-api
   trafficPolicy:
     loadBalancer:
       consistentHash:
@@ -150,7 +150,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: openai-proxy-dr
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   host: openai-proxy
   trafficPolicy:

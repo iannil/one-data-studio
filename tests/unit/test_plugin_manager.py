@@ -601,4 +601,4 @@ def test_version_parsing(version_str, expected_major, expected_minor, expected_p
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--cov=services/bisheng_api/engine/plugin_manager", "--cov-report=term-missing"])
+    pytest.main([__file__, "-v", "--cov=services/agent_api/engine/plugin_manager", "--cov-report=term-missing"])

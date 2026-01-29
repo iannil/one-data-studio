@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SchedulesPage from './SchedulesPage';
-import * as bisheng from '@/services/bisheng';
+import * as agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -54,12 +54,12 @@ describe('SchedulesPage', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
 
-    vi.mocked(bisheng.default.listAllSchedules).mockResolvedValue({
+    vi.mocked(agentService.default.listAllSchedules).mockResolvedValue({
       code: 0,
       data: { schedules: mockSchedules, total: 2 },
     });
@@ -116,8 +116,8 @@ describe('SchedulesPage', () => {
   });
 
   it('应该能够切换启用状态', async () => {
-    vi.mocked(bisheng.default.deleteSchedule).mockResolvedValue({ code: 0 });
-    vi.mocked(bisheng.default.createSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.deleteSchedule).mockResolvedValue({ code: 0 });
+    vi.mocked(agentService.default.createSchedule).mockResolvedValue({
       code: 0,
       data: { schedule_id: 'sch-new' },
     });
@@ -144,19 +144,19 @@ describe('SchedulesPage 调度操作', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
 
-    vi.mocked(bisheng.default.listAllSchedules).mockResolvedValue({
+    vi.mocked(agentService.default.listAllSchedules).mockResolvedValue({
       code: 0,
       data: { schedules: mockSchedules, total: 2 },
     });
   });
 
   it('应该能够手动触发调度', async () => {
-    vi.mocked(bisheng.default.triggerSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.triggerSchedule).mockResolvedValue({
       code: 0,
       data: { execution_id: 'exec-001' },
     });
@@ -171,7 +171,7 @@ describe('SchedulesPage 调度操作', () => {
   });
 
   it('应该能够删除调度', async () => {
-    vi.mocked(bisheng.default.deleteSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.deleteSchedule).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -186,12 +186,12 @@ describe('SchedulesPage 调度操作', () => {
   });
 
   it('应该能够暂停和恢复调度', async () => {
-    vi.mocked(bisheng.default.pauseSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.pauseSchedule).mockResolvedValue({
       code: 0,
       message: 'success',
     });
 
-    vi.mocked(bisheng.default.resumeSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.resumeSchedule).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -209,19 +209,19 @@ describe('SchedulesPage 创建调度', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
 
-    vi.mocked(bisheng.default.listAllSchedules).mockResolvedValue({
+    vi.mocked(agentService.default.listAllSchedules).mockResolvedValue({
       code: 0,
       data: { schedules: [], total: 0 },
     });
   });
 
   it('应该能够创建 Cron 类型调度', async () => {
-    vi.mocked(bisheng.default.createSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.createSchedule).mockResolvedValue({
       code: 0,
       data: { schedule_id: 'sch-new' },
     });
@@ -260,7 +260,7 @@ describe('SchedulesPage 创建调度', () => {
   });
 
   it('应该能够创建间隔类型调度', async () => {
-    vi.mocked(bisheng.default.createSchedule).mockResolvedValue({
+    vi.mocked(agentService.default.createSchedule).mockResolvedValue({
       code: 0,
       data: { schedule_id: 'sch-new' },
     });
@@ -278,17 +278,17 @@ describe('SchedulesPage 统计信息', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
 
-    vi.mocked(bisheng.default.listAllSchedules).mockResolvedValue({
+    vi.mocked(agentService.default.listAllSchedules).mockResolvedValue({
       code: 0,
       data: { schedules: mockSchedules, total: 2 },
     });
 
-    vi.mocked(bisheng.default.getScheduleStatistics).mockResolvedValue({
+    vi.mocked(agentService.default.getScheduleStatistics).mockResolvedValue({
       code: 0,
       data: {
         total_executions: 100,
@@ -319,12 +319,12 @@ describe('SchedulesPage 重试配置', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.default.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows, total: 2 },
     });
 
-    vi.mocked(bisheng.default.listAllSchedules).mockResolvedValue({
+    vi.mocked(agentService.default.listAllSchedules).mockResolvedValue({
       code: 0,
       data: {
         schedules: [
@@ -352,7 +352,7 @@ describe('SchedulesPage 重试配置', () => {
   });
 
   it('应该能够更新重试配置', async () => {
-    vi.mocked(bisheng.default.updateScheduleRetryConfig).mockResolvedValue({
+    vi.mocked(agentService.default.updateScheduleRetryConfig).mockResolvedValue({
       code: 0,
       message: 'success',
     });

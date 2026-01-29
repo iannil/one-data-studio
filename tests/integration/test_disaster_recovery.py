@@ -204,23 +204,23 @@ class TestMinIOFailover:
 class TestServiceRecovery:
     """服务恢复测试"""
 
-    def test_alldata_api_restart(self):
+    def test_data_api_restart(self):
         """测试 Alldata API 重启后恢复"""
         import requests
 
         # 检查健康状态
         response = requests.get(
-            "http://alldata-api:8080/api/v1/health",
+            "http://data-api:8080/api/v1/health",
             timeout=5
         )
         assert response.status_code == 200
 
-    def test_bisheng_api_restart(self):
+    def test_agent_api_restart(self):
         """测试 Bisheng API 重启后恢复"""
         import requests
 
         response = requests.get(
-            "http://bisheng-api:8081/api/v1/health",
+            "http://agent-api:8081/api/v1/health",
             timeout=5
         )
         assert response.status_code == 200
@@ -309,8 +309,8 @@ class TestKubernetesRecovery:
 
         # 检查 Alldata API Pod
         pods = v1.list_namespaced_pod(
-            namespace="one-data-alldata",
-            label_selector="app=alldata-api"
+            namespace="one-data-data",
+            label_selector="app=data-api"
         )
 
         assert len(pods.items) > 0, "No Alldata API pods found"
@@ -391,7 +391,7 @@ class TestBackupRestoreSimulation:
         assert len(restore_steps) == 6
 
     @pytest.mark.parametrize("component,expected_rto", [
-        ("alldata-api", "5m"),
+        ("data-api", "5m"),
         ("mysql", "15m"),
         ("milvus", "10m"),
         ("minio", "5m"),
@@ -400,7 +400,7 @@ class TestBackupRestoreSimulation:
         """验证恢复时间目标 (RTO)"""
         # RTO (Recovery Time Objective): 服务中断的最大可接受时间
         rto_targets = {
-            "alldata-api": "5m",
+            "data-api": "5m",
             "mysql": "15m",
             "milvus": "10m",
             "minio": "5m",
@@ -409,7 +409,7 @@ class TestBackupRestoreSimulation:
         assert rto_targets[component] == expected_rto
 
     @pytest.mark.parametrize("component,expected_rpo", [
-        ("alldata-api", "1h"),
+        ("data-api", "1h"),
         ("mysql", "15m"),
         ("milvus", "1h"),
         ("minio", "1h"),
@@ -418,7 +418,7 @@ class TestBackupRestoreSimulation:
         """验证恢复点目标 (RPO)"""
         # RPO (Recovery Point Objective): 数据丢失的最大可接受时间
         rpo_targets = {
-            "alldata-api": "1h",
+            "data-api": "1h",
             "mysql": "15m",
             "milvus": "1h",
             "minio": "1h",

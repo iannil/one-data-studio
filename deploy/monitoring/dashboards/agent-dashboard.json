@@ -1,6 +1,6 @@
 {
   "dashboard": {
-    "title": "ONE-DATA Bisheng API 监控",
+    "title": "ONE-DATA Agent API 监控",
     "tags": ["bisheng", "llmops", "rag", "agent"],
     "timezone": "browser",
     "refresh": "30s",
@@ -16,7 +16,7 @@
         "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
         "targets": [
           {
-            "expr": "up{job=\"bisheng-api\"}",
+            "expr": "up{job=\"agent-api\"}",
             "legendFormat": "服务状态"
           }
         ],

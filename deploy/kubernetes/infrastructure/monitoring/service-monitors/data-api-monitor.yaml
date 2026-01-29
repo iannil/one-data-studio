@@ -1,15 +1,15 @@
-# Alldata API ServiceMonitor
+# Data API ServiceMonitor
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
   labels:
-    app: alldata-api
+    app: data-api
 spec:
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   endpoints:
   - port: http
     path: /metrics

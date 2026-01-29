@@ -23,8 +23,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { TaskMetrics, Alert as AlertType } from '@/services/alldata';
+import data from '@/services/data';
+import type { TaskMetrics, Alert as AlertType } from '@/services/data';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -40,14 +40,14 @@ function MonitoringPage() {
   // Queries
   const { data: overviewData } = useQuery({
     queryKey: ['monitoring-overview'],
-    queryFn: () => alldata.getMonitoringOverview(),
+    queryFn: () => data.getMonitoringOverview(),
     refetchInterval: 30000,
   });
 
   const { data: tasksData } = useQuery({
     queryKey: ['task-metrics', taskTypeFilter, statusFilter, dateRange],
     queryFn: () =>
-      alldata.getTaskMetrics({
+      data.getTaskMetrics({
         task_type: taskTypeFilter || undefined,
         status: statusFilter || undefined,
         start_time: dateRange[0].format('YYYY-MM-DD'),
@@ -58,13 +58,13 @@ function MonitoringPage() {
 
   const { data: alertsData } = useQuery({
     queryKey: ['alerts'],
-    queryFn: () => alldata.getAlerts({ status: 'active', page: 1, page_size: 10 }),
+    queryFn: () => data.getAlerts({ status: 'active', page: 1, page_size: 10 }),
     refetchInterval: 10000,
   });
 
   const { data: alertRulesData } = useQuery({
     queryKey: ['alert-rules'],
-    queryFn: () => alldata.getAlertRules(),
+    queryFn: () => data.getAlertRules(),
   });
 
   const getTaskStatusColor = (status: string) => {
@@ -203,13 +203,13 @@ function MonitoringPage() {
   ];
 
   const acknowledgeAlert = (alertId: string) => {
-    alldata.acknowledgeAlert(alertId).then(() => {
+    data.acknowledgeAlert(alertId).then(() => {
       message.success('告警已确认');
     });
   };
 
   const resolveAlert = (alertId: string) => {
-    alldata.resolveAlert(alertId).then(() => {
+    data.resolveAlert(alertId).then(() => {
       message.success('告警已解决');
     });
   };

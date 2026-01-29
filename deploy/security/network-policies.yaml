@@ -7,7 +7,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector: {}
   policyTypes:
@@ -18,7 +18,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 spec:
   podSelector: {}
   policyTypes:
@@ -29,7 +29,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   podSelector: {}
   policyTypes:
@@ -47,16 +47,16 @@ spec:
   - Ingress
 
 ---
-# Alldata API 网络策略
+# Data API 网络策略
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: alldata-api-policy
-  namespace: one-data-alldata
+  name: data-api-policy
+  namespace: one-data-data
 spec:
   podSelector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   policyTypes:
   - Ingress
   - Egress
@@ -69,14 +69,14 @@ spec:
     ports:
     - protocol: TCP
       port: 8080
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 8080
@@ -165,16 +165,16 @@ spec:
       port: 443
 
 ---
-# Bisheng API 网络策略
+# Agent API 网络策略
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: bisheng-api-policy
-  namespace: one-data-bisheng
+  name: agent-api-policy
+  namespace: one-data-agent
 spec:
   podSelector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   policyTypes:
   - Ingress
   - Egress
@@ -199,14 +199,14 @@ spec:
     - protocol: TCP
       port: 8081
   egress:
-  # 允许访问 Alldata API
+  # 允许访问 Data API
   - to:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 8080
@@ -214,7 +214,7 @@ spec:
   - to:
     - namespaceSelector:
         matchLabels:
-          name: one-data-cube
+          name: one-data-model
       podSelector:
         matchLabels:
           app: vllm-serving
@@ -266,7 +266,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: vllm-serving-policy
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   podSelector:
     matchLabels:
@@ -275,14 +275,14 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 8000
@@ -329,25 +329,25 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Alldata API 的流量
+  # 允许来自 Data API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 3306
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 3306
@@ -388,25 +388,25 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Alldata API 的流量
+  # 允许来自 Data API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 19530
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 19530
@@ -502,25 +502,25 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Alldata API 的流量
+  # 允许来自 Data API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 9000
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 9000
@@ -539,7 +539,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
           app: kettle-carte
@@ -580,25 +580,25 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Alldata API 的流量
+  # 允许来自 Data API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 6379
-  # 允许来自 Bisheng API 的流量
+  # 允许来自 Agent API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-bisheng
+          name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 6379
@@ -619,7 +619,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: kettle-policy
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector:
     matchLabels:
@@ -628,14 +628,14 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 允许来自 Alldata API 的流量
+  # 允许来自 Data API 的流量
   - from:
     - namespaceSelector:
         matchLabels:
-          name: one-data-alldata
+          name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 8081
@@ -723,9 +723,9 @@ spec:
     - namespaceSelector: {}
     ports:
     - protocol: TCP
-      port: 8080  # Alldata API
+      port: 8080  # Data API
     - protocol: TCP
-      port: 8081  # Bisheng API
+      port: 8081  # Agent API
     - protocol: TCP
       port: 8000  # vLLM
     - protocol: TCP
@@ -748,7 +748,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector: {}
   policyTypes:
@@ -770,7 +770,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 spec:
   podSelector: {}
   policyTypes:
@@ -792,7 +792,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   podSelector: {}
   policyTypes:

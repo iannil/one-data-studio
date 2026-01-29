@@ -14,8 +14,8 @@ deploy/
 ├── kubernetes/               # Kubernetes 资源
 │   ├── base/                 # 基础配置（命名空间、存储类）
 │   ├── applications/         # 应用部署
-│   │   ├── alldata-api/
-│   │   ├── bisheng-api/
+│   │   ├── data-api/
+│   │   ├── agent-api/
 │   │   ├── openai-proxy/
 │   │   ├── web-frontend/
 │   │   └── vllm-serving/
@@ -36,8 +36,8 @@ deploy/
 │   └── projects/             # ArgoCD Project 定义
 │
 ├── dockerfiles/              # 所有 Dockerfile
-│   ├── alldata-api/
-│   ├── bisheng-api/
+│   ├── data-api/
+│   ├── agent-api/
 │   └── openai-proxy/
 │
 ├── helm/                     # Helm Charts
@@ -51,8 +51,8 @@ deploy/
 │   └── blue-green-deploy.sh
 │
 └── openapi/                  # API 规范文档
-    ├── alldata-api.yaml
-    └── bisheng-api.yaml
+    ├── data-api.yaml
+    └── agent-api.yaml
 ```
 
 ## 快速开始

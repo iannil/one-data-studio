@@ -1,10 +1,10 @@
-# Alldata API ArgoCD Application
+# Data API ArgoCD Application
 # Sprint 24: Infrastructure Hardening - GitOps
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: alldata-api
+  name: data-api
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: one-data-studio
@@ -22,11 +22,11 @@ spec:
     targetRevision: HEAD
     path: deploy/kubernetes/applications
     directory:
-      include: 'alldata-api*.yaml'
+      include: 'data-api*.yaml'
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: one-data-alldata
+    namespace: one-data-data
 
   syncPolicy:
     automated:

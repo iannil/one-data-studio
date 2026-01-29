@@ -27,13 +27,13 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 import type {
   EvaluationTask,
   CreateEvaluationTaskRequest,
   EvaluationResult,
   ComparisonReport,
-} from '@/services/bisheng';
+} from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -57,7 +57,7 @@ function EvaluationPage() {
   const { data: tasksData, isLoading: isLoadingList } = useQuery({
     queryKey: ['evaluation-tasks', page, pageSize, statusFilter],
     queryFn: () =>
-      bisheng.getEvaluationTasks({
+      agentService.getEvaluationTasks({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -66,12 +66,12 @@ function EvaluationPage() {
 
   const { data: datasetsData } = useQuery({
     queryKey: ['evaluation-datasets'],
-    queryFn: () => bisheng.getEvaluationDatasets(),
+    queryFn: () => agentService.getEvaluationDatasets(),
   });
 
   // Mutations
   const createTaskMutation = useMutation({
-    mutationFn: bisheng.createEvaluationTask,
+    mutationFn: agentService.createEvaluationTask,
     onSuccess: () => {
       message.success('评估任务创建成功');
       setIsCreateModalOpen(false);
@@ -84,7 +84,7 @@ function EvaluationPage() {
   });
 
   const startTaskMutation = useMutation({
-    mutationFn: bisheng.startEvaluationTask,
+    mutationFn: agentService.startEvaluationTask,
     onSuccess: () => {
       message.success('评估任务已启动');
       queryClient.invalidateQueries({ queryKey: ['evaluation-tasks'] });
@@ -95,7 +95,7 @@ function EvaluationPage() {
   });
 
   const stopTaskMutation = useMutation({
-    mutationFn: bisheng.stopEvaluationTask,
+    mutationFn: agentService.stopEvaluationTask,
     onSuccess: () => {
       message.success('评估任务已停止');
       queryClient.invalidateQueries({ queryKey: ['evaluation-tasks'] });
@@ -216,7 +216,7 @@ function EvaluationPage() {
               icon={<BarChartOutlined />}
               onClick={() => {
                 setSelectedTask(record);
-                bisheng.getEvaluationResults(record.task_id).then((res) => {
+                agentService.getEvaluationResults(record.task_id).then((res) => {
                   setSelectedResults(res.data.results);
                 });
               }}

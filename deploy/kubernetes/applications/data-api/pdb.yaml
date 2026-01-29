@@ -1,32 +1,32 @@
-# Bisheng API PodDisruptionBudget
+# Data API PodDisruptionBudget
 # 确保在集群维护期间至少有 1 个 Pod 可用
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: bisheng-api-pdb
-  namespace: one-data-bisheng
+  name: data-api-pdb
+  namespace: one-data-data
   labels:
-    app: bisheng-api
+    app: data-api
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: bisheng-api
+      app: data-api
 
 ---
-# Bisheng API HorizontalPodAutoscaler
+# Data API HorizontalPodAutoscaler
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: bisheng-api-hpa
-  namespace: one-data-bisheng
+  name: data-api-hpa
+  namespace: one-data-data
   labels:
-    app: bisheng-api
+    app: data-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: bisheng-api
+    name: data-api
   minReplicas: 2
   maxReplicas: 10
   metrics:

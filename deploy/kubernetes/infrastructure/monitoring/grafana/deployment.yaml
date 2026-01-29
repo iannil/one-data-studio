@@ -86,7 +86,7 @@ data:
             "type": "graph",
             "targets": [
               {
-                "expr": "sum(rate(http_requests_total{job=~\"alldata-api|bisheng-api|openai-proxy\"}[5m])) by (job)",
+                "expr": "sum(rate(http_requests_total{job=~\"data-api|agent-api|openai-proxy\"}[5m])) by (job)",
                 "legendFormat": "{{job}}"
               }
             ],
@@ -151,7 +151,7 @@ data:
             "type": "graph",
             "targets": [
               {
-                "expr": "http_active_connections{job=~\"alldata-api|bisheng-api|openai-proxy\"}",
+                "expr": "http_active_connections{job=~\"data-api|agent-api|openai-proxy\"}",
                 "legendFormat": "{{job}}"
               }
             ]

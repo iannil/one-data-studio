@@ -17,8 +17,8 @@ class TestServiceMonitoringService:
     def sample_services(self):
         """示例服务列表"""
         return [
-            {'name': 'alldata-api', 'url': 'http://localhost:5001', 'type': 'backend'},
-            {'name': 'bisheng-api', 'url': 'http://localhost:5002', 'type': 'backend'},
+            {'name': 'data-api', 'url': 'http://localhost:5001', 'type': 'backend'},
+            {'name': 'agent-api', 'url': 'http://localhost:5002', 'type': 'backend'},
             {'name': 'openai-proxy', 'url': 'http://localhost:8000', 'type': 'backend'},
             {'name': 'mysql', 'host': 'localhost', 'port': 3306, 'type': 'database'},
             {'name': 'milvus', 'host': 'localhost', 'port': 19530, 'type': 'vector_db'},

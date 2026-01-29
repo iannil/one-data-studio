@@ -194,8 +194,8 @@ make health-check
 
 | 服务 | 端口 | 验证命令 |
 |------|------|----------|
-| alldata-api | 5001 | `curl http://localhost:5001/health` |
-| bisheng-api | 5002 | `curl http://localhost:5002/health` |
+| data-api | 5001 | `curl http://localhost:5001/health` |
+| agent-api | 5002 | `curl http://localhost:5002/health` |
 | openai-proxy | 8000 | `curl http://localhost:8000/health` |
 | MySQL | 3306 | `mysql -u root -p -e "SELECT 1"` |
 | Milvus | 19530 | `curl http://localhost:9091/api/v1/health` |
@@ -843,9 +843,9 @@ trivy image one-data-studio:latest
 **关键发现:**
 - 系统管理员模块通过率最高 (56.3%)
 - 数据工程师模块所有 API 端点尚未实现
-- Alldata API (8001) 多个核心端点待实现
-- Bisheng API (8000) 知识库/RAG 端点待实现
-- Cube API (8002) Notebook/部署端点待实现
+- Data API (8001) 多个核心端点待实现
+- Agent API (8000) 知识库/RAG 端点待实现
+- Model API (8002) Notebook/部署端点待实现
 
 详细报告见: [test-execution-report.md](./test-execution-report.md)
 

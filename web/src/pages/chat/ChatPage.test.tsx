@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ChatPage from './ChatPage';
-import * as bisheng from '@/services/bisheng';
-import * as cube from '@/services/cube';
+import * as agentService from '@/services/agent-service';
+import * as model from '@/services/model';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -33,21 +33,21 @@ describe('ChatPage', () => {
     vi.clearAllMocks();
 
     // 默认 mock 返回值
-    vi.mocked(bisheng.default.getConversations).mockResolvedValue({
+    vi.mocked(agentService.default.getConversations).mockResolvedValue({
       code: 0,
       data: {
         conversations: [],
       },
     });
 
-    vi.mocked(bisheng.default.getPromptTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.getPromptTemplates).mockResolvedValue({
       code: 0,
       data: {
         templates: [],
       },
     });
 
-    vi.mocked(cube.default.getModels).mockResolvedValue({
+    vi.mocked(model.default.getModels).mockResolvedValue({
       code: 0,
       data: [
         { id: 'gpt-4o-mini', name: 'GPT-4O Mini' },
@@ -80,7 +80,7 @@ describe('ChatPage', () => {
   });
 
   it('应该显示会话列表', async () => {
-    vi.mocked(bisheng.default.getConversations).mockResolvedValue({
+    vi.mocked(agentService.default.getConversations).mockResolvedValue({
       code: 0,
       data: {
         conversations: [
@@ -170,7 +170,7 @@ describe('ChatPage', () => {
   });
 
   it('应该能够选择会话', async () => {
-    vi.mocked(bisheng.default.getConversations).mockResolvedValue({
+    vi.mocked(agentService.default.getConversations).mockResolvedValue({
       code: 0,
       data: {
         conversations: [
@@ -184,7 +184,7 @@ describe('ChatPage', () => {
       },
     });
 
-    vi.mocked(bisheng.default.getConversation).mockResolvedValue({
+    vi.mocked(agentService.default.getConversation).mockResolvedValue({
       code: 0,
       data: {
         conversation_id: 'conv-001',
@@ -206,7 +206,7 @@ describe('ChatPage', () => {
     fireEvent.click(screen.getByText('测试会话'));
 
     await waitFor(() => {
-      expect(bisheng.default.getConversation).toHaveBeenCalledWith('conv-001');
+      expect(agentService.default.getConversation).toHaveBeenCalledWith('conv-001');
     });
   });
 
@@ -225,22 +225,22 @@ describe('ChatPage 消息发送', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.getConversations).mockResolvedValue({
+    vi.mocked(agentService.default.getConversations).mockResolvedValue({
       code: 0,
       data: { conversations: [] },
     });
 
-    vi.mocked(bisheng.default.createConversation).mockResolvedValue({
+    vi.mocked(agentService.default.createConversation).mockResolvedValue({
       code: 0,
       data: { conversation_id: 'new-conv-001' },
     });
 
-    vi.mocked(cube.default.getModels).mockResolvedValue({
+    vi.mocked(model.default.getModels).mockResolvedValue({
       code: 0,
       data: [{ id: 'gpt-4o-mini' }],
     });
 
-    vi.mocked(bisheng.default.getPromptTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.getPromptTemplates).mockResolvedValue({
       code: 0,
       data: { templates: [] },
     });
@@ -266,7 +266,7 @@ describe('ChatPage 会话管理', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.getConversations).mockResolvedValue({
+    vi.mocked(agentService.default.getConversations).mockResolvedValue({
       code: 0,
       data: {
         conversations: [
@@ -280,12 +280,12 @@ describe('ChatPage 会话管理', () => {
       },
     });
 
-    vi.mocked(cube.default.getModels).mockResolvedValue({
+    vi.mocked(model.default.getModels).mockResolvedValue({
       code: 0,
       data: [{ id: 'gpt-4o-mini' }],
     });
 
-    vi.mocked(bisheng.default.getPromptTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.getPromptTemplates).mockResolvedValue({
       code: 0,
       data: { templates: [] },
     });

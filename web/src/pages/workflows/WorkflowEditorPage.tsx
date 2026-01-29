@@ -43,7 +43,7 @@ import type { MenuProps } from 'antd';
 import FlowCanvas, { Node, Edge, FlowCanvasRef } from '../../components/workflow/FlowCanvas';
 import NodePalette, { nodeTypes } from '../../components/workflow/NodePalette';
 import NodeConfigPanel from '../../components/workflow/NodeConfigPanel';
-import * as bishengService from '../../services/bisheng';
+import * as agentService from '../../services/agent-service';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface WorkflowDefinition {

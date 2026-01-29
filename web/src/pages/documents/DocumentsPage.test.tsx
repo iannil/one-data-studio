@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DocumentsPage from './DocumentsPage';
-import * as bisheng from '@/services/bisheng';
+import * as agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -60,7 +60,7 @@ describe('DocumentsPage', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
@@ -118,14 +118,14 @@ describe('DocumentsPage 文档操作', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
   });
 
   it('应该能够删除文档', async () => {
-    vi.mocked(bisheng.default.deleteDocument).mockResolvedValue({
+    vi.mocked(agentService.default.deleteDocument).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -140,7 +140,7 @@ describe('DocumentsPage 文档操作', () => {
   });
 
   it('应该能够重新处理失败的文档', async () => {
-    vi.mocked(bisheng.default.reprocessDocument).mockResolvedValue({
+    vi.mocked(agentService.default.reprocessDocument).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -155,7 +155,7 @@ describe('DocumentsPage 文档操作', () => {
   });
 
   it('应该能够查看文档分块', async () => {
-    vi.mocked(bisheng.default.getDocumentChunks).mockResolvedValue({
+    vi.mocked(agentService.default.getDocumentChunks).mockResolvedValue({
       code: 0,
       data: {
         chunks: [
@@ -179,14 +179,14 @@ describe('DocumentsPage 文件上传', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: [], collections: [], total_collections: 0 },
     });
   });
 
   it('应该能够上传文档', async () => {
-    vi.mocked(bisheng.default.uploadDocument).mockResolvedValue({
+    vi.mocked(agentService.default.uploadDocument).mockResolvedValue({
       code: 0,
       data: { document_id: 'doc-new', name: '新文档.pdf' },
     });
@@ -224,7 +224,7 @@ describe('DocumentsPage 搜索和筛选', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: mockDocuments, collections: ['default', 'faq'], total_collections: 2 },
     });
@@ -266,7 +266,7 @@ describe('DocumentsPage 空状态', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: [], collections: [], total_collections: 0 },
     });
@@ -289,7 +289,7 @@ describe('DocumentsPage 错误处理', () => {
   });
 
   it('应该显示加载失败提示', async () => {
-    vi.mocked(bisheng.default.getDocuments).mockRejectedValue(new Error('加载失败'));
+    vi.mocked(agentService.default.getDocuments).mockRejectedValue(new Error('加载失败'));
 
     render(<DocumentsPage />);
 
@@ -300,12 +300,12 @@ describe('DocumentsPage 错误处理', () => {
   });
 
   it('应该显示上传失败提示', async () => {
-    vi.mocked(bisheng.default.getDocuments).mockResolvedValue({
+    vi.mocked(agentService.default.getDocuments).mockResolvedValue({
       code: 0,
       data: { documents: [], collections: [], total_collections: 0 },
     });
 
-    vi.mocked(bisheng.default.uploadDocument).mockRejectedValue(new Error('上传失败'));
+    vi.mocked(agentService.default.uploadDocument).mockRejectedValue(new Error('上传失败'));
 
     render(<DocumentsPage />);
 

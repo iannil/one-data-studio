@@ -10,9 +10,9 @@
 
 | 集成点 | 验证内容 | 成功标准 |
 |--------|----------|----------|
-| Alldata → Cube | 数据集注册与读取 | Cube 能读取 Alldata 产出的数据集 |
-| Cube → Bisheng | 模型服务调用 | Bisheng 能调用 Cube 的 OpenAI 兼容 API |
-| Alldata → Bisheng | 元数据查询 | Bisheng 能获取 Alldata 的表结构信息 |
+| Data → Cube | 数据集注册与读取 | Cube 能读取 Data 产出的数据集 |
+| Cube → Agent | 模型服务调用 | Agent 能调用 Cube 的 OpenAI 兼容 API |
+| Data → Agent | 元数据查询 | Agent 能获取 Data 的表结构信息 |
 | 端到端 | RAG + SQL 查询 | 用户提问能正确返回结果 |
 
 ### 非目标
@@ -219,8 +219,8 @@ kubectl get pods -n one-data-infra
 ### 3.1 创建命名空间
 
 ```bash
-kubectl create namespace one-data-alldata
-kubectl label namespace one-data-alldata istio-injection=enabled
+kubectl create namespace one-data-data
+kubectl label namespace one-data-data istio-injection=enabled
 ```
 
 ### 3.2 准备模拟数据
@@ -244,7 +244,7 @@ kubectl cp /tmp/sales_data.csv one-data-infra/minio-0:/tmp/sales_data.csv
 kubectl exec -n one-data-infra minio-0 -- mc cp /tmp/sales_data.csv local/test-datasets/
 ```
 
-### 3.3 部署模拟 Alldata API
+### 3.3 部署模拟 Data API
 
 ```bash
 # 创建 Deployment
@@ -252,17 +252,17 @@ cat << 'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   template:
     metadata:
       labels:
-        app: alldata-api
+        app: data-api
     spec:
       containers:
       - name: api
@@ -341,25 +341,25 @@ cat << 'EOF' | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 spec:
   selector:
-    app: alldata-api
+    app: data-api
   ports:
   - port: 8080
     targetPort: 8080
 EOF
 
 # 等待就绪
-kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-alldata --timeout=120s
+kubectl wait --for=condition=ready pod -l app=data-api -n one-data-data --timeout=120s
 ```
 
-### 3.4 验证 Alldata API
+### 3.4 验证 Data API
 
 ```bash
 # 端口转发
-kubectl port-forward -n one-data-alldata svc/alldata-api 8080:8080 &
+kubectl port-forward -n one-data-data svc/data-api 8080:8080 &
 
 # 测试健康检查
 curl http://localhost:8080/api/v1/health
@@ -384,8 +384,8 @@ curl -X POST http://localhost:8080/api/v1/datasets \
 ### 4.1 创建命名空间
 
 ```bash
-kubectl create namespace one-data-cube
-kubectl label namespace one-data-cube istio-injection=enabled
+kubectl create namespace one-data-model
+kubectl label namespace one-data-model istio-injection=enabled
 ```
 
 ### 4.2 部署 vLLM（使用小模型）
@@ -397,7 +397,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vllm-serving
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   replicas: 1
   selector:
@@ -438,7 +438,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: vllm-serving
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   selector:
     app: vllm-serving
@@ -448,14 +448,14 @@ spec:
 EOF
 
 # 等待 Pod 启动（模型下载需要时间）
-kubectl get pods -n one-data-cube -w
+kubectl get pods -n one-data-model -w
 ```
 
 ### 4.3 验证 vLLM 服务
 
 ```bash
 # 端口转发
-kubectl port-forward -n one-data-cube svc/vllm-serving 8000:8000 &
+kubectl port-forward -n one-data-model svc/vllm-serving 8000:8000 &
 
 # 列出模型
 curl http://localhost:8000/v1/models
@@ -479,7 +479,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: vllm-vs
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   hosts:
   - "*"
@@ -504,28 +504,28 @@ EOF
 ### 5.1 创建命名空间
 
 ```bash
-kubectl create namespace one-data-bisheng
-kubectl label namespace one-data-bisheng istio-injection=enabled
+kubectl create namespace one-data-agent
+kubectl label namespace one-data-agent istio-injection=enabled
 ```
 
-### 5.2 部署简化版 Bisheng API
+### 5.2 部署简化版 Agent API
 
 ```bash
 cat << 'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   template:
     metadata:
       labels:
-        app: bisheng-api
+        app: agent-api
     spec:
       containers:
       - name: api
@@ -541,7 +541,7 @@ spec:
           app = Flask(__name__)
 
           # 配置模型端点
-          MODEL_ENDPOINT = os.getenv("MODEL_ENDPOINT", "http://vllm-serving.one-data-cube.svc.cluster.local:8000")
+          MODEL_ENDPOINT = os.getenv("MODEL_ENDPOINT", "http://vllm-serving.one-data-model.svc.cluster.local:8000")
 
           @app.route("/api/v1/health")
           def health():
@@ -576,9 +576,9 @@ spec:
 
           @app.route("/api/v1/datasets", methods=["GET"])
           def list_datasets():
-              # 调用 Alldata API
+              # 调用 Data API
               response = requests.get(
-                  "http://alldata-api.one-data-alldata.svc.cluster.local:8080/api/v1/datasets",
+                  "http://data-api.one-data-data.svc.cluster.local:8080/api/v1/datasets",
                   timeout=10
               )
               return jsonify(response.json())
@@ -587,7 +587,7 @@ spec:
               app.run(host="0.0.0.0", port=8080)
         env:
         - name: MODEL_ENDPOINT
-          value: "http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+          value: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -607,22 +607,22 @@ cat << 'EOF' | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 spec:
   selector:
-    app: bisheng-api
+    app: agent-api
   ports:
   - port: 8080
     targetPort: 8080
 EOF
 ```
 
-### 5.3 验证 Bisheng API
+### 5.3 验证 Agent API
 
 ```bash
 # 端口转发
-kubectl port-forward -n one-data-bisheng svc/bisheng-api 8081:8080 &
+kubectl port-forward -n one-data-agent svc/agent-api 8081:8080 &
 
 # 测试健康检查
 curl http://localhost:8081/api/v1/health
@@ -632,7 +632,7 @@ curl -X POST http://localhost:8081/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "你好"}'
 
-# 测试数据集列表（调用 Alldata API）
+# 测试数据集列表（调用 Data API）
 curl http://localhost:8081/api/v1/datasets
 ```
 
@@ -649,14 +649,14 @@ cat << 'EOF' > /tmp/poc-test.sh
 echo "=== ONE-DATA-STUDIO PoC 集成验证 ==="
 echo
 
-# 测试 1: Alldata API
-echo "[1/4] 测试 Alldata API..."
+# 测试 1: Data API
+echo "[1/4] 测试 Data API..."
 ALDATA_URL="http://localhost:8080"
 response=$(curl -s $ALDATA_URL/api/v1/health)
 if echo $response | grep -q "healthy"; then
-    echo "✓ Alldata API 正常"
+    echo "✓ Data API 正常"
 else
-    echo "✗ Alldata API 异常"
+    echo "✗ Data API 异常"
 fi
 echo
 
@@ -673,14 +673,14 @@ else
 fi
 echo
 
-# 测试 3: Bisheng 应用层
-echo "[3/4] 测试 Bisheng 应用层..."
+# 测试 3: Agent 应用层
+echo "[3/4] 测试 Agent 应用层..."
 BISHENG_URL="http://localhost:8081"
 response=$(curl -s $BISHENG_URL/api/v1/health)
 if echo $response | grep -q "healthy"; then
-    echo "✓ Bisheng API 正常"
+    echo "✓ Agent API 正常"
 else
-    echo "✗ Bisheng API 异常"
+    echo "✗ Agent API 异常"
 fi
 echo
 
@@ -735,7 +735,7 @@ jobs
 kubectl get pods -A
 
 # 查看特定 Pod 日志
-kubectl logs -n one-data-cube deployment/vllm-serving -f
+kubectl logs -n one-data-model deployment/vllm-serving -f
 
 # 查看事件
 kubectl get events -A --sort-by='.lastTimestamp'
@@ -747,9 +747,9 @@ kubectl get events -A --sort-by='.lastTimestamp'
 
 ```bash
 # 删除所有资源
-kubectl delete namespace one-data-bisheng
-kubectl delete namespace one-data-cube
-kubectl delete namespace one-data-alldata
+kubectl delete namespace one-data-agent
+kubectl delete namespace one-data-model
+kubectl delete namespace one-data-data
 kubectl delete namespace one-data-infra
 kubectl delete namespace one-data-system
 

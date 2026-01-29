@@ -23,7 +23,7 @@
 │  ┌─────────────────────────────────────────────────────────────┐     │
 │  │                    Application Layer                         │     │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │     │
-│  │  │   Alldata    │  │  Cube Studio │  │   Bisheng    │       │     │
+│  │  │   Data    │  │  Cube Studio │  │   Agent    │       │     │
 │  │  │  (L2 数据层) │  │  (L3 模型层) │  │ (L4 应用层)  │       │     │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘       │     │
 │  └─────────────────────────────────────────────────────────────┘     │
@@ -59,22 +59,22 @@ one-data-infra           # 基础设施（存储、中间件）
 ├── Kafka / RabbitMQ
 └── Harbor (镜像仓库)
 
-one-data-alldata         # Alldata 平台
-├── alldata-api
+one-data-data         # Data 平台
+├── data-api
 ├── alldata-etl
 ├── alldata-metadata
 ├── alldata-frontend
 └── alldata-jobs
 
-one-data-cube            # Cube Studio 平台
-├── cube-api
+one-data-model            # Cube Studio 平台
+├── model-api
 ├── cube-scheduler
 ├── jupyterhub
 ├── cube-model-serving
 └── cube-training-jobs
 
-one-data-bisheng         # Bisheng 平台
-├── bisheng-api
+one-data-agent         # Agent 平台
+├── agent-api
 ├── bisheng-frontend
 ├── bisheng-workflow
 └── bisheng-knowledgebase
@@ -126,7 +126,7 @@ apiVersion: v1
 kind: ResourceQuota
 metadata:
   name: platform-quota
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   hard:
     requests.cpu: "64"
@@ -247,7 +247,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: model-cache
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   accessModes:
     - ReadOnlyMany
@@ -300,14 +300,14 @@ spec:
 
 ### 3.2 VirtualService 配置
 
-#### Alldata API 路由
+#### Data API 路由
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: alldata-vs
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   hosts:
   - "alldata.example.com"
@@ -319,7 +319,7 @@ spec:
         prefix: /api/
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         port:
           number: 8080
   - route:
@@ -336,7 +336,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: cube-serving-vs
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   hosts:
   - "cube.example.com"
@@ -361,7 +361,7 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: one-data-alldata
+  name: one-data-data
   labels:
     istio-injection: enabled
 ```
@@ -392,7 +392,7 @@ helm-charts/
 │   ├── values.yaml
 │   └── charts/
 │
-├── alldata/                     # Alldata 平台 Chart
+├── alldata/                     # Data 平台 Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -414,7 +414,7 @@ helm-charts/
 │       ├── serving/
 │       └── training/
 │
-├── bisheng/                     # Bisheng Chart
+├── bisheng/                     # Agent Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -444,12 +444,12 @@ helm-charts/
 
 ### 4.2 Values 文件示例
 
-#### Alldata values.yaml
+#### Data values.yaml
 
 ```yaml
-# Alldata 平台配置
+# Data 平台配置
 global:
-  namespace: one-data-alldata
+  namespace: one-data-data
   imageRegistry: harbor.example.com/one-data
   imageTag: "v1.0.0"
 
@@ -471,7 +471,7 @@ api:
   replicaCount: 2
 
   image:
-    repository: alldata-api
+    repository: data-api
     tag: "v1.0.0"
 
   service:
@@ -537,7 +537,7 @@ frontend:
 ```yaml
 # Cube Studio 平台配置
 global:
-  namespace: one-data-cube
+  namespace: one-data-model
   imageRegistry: harbor.example.com/one-data
   imageTag: "v1.0.0"
 
@@ -623,28 +623,28 @@ helm repo update
 
 # 2. 创建命名空间
 kubectl create namespace one-data-infra
-kubectl create namespace one-data-alldata
-kubectl create namespace one-data-cube
-kubectl create namespace one-data-bisheng
+kubectl create namespace one-data-data
+kubectl create namespace one-data-model
+kubectl create namespace one-data-agent
 
 # 3. 部署基础设施
 helm install infrastructure one-data/infrastructure \
   -n one-data-infra \
   -f infrastructure/values-prod.yaml
 
-# 4. 部署 Alldata
+# 4. 部署 Data
 helm install alldata one-data/alldata \
-  -n one-data-alldata \
+  -n one-data-data \
   -f alldata/values-prod.yaml
 
 # 5. 部署 Cube Studio
 helm install cube one-data/cube-studio \
-  -n one-data-cube \
+  -n one-data-model \
   -f cube-studio/values-prod.yaml
 
-# 6. 部署 Bisheng
+# 6. 部署 Agent
 helm install bisheng one-data/bisheng \
-  -n one-data-bisheng \
+  -n one-data-agent \
   -f bisheng/values-prod.yaml
 
 # 7. 部署监控
@@ -666,9 +666,9 @@ graph TD
     C --> D[部署 Istio]
     D --> E[部署基础设施 Chart]
     E --> F[等待基础设施就绪]
-    F --> G[部署 Alldata Chart]
+    F --> G[部署 Data Chart]
     G --> H[部署 Cube Studio Chart]
-    H --> I[部署 Bisheng Chart]
+    H --> I[部署 Agent Chart]
     I --> J[部署监控 Chart]
     J --> K[健康检查]
     K --> L{检查通过?}
@@ -681,21 +681,21 @@ graph TD
 
 ```bash
 # 1. 备份配置
-helm get values alldata -n one-data-alldata > alldata-backup.yaml
+helm get values alldata -n one-data-data > alldata-backup.yaml
 
 # 2. 更新镜像版本
 helm upgrade alldata one-data/alldata \
-  -n one-data-alldata \
+  -n one-data-data \
   --set global.imageTag=v1.1.0 \
   --wait \
   --timeout 10m
 
 # 3. 验证升级
-kubectl rollout status deployment/alldata-api -n one-data-alldata
-kubectl get pods -n one-data-alldata
+kubectl rollout status deployment/data-api -n one-data-data
+kubectl get pods -n one-data-data
 
 # 4. 回滚（如需要）
-helm rollback alldata -n one-data-alldata
+helm rollback alldata -n one-data-data
 ```
 
 ---
@@ -727,7 +727,7 @@ affinity:
           - key: app
             operator: In
             values:
-            - alldata-api
+            - data-api
         topologyKey: kubernetes.io/hostname
 ```
 
@@ -737,13 +737,13 @@ affinity:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: alldata-api-pdb
-  namespace: one-data-alldata
+  name: data-api-pdb
+  namespace: one-data-data
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
 ```
 
 ---
@@ -764,12 +764,12 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
 spec:
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   endpoints:
   - port: metrics
     interval: 30s

@@ -137,7 +137,7 @@ kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisione
 
 **症状**：
 ```bash
-kubectl logs -n one-data-cube vllm-serving-xxx
+kubectl logs -n one-data-model vllm-serving-xxx
 # ERROR: CUDA out of memory
 ```
 
@@ -182,7 +182,7 @@ kubectl apply -f k8s/applications/model-cache-pvc.yaml
 
 **症状**：
 ```bash
-kubectl get pods -n one-data-cube -w
+kubectl get pods -n one-data-model -w
 # vLLM Pod 一直 ContainerCreating
 ```
 
@@ -195,7 +195,7 @@ livenessProbe:
   initialDelaySeconds: 180  # 增加到 3 分钟
 
 # 查看下载进度
-kubectl logs -n one-data-cube vllm-serving-xxx -f
+kubectl logs -n one-data-model vllm-serving-xxx -f
 ```
 
 ---
@@ -257,14 +257,14 @@ redis_client = redis.Redis(
 
 **症状**：
 ```
-getaddrinfo ENOTFOUND alldata-api.one-data-alldata.svc.cluster.local
+getaddrinfo ENOTFOUND data-api.one-data-data.svc.cluster.local
 ```
 
 **解决方案**：
 
 1. **检查 Service 是否存在**
 ```bash
-kubectl get svc -A | grep alldata-api
+kubectl get svc -A | grep data-api
 ```
 
 2. **检查 DNS Pod**
@@ -273,7 +273,7 @@ kubectl get pods -n kube-system | grep kube-dns
 
 # 测试 DNS
 kubectl run -it --rm debug --image=busybox --restart=Never -- \
-  nslookup alldata-api.one-data-alldata.svc.cluster.local
+  nslookup data-api.one-data-data.svc.cluster.local
 ```
 
 3. **检查 CoreDNS 配置**
@@ -285,17 +285,17 @@ kubectl get configmap coredns -n kube-system -o yaml
 
 #### 跨 Namespace 无法访问
 
-**症状**：Bisheng 无法调用 Alldata API
+**症状**：Agent 无法调用 Data API
 
 **解决方案**：
 
 1. **使用完整的服务名**
 ```python
 # 正确
-ALDATA_API_URL = "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+ALDATA_API_URL = "http://data-api.one-data-data.svc.cluster.local:8080"
 
 # 错误
-ALDATA_API_URL = "http://alldata-api:8080"  # 仅在同一 Namespace 内可用
+ALDATA_API_URL = "http://data-api:8080"  # 仅在同一 Namespace 内可用
 ```
 
 2. **检查 NetworkPolicy**
@@ -320,14 +320,14 @@ curl http://alldata.example.com/api/v1/health
 
 1. **检查 Service 选择器**
 ```bash
-kubectl get endpoints -n one-data-alldata
+kubectl get endpoints -n one-data-data
 # 确保 Endpoints 有对应的 Pod IP
 ```
 
 2. **检查 Ingress 配置**
 ```bash
 kubectl get ingress -A
-kubectl describe ingress alldata-ingress -n one-data-alldata
+kubectl describe ingress alldata-ingress -n one-data-data
 ```
 
 3. **检查 Ingress Controller**
@@ -350,13 +350,13 @@ kubectl top pods -A
 
 2. **检查服务日志**
 ```bash
-kubectl logs -n one-data-alldata deployment/alldata-api --tail=100
+kubectl logs -n one-data-data deployment/data-api --tail=100
 ```
 
 3. **检查网络延迟**
 ```bash
 # 在 Pod 内运行
-kubectl exec -it alldata-api-xxx -n one-data-alldata -- \
+kubectl exec -it data-api-xxx -n one-data-data -- \
   curl -w "@-" -o /dev/null -s "http://mysql.one-data-infra.svc.cluster.local:3306"
 ```
 
@@ -378,12 +378,12 @@ resources:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: alldata-api-hpa
+  name: data-api-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: alldata-api
+    name: data-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -403,7 +403,7 @@ spec:
 
 1. **检查 GPU 利用率**
 ```bash
-kubectl exec -it vllm-serving-xxx -n one-data-cube -- nvidia-smi
+kubectl exec -it vllm-serving-xxx -n one-data-model -- nvidia-smi
 ```
 
 2. **检查请求队列**
@@ -487,16 +487,16 @@ echo "=== 最近事件 ==="
 kubectl get events -A --sort-by='.lastTimestamp' | tail -20
 
 echo ""
-echo "=== Alldata API 日志 ==="
-kubectl logs -n one-data-alldata deployment/alldata-api --tail=50
+echo "=== Data API 日志 ==="
+kubectl logs -n one-data-data deployment/data-api --tail=50
 
 echo ""
 echo "=== vLLM 日志 ==="
-kubectl logs -n one-data-cube deployment/vllm-serving --tail=50
+kubectl logs -n one-data-model deployment/vllm-serving --tail=50
 
 echo ""
-echo "=== Bisheng API 日志 ==="
-kubectl logs -n one-data-bisheng deployment/bisheng-api --tail=50
+echo "=== Agent API 日志 ==="
+kubectl logs -n one-data-agent deployment/agent-api --tail=50
 ```
 
 ---

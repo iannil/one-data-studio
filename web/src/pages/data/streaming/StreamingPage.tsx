@@ -28,8 +28,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { FlinkJob, CreateFlinkJobRequest } from '@/services/alldata';
+import data from '@/services/data';
+import type { FlinkJob, CreateFlinkJobRequest } from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -53,7 +53,7 @@ function StreamingPage() {
   const { data: jobsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['flink-jobs', page, pageSize, statusFilter, typeFilter],
     queryFn: () =>
-      alldata.getFlinkJobs({
+      data.getFlinkJobs({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -63,7 +63,7 @@ function StreamingPage() {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: alldata.createFlinkJob,
+    mutationFn: data.createFlinkJob,
     onSuccess: () => {
       message.success('Flink 作业创建成功');
       setIsCreateModalOpen(false);
@@ -76,7 +76,7 @@ function StreamingPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: alldata.deleteFlinkJob,
+    mutationFn: data.deleteFlinkJob,
     onSuccess: () => {
       message.success('Flink 作业删除成功');
       setIsDetailDrawerOpen(false);
@@ -88,7 +88,7 @@ function StreamingPage() {
   });
 
   const startMutation = useMutation({
-    mutationFn: alldata.startFlinkJob,
+    mutationFn: data.startFlinkJob,
     onSuccess: () => {
       message.success('Flink 作业启动成功');
       queryClient.invalidateQueries({ queryKey: ['flink-jobs'] });
@@ -99,7 +99,7 @@ function StreamingPage() {
   });
 
   const stopMutation = useMutation({
-    mutationFn: alldata.stopFlinkJob,
+    mutationFn: data.stopFlinkJob,
     onSuccess: () => {
       message.success('Flink 作业停止成功');
       queryClient.invalidateQueries({ queryKey: ['flink-jobs'] });
@@ -219,7 +219,7 @@ function StreamingPage() {
             icon={<CodeOutlined />}
             onClick={() => {
               setSelectedJob(record);
-              alldata.getFlinkJobLogs(record.job_id, { limit: 100 }).then((res) => {
+              data.getFlinkJobLogs(record.job_id, { limit: 100 }).then((res) => {
                 setJobLogs(res.data.logs);
                 setIsLogModalOpen(true);
               });

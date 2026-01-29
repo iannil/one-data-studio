@@ -100,13 +100,13 @@
 
 ### 目标
 
-验证 Alldata 数据集注册与读取功能
+验证 Data 数据集注册与读取功能
 
 ### 任务清单
 
 | 任务 | 负责人 | 预计工时 | 状态 |
 |------|--------|----------|------|
-| Alldata API 服务开发 | Backend | 24h | ✅ |
+| Data API 服务开发 | Backend | 24h | ✅ |
 | 数据集注册接口开发 | Backend | 8h | ✅ |
 | 数据集查询接口开发 | Backend | 8h | ✅ |
 | MinIO 集成测试 | QA | 8h | ✅ |
@@ -115,7 +115,7 @@
 
 ### 交付物
 
-- [x] Alldata API 服务
+- [x] Data API 服务
 - [x] 数据集 CRUD 接口
 - [x] Cube 数据读取 SDK
 
@@ -123,11 +123,11 @@
 
 ```bash
 # 注册数据集
-curl -X POST http://alldata-api/api/v1/datasets \
+curl -X POST http://data-api/api/v1/datasets \
   -d '{"name": "test", "path": "s3://bucket/data/"}'
 
 # 查询数据集
-curl http://alldata-api/api/v1/datasets/ds-001
+curl http://data-api/api/v1/datasets/ds-001
 
 # Cube SDK 读取
 python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.read())"
@@ -152,13 +152,13 @@ python -c "from cube_sdk import Dataset; ds = Dataset.get('ds-001'); print(ds.re
 | OpenAI 兼容接口配置 | ML Engineer | 8h | ✅ |
 | Istio Gateway 配置 | DevOps | 4h | ✅ |
 | 模型服务测试 | QA | 8h | ✅ |
-| Bisheng 调用测试 | Backend | 8h | ✅ |
+| Agent 调用测试 | Backend | 8h | ✅ |
 
 ### 交付物
 
 - [x] vLLM 推理服务
 - [x] OpenAI 兼容 API
-- [x] Bisheng 调用示例
+- [x] Agent 调用示例
 
 ### 验收标准
 
@@ -180,13 +180,13 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 目标
 
-验证 Bisheng 应用编排服务
+验证 Agent 应用编排服务
 
 ### 任务清单
 
 | 任务 | 负责人 | 预计工时 | 状态 |
 |------|--------|----------|------|
-| Bisheng API 服务开发 | Backend | 16h | ✅ |
+| Agent API 服务开发 | Backend | 16h | ✅ |
 | 模型调用集成 | Backend | 8h | ✅ |
 | 数据集查询集成 | Backend | 8h | ✅ |
 | 简单 RAG 流水线 | Backend | 16h | ✅ |
@@ -196,7 +196,7 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 交付物
 
-- [x] Bisheng API 服务
+- [x] Agent API 服务
 - [x] 模型调用功能
 - [x] 数据集查询功能
 - [x] RAG Demo
@@ -205,8 +205,8 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 验收标准
 
-- Bisheng 可调用 Cube 模型服务
-- Bisheng 可查询 Alldata 数据集
+- Agent 可调用 Cube 模型服务
+- Agent 可查询 Data 数据集
 - RAG 流水线端到端可用
 
 ---
@@ -305,9 +305,9 @@ curl -X POST http://cube-serving/v1/chat/completions \
 
 ### 验收标准
 
-- [x] Alldata → Cube：数据集注册与读取验证通过
-- [x] Cube → Bisheng：模型服务调用验证通过
-- [x] Alldata → Bisheng：Text-to-SQL 元数据查询验证通过
+- [x] Data → Cube：数据集注册与读取验证通过
+- [x] Cube → Agent：模型服务调用验证通过
+- [x] Data → Agent：Text-to-SQL 元数据查询验证通过
 - [x] E2E 测试脚本可运行
 - [x] Demo 指南文档完整
 
@@ -343,8 +343,8 @@ curl -X POST http://cube-serving/v1/chat/completions \
 - [x] `services/shared/cache.py` - Redis 缓存模块
 - [x] `services/shared/celery_app.py` - Celery 任务队列
 - [x] `services/shared/celery_tasks.py` - 异步任务定义
-- [x] `services/alldata-api/src/database.py` - 优化的数据库连接池
-- [x] `services/bisheng-api/services/vector_store.py` - 优化的向量搜索
+- [x] `services/data-api/src/database.py` - 优化的数据库连接池
+- [x] `services/agent-api/services/vector_store.py` - 优化的向量搜索
 - [x] `web/src/App.tsx` - 懒加载路由
 
 ### 验收标准

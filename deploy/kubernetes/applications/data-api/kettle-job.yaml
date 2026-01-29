@@ -7,7 +7,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: kettle-etl-job-example
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     app: kettle-job
     component: etl
@@ -135,7 +135,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: kettle-daily-sync
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     app: kettle-cronjob
     component: etl
@@ -229,7 +229,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: kettle-pan-job-example
-  namespace: one-data-alldata
+  namespace: one-data-data
   labels:
     app: kettle-job
     component: etl

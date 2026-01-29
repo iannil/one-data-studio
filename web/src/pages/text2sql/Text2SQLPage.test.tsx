@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Text2SQLPage from './Text2SQLPage';
-import * as bisheng from '@/services/bisheng';
-import * as alldata from '@/services/alldata';
+import * as agentService from '@/services/agent-service';
+import * as data from '@/services/data';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -21,7 +21,7 @@ vi.mock('@/services/alldata', () => ({
   },
 }));
 
-import { text2Sql } from '@/services/bisheng';
+import { text2Sql } from '@/services/agent-service';
 
 
 
@@ -30,7 +30,7 @@ describe('Text2SQLPage', () => {
     vi.clearAllMocks();
 
     // 默认 mock 返回值
-    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+    vi.mocked(data.default.getDatabases).mockResolvedValue({
       code: 0,
       data: {
         databases: [
@@ -40,7 +40,7 @@ describe('Text2SQLPage', () => {
       },
     });
 
-    vi.mocked(alldata.default.getTables).mockResolvedValue({
+    vi.mocked(data.default.getTables).mockResolvedValue({
       code: 0,
       data: {
         tables: [
@@ -178,7 +178,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+    vi.mocked(data.default.getDatabases).mockResolvedValue({
       code: 0,
       data: {
         databases: [
@@ -187,7 +187,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
       },
     });
 
-    vi.mocked(alldata.default.getTables).mockResolvedValue({
+    vi.mocked(data.default.getTables).mockResolvedValue({
       code: 0,
       data: {
         tables: [
@@ -197,7 +197,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
       },
     });
 
-    vi.mocked(alldata.default.getTableColumns).mockResolvedValue({
+    vi.mocked(data.default.getTableColumns).mockResolvedValue({
       code: 0,
       data: {
         columns: [
@@ -213,7 +213,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
     render(<Text2SQLPage />);
 
     await waitFor(() => {
-      expect(alldata.default.getDatabases).toHaveBeenCalled();
+      expect(data.default.getDatabases).toHaveBeenCalled();
     });
   });
 
@@ -221,7 +221,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
     render(<Text2SQLPage />);
 
     await waitFor(() => {
-      expect(alldata.default.getDatabases).toHaveBeenCalled();
+      expect(data.default.getDatabases).toHaveBeenCalled();
     });
 
     // 选择数据库后应该加载表 - getTables 可能由 useQuery 自动触发
@@ -234,7 +234,7 @@ describe('Text2SQLPage SQL 预览', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(alldata.default.getDatabases).mockResolvedValue({
+    vi.mocked(data.default.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: [] },
     });

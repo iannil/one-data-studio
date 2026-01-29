@@ -45,9 +45,9 @@ SERVICES = ["admin", "alldata", "bisheng", "cube"]
 # 服务目录映射（使用连字符的目录名）
 SERVICE_DIR_MAP = {
     "admin": "admin-api",
-    "alldata": "alldata-api",
-    "bisheng": "bisheng-api",
-    "cube": "cube-api",
+    "alldata": "data-api",
+    "bisheng": "agent-api",
+    "cube": "model-api",
 }
 
 # 导入顺序（按依赖关系）

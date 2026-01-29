@@ -29,8 +29,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { DataService, CreateDataServiceRequest, ApiKeyInfo } from '@/services/alldata';
+import data from '@/services/data';
+import type { DataService, CreateDataServiceRequest, ApiKeyInfo } from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -53,7 +53,7 @@ function ServicesPage() {
   const { data: servicesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['data-services', page, pageSize, typeFilter, statusFilter],
     queryFn: () =>
-      alldata.getDataServices({
+      data.getDataServices({
         page,
         page_size: pageSize,
         type: typeFilter || undefined,
@@ -63,19 +63,19 @@ function ServicesPage() {
 
   const { data: statisticsData } = useQuery({
     queryKey: ['service-statistics', selectedService?.service_id],
-    queryFn: () => alldata.getDataServiceStatistics(selectedService!.service_id),
+    queryFn: () => data.getDataServiceStatistics(selectedService!.service_id),
     enabled: !!selectedService && isDetailDrawerOpen,
   });
 
   const { data: apiKeysData } = useQuery({
     queryKey: ['service-api-keys', selectedService?.service_id],
-    queryFn: () => alldata.getServiceApiKeys(selectedService!.service_id),
+    queryFn: () => data.getServiceApiKeys(selectedService!.service_id),
     enabled: !!selectedService && isApiKeyModalOpen,
   });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: alldata.createDataService,
+    mutationFn: data.createDataService,
     onSuccess: () => {
       message.success('服务创建成功');
       setIsCreateModalOpen(false);
@@ -88,7 +88,7 @@ function ServicesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: alldata.deleteDataService,
+    mutationFn: data.deleteDataService,
     onSuccess: () => {
       message.success('服务删除成功');
       setIsDetailDrawerOpen(false);
@@ -100,7 +100,7 @@ function ServicesPage() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: alldata.publishDataService,
+    mutationFn: data.publishDataService,
     onSuccess: () => {
       message.success('服务发布成功');
       queryClient.invalidateQueries({ queryKey: ['data-services'] });
@@ -112,7 +112,7 @@ function ServicesPage() {
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: alldata.unpublishDataService,
+    mutationFn: data.unpublishDataService,
     onSuccess: () => {
       message.success('服务已下线');
       queryClient.invalidateQueries({ queryKey: ['data-services'] });
@@ -123,7 +123,7 @@ function ServicesPage() {
   });
 
   const createApiKeyMutation = useMutation({
-    mutationFn: () => alldata.createServiceApiKey(selectedService!.service_id),
+    mutationFn: () => data.createServiceApiKey(selectedService!.service_id),
     onSuccess: (data) => {
       message.success('API 密钥创建成功');
       queryClient.invalidateQueries({ queryKey: ['service-api-keys'] });
@@ -162,7 +162,7 @@ function ServicesPage() {
   });
 
   const deleteApiKeyMutation = useMutation({
-    mutationFn: (keyId: string) => alldata.deleteServiceApiKey(selectedService!.service_id, keyId),
+    mutationFn: (keyId: string) => data.deleteServiceApiKey(selectedService!.service_id, keyId),
     onSuccess: () => {
       message.success('API 密钥删除成功');
       queryClient.invalidateQueries({ queryKey: ['service-api-keys'] });

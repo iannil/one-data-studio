@@ -5,7 +5,7 @@
 #   ./scripts/dev/dev-shell.sh [选项] <服务>
 #
 # 示例:
-#   ./scripts/dev/dev-shell.sh bisheng    # 进入 bisheng-api 容器
+#   ./scripts/dev/dev-shell.sh bisheng    # 进入 agent-api 容器
 #   ./scripts/dev/dev-shell.sh b          # 使用别名
 #   ./scripts/dev/dev-shell.sh -s python b # 使用 Python shell
 
@@ -34,14 +34,14 @@ show_shell_help() {
   -h, --help        显示帮助信息
 
 服务别名:
-  b, bisheng     = bisheng-api
-  a, alldata     = alldata-api
-  c, cube        = cube-api
+  b, bisheng     = agent-api
+  a, alldata     = data-api
+  c, cube        = model-api
   o, openai      = openai-proxy
   w, web         = web-frontend
   m, db, mysql   = mysql
   r, redis       = redis" \
-        "  dev-shell.sh bisheng         # 进入 bisheng-api（bash）
+        "  dev-shell.sh bisheng         # 进入 agent-api（bash）
   dev-shell.sh b               # 使用别名
   dev-shell.sh -s python b     # 进入 Python shell
   dev-shell.sh -s ipython b    # 进入 IPython shell

@@ -53,7 +53,7 @@ docker-compose logs -f
 
 ## 核心功能
 
-### 1. 数据管理（Alldata）
+### 1. 数据管理（Data）
 
 创建数据集：
 ```bash
@@ -67,7 +67,7 @@ curl -X POST https://api.one-data.example.com/api/v1/datasets \
   }'
 ```
 
-### 2. 工作流（Bisheng）
+### 2. 工作流（Agent）
 
 创建简单工作流：
 1. 导航到 **工作流** > **创建工作流**
@@ -117,20 +117,20 @@ curl https://api.one-data.example.com/api/v1/health
 
 ```bash
 # Kubernetes
-kubectl logs -f deployment/bisheng-api -n one-data-system
+kubectl logs -f deployment/agent-api -n one-data-system
 
 # Docker Compose
-docker-compose logs -f bisheng-api
+docker-compose logs -f agent-api
 ```
 
 ### 重启服务
 
 ```bash
 # Kubernetes
-kubectl rollout restart deployment/bisheng-api -n one-data-system
+kubectl rollout restart deployment/agent-api -n one-data-system
 
 # Docker Compose
-docker-compose restart bisheng-api
+docker-compose restart agent-api
 ```
 
 ## 下一步

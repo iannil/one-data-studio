@@ -25,8 +25,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng from '@/services/bisheng';
-import type { PromptTemplate } from '@/services/bisheng';
+import agentService from '@/services/agent-service';
+import type { PromptTemplate } from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -51,7 +51,7 @@ function PromptsPage() {
   const { data: templatesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['prompt-templates', page, pageSize, categoryFilter],
     queryFn: () =>
-      bisheng.getPromptTemplates({
+      agentService.getPromptTemplates({
         page,
         page_size: pageSize,
         category: categoryFilter || undefined,
@@ -60,7 +60,7 @@ function PromptsPage() {
 
   // 创建模板
   const createMutation = useMutation({
-    mutationFn: bisheng.createPromptTemplate,
+    mutationFn: agentService.createPromptTemplate,
     onSuccess: () => {
       message.success('Prompt 模板创建成功');
       setIsCreateModalOpen(false);
@@ -74,8 +74,8 @@ function PromptsPage() {
 
   // 更新模板
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof bisheng.updatePromptTemplate>[1] }) =>
-      bisheng.updatePromptTemplate(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof agentService.updatePromptTemplate>[1] }) =>
+      agentService.updatePromptTemplate(id, data),
     onSuccess: () => {
       message.success('Prompt 模板更新成功');
       setIsEditModalOpen(false);
@@ -89,7 +89,7 @@ function PromptsPage() {
 
   // 删除模板
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deletePromptTemplate,
+    mutationFn: agentService.deletePromptTemplate,
     onSuccess: () => {
       message.success('Prompt 模板删除成功');
       setIsDetailDrawerOpen(false);
@@ -102,7 +102,7 @@ function PromptsPage() {
 
   // 测试模板
   const testMutation = useMutation({
-    mutationFn: bisheng.testPromptTemplate,
+    mutationFn: agentService.testPromptTemplate,
     onSuccess: (result) => {
       setTestResult(result.data);
     },

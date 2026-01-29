@@ -151,9 +151,9 @@ class TestConfig:
     def test_get_service_url(self):
         """测试获取服务 URL"""
         config = Config()
-        assert config.get_service_url("alldata") == config.service.alldata_api_url
-        assert config.get_service_url("bisheng") == config.service.bisheng_api_url
-        assert config.get_service_url("cube") == config.service.cube_api_url
+        assert config.get_service_url("alldata") == config.service.data_api_url
+        assert config.get_service_url("bisheng") == config.service.agent_api_url
+        assert config.get_service_url("cube") == config.service.model_api_url
         assert config.get_service_url("invalid") is None
 
 

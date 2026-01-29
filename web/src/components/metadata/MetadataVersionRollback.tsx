@@ -42,7 +42,7 @@ import {
   SwapRightOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 import './MetadataVersionRollback.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -199,7 +199,7 @@ const RollbackPreviewModal: React.FC<{
   const { data: planData, isLoading: planLoading } = useQuery({
     queryKey: ['metadata', 'rollback', 'preview', tableId, targetVersionId],
     queryFn: async () => {
-      const res = await alldata.previewRollback(tableId, { target_version_id: targetVersionId });
+      const res = await data.previewRollback(tableId, { target_version_id: targetVersionId });
       return res.data as RollbackPlan;
     },
     enabled: visible && !!targetVersionId,
@@ -507,7 +507,7 @@ const VersionHistoryTimeline: React.FC<{
   const { data: versionsData, isLoading } = useQuery({
     queryKey: ['metadata', 'versions', tableId],
     queryFn: async () => {
-      const res = await alldata.getMetadataVersions(tableId);
+      const res = await data.getMetadataVersions(tableId);
       return res.data as { versions: MetadataVersion[] };
     },
   });
@@ -569,14 +569,14 @@ const MetadataVersionRollback: React.FC<MetadataVersionRollbackProps> = ({
   const { data: versionsData, isLoading: versionsLoading } = useQuery({
     queryKey: ['metadata', 'versions', tableId],
     queryFn: async () => {
-      const res = await alldata.getMetadataVersions(tableId);
+      const res = await data.getMetadataVersions(tableId);
       return res.data as { versions: MetadataVersion[] };
     },
   });
 
   const rollbackMutation = useMutation({
     mutationFn: async (params: { targetVersionId: string; options: any }) => {
-      const res = await alldata.executeRollback(tableId, {
+      const res = await data.executeRollback(tableId, {
         target_version_id: params.targetVersionId,
         create_backup: params.options.create_backup !== false,
         execute_on_database: params.options.execute_on_database || false,

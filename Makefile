@@ -4,7 +4,7 @@
 .PHONY: help install install-base install-infra install-apps install-all
 .PHONY: status logs test clean forward unforward
 .PHONY: kind-cluster docker-up docker-down helm-lint
-.PHONY: logs-alldata logs-cube logs-bisheng
+.PHONY: logs-data logs-model logs-agent
 .PHONY: web-build web-install web-logs web-forward web-dev
 .PHONY: phase2 phase2-all
 .PHONY: init-db test-e2e
@@ -41,7 +41,7 @@ help:
 	@echo "  make install          - 安装所有服务"
 	@echo "  make install-base     - 安装基础资源（命名空间、StorageClass）"
 	@echo "  make install-infra    - 安装基础设施（MinIO、MySQL、Redis）"
-	@echo "  make install-apps     - 安装应用服务（Alldata、Cube、Bisheng）"
+	@echo "  make install-apps     - 安装应用服务（Data、Model、Agent）"
 	@echo ""
 	@echo "Phase 2 Web 前端:"
 	@echo "  make web-build        - 构建 Web 前端 Docker 镜像"
@@ -55,9 +55,9 @@ help:
 	@echo "状态查看:"
 	@echo "  make status           - 查看所有 Pod 状态"
 	@echo "  make logs             - 查看所有服务日志"
-	@echo "  make logs-alldata     - 查看 Alldata API 日志"
-	@echo "  make logs-cube        - 查看 Cube 模型服务日志"
-	@echo "  make logs-bisheng     - 查看 Bisheng API 日志"
+	@echo "  make logs-data        - 查看 Data API 日志"
+	@echo "  make logs-model       - 查看 Model 模型服务日志"
+	@echo "  make logs-agent       - 查看 Agent API 日志"
 	@echo ""
 	@echo "测试验证:"
 	@echo "  make test             - 运行快速测试"
@@ -99,9 +99,9 @@ docker-up:
 	@echo "==> 使用 Docker Compose 启动服务..."
 	@docker-compose -f deploy/local/docker-compose.yml up -d
 	@echo "==> 服务已启动:"
-	@echo "    Bisheng API:  http://localhost:8000"
-	@echo "    Alldata API:  http://localhost:8001"
-	@echo "    Cube API:     http://localhost:8002"
+	@echo "    Agent API:    http://localhost:8000"
+	@echo "    Data API:    http://localhost:8001"
+	@echo "    Model API:   http://localhost:8002"
 	@echo "    OpenAI Proxy: http://localhost:8003"
 	@echo "    MinIO:        http://localhost:9001"
 	@echo "    Web Frontend: http://localhost:3000"
@@ -140,13 +140,13 @@ install-infra: install-base
 # 安装应用服务
 install-apps: install-infra
 	@echo "==> 安装应用服务..."
-	kubectl apply -f deploy/kubernetes/applications/alldata-api/deployment.yaml
+	kubectl apply -f deploy/kubernetes/applications/data-api/deployment.yaml
 	kubectl apply -f deploy/kubernetes/applications/vllm-serving/deployment.yaml
-	kubectl apply -f deploy/kubernetes/applications/bisheng-api/deployment.yaml
+	kubectl apply -f deploy/kubernetes/applications/agent-api/deployment.yaml
 	@echo "==> 等待应用服务就绪..."
-	kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-alldata --timeout=120s || true
-	kubectl wait --for=condition=ready pod -l app=vllm-serving -n one-data-cube --timeout=600s || true
-	kubectl wait --for=condition=ready pod -l app=bisheng-api -n one-data-bisheng --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=data-api -n one-data-data --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=vllm-serving -n one-data-model --timeout=600s || true
+	kubectl wait --for=condition=ready pod -l app=agent-api -n one-data-agent --timeout=120s || true
 
 # ============================================
 # 状态查看
@@ -162,23 +162,23 @@ status:
 
 # 查看日志
 logs:
-	@echo "==> Alldata API 日志:"
-	@kubectl logs -n one-data-alldata deployment/alldata-api --tail=20 || true
+	@echo "==> Data API 日志:"
+	@kubectl logs -n one-data-data deployment/data-api --tail=20 || true
 	@echo ""
 	@echo "==> vLLM 服务日志:"
-	@kubectl logs -n one-data-cube deployment/vllm-serving --tail=20 || true
+	@kubectl logs -n one-data-model deployment/vllm-serving --tail=20 || true
 	@echo ""
-	@echo "==> Bisheng API 日志:"
-	@kubectl logs -n one-data-bisheng deployment/bisheng-api --tail=20 || true
+	@echo "==> Agent API 日志:"
+	@kubectl logs -n one-data-agent deployment/agent-api --tail=20 || true
 
-logs-alldata:
-	@kubectl logs -n one-data-alldata deployment/alldata-api -f
+logs-data:
+	@kubectl logs -n one-data-data deployment/data-api -f
 
-logs-cube:
-	@kubectl logs -n one-data-cube deployment/vllm-serving -f
+logs-model:
+	@kubectl logs -n one-data-model deployment/vllm-serving -f
 
-logs-bisheng:
-	@kubectl logs -n one-data-bisheng deployment/bisheng-api -f
+logs-agent:
+	@kubectl logs -n one-data-agent deployment/agent-api -f
 
 # ============================================
 # 测试
@@ -186,14 +186,14 @@ logs-bisheng:
 
 # 快速测试
 test:
-	@echo "==> 测试 Bisheng API..."
-	@curl -s http://localhost:8000/api/v1/health | jq . || echo "  Bisheng API 未响应"
+	@echo "==> 测试 Agent API..."
+	@curl -s http://localhost:8000/api/v1/health | jq . || echo "  Agent API 未响应"
 	@echo ""
-	@echo "==> 测试 Alldata API..."
-	@curl -s http://localhost:8001/api/v1/health | jq . || echo "  Alldata API 未响应"
+	@echo "==> 测试 Data API..."
+	@curl -s http://localhost:8001/api/v1/health | jq . || echo "  Data API 未响应"
 	@echo ""
-	@echo "==> 测试 Cube API..."
-	@curl -s http://localhost:8002/api/v1/health | jq . || echo "  Cube API 未响应"
+	@echo "==> 测试 Model API..."
+	@curl -s http://localhost:8002/api/v1/health | jq . || echo "  Model API 未响应"
 	@echo ""
 	@echo "==> 测试端到端调用..."
 	@curl -s -X POST http://localhost:8000/api/v1/chat \
@@ -224,17 +224,17 @@ test-unit-p0:
 	@pytest tests/unit/ -v -m "unit and not slow" --tb=short
 
 # 单元测试 - 按模块
-test-unit-alldata:
-	@echo "==> 运行 Alldata 模块单元测试..."
-	@pytest tests/unit/test_alldata*.py tests/unit/test_datasource*.py tests/unit/test_metadata*.py tests/unit/test_sensitive*.py tests/unit/test_masking*.py tests/unit/test_data_standard.py -v
+test-unit-data:
+	@echo "==> 运行 Data 模块单元测试..."
+	@pytest tests/unit/test_data*.py tests/unit/test_datasource*.py tests/unit/test_metadata*.py tests/unit/test_sensitive*.py tests/unit/test_masking*.py tests/unit/test_data_standard.py -v
 
-test-unit-bisheng:
-	@echo "==> 运行 Bisheng 模块单元测试..."
-	@pytest tests/unit/test_bisheng*.py tests/unit/test_hybrid*.py tests/unit/test_sql*.py tests/unit/test_document*.py tests/unit/test_agents.py -v
+test-unit-agent:
+	@echo "==> 运行 Agent 模块单元测试..."
+	@pytest tests/unit/test_agent*.py tests/unit/test_hybrid*.py tests/unit/test_sql*.py tests/unit/test_document*.py tests/unit/test_agents.py -v
 
-test-unit-cube:
-	@echo "==> 运行 Cube 模块单元测试..."
-	@pytest tests/unit/test_cube*.py tests/unit/test_model*.py tests/unit/test_workflow*.py -v
+test-unit-model:
+	@echo "==> 运行 Model 模块单元测试..."
+	@pytest tests/unit/test_model*.py tests/unit/test_models*.py tests/unit/test_workflow*.py -v
 
 test-unit-shared:
 	@echo "==> 运行共享模块单元测试..."
@@ -389,17 +389,17 @@ test-e2e-core:
 	@echo "==> 运行核心页面 E2E 测试..."
 	@cd tests/e2e && npx playwright test --project=chromium-fast core-pages*.spec.ts
 
-test-e2e-alldata:
-	@echo "==> 运行 Alldata 深度 E2E 测试..."
-	@cd tests/e2e && npx playwright test --project=chromium-acceptance alldata-deep.spec.ts
+test-e2e-data:
+	@echo "==> 运行 Data 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance data-deep.spec.ts
 
-test-e2e-bisheng:
-	@echo "==> 运行 Bisheng 深度 E2E 测试..."
-	@cd tests/e2e && npx playwright test --project=chromium-acceptance bisheng-deep.spec.ts
+test-e2e-agent:
+	@echo "==> 运行 Agent 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance agent-deep.spec.ts
 
-test-e2e-cube:
-	@echo "==> 运行 Cube 深度 E2E 测试..."
-	@cd tests/e2e && npx playwright test --project=chromium-acceptance cube-deep.spec.ts
+test-e2e-model:
+	@echo "==> 运行 Model 深度 E2E 测试..."
+	@cd tests/e2e && npx playwright test --project=chromium-acceptance model-deep.spec.ts
 
 test-e2e-lifecycle:
 	@echo "==> 运行用户生命周期 E2E 测试..."
@@ -455,11 +455,11 @@ test-report:
 # 运行数据库初始化 Job
 init-db:
 	@echo "==> 运行数据库初始化 Job..."
-	kubectl apply -f deploy/kubernetes/jobs/alldata-init-job.yaml
-	kubectl apply -f deploy/kubernetes/jobs/bisheng-init-job.yaml
+	kubectl apply -f deploy/kubernetes/jobs/data-init-job.yaml
+	kubectl apply -f deploy/kubernetes/jobs/agent-init-job.yaml
 	@echo "==> 等待初始化完成..."
-	@kubectl wait --for=condition=complete job/alldata-db-init -n one-data-alldata --timeout=300s || true
-	@kubectl wait --for=condition=complete job/bisheng-db-init -n one-data-bisheng --timeout=300s || true
+	@kubectl wait --for=condition=complete job/data-db-init -n one-data-data --timeout=300s || true
+	@kubectl wait --for=condition=complete job/agent-db-init -n one-data-agent --timeout=300s || true
 	@echo "==> 数据库初始化完成"
 
 # ============================================

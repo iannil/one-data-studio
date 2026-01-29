@@ -14,19 +14,19 @@ class TestVectorStore:
     @pytest.fixture
     def mock_milvus_connections(self):
         """Mock Milvus connections"""
-        with patch('services.bisheng-api.services.vector_store.connections') as mock:
+        with patch('services.agent-api.services.vector_store.connections') as mock:
             yield mock
 
     @pytest.fixture
     def mock_utility(self):
         """Mock Milvus utility"""
-        with patch('services.bisheng-api.services.vector_store.utility') as mock:
+        with patch('services.agent-api.services.vector_store.utility') as mock:
             yield mock
 
     @pytest.fixture
     def mock_collection(self):
         """Mock Milvus Collection"""
-        with patch('services.bisheng-api.services.vector_store.Collection') as mock:
+        with patch('services.agent-api.services.vector_store.Collection') as mock:
             yield mock
 
     def test_get_cache_key(self):

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ONE-DATA-STUDIO Bisheng API
+  title: ONE-DATA-STUDIO Agent API
   description: |
     大模型应用开发平台 API
 
@@ -483,7 +483,7 @@ components:
           example: healthy
         service:
           type: string
-          example: bisheng-api
+          example: agent-api
         version:
           type: string
           example: 2.0.0

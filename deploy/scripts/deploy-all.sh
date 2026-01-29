@@ -229,10 +229,10 @@ deploy_applications() {
             log_info "Building and starting application containers..."
 
             # 构建镜像
-            run_cmd docker-compose -f "$DOCKER_COMPOSE_FILE" build alldata-api bisheng-api web
+            run_cmd docker-compose -f "$DOCKER_COMPOSE_FILE" build data-api agent-api web
 
             # 启动服务
-            run_cmd docker-compose -f "$DOCKER_COMPOSE_FILE" up -d alldata-api bisheng-api web
+            run_cmd docker-compose -f "$DOCKER_COMPOSE_FILE" up -d data-api agent-api web
 
             # 健康检查
             sleep 10
@@ -245,14 +245,14 @@ deploy_applications() {
             log_info "Deploying applications to Kubernetes..."
 
             # 部署应用
-            run_cmd kubectl apply -f "$K8S_DIR/apps/alldata-api/"
-            run_cmd kubectl apply -f "$K8S_DIR/apps/bisheng-api/"
+            run_cmd kubectl apply -f "$K8S_DIR/apps/data-api/"
+            run_cmd kubectl apply -f "$K8S_DIR/apps/agent-api/"
             run_cmd kubectl apply -f "$K8S_DIR/apps/web/"
 
             # 等待 Pod 就绪
             log_info "Waiting for application pods..."
-            run_cmd kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-system --timeout=300s
-            run_cmd kubectl wait --for=condition=ready pod -l app=bisheng-api -n one-data-system --timeout=300s
+            run_cmd kubectl wait --for=condition=ready pod -l app=data-api -n one-data-system --timeout=300s
+            run_cmd kubectl wait --for=condition=ready pod -l app=agent-api -n one-data-system --timeout=300s
             run_cmd kubectl wait --for=condition=ready pod -l app=web -n one-data-system --timeout=300s
 
             # 应用 HPA
@@ -402,8 +402,8 @@ print_deployment_info() {
             echo "Use 'kubectl port-forward' to access services:"
             echo ""
             echo "  kubectl port-forward svc/web 3000:80 -n one-data-system"
-            echo "  kubectl port-forward svc/alldata-api 8080:8080 -n one-data-system"
-            echo "  kubectl port-forward svc/bisheng-api 8081:8081 -n one-data-system"
+            echo "  kubectl port-forward svc/data-api 8080:8080 -n one-data-system"
+            echo "  kubectl port-forward svc/agent-api 8081:8081 -n one-data-system"
             echo ""
             echo "Or use the provided port-forward script:"
             echo "  ./scripts/port-forward.sh"

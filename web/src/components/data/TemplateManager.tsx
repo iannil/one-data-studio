@@ -38,8 +38,8 @@ import {
   SettingOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
-import type { OCRTemplate } from '@/services/alldata';
-import { ocrService } from '@/services/alldata';
+import type { OCRTemplate } from '@/services/data';
+import { ocrService } from '@/services/data';
 import './TemplateManager.css';
 
 const { TextArea } = Input;

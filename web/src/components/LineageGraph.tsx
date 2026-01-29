@@ -6,7 +6,7 @@ import {
   ZoomOutOutlined,
   ExpandOutlined,
 } from '@ant-design/icons';
-import type { LineageGraph as LineageGraphType, LineageNode } from '@/services/alldata';
+import type { LineageGraph as LineageGraphType, LineageNode } from '@/services/data';
 
 const { Option } = Select;
 

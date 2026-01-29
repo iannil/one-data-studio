@@ -62,9 +62,9 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [集成总览](02-integration/integration-overview.md) | 三个集成点概览 |
-| [Alldata - Cube](02-integration/alldata-cube.md) | 数据与训练连接 |
-| [Cube - Bisheng](02-integration/cube-bisheng.md) | 模型与应用连接 |
-| [Alldata - Bisheng](02-integration/alldata-bisheng.md) | 结构化数据与LLM |
+| [Data - Cube](02-integration/alldata-cube.md) | 数据与训练连接 |
+| [Cube - Agent](02-integration/cube-bisheng.md) | 模型与应用连接 |
+| [Data - Agent](02-integration/alldata-bisheng.md) | 结构化数据与LLM |
 | [Behavior Service](02-integration/behavior-service.md) | 用户行为分析服务 |
 | [时序图](02-integration/sequence-diagrams.md) | 研发态/运行态流程图 |
 | [API 规范](02-integration/api-specifications.md) | 三大集成点 API 接口规范 |

@@ -72,8 +72,8 @@ cp deploy/.env.example deploy/.env.dev
 访问以下地址验证服务：
 
 - Web UI: http://localhost:3000
-- Alldata API: http://localhost:8080/api/v1/health
-- Bisheng API: http://localhost:8081/api/v1/health
+- Data API: http://localhost:8080/api/v1/health
+- Agent API: http://localhost:8081/api/v1/health
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3001
 
@@ -149,15 +149,15 @@ docker-compose up -d
 #### 4. 初始化数据库
 
 ```bash
-# Alldata API 数据库
-docker-compose exec alldata-api python -c "
+# Data API 数据库
+docker-compose exec data-api python -c "
 from models import Base
 from database import engine
 Base.metadata.create_all(engine)
 "
 
-# Bisheng API 数据库
-docker-compose exec bisheng-api python -c "
+# Agent API 数据库
+docker-compose exec agent-api python -c "
 from models import Base
 from database import engine
 Base.metadata.create_all(engine)
@@ -171,12 +171,12 @@ Base.metadata.create_all(engine)
 ```bash
 # 构建并推送镜像
 docker build -t your-registry/one-data-web:latest web/
-docker build -t your-registry/one-data-alldata-api:latest services/alldata-api/
-docker build -t your-registry/one-data-bisheng-api:latest services/bisheng-api/
+docker build -t your-registry/one-data-data-api:latest services/data-api/
+docker build -t your-registry/one-data-agent-api:latest services/agent-api/
 
 docker push your-registry/one-data-web:latest
-docker push your-registry/one-data-alldata-api:latest
-docker push your-registry/one-data-bisheng-api:latest
+docker push your-registry/one-data-data-api:latest
+docker push your-registry/one-data-agent-api:latest
 ```
 
 #### 2. 部署到 Kubernetes
@@ -249,17 +249,17 @@ LOG_FILE=/var/log/one-data/app.log
 ### 健康检查
 
 ```bash
-# Alldata API
+# Data API
 curl http://localhost:8080/api/v1/health
 
-# Bisheng API
+# Agent API
 curl http://localhost:8081/api/v1/health
 
 # 返回示例
 {
   "code": 0,
   "message": "healthy",
-  "service": "bisheng-api",
+  "service": "agent-api",
   "version": "2.0.0"
 }
 ```
@@ -317,8 +317,8 @@ curl -X POST http://localhost:8081/api/v1/chat \
 **排查步骤**:
 ```bash
 # 查看日志
-docker-compose logs alldata-api
-docker-compose logs bisheng-api
+docker-compose logs data-api
+docker-compose logs agent-api
 
 # 检查配置
 docker-compose config
@@ -342,7 +342,7 @@ netstat -tuln | grep -E '8080|8081|3000'
 docker-compose exec mysql mysql -u root -p
 
 # 检查网络连接
-docker-compose exec alldata-api ping mysql -c 3
+docker-compose exec data-api ping mysql -c 3
 ```
 
 **解决方案**:
@@ -403,11 +403,11 @@ curl -H "Origin: http://localhost:3000" \
 docker-compose logs -f
 
 # 查看特定服务日志
-docker-compose logs -f alldata-api
-docker-compose logs -f bisheng-api
+docker-compose logs -f data-api
+docker-compose logs -f agent-api
 
 # 查看最近 100 行日志
-docker-compose logs --tail=100 alldata-api
+docker-compose logs --tail=100 data-api
 ```
 
 ### 性能监控

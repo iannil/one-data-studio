@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AgentTemplatesModal from './AgentTemplatesModal';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -281,12 +281,12 @@ describe('AgentTemplatesModal 表单提交', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.createAgentTemplate).mockResolvedValue({
+    vi.mocked(agentService.createAgentTemplate).mockResolvedValue({
       code: 0,
       data: { template_id: 'tmpl-new' },
     });
 
-    vi.mocked(bisheng.updateAgentTemplate).mockResolvedValue({
+    vi.mocked(agentService.updateAgentTemplate).mockResolvedValue({
       code: 0,
       data: { template_id: 'tmpl-001' },
     });

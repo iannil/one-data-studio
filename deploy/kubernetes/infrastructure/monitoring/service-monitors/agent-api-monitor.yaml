@@ -1,15 +1,15 @@
-# Bisheng API ServiceMonitor
+# Agent API ServiceMonitor
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
   labels:
-    app: bisheng-api
+    app: agent-api
 spec:
   selector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   endpoints:
   - port: http
     path: /metrics

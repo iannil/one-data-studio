@@ -30,8 +30,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
-import type { TrainingJob, CreateTrainingJobRequest } from '@/services/cube';
+import model from '@/services/model';
+import type { TrainingJob, CreateTrainingJobRequest } from '@/services/model';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -54,7 +54,7 @@ function TrainingPage() {
   const { data: jobsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['training-jobs', page, pageSize, statusFilter, projectFilter],
     queryFn: () =>
-      cube.getTrainingJobs({
+      model.getTrainingJobs({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -64,7 +64,7 @@ function TrainingPage() {
 
   // 创建训练任务
   const createMutation = useMutation({
-    mutationFn: cube.createTrainingJob,
+    mutationFn: model.createTrainingJob,
     onSuccess: () => {
       message.success('训练任务创建成功');
       setIsCreateModalOpen(false);
@@ -78,7 +78,7 @@ function TrainingPage() {
 
   // 停止训练任务
   const stopMutation = useMutation({
-    mutationFn: cube.stopTrainingJob,
+    mutationFn: model.stopTrainingJob,
     onSuccess: () => {
       message.success('训练任务已停止');
       queryClient.invalidateQueries({ queryKey: ['training-jobs'] });
@@ -90,7 +90,7 @@ function TrainingPage() {
 
   // 删除训练任务
   const deleteMutation = useMutation({
-    mutationFn: cube.deleteTrainingJob,
+    mutationFn: model.deleteTrainingJob,
     onSuccess: () => {
       message.success('训练任务删除成功');
       setIsDetailDrawerOpen(false);

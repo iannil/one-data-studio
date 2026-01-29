@@ -3,7 +3,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: openai-proxy-hpa
-  namespace: one-data-cube
+  namespace: one-data-model
   labels:
     app: openai-proxy
 spec:

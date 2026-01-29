@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Modal, Form, Input, Button, message, Spin, Alert } from 'antd';
 import { PlayCircleOutlined } from '@ant-design/icons';
-import type { Tool } from '@/services/bisheng';
-import bisheng from '@/services/bisheng';
+import type { Tool } from '@/services/agent-service';
+import agentService from '@/services/agent-service';
 
 const { TextArea } = Input;
 
@@ -39,7 +39,7 @@ function ToolExecuteModal({ tool, open, onClose }: ToolExecuteModalProps) {
     setResult(null);
 
     try {
-      const response = await bisheng.executeTool(tool.name, values);
+      const response = await agentService.executeTool(tool.name, values);
       setResult(response.data as ToolExecuteResult);
       setHasExecuted(true);
       message.success('工具执行成功');

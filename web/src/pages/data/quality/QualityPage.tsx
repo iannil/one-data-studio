@@ -39,14 +39,14 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 import type {
   QualityRule,
   QualityTask,
   QualityReport,
   QualityAlert,
   QualityDimension,
-} from '@/services/alldata';
+} from '@/services/data';
 import AICleaningRulesPanel from './AICleaningRulesPanel';
 
 const { Option } = Select;
@@ -103,46 +103,46 @@ function QualityPage() {
   // 质量规则列表
   const { data: rulesData, isLoading: isLoadingRules } = useQuery({
     queryKey: ['qualityRules', page, pageSize],
-    queryFn: () => alldata.getQualityRules({ page, page_size: pageSize }),
+    queryFn: () => data.getQualityRules({ page, page_size: pageSize }),
   });
 
   // 质量任务列表
   const { data: tasksData, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['qualityTasks'],
-    queryFn: () => alldata.getQualityTasks(),
+    queryFn: () => data.getQualityTasks(),
     enabled: activeTab === 'tasks',
   });
 
   // 质量报告列表
   const { data: reportsData, isLoading: isLoadingReports } = useQuery({
     queryKey: ['qualityReports'],
-    queryFn: () => alldata.getQualityReports(),
+    queryFn: () => data.getQualityReports(),
     enabled: activeTab === 'reports',
   });
 
   // 告警列表
   const { data: alertsData, isLoading: isLoadingAlerts } = useQuery({
     queryKey: ['qualityAlerts'],
-    queryFn: () => alldata.getQualityAlerts(),
+    queryFn: () => data.getQualityAlerts(),
     enabled: activeTab === 'alerts',
   });
 
   // 告警配置
   const { data: alertConfigData } = useQuery({
     queryKey: ['alertConfig'],
-    queryFn: alldata.getAlertConfig,
+    queryFn: data.getAlertConfig,
   });
 
   // 质量趋势
   const { data: trendData } = useQuery({
     queryKey: ['qualityTrend'],
-    queryFn: () => alldata.getQualityTrend({ period: 'daily' }),
+    queryFn: () => data.getQualityTrend({ period: 'daily' }),
     enabled: activeTab === 'overview',
   });
 
   // Mutations
   const createRuleMutation = useMutation({
-    mutationFn: alldata.createQualityRule,
+    mutationFn: data.createQualityRule,
     onSuccess: () => {
       message.success('质量规则创建成功');
       setIsRuleModalOpen(false);
@@ -152,8 +152,8 @@ function QualityPage() {
   });
 
   const updateRuleMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof alldata.updateQualityRule>[1] }) =>
-      alldata.updateQualityRule(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof data.updateQualityRule>[1] }) =>
+      data.updateQualityRule(id, data),
     onSuccess: () => {
       message.success('质量规则更新成功');
       setIsRuleModalOpen(false);
@@ -164,7 +164,7 @@ function QualityPage() {
   });
 
   const deleteRuleMutation = useMutation({
-    mutationFn: alldata.deleteQualityRule,
+    mutationFn: data.deleteQualityRule,
     onSuccess: () => {
       message.success('质量规则删除成功');
       queryClient.invalidateQueries({ queryKey: ['qualityRules'] });
@@ -172,7 +172,7 @@ function QualityPage() {
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: alldata.createQualityTask,
+    mutationFn: data.createQualityTask,
     onSuccess: () => {
       message.success('质量任务创建成功');
       setIsTaskModalOpen(false);
@@ -182,7 +182,7 @@ function QualityPage() {
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: alldata.deleteQualityTask,
+    mutationFn: data.deleteQualityTask,
     onSuccess: () => {
       message.success('质量任务删除成功');
       queryClient.invalidateQueries({ queryKey: ['qualityTasks'] });
@@ -190,14 +190,14 @@ function QualityPage() {
   });
 
   const runCheckMutation = useMutation({
-    mutationFn: alldata.runQualityCheck,
+    mutationFn: data.runQualityCheck,
     onSuccess: () => {
       message.success('质量检查已启动');
     },
   });
 
   const updateAlertConfigMutation = useMutation({
-    mutationFn: alldata.updateAlertConfig,
+    mutationFn: data.updateAlertConfig,
     onSuccess: () => {
       message.success('告警配置更新成功');
       setIsAlertConfigModalOpen(false);
@@ -206,7 +206,7 @@ function QualityPage() {
   });
 
   const acknowledgeAlertMutation = useMutation({
-    mutationFn: alldata.acknowledgeAlert,
+    mutationFn: data.acknowledgeAlert,
     onSuccess: () => {
       message.success('告警已确认');
       queryClient.invalidateQueries({ queryKey: ['qualityAlerts'] });
@@ -214,7 +214,7 @@ function QualityPage() {
   });
 
   const resolveAlertMutation = useMutation({
-    mutationFn: alldata.resolveAlert,
+    mutationFn: data.resolveAlert,
     onSuccess: () => {
       message.success('告警已解决');
       queryClient.invalidateQueries({ queryKey: ['qualityAlerts'] });

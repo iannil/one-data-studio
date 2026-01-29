@@ -11,14 +11,14 @@
 
 | 位置 | 内容 | 影响 |
 |------|------|------|
-| `services/bisheng-api/engine/nodes.py:97` | 向量检索使用模拟数据 | RAG 功能无法正常工作 |
+| `services/agent-api/engine/nodes.py:97` | 向量检索使用模拟数据 | RAG 功能无法正常工作 |
 | `web/src/pages/chat/ChatPage.tsx:161` | 聊天历史记录硬编码为空数组 | 用户无法查看历史对话 |
 
 ### 1.2 中优先级
 
 | 位置 | 内容 | 影响 |
 |------|------|------|
-| `services/bisheng-api/engine/plugin_manager.py` | 从类型注解提取参数 | 插件参数配置不够灵活 |
+| `services/agent-api/engine/plugin_manager.py` | 从类型注解提取参数 | 插件参数配置不够灵活 |
 | `web/src/pages/portal/ProfilePage.tsx` | 调用修改密码 API | 修改密码功能未连接后端 |
 
 ### 1.3 低优先级
@@ -26,7 +26,7 @@
 | 位置 | 内容 | 影响 |
 |------|------|------|
 | `services/ocr-service/services/validator.py` | 添加校验码验证 | OCR 识别准确性可提升 |
-| `services/alldata-api/app.py` | 从实际表中获取样本数据 | 数据预览功能使用模拟数据 |
+| `services/data-api/app.py` | 从实际表中获取样本数据 | 数据预览功能使用模拟数据 |
 
 ---
 
@@ -36,9 +36,9 @@
 
 | 功能 | 位置 | 状态 | 说明 |
 |------|------|------|------|
-| 向量检索 | `services/bisheng-api/engine/nodes.py` | ⚪ 未实现 | 需连接真实向量数据库（Milvus） |
+| 向量检索 | `services/agent-api/engine/nodes.py` | ⚪ 未实现 | 需连接真实向量数据库（Milvus） |
 | 聊天历史 | `web/src/pages/chat/ChatPage.tsx` | ⚪ 未实现 | 需实现历史会话存储和查询 |
-| 向量删除 | `services/bisheng-api/app.py:966` | 🟡 部分 | 仅删除数据库记录，未删除向量索引 |
+| 向量删除 | `services/agent-api/app.py:966` | 🟡 部分 | 仅删除数据库记录，未删除向量索引 |
 
 ### 2.2 P1 - 重要功能
 
@@ -52,8 +52,8 @@
 
 | 功能 | 位置 | 状态 | 说明 |
 |------|------|------|------|
-| 数据集版本控制 | `services/alldata-api/` | ⚪ 未实现 | 数据集自动版本管理 |
-| 自动触发训练 | `services/cube-api/` | ⚪ 未实现 | 数据更新自动触发训练 |
+| 数据集版本控制 | `services/data-api/` | ⚪ 未实现 | 数据集自动版本管理 |
+| 自动触发训练 | `services/model-api/` | ⚪ 未实现 | 数据更新自动触发训练 |
 
 ---
 

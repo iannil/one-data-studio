@@ -1,6 +1,6 @@
 {
   "dashboard": {
-    "title": "ONE-DATA Alldata API 监控",
+    "title": "ONE-DATA Data API 监控",
     "tags": ["alldata", "dataops", "governance"],
     "timezone": "browser",
     "refresh": "30s",
@@ -16,7 +16,7 @@
         "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
         "targets": [
           {
-            "expr": "up{job=\"alldata-api\"}",
+            "expr": "up{job=\"data-api\"}",
             "legendFormat": "服务状态"
           }
         ],
@@ -44,7 +44,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"alldata-api\"}[5m])) by (endpoint)",
+            "expr": "sum(rate(http_requests_total{job=\"data-api\"}[5m])) by (endpoint)",
             "legendFormat": "{{endpoint}}"
           }
         ],
@@ -59,7 +59,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"alldata-api\"}[5m])) by (le, endpoint))",
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"data-api\"}[5m])) by (le, endpoint))",
             "legendFormat": "{{endpoint}}"
           }
         ],
@@ -74,11 +74,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"alldata-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"alldata-api\"}[5m]))",
+            "expr": "sum(rate(http_requests_total{job=\"data-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"data-api\"}[5m]))",
             "legendFormat": "5xx 错误率"
           },
           {
-            "expr": "sum(rate(http_requests_total{job=\"alldata-api\",status=~\"4..\"}[5m])) / sum(rate(http_requests_total{job=\"alldata-api\"}[5m]))",
+            "expr": "sum(rate(http_requests_total{job=\"data-api\",status=~\"4..\"}[5m])) / sum(rate(http_requests_total{job=\"data-api\"}[5m]))",
             "legendFormat": "4xx 错误率"
           }
         ],

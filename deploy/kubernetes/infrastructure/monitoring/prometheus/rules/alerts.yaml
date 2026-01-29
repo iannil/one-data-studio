@@ -14,7 +14,7 @@ groups:
       - alert: APIHighLatency
         expr: |
           histogram_quantile(0.99,
-            sum(rate(http_request_duration_seconds_bucket{job="bisheng-api"}[5m])) by (le, endpoint)
+            sum(rate(http_request_duration_seconds_bucket{job="agent-api"}[5m])) by (le, endpoint)
           ) > 1
         for: 5m
         labels:
@@ -28,7 +28,7 @@ groups:
       - alert: APICriticalLatency
         expr: |
           histogram_quantile(0.99,
-            sum(rate(http_request_duration_seconds_bucket{job="bisheng-api"}[5m])) by (le, endpoint)
+            sum(rate(http_request_duration_seconds_bucket{job="agent-api"}[5m])) by (le, endpoint)
           ) > 5
         for: 2m
         labels:
@@ -40,9 +40,9 @@ groups:
 
       - alert: APIHighErrorRate
         expr: |
-          sum(rate(http_requests_total{job="bisheng-api", status=~"5.."}[5m])) by (service)
+          sum(rate(http_requests_total{job="agent-api", status=~"5.."}[5m])) by (service)
           /
-          sum(rate(http_requests_total{job="bisheng-api"}[5m])) by (service)
+          sum(rate(http_requests_total{job="agent-api"}[5m])) by (service)
           > 0.05
         for: 5m
         labels:
@@ -54,9 +54,9 @@ groups:
 
       - alert: APICriticalErrorRate
         expr: |
-          sum(rate(http_requests_total{job="bisheng-api", status=~"5.."}[5m])) by (service)
+          sum(rate(http_requests_total{job="agent-api", status=~"5.."}[5m])) by (service)
           /
-          sum(rate(http_requests_total{job="bisheng-api"}[5m])) by (service)
+          sum(rate(http_requests_total{job="agent-api"}[5m])) by (service)
           > 0.10
         for: 2m
         labels:

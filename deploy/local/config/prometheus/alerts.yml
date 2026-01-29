@@ -97,31 +97,31 @@ groups:
     rules:
       # API-specific alerts
       - alert: AlldataAPIDown
-        expr: up{job="alldata-api"} == 0
+        expr: up{job="data-api"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Alldata API is down"
-          description: "Alldata API has been unreachable for more than 1 minute."
+          summary: "Data API is down"
+          description: "Data API has been unreachable for more than 1 minute."
 
       - alert: BishengAPIDown
-        expr: up{job="bisheng-api"} == 0
+        expr: up{job="agent-api"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Bisheng API is down"
-          description: "Bisheng API has been unreachable for more than 1 minute."
+          summary: "Agent API is down"
+          description: "Agent API has been unreachable for more than 1 minute."
 
       - alert: CubeAPIDown
-        expr: up{job="cube-api"} == 0
+        expr: up{job="model-api"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Cube API is down"
-          description: "Cube API has been unreachable for more than 1 minute."
+          summary: "Model API is down"
+          description: "Model API has been unreachable for more than 1 minute."
 
       - alert: OpenAIProxyDown
         expr: up{job="openai-proxy"} == 0

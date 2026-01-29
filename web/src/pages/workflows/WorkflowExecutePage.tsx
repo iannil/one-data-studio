@@ -37,7 +37,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import bisheng, { type WorkflowExecution, type HumanTask } from '@/services/bisheng';
+import bisheng, { type WorkflowExecution, type HumanTask } from '@/services/agent-service';
 import WorkflowLogViewer from '@/components/WorkflowLogViewer';
 // import './WorkflowsPage.less';
 
@@ -79,14 +79,14 @@ function WorkflowExecutePage() {
   // 获取工作流信息
   const { data: workflowData } = useQuery({
     queryKey: ['workflow', workflowId],
-    queryFn: () => bisheng.getWorkflow(workflowId!),
+    queryFn: () => agentService.getWorkflow(workflowId!),
     enabled: !!workflowId,
   });
 
   // 获取执行历史
   const { data: executionsData, refetch: refetchExecutions } = useQuery({
     queryKey: ['workflowExecutions', workflowId],
-    queryFn: () => bisheng.getWorkflowExecutions(workflowId!),
+    queryFn: () => agentService.getWorkflowExecutions(workflowId!),
     enabled: !!workflowId,
     refetchInterval: (query) => {
       // 如果有运行中的执行，每2秒轮询一次
@@ -101,7 +101,7 @@ function WorkflowExecutePage() {
   // 获取当前执行的日志
   const { data: logsData, refetch: refetchLogs } = useQuery({
     queryKey: ['executionLogs', executionId],
-    queryFn: () => bisheng.getExecutionLogs(executionId!),
+    queryFn: () => agentService.getExecutionLogs(executionId!),
     enabled: !!executionId && activeTab === 'logs',
     refetchInterval: (query) => {
       // 如果执行仍在运行，每2秒轮询日志
@@ -116,14 +116,14 @@ function WorkflowExecutePage() {
   // 获取待处理的人工任务
   const { data: pendingTasksData, refetch: refetchPendingTasks } = useQuery({
     queryKey: ['pendingHumanTasks', workflowId],
-    queryFn: () => bisheng.getPendingHumanTasks({ execution_id: workflowId }),
+    queryFn: () => agentService.getPendingHumanTasks({ execution_id: workflowId }),
     enabled: !!workflowId && activeTab === 'human-tasks',
   });
 
   // 获取人工任务统计
   const { data: myTasksStatsData } = useQuery({
     queryKey: ['myTasksStatistics'],
-    queryFn: () => bisheng.getMyTaskStatistics(),
+    queryFn: () => agentService.getMyTaskStatistics(),
     enabled: activeTab === 'human-tasks',
   });
 
@@ -135,7 +135,7 @@ function WorkflowExecutePage() {
       comment?: string;
       input_data?: Record<string, unknown>;
     }) =>
-      bisheng.submitHumanTask(data.taskId, {
+      agentService.submitHumanTask(data.taskId, {
         approved: data.action === 'approve',
         action: data.action,
         comment: data.comment,
@@ -160,7 +160,7 @@ function WorkflowExecutePage() {
   // 启动工作流
   const startMutation = useMutation({
     mutationFn: (data?: { inputs?: Record<string, unknown> }) =>
-      bisheng.startWorkflow(workflowId!, data),
+      agentService.startWorkflow(workflowId!, data),
     onSuccess: (result) => {
       message.success('工作流已启动');
       setExecutionId(result.data.execution_id);
@@ -174,7 +174,7 @@ function WorkflowExecutePage() {
   // 停止工作流
   const stopMutation = useMutation({
     mutationFn: (executionId: string) =>
-      bisheng.stopWorkflow(workflowId!, { execution_id: executionId }),
+      agentService.stopWorkflow(workflowId!, { execution_id: executionId }),
     onSuccess: () => {
       message.success('工作流已停止');
       refetchExecutions();

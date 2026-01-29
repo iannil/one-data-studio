@@ -1,32 +1,32 @@
-# Alldata API PodDisruptionBudget
+# Agent API PodDisruptionBudget
 # 确保在集群维护期间至少有 1 个 Pod 可用
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: alldata-api-pdb
-  namespace: one-data-alldata
+  name: agent-api-pdb
+  namespace: one-data-agent
   labels:
-    app: alldata-api
+    app: agent-api
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: alldata-api
+      app: agent-api
 
 ---
-# Alldata API HorizontalPodAutoscaler
+# Agent API HorizontalPodAutoscaler
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: alldata-api-hpa
-  namespace: one-data-alldata
+  name: agent-api-hpa
+  namespace: one-data-agent
   labels:
-    app: alldata-api
+    app: agent-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: alldata-api
+    name: agent-api
   minReplicas: 2
   maxReplicas: 10
   metrics:

@@ -42,7 +42,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient, { type ApiResponse } from '@/services/api';
-import type { CleaningRecommendation } from '@/services/alldata';
+import type { CleaningRecommendation } from '@/services/data';
 import './AICleaningRules.css';
 
 const { Option } = Select;

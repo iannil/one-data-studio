@@ -30,7 +30,7 @@ import {
   AppstoreOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import bisheng, { type Tool, type AgentStep, type AgentTemplate } from '@/services/bisheng';
+import bisheng, { type Tool, type AgentStep, type AgentTemplate } from '@/services/agent-service';
 import StepsViewer from './StepsViewer';
 import ToolExecuteModal from './ToolExecuteModal';
 import SchemaViewer from './SchemaViewer';
@@ -79,19 +79,19 @@ function AgentsPage() {
   // 获取工具列表
   const { data: toolsData, isLoading: toolsLoading } = useQuery({
     queryKey: ['tools'],
-    queryFn: () => bisheng.listTools(),
+    queryFn: () => agentService.listTools(),
   });
 
   // 获取工具 Schema
   const { data: schemasData } = useQuery({
     queryKey: ['toolSchemas'],
-    queryFn: () => bisheng.getToolSchemas(),
+    queryFn: () => agentService.getToolSchemas(),
   });
 
   // 获取 Agent 模板列表
   const { data: templatesData, isLoading: templatesLoading } = useQuery({
     queryKey: ['agentTemplates'],
-    queryFn: () => bisheng.listAgentTemplates(),
+    queryFn: () => agentService.listAgentTemplates(),
   });
 
   const tools = toolsData?.data?.tools || [];
@@ -118,7 +118,7 @@ function AgentsPage() {
 
     if (useStreaming) {
       // 使用流式 API
-      await bisheng.runAgentStream(
+      await agentService.runAgentStream(
         {
           query,
           agent_type: agentType,
@@ -164,7 +164,7 @@ function AgentsPage() {
     } else {
       // 使用非流式 API（原有逻辑）
       try {
-        const response = await bisheng.runAgent({
+        const response = await agentService.runAgent({
           query,
           agent_type: agentType,
           model,
@@ -246,7 +246,7 @@ function AgentsPage() {
 
   // 删除模板
   const deleteMutation = useMutation({
-    mutationFn: (templateId: string) => bisheng.deleteAgentTemplate(templateId),
+    mutationFn: (templateId: string) => agentService.deleteAgentTemplate(templateId),
     onSuccess: () => {
       message.success('模板删除成功');
       queryClient.invalidateQueries({ queryKey: ['agentTemplates'] });

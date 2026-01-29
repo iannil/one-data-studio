@@ -28,14 +28,14 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
+import model from '@/services/model';
 import type {
   Pipeline,
   CreatePipelineRequest,
   PipelineExecution,
   PipelineNode,
   PipelineEdge,
-} from '@/services/cube';
+} from '@/services/model';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -60,7 +60,7 @@ function PipelinesPage() {
   const { data: pipelinesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['pipelines', page, pageSize, statusFilter],
     queryFn: () =>
-      cube.getPipelines({
+      model.getPipelines({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -69,20 +69,20 @@ function PipelinesPage() {
 
   const { data: templatesData } = useQuery({
     queryKey: ['pipeline-templates'],
-    queryFn: () => cube.getPipelineTemplates(),
+    queryFn: () => model.getPipelineTemplates(),
   });
 
   const { data: executionsData, isLoading: isLoadingExecutions } = useQuery({
     queryKey: ['pipeline-executions', selectedPipeline?.pipeline_id],
     queryFn: () =>
-      cube.getPipelineExecutions(selectedPipeline!.pipeline_id),
+      model.getPipelineExecutions(selectedPipeline!.pipeline_id),
     enabled: !!selectedPipeline && isExecutionDrawerOpen,
     refetchInterval: 5000,
   });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: cube.createPipeline,
+    mutationFn: model.createPipeline,
     onSuccess: () => {
       message.success('Pipeline 创建成功');
       setIsCreateModalOpen(false);
@@ -97,7 +97,7 @@ function PipelinesPage() {
   });
 
   const stopExecutionMutation = useMutation({
-    mutationFn: cube.stopPipelineExecution,
+    mutationFn: model.stopPipelineExecution,
     onSuccess: () => {
       message.success('执行已停止');
       queryClient.invalidateQueries({ queryKey: ['pipeline-executions'] });

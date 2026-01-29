@@ -22,9 +22,9 @@ class TestServiceHealth:
             'timestamp': datetime.utcnow().isoformat(),
             'services': {
                 'api_gateway': {'status': 'healthy', 'uptime_seconds': 86400},
-                'alldata_api': {'status': 'healthy', 'uptime_seconds': 86400},
-                'bisheng_api': {'status': 'healthy', 'uptime_seconds': 86400},
-                'cube_api': {'status': 'healthy', 'uptime_seconds': 86400},
+                'data_api': {'status': 'healthy', 'uptime_seconds': 86400},
+                'agent_api': {'status': 'healthy', 'uptime_seconds': 86400},
+                'model_api': {'status': 'healthy', 'uptime_seconds': 86400},
                 'openai_proxy': {'status': 'healthy', 'uptime_seconds': 86400},
                 'mysql': {'status': 'healthy', 'uptime_seconds': 259200},
                 'redis': {'status': 'healthy', 'uptime_seconds': 172800},

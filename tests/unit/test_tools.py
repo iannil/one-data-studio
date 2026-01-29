@@ -23,7 +23,7 @@ class TestSafeMathEvaluator:
     def setup(self):
         """导入 SafeMathEvaluator"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import SafeMathEvaluator
         self.evaluator = SafeMathEvaluator
 
@@ -96,7 +96,7 @@ class TestSQLQueryTool:
     def setup(self):
         """设置测试环境"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
     def test_sql_injection_drop_blocked(self):
         """测试 SQL 注入 - DROP 语句被阻止"""
@@ -194,7 +194,7 @@ class TestSSRFProtection:
     def setup(self):
         """导入 SSRFProtection"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import SSRFProtection
         self.protection = SSRFProtection
 
@@ -266,7 +266,7 @@ class TestCalculatorTool:
     def setup(self):
         """导入 CalculatorTool"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import CalculatorTool
         self.tool = CalculatorTool()
 
@@ -312,7 +312,7 @@ class TestToolRegistry:
     def test_registry_initialization(self):
         """测试注册表初始化"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import get_tool_registry
 
         registry = get_tool_registry()
@@ -327,7 +327,7 @@ class TestToolRegistry:
     def test_get_nonexistent_tool(self):
         """测试获取不存在的工具"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import get_tool_registry
 
         registry = get_tool_registry()
@@ -337,7 +337,7 @@ class TestToolRegistry:
     def test_execute_nonexistent_tool(self):
         """测试执行不存在的工具"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
         from tools import get_tool_registry
         import asyncio
 
@@ -360,7 +360,7 @@ class TestEnvironmentChecks:
             if 'tools' in sys.modules:
                 del sys.modules['tools']
 
-            sys.path.insert(0, 'services/bisheng-api/engine')
+            sys.path.insert(0, 'services/agent-api/engine')
 
             with pytest.raises(ValueError, match="VERIFY_SSL cannot be disabled in production"):
                 import tools

@@ -35,7 +35,7 @@ show_start_help() {
         "ONE-DATA-STUDIO 开发环境启动脚本" \
         "dev-start.sh [选项] [服务...]" \
         "  -i, --infra       仅启动基础设施服务（mysql, redis, minio, etcd, milvus）
-  -a, --apps        仅启动应用服务（bisheng-api, alldata-api, cube-api, openai-proxy, web）
+  -a, --apps        仅启动应用服务（agent-api, data-api, model-api, openai-proxy, web）
   -m, --monitoring  包含监控服务（prometheus, grafana, jaeger）
   -b, --build       强制重新构建镜像
   -s, --seed        启动后导入种子数据（初始化数据）
@@ -304,9 +304,9 @@ print_access_info() {
 
     echo -e "${BOLD}应用服务:${NC}"
     echo "  Web 前端:        http://localhost:$(get_service_port web-frontend)"
-    echo "  Bisheng API:     http://localhost:$(get_service_port bisheng-api)"
-    echo "  Alldata API:     http://localhost:$(get_service_port alldata-api)"
-    echo "  Cube API:        http://localhost:$(get_service_port cube-api)"
+    echo "  Bisheng API:     http://localhost:$(get_service_port agent-api)"
+    echo "  Alldata API:     http://localhost:$(get_service_port data-api)"
+    echo "  Cube API:        http://localhost:$(get_service_port model-api)"
     echo "  OpenAI Proxy:    http://localhost:$(get_service_port openai-proxy)"
     echo ""
     echo -e "${BOLD}基础设施:${NC}"

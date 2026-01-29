@@ -28,9 +28,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: one-data-alldata
+  name: one-data-data
   labels:
-    name: one-data-alldata
+    name: one-data-data
     app: alldata
     istio-injection: enabled
 
@@ -39,9 +39,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: one-data-cube
+  name: one-data-model
   labels:
-    name: one-data-cube
+    name: one-data-model
     app: cube-studio
     istio-injection: enabled
 
@@ -50,8 +50,8 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: one-data-bisheng
+  name: one-data-agent
   labels:
-    name: one-data-bisheng
+    name: one-data-agent
     app: bisheng
     istio-injection: enabled

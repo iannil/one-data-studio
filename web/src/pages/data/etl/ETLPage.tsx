@@ -39,8 +39,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { ETLTask, CreateETLTaskRequest, ETLTaskStatus, ETLTaskType, KettleStatus } from '@/services/alldata';
+import data from '@/services/data';
+import type { ETLTask, CreateETLTaskRequest, ETLTaskStatus, ETLTaskType, KettleStatus } from '@/services/data';
 import AIFieldMappingPanel from './AIFieldMappingPanel';
 
 const { Option } = Select;
@@ -69,7 +69,7 @@ function ETLPage() {
   const { data: tasksData, isLoading: isLoadingList } = useQuery({
     queryKey: ['etl-tasks', page, pageSize, statusFilter, typeFilter],
     queryFn: () =>
-      alldata.getETLTasks({
+      data.getETLTasks({
         page,
         page_size: pageSize,
         status: statusFilter as ETLTaskStatus || undefined,
@@ -80,18 +80,18 @@ function ETLPage() {
   // 获取数据源列表（用于选择）
   const { data: sourcesData } = useQuery({
     queryKey: ['datasources'],
-    queryFn: () => alldata.getDataSources(),
+    queryFn: () => data.getDataSources(),
   });
 
   // 获取 Kettle 服务状态
   const { data: kettleStatusData } = useQuery({
     queryKey: ['kettle-status'],
-    queryFn: () => alldata.getKettleStatus(),
+    queryFn: () => data.getKettleStatus(),
   });
 
   // 创建 ETL 任务
   const createMutation = useMutation({
-    mutationFn: alldata.createETLTask,
+    mutationFn: data.createETLTask,
     onSuccess: () => {
       message.success('ETL 任务创建成功');
       setIsCreateModalOpen(false);
@@ -105,7 +105,7 @@ function ETLPage() {
 
   // 删除 ETL 任务
   const deleteMutation = useMutation({
-    mutationFn: alldata.deleteETLTask,
+    mutationFn: data.deleteETLTask,
     onSuccess: () => {
       message.success('ETL 任务删除成功');
       setIsDetailDrawerOpen(false);
@@ -118,7 +118,7 @@ function ETLPage() {
 
   // 启动 ETL 任务
   const startMutation = useMutation({
-    mutationFn: alldata.startETLTask,
+    mutationFn: data.startETLTask,
     onSuccess: () => {
       message.success('ETL 任务启动成功');
       queryClient.invalidateQueries({ queryKey: ['etl-tasks'] });
@@ -130,7 +130,7 @@ function ETLPage() {
 
   // 停止 ETL 任务
   const stopMutation = useMutation({
-    mutationFn: alldata.stopETLTask,
+    mutationFn: data.stopETLTask,
     onSuccess: () => {
       message.success('ETL 任务已停止');
       queryClient.invalidateQueries({ queryKey: ['etl-tasks'] });
@@ -142,7 +142,7 @@ function ETLPage() {
 
   // 使用 Kettle 引擎执行 ETL 任务
   const executeKettleMutation = useMutation({
-    mutationFn: (taskId: string) => alldata.executeETLTaskWithKettle(taskId),
+    mutationFn: (taskId: string) => data.executeETLTaskWithKettle(taskId),
     onSuccess: (response) => {
       if (response.data?.execution_result?.success) {
         message.success(`Kettle 任务执行成功，处理 ${response.data.execution_result.rows_written} 行`);
@@ -234,7 +234,7 @@ function ETLPage() {
 
   const handleViewLogs = async (task: ETLTask) => {
     try {
-      const result = await alldata.getETLTaskLogs(task.task_id);
+      const result = await data.getETLTaskLogs(task.task_id);
       setTaskLogs(result.data.logs?.map((log) => JSON.stringify(log, null, 2)).join('\n\n') || '暂无日志');
       setIsLogsModalOpen(true);
     } catch (error) {

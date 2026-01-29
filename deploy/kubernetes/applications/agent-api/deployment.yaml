@@ -1,4 +1,4 @@
-# Bisheng API - Production Deployment
+# Agent API - Production Deployment
 # Sprint 1.2: 集成 OpenAI 代理服务
 #
 # ============================================
@@ -8,31 +8,31 @@
 # Application code is built into the image via CI/CD pipeline.
 #
 # Build the Docker image:
-#   docker build -t bisheng-api:v1.0.0 -f deploy/dockerfiles/bisheng-api/Dockerfile .
+#   docker build -t agent-api:v1.0.0 -f deploy/dockerfiles/agent-api/Dockerfile .
 #
 # For local development, use docker-compose instead:
-#   docker-compose -f deploy/local/docker-compose.yml up bisheng-api
+#   docker-compose -f deploy/local/docker-compose.yml up agent-api
 # ============================================
 
 ---
-# Bisheng API Deployment
+# Agent API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
   labels:
-    app: bisheng-api
+    app: agent-api
     version: v1.1
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   template:
     metadata:
       labels:
-        app: bisheng-api
+        app: agent-api
         version: v1.1
     spec:
       affinity:
@@ -42,14 +42,14 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app: bisheng-api
+                  app: agent-api
               topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
         fsGroup: 1000
       containers:
       - name: api
-        image: bisheng-api:v1.0.0  # Use pre-built image instead of python base image with runtime pip install
+        image: agent-api:v1.0.0  # Use pre-built image instead of python base image with runtime pip install
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
@@ -64,9 +64,9 @@ spec:
         - name: PYTHONUNBUFFERED
           value: "true"
         - name: ALDATA_API_URL
-          value: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
+          value: "http://data-api.one-data-data.svc.cluster.local:8080"
         - name: CUBE_API_URL
-          value: "http://openai-proxy.one-data-cube.svc.cluster.local:8000"
+          value: "http://openai-proxy.one-data-model.svc.cluster.local:8000"
         ports:
         - name: http
           containerPort: 8080
@@ -97,15 +97,15 @@ spec:
         # No ConfigMap volume mount needed for production
 
 ---
-# Bisheng API Service
+# Agent API Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: bisheng-api
-  namespace: one-data-bisheng
+  name: agent-api
+  namespace: one-data-agent
 spec:
   selector:
-    app: bisheng-api
+    app: agent-api
   ports:
   - name: http
     port: 8080
@@ -120,7 +120,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: bisheng-ingress
-  namespace: one-data-bisheng
+  namespace: one-data-agent
   annotations:
     # SECURITY: Force HTTPS redirect
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -141,6 +141,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: bisheng-api
+            name: agent-api
             port:
               number: 8080

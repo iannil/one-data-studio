@@ -31,8 +31,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
-import type { LLMFineTuningJob, CreateFineTuningJobRequest, FineTuningDataset } from '@/services/cube';
+import model from '@/services/model';
+import type { LLMFineTuningJob, CreateFineTuningJobRequest, FineTuningDataset } from '@/services/model';
 
 const { Option } = Select;
 
@@ -52,7 +52,7 @@ function LLMTuningPage() {
   const { data: jobsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['llm-tuning-jobs', page, pageSize, statusFilter],
     queryFn: () =>
-      cube.getFineTuningJobs({
+      model.getFineTuningJobs({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -61,12 +61,12 @@ function LLMTuningPage() {
 
   const { data: datasetsData } = useQuery({
     queryKey: ['finetuning-datasets'],
-    queryFn: () => cube.getFineTuningDatasets(),
+    queryFn: () => model.getFineTuningDatasets(),
   });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: cube.createFineTuningJob,
+    mutationFn: model.createFineTuningJob,
     onSuccess: () => {
       message.success('微调任务创建成功');
       setIsCreateModalOpen(false);
@@ -79,7 +79,7 @@ function LLMTuningPage() {
   });
 
   const startMutation = useMutation({
-    mutationFn: cube.startFineTuningJob,
+    mutationFn: model.startFineTuningJob,
     onSuccess: () => {
       message.success('微调任务已启动');
       queryClient.invalidateQueries({ queryKey: ['llm-tuning-jobs'] });
@@ -90,7 +90,7 @@ function LLMTuningPage() {
   });
 
   const stopMutation = useMutation({
-    mutationFn: cube.stopFineTuningJob,
+    mutationFn: model.stopFineTuningJob,
     onSuccess: () => {
       message.success('微调任务已停止');
       queryClient.invalidateQueries({ queryKey: ['llm-tuning-jobs'] });

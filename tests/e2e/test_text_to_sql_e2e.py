@@ -66,7 +66,7 @@ class TestTextToSQLEndToEnd:
     def test_text_to_sql_basic_query(self, mock_llm_response):
         """测试基本的自然语言到 SQL 转换"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         with patch('requests.post') as mock_post:
             mock_response = MagicMock()
@@ -90,7 +90,7 @@ class TestTextToSQLEndToEnd:
     def test_text_to_sql_injection_prevention(self, mock_llm_response):
         """测试 SQL 注入防护在 Text-to-SQL 流程中的工作"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         # 即使 LLM 生成了危险的 SQL，验证层也应该阻止
         malicious_response = mock_llm_response.copy()
@@ -131,7 +131,7 @@ class TestTextToSQLEndToEnd:
     def test_text_to_sql_with_database_execution(self, mock_llm_response):
         """测试完整的 Text-to-SQL + 执行流程"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         with patch('requests.post') as mock_post:
             mock_response = MagicMock()
@@ -163,7 +163,7 @@ class TestTextToSQLEndToEnd:
     def test_text_to_sql_llm_error_handling(self):
         """测试 LLM 服务错误处理"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         with patch('requests.post') as mock_post:
             mock_response = MagicMock()
@@ -184,7 +184,7 @@ class TestTextToSQLEndToEnd:
     def test_text_to_sql_timeout_handling(self):
         """测试 LLM 请求超时处理"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         import requests
 
@@ -209,7 +209,7 @@ class TestAgentWorkflowEndToEnd:
     def test_agent_tool_execution_flow(self):
         """测试 Agent 工具执行流程"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         from tools import get_tool_registry
 
@@ -242,7 +242,7 @@ class TestAgentWorkflowEndToEnd:
     def test_agent_multi_tool_workflow(self):
         """测试 Agent 多工具工作流"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         from tools import get_tool_registry
 
@@ -274,7 +274,7 @@ class TestAgentWorkflowEndToEnd:
     def test_agent_tool_error_recovery(self):
         """测试 Agent 工具错误恢复"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         from tools import get_tool_registry
 
@@ -296,7 +296,7 @@ class TestAgentWorkflowEndToEnd:
     def test_agent_tool_validation_flow(self):
         """测试 Agent 工具参数验证流程"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         from tools import get_tool_registry
 
@@ -324,7 +324,7 @@ class TestSecurityEndToEnd:
         for mod in modules_to_remove:
             del sys.modules[mod]
 
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         # 在生产环境中，mock_data=True 应该被拒绝
         from tools import SQLQueryTool
@@ -336,7 +336,7 @@ class TestSecurityEndToEnd:
     def test_ssrf_protection_in_http_tool(self):
         """测试 HTTP 工具中的 SSRF 防护"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         from tools import HTTPRequestTool
 
@@ -362,7 +362,7 @@ class TestSecurityEndToEnd:
     def test_code_executor_sandbox_escape_prevention(self):
         """测试代码执行器沙箱逃逸防护"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine/tools')
+        sys.path.insert(0, 'services/agent-api/engine/tools')
 
         from code_executor import CodeExecutorTool
 

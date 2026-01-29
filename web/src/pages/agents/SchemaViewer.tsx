@@ -1,6 +1,6 @@
 import { Modal, Typography, Button, message } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
-import type { ToolSchema } from '@/services/bisheng';
+import type { ToolSchema } from '@/services/agent-service';
 
 const { Paragraph, Text } = Typography;
 

@@ -20,8 +20,8 @@
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | Web Frontend | 3000 | React 前端应用 |
-| Alldata API | 8080 | 数据治理 API |
-| Bisheng API | 8081 | LLM 应用编排 API |
+| Data API | 8080 | 数据治理 API |
+| Agent API | 8081 | LLM 应用编排 API |
 | OpenAI Proxy | 8000 | LLM 服务代理 |
 
 ### 依赖服务
@@ -46,7 +46,7 @@
 ├─────────────────────────────────────────────────────────────┤
 │                     Istio Service Mesh                       │
 ├─────────────────┬───────────────────┬───────────────────────┤
-│   Web Frontend  │   Alldata API     │   Bisheng API         │
+│   Web Frontend  │   Data API     │   Agent API         │
 │   (Deployment)  │   (Deployment)    │   (Deployment)        │
 │   replicas: 2   │   replicas: 2     │   replicas: 2         │
 ├─────────────────┴───────────────────┴───────────────────────┤
@@ -61,8 +61,8 @@
 
 | 组件 | CPU | 内存 | 存储 |
 |------|-----|------|------|
-| Alldata API | 500m-2000m | 512Mi-2Gi | - |
-| Bisheng API | 1000m-4000m | 1Gi-4Gi | - |
+| Data API | 500m-2000m | 512Mi-2Gi | - |
+| Agent API | 1000m-4000m | 1Gi-4Gi | - |
 | Web Frontend | 200m-1000m | 256Mi-1Gi | - |
 | MySQL | 2000m | 4Gi | 100Gi SSD |
 | Redis | 500m | 1Gi | 10Gi |
@@ -77,8 +77,8 @@
 
 ```bash
 # 检查所有服务健康状态
-curl http://alldata-api:8080/api/v1/health | jq
-curl http://bisheng-api:8081/api/v1/health | jq
+curl http://data-api:8080/api/v1/health | jq
+curl http://agent-api:8081/api/v1/health | jq
 
 # Kubernetes 环境
 kubectl get pods -n one-data-system
@@ -89,41 +89,41 @@ kubectl get pods -n one-data-system -o wide | grep -v Running
 
 ```bash
 # Docker Compose 环境
-docker-compose logs -f alldata-api
-docker-compose logs -f bisheng-api
+docker-compose logs -f data-api
+docker-compose logs -f agent-api
 
 # Kubernetes 环境
-kubectl logs -f deployment/alldata-api -n one-data-system
-kubectl logs -f deployment/bisheng-api -n one-data-system
+kubectl logs -f deployment/data-api -n one-data-system
+kubectl logs -f deployment/agent-api -n one-data-system
 
 # 使用 Loki 查询日志
 # Grafana -> Explore -> Loki
-# 查询示例：{service="bisheng-api"} |= "error"
+# 查询示例：{service="agent-api"} |= "error"
 ```
 
 ### 服务重启
 
 ```bash
 # Docker Compose 环境
-docker-compose restart alldata-api
-docker-compose restart bisheng-api
+docker-compose restart data-api
+docker-compose restart agent-api
 
 # Kubernetes 环境
-kubectl rollout restart deployment/alldata-api -n one-data-system
-kubectl rollout restart deployment/bisheng-api -n one-data-system
+kubectl rollout restart deployment/data-api -n one-data-system
+kubectl rollout restart deployment/agent-api -n one-data-system
 
 # 等待重启完成
-kubectl rollout status deployment/alldata-api -n one-data-system
+kubectl rollout status deployment/data-api -n one-data-system
 ```
 
 ### 配置更新
 
 ```bash
 # 更新 ConfigMap
-kubectl apply -f k8s/apps/alldata-api/configmap.yaml
+kubectl apply -f k8s/apps/data-api/configmap.yaml
 
 # 触发 Pod 重启以应用新配置
-kubectl rollout restart deployment/alldata-api -n one-data-system
+kubectl rollout restart deployment/data-api -n one-data-system
 ```
 
 ---
@@ -197,7 +197,7 @@ kubectl rollout restart deployment/alldata-api -n one-data-system
 ```yaml
 # 服务不可用告警
 - alert: ServiceDown
-  expr: up{job=~"alldata-api|bisheng-api"} == 0
+  expr: up{job=~"data-api|agent-api"} == 0
   for: 1m
   labels:
     severity: critical
@@ -373,7 +373,7 @@ echo "Backup completed: /backup/backup_$(date +%Y%m%d).tar.gz"
 kubectl top pods -n one-data-system
 
 # 2. 检查数据库连接
-kubectl exec -it deployment/bisheng-api -n one-data-system -- python -c "
+kubectl exec -it deployment/agent-api -n one-data-system -- python -c "
 from models import SessionLocal
 db = SessionLocal()
 db.execute('SELECT 1')
@@ -381,10 +381,10 @@ print('Database OK')
 "
 
 # 3. 检查 Redis 连接
-kubectl exec -it deployment/bisheng-api -n one-data-system -- redis-cli -h redis ping
+kubectl exec -it deployment/agent-api -n one-data-system -- redis-cli -h redis ping
 
 # 4. 检查慢查询日志
-kubectl logs deployment/bisheng-api -n one-data-system | grep -i slow
+kubectl logs deployment/agent-api -n one-data-system | grep -i slow
 ```
 
 #### 2. 向量检索失败
@@ -395,7 +395,7 @@ kubectl logs deployment/bisheng-api -n one-data-system | grep -i slow
 kubectl get pods -l app=milvus -n one-data-system
 
 # 2. 检查集合状态
-kubectl exec -it deployment/bisheng-api -n one-data-system -- python -c "
+kubectl exec -it deployment/agent-api -n one-data-system -- python -c "
 from services import VectorStore
 vs = VectorStore()
 print(vs.list_collections())
@@ -416,7 +416,7 @@ kubectl get pods -l app=keycloak -n one-data-system
 kubectl get secret jwt-secret -n one-data-system -o yaml
 
 # 3. 测试认证
-curl -v -H "Authorization: Bearer $TOKEN" http://bisheng-api:8081/api/v1/auth/me
+curl -v -H "Authorization: Bearer $TOKEN" http://agent-api:8081/api/v1/auth/me
 ```
 
 ### 紧急恢复流程
@@ -453,8 +453,8 @@ curl -v -H "Authorization: Bearer $TOKEN" http://bisheng-api:8081/api/v1/auth/me
 
 ```bash
 # 扩展 API 副本数
-kubectl scale deployment/alldata-api --replicas=3 -n one-data-system
-kubectl scale deployment/bisheng-api --replicas=3 -n one-data-system
+kubectl scale deployment/data-api --replicas=3 -n one-data-system
+kubectl scale deployment/agent-api --replicas=3 -n one-data-system
 ```
 
 ### 自动扩容 (HPA)
@@ -462,16 +462,16 @@ kubectl scale deployment/bisheng-api --replicas=3 -n one-data-system
 已配置的 HPA 策略：
 
 ```yaml
-# k8s/hpa/bisheng-api-hpa.yaml
+# k8s/hpa/agent-api-hpa.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: bisheng-api-hpa
+  name: agent-api-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: bisheng-api
+    name: agent-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -519,8 +519,8 @@ kubectl get hpa -n one-data-system
      -p='{"data":{"JWT_SECRET_KEY":"'$(echo -n $NEW_KEY | base64)'"}}'
 
    # 重启服务应用新密钥
-   kubectl rollout restart deployment/alldata-api -n one-data-system
-   kubectl rollout restart deployment/bisheng-api -n one-data-system
+   kubectl rollout restart deployment/data-api -n one-data-system
+   kubectl rollout restart deployment/agent-api -n one-data-system
    ```
 
 ### 网络策略
@@ -535,7 +535,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: bisheng-api
+      app: agent-api
   ingress:
   - from:
     - podSelector:
@@ -543,7 +543,7 @@ spec:
           app: web
     - podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
 ```
 
 ### 审计日志
@@ -555,7 +555,7 @@ spec:
 查看审计日志：
 ```bash
 # 查询审计日志（通过 Loki）
-{job="bisheng-api"} |= "AUDIT"
+{job="agent-api"} |= "AUDIT"
 ```
 
 ---
@@ -575,7 +575,7 @@ kubectl describe pod <pod-name> -n one-data-system
 kubectl exec -it <pod-name> -n one-data-system -- /bin/bash
 
 # 端口转发
-kubectl port-forward svc/bisheng-api 8081:8081 -n one-data-system
+kubectl port-forward svc/agent-api 8081:8081 -n one-data-system
 
 # 查看事件
 kubectl get events -n one-data-system --sort-by='.lastTimestamp'

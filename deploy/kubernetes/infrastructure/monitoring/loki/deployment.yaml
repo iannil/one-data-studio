@@ -225,7 +225,7 @@ data:
         relabel_configs:
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
-            regex: one-data-alldata|one-data-cube|one-data-bisheng|one-data-system|one-data-infra
+            regex: one-data-data|one-data-model|one-data-agent|one-data-system|one-data-infra
           - source_labels: [__meta_kubernetes_pod_container_name]
             action: replace
             target_label: container

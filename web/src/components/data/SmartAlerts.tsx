@@ -74,7 +74,7 @@ import {
   updateAlertSubscription,
   deleteAlertSubscription,
   getAvailableAlertTypes,
-} from '@/services/alldata';
+} from '@/services/data';
 import type {
   AnomalyDetectionResult,
   AlertRule,
@@ -83,7 +83,7 @@ import type {
   AlertStatistics,
   AlertSubscription,
   AlertType,
-} from '@/services/alldata';
+} from '@/services/data';
 import './SmartAlerts.css';
 
 // 通道配置接口

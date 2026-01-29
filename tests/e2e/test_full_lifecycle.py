@@ -31,8 +31,8 @@ class TestFullLifecycleE2E:
     def config(self) -> Dict[str, str]:
         """测试配置"""
         return {
-            "alldata_api_url": os.getenv("ALDATA_API_URL", "http://localhost:8080"),
-            "bisheng_api_url": os.getenv("BISHENG_API_URL", "http://localhost:8000"),
+            "data_api_url": os.getenv("ALDATA_API_URL", "http://localhost:8080"),
+            "agent_api_url": os.getenv("BISHENG_API_URL", "http://localhost:8000"),
             "openai_proxy_url": os.getenv("OPENAI_PROXY_URL", "http://localhost:8001"),
             "test_database": os.getenv("TEST_DATABASE", "test_dw"),
         }
@@ -42,7 +42,7 @@ class TestFullLifecycleE2E:
         """创建测试数据源并返回 ID"""
         # 阶段 1: 数据源接入
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/datasources",
+            f"{config['data_api_url']}/api/v1/datasources",
             json={
                 "name": "test_sales_db",
                 "type": "mysql",
@@ -62,14 +62,14 @@ class TestFullLifecycleE2E:
         yield source_id
 
         # 清理
-        requests.delete(f"{config['alldata_api_url']}/api/v1/datasources/{source_id}")
+        requests.delete(f"{config['data_api_url']}/api/v1/datasources/{source_id}")
 
     @pytest.fixture(scope="class")
     def test_tables(self, test_data_source_id, config) -> List[Dict[str, Any]]:
         """扫描并获取测试表列表"""
         # 触发元数据扫描
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/metadata/scan",
+            f"{config['data_api_url']}/api/v1/metadata/scan",
             json={"datasource_id": test_data_source_id}
         )
         assert response.status_code == 200
@@ -78,7 +78,7 @@ class TestFullLifecycleE2E:
         scan_id = response.json()["scan_id"]
         for _ in range(30):
             status_response = requests.get(
-                f"{config['alldata_api_url']}/api/v1/metadata/scan/{scan_id}"
+                f"{config['data_api_url']}/api/v1/metadata/scan/{scan_id}"
             )
             status = status_response.json()
             if status.get("status") == "completed":
@@ -87,7 +87,7 @@ class TestFullLifecycleE2E:
 
         # 获取表列表
         tables_response = requests.get(
-            f"{config['alldata_api_url']}/api/v1/metadata/tables",
+            f"{config['data_api_url']}/api/v1/metadata/tables",
             params={"datasource_id": test_data_source_id}
         )
         assert tables_response.status_code == 200
@@ -132,7 +132,7 @@ class TestFullLifecycleE2E:
     def test_stage1_datasource_connection(self, config):
         """阶段 1.1: 测试数据源连接"""
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/datasources/test-connection",
+            f"{config['data_api_url']}/api/v1/datasources/test-connection",
             json={
                 "type": "mysql",
                 "connection": {
@@ -147,7 +147,7 @@ class TestFullLifecycleE2E:
     def test_stage1_metadata_scan(self, test_data_source_id, config):
         """阶段 1.2: 测试元数据扫描"""
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/metadata/scan",
+            f"{config['data_api_url']}/api/v1/metadata/scan",
             json={"datasource_id": test_data_source_id}
         )
         assert response.status_code == 200
@@ -164,7 +164,7 @@ class TestFullLifecycleE2E:
             pytest.skip("No customers table found")
 
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/sensitivity/scan",
+            f"{config['data_api_url']}/api/v1/sensitivity/scan",
             json={
                 "datasource_id": test_data_source_id,
                 "table_name": test_table["name"],
@@ -179,7 +179,7 @@ class TestFullLifecycleE2E:
         scan_id = data["scan_id"]
         for _ in range(30):
             status_response = requests.get(
-                f"{config['alldata_api_url']}/api/v1/sensitivity/scan/{scan_id}"
+                f"{config['data_api_url']}/api/v1/sensitivity/scan/{scan_id}"
             )
             status = status_response.json()
             if status.get("status") == "completed":
@@ -188,7 +188,7 @@ class TestFullLifecycleE2E:
 
         # 获取扫描结果
         result_response = requests.get(
-            f"{config['alldata_api_url']}/api/v1/sensitivity/results/{scan_id}"
+            f"{config['data_api_url']}/api/v1/sensitivity/results/{scan_id}"
         )
         assert result_response.status_code == 200
         results = result_response.json()
@@ -207,7 +207,7 @@ class TestFullLifecycleE2E:
         """阶段 3: 测试 ETL 编排"""
         # 创建 ETL 任务
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/etl/jobs",
+            f"{config['data_api_url']}/api/v1/etl/jobs",
             json={
                 "name": "test_daily_sales_sync",
                 "type": "sync",
@@ -233,7 +233,7 @@ class TestFullLifecycleE2E:
 
         # 触发任务执行
         run_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/etl/jobs/{job_id}/run"
+            f"{config['data_api_url']}/api/v1/etl/jobs/{job_id}/run"
         )
         assert run_response.status_code == 200
 
@@ -241,7 +241,7 @@ class TestFullLifecycleE2E:
         run_id = run_response.json().get("run_id")
         for _ in range(60):
             status_response = requests.get(
-                f"{config['alldata_api_url']}/api/v1/etl/runs/{run_id}"
+                f"{config['data_api_url']}/api/v1/etl/runs/{run_id}"
             )
             status = status_response.json()
             if status.get("status") in ("completed", "failed"):
@@ -249,7 +249,7 @@ class TestFullLifecycleE2E:
             time.sleep(2)
 
         # 清理
-        requests.delete(f"{config['alldata_api_url']}/api/v1/etl/jobs/{job_id}")
+        requests.delete(f"{config['data_api_url']}/api/v1/etl/jobs/{job_id}")
 
     # ==================== 阶段 4: 元数据同步与数据血缘 ====================
 
@@ -257,7 +257,7 @@ class TestFullLifecycleE2E:
         """阶段 4: 测试血缘跟踪"""
         # 创建血缘事件
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/lineage/events",
+            f"{config['data_api_url']}/api/v1/lineage/events",
             json={
                 "event_type": "etl_job_completed",
                 "source_tables": ["sales_dw.orders"],
@@ -270,7 +270,7 @@ class TestFullLifecycleE2E:
 
         # 查询血缘关系
         lineage_response = requests.get(
-            f"{config['alldata_api_url']}/api/v1/lineage/upstream",
+            f"{config['data_api_url']}/api/v1/lineage/upstream",
             params={
                 "namespace": "analytics",
                 "table_name": "fact_orders",
@@ -290,7 +290,7 @@ class TestFullLifecycleE2E:
         # 计算资产价值
         for table in test_tables[:2]:  # 只测试前两个表
             response = requests.post(
-                f"{config['alldata_api_url']}/api/v1/assets/evaluate",
+                f"{config['data_api_url']}/api/v1/assets/evaluate",
                 json={
                     "namespace": table.get("schema", "sales_dw"),
                     "table_name": table["name"],
@@ -302,7 +302,7 @@ class TestFullLifecycleE2E:
 
         # 获取高价值资产列表
         assets_response = requests.get(
-            f"{config['alldata_api_url']}/api/v1/assets",
+            f"{config['data_api_url']}/api/v1/assets",
             params={"min_value_score": 50}
         )
         assert assets_response.status_code == 200
@@ -318,7 +318,7 @@ class TestFullLifecycleE2E:
 
         # 触发表融合分析
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/fusion/analyze",
+            f"{config['data_api_url']}/api/v1/fusion/analyze",
             json={
                 "tables": [
                     {"namespace": t.get("schema", "sales_dw"), "name": t["name"]}
@@ -339,7 +339,7 @@ class TestFullLifecycleE2E:
             pytest.skip("No tables to index")
 
         response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/knowledge/build",
+            f"{config['data_api_url']}/api/v1/knowledge/build",
             json={
                 "datasource_id": test_tables[0].get("datasource_id", "test"),
                 "tables": [t["name"] for t in test_tables[:2]],
@@ -354,7 +354,7 @@ class TestFullLifecycleE2E:
             if task_id:
                 for _ in range(60):
                     status_response = requests.get(
-                        f"{config['alldata_api_url']}/api/v1/knowledge/tasks/{task_id}"
+                        f"{config['data_api_url']}/api/v1/knowledge/tasks/{task_id}"
                     )
                     status = status_response.json()
                     if status.get("status") in ("completed", "failed"):
@@ -366,7 +366,7 @@ class TestFullLifecycleE2E:
     def test_stage8_text_to_sql(self, config):
         """阶段 8.1: 测试 Text-to-SQL"""
         response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/text-to-sql",
+            f"{config['agent_api_url']}/api/v1/text-to-sql",
             json={
                 "question": "查询最近7天的订单总金额",
                 "database": config["test_database"],
@@ -380,7 +380,7 @@ class TestFullLifecycleE2E:
     def test_stage8_rag_query(self, config):
         """阶段 8.2: 测试 RAG 查询"""
         response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/rag/query",
+            f"{config['agent_api_url']}/api/v1/rag/query",
             json={
                 "question": "订单数据的敏感信息如何处理？",
                 "collection": "knowledge_base",
@@ -394,7 +394,7 @@ class TestFullLifecycleE2E:
     def test_stage8_agent_query(self, config):
         """阶段 8.3: 测试 Agent 查询"""
         response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/agent/chat",
+            f"{config['agent_api_url']}/api/v1/agent/chat",
             json={
                 "message": "帮我分析一下销售额趋势",
                 "use_tools": True,
@@ -420,7 +420,7 @@ class TestFullLifecycleE2E:
         # 2. 元数据扫描
         print(f"[{flow_id}] Stage 1.2: 元数据扫描")
         scan_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/metadata/scan",
+            f"{config['data_api_url']}/api/v1/metadata/scan",
             json={"datasource_id": test_data_source_id}
         )
         assert scan_response.status_code == 200
@@ -428,7 +428,7 @@ class TestFullLifecycleE2E:
         # 3. 敏感数据扫描
         print(f"[{flow_id}] Stage 2: 敏感数据扫描")
         sensitivity_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/sensitivity/scan-batch",
+            f"{config['data_api_url']}/api/v1/sensitivity/scan-batch",
             json={"datasource_id": test_data_source_id}
         )
         assert sensitivity_response.status_code in (200, 202)
@@ -436,7 +436,7 @@ class TestFullLifecycleE2E:
         # 4. ETL 任务创建
         print(f"[{flow_id}] Stage 3: ETL 编排")
         etl_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/etl/jobs",
+            f"{config['data_api_url']}/api/v1/etl/jobs",
             json={
                 "name": f"{flow_id}_etl",
                 "source": {"datasource_id": test_data_source_id, "table": "orders"},
@@ -449,7 +449,7 @@ class TestFullLifecycleE2E:
         # 5. 血缘记录
         print(f"[{flow_id}] Stage 4: 血缘跟踪")
         lineage_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/lineage/events",
+            f"{config['data_api_url']}/api/v1/lineage/events",
             json={
                 "job_name": f"{flow_id}_etl",
                 "source_tables": ["sales_dw.orders"],
@@ -461,7 +461,7 @@ class TestFullLifecycleE2E:
         # 6. 资产评估
         print(f"[{flow_id}] Stage 5: 资产评估")
         asset_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/assets/evaluate-batch",
+            f"{config['data_api_url']}/api/v1/assets/evaluate-batch",
             json={"datasource_id": test_data_source_id}
         )
         assert asset_response.status_code in (200, 202)
@@ -469,7 +469,7 @@ class TestFullLifecycleE2E:
         # 7. 向量索引
         print(f"[{flow_id}] Stage 7: 向量索引")
         index_response = requests.post(
-            f"{config['alldata_api_url']}/api/v1/knowledge/build",
+            f"{config['data_api_url']}/api/v1/knowledge/build",
             json={"datasource_id": test_data_source_id}
         )
         assert index_response.status_code in (200, 202)
@@ -477,14 +477,14 @@ class TestFullLifecycleE2E:
         # 8. 智能查询
         print(f"[{flow_id}] Stage 8: 智能查询")
         query_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/agent/chat",
+            f"{config['agent_api_url']}/api/v1/agent/chat",
             json={"message": "查询订单数据"}
         )
         assert query_response.status_code == 200
 
         # 清理
         if job_id:
-            requests.delete(f"{config['alldata_api_url']}/api/v1/etl/jobs/{job_id}")
+            requests.delete(f"{config['data_api_url']}/api/v1/etl/jobs/{job_id}")
 
         print(f"[{flow_id}] Complete lifecycle test passed!")
 
@@ -496,7 +496,7 @@ class TestTextToSQLE2E:
         """测试 SQL 生成和执行流程"""
         # 1. 生成 SQL
         gen_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/text-to-sql",
+            f"{config['agent_api_url']}/api/v1/text-to-sql",
             json={
                 "question": "查询销售额最高的前10个产品",
                 "database": config["test_database"],
@@ -510,7 +510,7 @@ class TestTextToSQLE2E:
 
         # 2. 验证 SQL 安全性
         validate_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/sql/validate",
+            f"{config['agent_api_url']}/api/v1/sql/validate",
             json={"sql": sql}
         )
         assert validate_response.status_code == 200
@@ -519,7 +519,7 @@ class TestTextToSQLE2E:
 
         # 3. 执行 SQL
         exec_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/sql/execute",
+            f"{config['agent_api_url']}/api/v1/sql/execute",
             json={
                 "sql": sql,
                 "database": config["test_database"],
@@ -538,7 +538,7 @@ class TestRAGE2E:
         """测试向量搜索和生成流程"""
         # 1. 向量搜索
         search_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/vector/search",
+            f"{config['agent_api_url']}/api/v1/vector/search",
             json={
                 "query": "如何处理订单敏感信息",
                 "top_k": 5,
@@ -551,7 +551,7 @@ class TestRAGE2E:
 
         # 2. RAG 查询
         rag_response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/rag/query",
+            f"{config['agent_api_url']}/api/v1/rag/query",
             json={
                 "question": "如何处理订单敏感信息",
                 "use_vector_search": True,
@@ -568,7 +568,7 @@ class TestAgentE2E:
     def test_multi_tool_agent_execution(self, config):
         """测试多工具 Agent 执行"""
         response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/agent/chat",
+            f"{config['agent_api_url']}/api/v1/agent/chat",
             json={
                 "message": "分析一下最近一个月的销售趋势，并生成图表",
                 "session_id": f"test_{int(time.time())}",
@@ -590,14 +590,14 @@ class TestAgentE2E:
 class TestSmokeE2E:
     """冒烟测试 - 快速验证关键功能"""
 
-    def test_alldata_api_health(self, config):
+    def test_data_api_health(self, config):
         """测试 Alldata API 健康状态"""
-        response = requests.get(f"{config['alldata_api_url']}/health")
+        response = requests.get(f"{config['data_api_url']}/health")
         assert response.status_code == 200
 
-    def test_bisheng_api_health(self, config):
+    def test_agent_api_health(self, config):
         """测试 Bisheng API 健康状态"""
-        response = requests.get(f"{config['bisheng_api_url']}/health")
+        response = requests.get(f"{config['agent_api_url']}/health")
         assert response.status_code == 200
 
     def test_openai_proxy_health(self, config):
@@ -607,10 +607,10 @@ class TestSmokeE2E:
 
     def test_api_versions(self, config):
         """测试 API 版本端点"""
-        alldata_response = requests.get(f"{config['alldata_api_url']}/api/version")
+        alldata_response = requests.get(f"{config['data_api_url']}/api/version")
         assert alldata_response.status_code == 200
 
-        bisheng_response = requests.get(f"{config['bisheng_api_url']}/api/version")
+        bisheng_response = requests.get(f"{config['agent_api_url']}/api/version")
         assert bisheng_response.status_code == 200
 
 
@@ -623,7 +623,7 @@ class TestPerformanceE2E:
         start_time = time.time()
 
         response = requests.post(
-            f"{config['bisheng_api_url']}/api/v1/text-to-sql",
+            f"{config['agent_api_url']}/api/v1/text-to-sql",
             json={
                 "question": "查询所有订单",
                 "database": config["test_database"],
@@ -640,7 +640,7 @@ class TestPerformanceE2E:
 
         def make_request():
             response = requests.post(
-                f"{config['bisheng_api_url']}/api/v1/sql/execute",
+                f"{config['agent_api_url']}/api/v1/sql/execute",
                 json={
                     "sql": "SELECT 1",
                     "database": config["test_database"],

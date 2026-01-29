@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowEditorPage from './WorkflowEditorPage';
-import * as bishengService from '../../services/bisheng';
+import * as agentServiceService from '../../services/agent-service';
 
 // Mock 服务
 vi.mock('../../services/bisheng', () => ({

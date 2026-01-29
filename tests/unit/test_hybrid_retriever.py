@@ -394,4 +394,4 @@ def test_search_variations(query, expected_min_results):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--cov=services/bisheng_api/services/hybrid_retriever", "--cov-report=term-missing"])
+    pytest.main([__file__, "-v", "--cov=services/agent_api/services/hybrid_retriever", "--cov-report=term-missing"])

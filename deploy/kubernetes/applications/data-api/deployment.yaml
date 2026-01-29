@@ -1,13 +1,13 @@
-# Alldata API 持久化服务
+# Data API 持久化服务
 # Sprint 1.1: MySQL + SQLAlchemy 实现
 
 ---
-# Alldata API ConfigMap (可选配置)
+# Data API ConfigMap (可选配置)
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: alldata-api-env
-  namespace: one-data-alldata
+  name: data-api-env
+  namespace: one-data-data
 data:
   # MySQL 配置
   MYSQL_HOST: "mysql.one-data-infra.svc.cluster.local"
@@ -28,24 +28,24 @@ data:
   OPENMETADATA_TIMEOUT: "30"
 
 ---
-# Alldata API Deployment
+# Data API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
   labels:
-    app: alldata-api
+    app: data-api
     version: v1.1
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   template:
     metadata:
       labels:
-        app: alldata-api
+        app: data-api
         version: v1.1
     spec:
       affinity:
@@ -55,14 +55,14 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app: alldata-api
+                  app: data-api
               topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
         fsGroup: 1000
       containers:
       - name: api
-        image: alldata-api:v1.0.0  # Use semantic versioning or git SHA, never :latest
+        image: data-api:v1.0.0  # Use semantic versioning or git SHA, never :latest
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
@@ -82,22 +82,22 @@ spec:
         - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MYSQL_HOST
         - name: MYSQL_PORT
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MYSQL_PORT
         - name: MYSQL_USER
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MYSQL_USER
         - name: MYSQL_DATABASE
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MYSQL_DATABASE
         - name: MYSQL_PASSWORD
           valueFrom:
@@ -109,17 +109,17 @@ spec:
         - name: MINIO_ENDPOINT
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MINIO_ENDPOINT
         - name: MINIO_DEFAULT_BUCKET
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MINIO_DEFAULT_BUCKET
         - name: MINIO_USE_SSL
           valueFrom:
             configMapKeyRef:
-              name: alldata-api-env
+              name: data-api-env
               key: MINIO_USE_SSL
         - name: MINIO_ACCESS_KEY
           valueFrom:
@@ -162,17 +162,17 @@ spec:
             cpu: "500m"
 
 ---
-# Alldata API Service
+# Data API Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: alldata-api
-  namespace: one-data-alldata
+  name: data-api
+  namespace: one-data-data
   labels:
-    app: alldata-api
+    app: data-api
 spec:
   selector:
-    app: alldata-api
+    app: data-api
   ports:
   - name: http
     port: 8080
@@ -181,12 +181,12 @@ spec:
   type: ClusterIP
 
 ---
-# Alldata API Ingress (可选)
+# Data API Ingress (可选)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: alldata-ingress
-  namespace: one-data-alldata
+  namespace: one-data-data
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 spec:
@@ -199,6 +199,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: alldata-api
+            name: data-api
             port:
               number: 8080

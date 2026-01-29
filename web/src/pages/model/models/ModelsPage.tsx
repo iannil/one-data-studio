@@ -24,8 +24,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
-import type { RegisteredModel, RegisterModelRequest } from '@/services/cube';
+import model from '@/services/model';
+import type { RegisteredModel, RegisterModelRequest } from '@/services/model';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -48,7 +48,7 @@ function ModelsPage() {
   const { data: modelsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['registered-models', page, pageSize, frameworkFilter, statusFilter],
     queryFn: () =>
-      cube.getRegisteredModels({
+      model.getRegisteredModels({
         page,
         page_size: pageSize,
         framework: frameworkFilter || undefined,
@@ -58,7 +58,7 @@ function ModelsPage() {
 
   // 注册模型
   const registerMutation = useMutation({
-    mutationFn: cube.registerModel,
+    mutationFn: model.registerModel,
     onSuccess: () => {
       message.success('模型注册成功');
       setIsRegisterModalOpen(false);
@@ -72,7 +72,7 @@ function ModelsPage() {
 
   // 删除模型
   const deleteMutation = useMutation({
-    mutationFn: cube.deleteRegisteredModel,
+    mutationFn: model.deleteRegisteredModel,
     onSuccess: () => {
       message.success('模型删除成功');
       setIsDetailDrawerOpen(false);
@@ -86,7 +86,7 @@ function ModelsPage() {
   // 设置模型阶段
   const setStageMutation = useMutation({
     mutationFn: ({ modelId, version, stage }: { modelId: string; version: string; stage: string }) =>
-      cube.setModelStage(modelId, version, stage),
+      model.setModelStage(modelId, version, stage),
     onSuccess: () => {
       message.success('模型状态更新成功');
       queryClient.invalidateQueries({ queryKey: ['registered-models'] });

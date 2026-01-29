@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExecutionLogsModal from './ExecutionLogsModal';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -70,7 +70,7 @@ describe('ExecutionLogsModal', () => {
   });
 
   it('应该在 open 为 true 时渲染', async () => {
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: [] },
     });
@@ -85,7 +85,7 @@ describe('ExecutionLogsModal', () => {
   });
 
   it('应该显示执行 ID 的缩略形式', async () => {
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: [] },
     });
@@ -109,7 +109,7 @@ describe('ExecutionLogsModal 日志显示', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: mockLogs },
     });
@@ -171,7 +171,7 @@ describe('ExecutionLogsModal 空状态', () => {
   });
 
   it('无日志时应该显示空状态', async () => {
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: [] },
     });
@@ -193,7 +193,7 @@ describe('ExecutionLogsModal 加载状态', () => {
   });
 
   it('应该在加载时显示 Spin', async () => {
-    vi.mocked(bisheng.getExecutionLogs).mockImplementation(
+    vi.mocked(agentService.getExecutionLogs).mockImplementation(
       () => new Promise(() => {}) // 永不解析
     );
 
@@ -210,7 +210,7 @@ describe('ExecutionLogsModal 关闭操作', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: mockLogs },
     });
@@ -244,7 +244,7 @@ describe('ExecutionLogsModal API 调用', () => {
   });
 
   it('应该使用正确的 executionId 调用 API', async () => {
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: [] },
     });
@@ -254,7 +254,7 @@ describe('ExecutionLogsModal API 调用', () => {
     );
 
     await waitFor(() => {
-      expect(bisheng.getExecutionLogs).toHaveBeenCalledWith('my-execution-123');
+      expect(agentService.getExecutionLogs).toHaveBeenCalledWith('my-execution-123');
     });
   });
 
@@ -263,7 +263,7 @@ describe('ExecutionLogsModal API 调用', () => {
       <ExecutionLogsModal executionId="exec-001" open={false} onClose={vi.fn()} />
     );
 
-    expect(bisheng.getExecutionLogs).not.toHaveBeenCalled();
+    expect(agentService.getExecutionLogs).not.toHaveBeenCalled();
   });
 
   it('executionId 为 null 时不应该调用 API', () => {
@@ -271,7 +271,7 @@ describe('ExecutionLogsModal API 调用', () => {
       <ExecutionLogsModal executionId={null} open={true} onClose={vi.fn()} />
     );
 
-    expect(bisheng.getExecutionLogs).not.toHaveBeenCalled();
+    expect(agentService.getExecutionLogs).not.toHaveBeenCalled();
   });
 });
 
@@ -280,7 +280,7 @@ describe('ExecutionLogsModal 日志容器', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getExecutionLogs).mockResolvedValue({
+    vi.mocked(agentService.getExecutionLogs).mockResolvedValue({
       code: 0,
       data: { logs: mockLogs },
     });

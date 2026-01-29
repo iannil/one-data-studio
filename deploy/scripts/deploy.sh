@@ -168,7 +168,7 @@ build_images() {
 
     # 构建后端服务
     log_info "构建后端镜像..."
-    docker-compose -f "$COMPOSE_FILE" build alldata-api bisheng-api
+    docker-compose -f "$COMPOSE_FILE" build data-api agent-api
 
     log_info "✓ 镜像构建完成"
 }
@@ -206,10 +206,10 @@ start_services() {
 
     # 运行数据库迁移
     log_info "运行数据库迁移..."
-    docker-compose $compose_files exec -T alldata-api \
+    docker-compose $compose_files exec -T data-api \
         python -c "from models import Base; from database import engine; Base.metadata.create_all(engine)" 2>/dev/null || true
 
-    docker-compose $compose_files exec -T bisheng-api \
+    docker-compose $compose_files exec -T agent-api \
         python -c "from models import Base; from database import engine; Base.metadata.create_all(engine)" 2>/dev/null || true
 
     log_info "✓ 服务启动完成"

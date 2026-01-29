@@ -32,8 +32,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
-import type { ServingService, CreateServingServiceRequest } from '@/services/cube';
+import model from '@/services/model';
+import type { ServingService, CreateServingServiceRequest } from '@/services/model';
 
 const { Option } = Select;
 
@@ -56,7 +56,7 @@ function ServingPage() {
   const { data: servicesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['serving-services', page, pageSize, statusFilter],
     queryFn: () =>
-      cube.getServingServices({
+      model.getServingServices({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -65,7 +65,7 @@ function ServingPage() {
 
   // 创建服务
   const createMutation = useMutation({
-    mutationFn: cube.createServingService,
+    mutationFn: model.createServingService,
     onSuccess: () => {
       message.success('服务创建成功');
       setIsCreateModalOpen(false);
@@ -79,7 +79,7 @@ function ServingPage() {
 
   // 启动服务
   const startMutation = useMutation({
-    mutationFn: cube.startServingService,
+    mutationFn: model.startServingService,
     onSuccess: () => {
       message.success('服务启动成功');
       queryClient.invalidateQueries({ queryKey: ['serving-services'] });
@@ -91,7 +91,7 @@ function ServingPage() {
 
   // 停止服务
   const stopMutation = useMutation({
-    mutationFn: cube.stopServingService,
+    mutationFn: model.stopServingService,
     onSuccess: () => {
       message.success('服务已停止');
       queryClient.invalidateQueries({ queryKey: ['serving-services'] });
@@ -103,7 +103,7 @@ function ServingPage() {
 
   // 删除服务
   const deleteMutation = useMutation({
-    mutationFn: cube.deleteServingService,
+    mutationFn: model.deleteServingService,
     onSuccess: () => {
       message.success('服务删除成功');
       setIsDetailDrawerOpen(false);
@@ -117,7 +117,7 @@ function ServingPage() {
   // 扩缩容
   const scaleMutation = useMutation({
     mutationFn: ({ serviceId, replicas }: { serviceId: string; replicas: number }) =>
-      cube.scaleServingService(serviceId, { replicas }),
+      model.scaleServingService(serviceId, { replicas }),
     onSuccess: () => {
       message.success('扩缩容成功');
       setIsScaleModalOpen(false);

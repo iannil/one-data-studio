@@ -342,4 +342,4 @@ def test_insight_detection(data, expected_insight_types):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--cov=services/bisheng_api/services/result_interpreter", "--cov-report=term-missing"])
+    pytest.main([__file__, "-v", "--cov=services/agent_api/services/result_interpreter", "--cov-report=term-missing"])

@@ -1,6 +1,6 @@
 import { Timeline } from 'antd';
 import { ClockCircleOutlined, ToolOutlined, EyeOutlined, CheckCircleOutlined, FileTextOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import type { AgentStep } from '@/services/bisheng';
+import type { AgentStep } from '@/services/agent-service';
 
 interface StepsViewerProps {
   steps: AgentStep[];

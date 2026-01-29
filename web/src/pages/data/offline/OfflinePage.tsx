@@ -26,8 +26,8 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { OfflineWorkflow, WorkflowExecution } from '@/services/alldata';
+import data from '@/services/data';
+import type { OfflineWorkflow, WorkflowExecution } from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -48,7 +48,7 @@ function OfflinePage() {
   const { data: workflowsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['offline-workflows', page, pageSize, statusFilter],
     queryFn: () =>
-      alldata.getOfflineWorkflows({
+      data.getOfflineWorkflows({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -58,7 +58,7 @@ function OfflinePage() {
   const { data: executionsData, isLoading: isLoadingExecutions } = useQuery({
     queryKey: ['workflow-executions', selectedWorkflow?.workflow_id],
     queryFn: () =>
-      alldata.getWorkflowExecutions(selectedWorkflow!.workflow_id),
+      data.getWorkflowExecutions(selectedWorkflow!.workflow_id),
     enabled: !!selectedWorkflow && isExecutionModalOpen,
     refetchInterval: 5000,
   });

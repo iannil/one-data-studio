@@ -22,7 +22,7 @@ class TestCodeSecurityValidator:
     def setup(self):
         """导入 CodeSecurityValidator"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine/tools')
+        sys.path.insert(0, 'services/agent-api/engine/tools')
         from code_executor import CodeSecurityValidator
         self.validator = CodeSecurityValidator()
 
@@ -159,7 +159,7 @@ class TestCodeExecutorTool:
     def setup(self):
         """导入 CodeExecutorTool"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine/tools')
+        sys.path.insert(0, 'services/agent-api/engine/tools')
         from code_executor import CodeExecutorTool
         self.tool = CodeExecutorTool()
 
@@ -369,7 +369,7 @@ class TestCodeExecutorDisabled:
     def test_unrestricted_mode(self):
         """测试非限制模式（仅用于测试）"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine/tools')
+        sys.path.insert(0, 'services/agent-api/engine/tools')
         from code_executor import CodeExecutorTool
 
         tool = CodeExecutorTool(config={"enable_restricted": False})
@@ -389,7 +389,7 @@ class TestSafeBuiltins:
     def setup(self):
         """导入 CodeExecutorTool"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine/tools')
+        sys.path.insert(0, 'services/agent-api/engine/tools')
         from code_executor import CodeExecutorTool
         self.tool = CodeExecutorTool()
 

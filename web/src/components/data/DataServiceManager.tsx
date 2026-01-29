@@ -63,14 +63,14 @@ import {
   getAPICallRecords,
   getServiceStatistics,
   getOverallStatistics,
-} from '@/services/alldata';
+} from '@/services/data';
 import type {
   APIDataService,
   APIKeyInfo,
   APICallRecord,
   ServiceStatistics,
   OverallStatistics,
-} from '@/services/alldata';
+} from '@/services/data';
 import './DataServiceManager.css';
 
 const { Option } = Select;

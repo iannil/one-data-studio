@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExecutionsDashboard from './ExecutionsDashboard';
-import bisheng from '@/services/bisheng';
+import agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -81,12 +81,12 @@ describe('ExecutionsDashboard', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -158,12 +158,12 @@ describe('ExecutionsDashboard 执行列表', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -226,12 +226,12 @@ describe('ExecutionsDashboard 成功率', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -260,12 +260,12 @@ describe('ExecutionsDashboard 查看日志', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -300,12 +300,12 @@ describe('ExecutionsDashboard 自动刷新', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -332,12 +332,12 @@ describe('ExecutionsDashboard 空状态', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: [] },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: [] },
     });
@@ -367,12 +367,12 @@ describe('ExecutionsDashboard 分页', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });
@@ -392,12 +392,12 @@ describe('ExecutionsDashboard 搜索过滤', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(bisheng.getWorkflows).mockResolvedValue({
+    vi.mocked(agentService.getWorkflows).mockResolvedValue({
       code: 0,
       data: { workflows: mockWorkflows },
     });
 
-    vi.mocked(bisheng.listExecutions).mockResolvedValue({
+    vi.mocked(agentService.listExecutions).mockResolvedValue({
       code: 0,
       data: { executions: mockExecutions },
     });

@@ -35,13 +35,13 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
+import model from '@/services/model';
 import type {
   MonitoringAlertRule,
   AlertNotification,
   MetricPeriod,
   AlertSeverity,
-} from '@/services/cube';
+} from '@/services/model';
 import MetricChart from '@/components/MetricChart';
 
 const { Option } = Select;
@@ -68,46 +68,46 @@ function MonitoringPage() {
   // 获取指标概览
   const { data: overviewData } = useQuery({
     queryKey: ['metricsOverview'],
-    queryFn: cube.getMetricsOverview,
+    queryFn: model.getMetricsOverview,
     refetchInterval: 30000,
   });
 
   // 获取系统指标
   const { data: systemMetricsData } = useQuery({
     queryKey: ['systemMetrics'],
-    queryFn: cube.getSystemMetrics,
+    queryFn: model.getSystemMetrics,
     refetchInterval: 5000,
   });
 
   // 获取告警规则
   const { data: alertRulesData, isLoading: isLoadingRules } = useQuery({
     queryKey: ['alertRules'],
-    queryFn: () => cube.getAlertRules(),
+    queryFn: () => model.getAlertRules(),
   });
 
   // 获取告警通知
   const { data: alertNotificationsData, isLoading: isLoadingNotifications } = useQuery({
     queryKey: ['alertNotifications'],
-    queryFn: () => cube.getAlertNotifications(),
+    queryFn: () => model.getAlertNotifications(),
     refetchInterval: 10000,
   });
 
   // 获取仪表板列表
   const { data: dashboardsData } = useQuery({
     queryKey: ['dashboards'],
-    queryFn: () => cube.getDashboards(),
+    queryFn: () => model.getDashboards(),
     enabled: activeTab === 'dashboards',
   });
 
   // 获取训练任务列表
   const { data: trainingJobsData } = useQuery({
     queryKey: ['trainingJobs'],
-    queryFn: () => cube.getTrainingJobs({ page: 1, page_size: 10 }),
+    queryFn: () => model.getTrainingJobs({ page: 1, page_size: 10 }),
   });
 
   // Mutations
   const createRuleMutation = useMutation({
-    mutationFn: cube.createAlertRule,
+    mutationFn: model.createAlertRule,
     onSuccess: () => {
       message.success('告警规则创建成功');
       setIsRuleModalOpen(false);
@@ -117,7 +117,7 @@ function MonitoringPage() {
   });
 
   const deleteRuleMutation = useMutation({
-    mutationFn: cube.deleteAlertRule,
+    mutationFn: model.deleteAlertRule,
     onSuccess: () => {
       message.success('告警规则删除成功');
       queryClient.invalidateQueries({ queryKey: ['alertRules'] });
@@ -125,14 +125,14 @@ function MonitoringPage() {
   });
 
   const toggleRuleMutation = useMutation({
-    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => cube.toggleAlertRule(id, enabled),
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => model.toggleAlertRule(id, enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alertRules'] });
     },
   });
 
   const acknowledgeNotificationMutation = useMutation({
-    mutationFn: cube.acknowledgeAlertNotification,
+    mutationFn: model.acknowledgeAlertNotification,
     onSuccess: () => {
       message.success('告警已确认');
       queryClient.invalidateQueries({ queryKey: ['alertNotifications'] });
@@ -140,7 +140,7 @@ function MonitoringPage() {
   });
 
   const resolveNotificationMutation = useMutation({
-    mutationFn: cube.resolveAlertNotification,
+    mutationFn: model.resolveAlertNotification,
     onSuccess: () => {
       message.success('告警已解决');
       queryClient.invalidateQueries({ queryKey: ['alertNotifications'] });
@@ -148,7 +148,7 @@ function MonitoringPage() {
   });
 
   const createDashboardMutation = useMutation({
-    mutationFn: cube.createDashboard,
+    mutationFn: model.createDashboard,
     onSuccess: () => {
       message.success('仪表板创建成功');
       setIsDashboardModalOpen(false);

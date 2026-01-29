@@ -20,7 +20,7 @@ class TestMinIOClientInit:
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             # 重新导入以获取新实例
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -34,7 +34,7 @@ class TestMinIOClientInit:
             'MINIO_ENDPOINT': 'localhost:9000'
         }):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -46,7 +46,7 @@ class TestMinIOClientInit:
         """默认桶配置"""
         with patch.dict(os.environ, {'MINIO_DEFAULT_BUCKET': 'custom-bucket'}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -61,7 +61,7 @@ class TestMinIOClientMockMode:
         """创建 Mock 模式的客户端"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -124,7 +124,7 @@ class TestMinIOClientWithMinio:
             'MINIO_SECRET_KEY': 'test_secret'
         }):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -239,7 +239,7 @@ class TestStoragePathParsing:
         """创建客户端"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
             return storage_module.MinIOClient()
 
@@ -278,7 +278,7 @@ class TestGenerateUploadId:
         """上传 ID 格式正确"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -291,7 +291,7 @@ class TestGenerateUploadId:
         """上传 ID 唯一"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.MinIOClient()
@@ -307,7 +307,7 @@ class TestGlobalClientAndHelpers:
         """获取存储客户端"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             client = storage_module.get_storage_client()
@@ -319,7 +319,7 @@ class TestGlobalClientAndHelpers:
         """初始化存储"""
         with patch.dict(os.environ, {'MINIO_ACCESS_KEY': '', 'MINIO_SECRET_KEY': ''}):
             import importlib
-            import services.alldata_api.src.storage as storage_module
+            import services.data_api.src.storage as storage_module
             importlib.reload(storage_module)
 
             storage_module.init_storage()

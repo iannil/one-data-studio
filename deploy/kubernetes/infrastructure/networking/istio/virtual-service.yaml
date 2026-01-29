@@ -2,12 +2,12 @@
 # Sprint 11.1: 服务网格与流量管理 - 灰度发布支持
 
 ---
-# VirtualService: Alldata API with Canary Support
+# VirtualService: Data API with Canary Support
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: alldata-api-vs
-  namespace: one-data-alldata
+  name: data-api-vs
+  namespace: one-data-data
 spec:
   hosts:
   - "api.one-data.local"
@@ -21,7 +21,7 @@ spec:
           regex: ".*"  # 匹配任何值，用于强制路由到金丝雀
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         subset: canary  # 金丝雀版本
       weight: 100
   # 默认流量分配（调整 weight 实现灰度发布）
@@ -32,11 +32,11 @@ spec:
         prefix: /api/v1/metadata
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         subset: stable  # 稳定版本
       weight: 90  # 调整此值控制灰度比例
     - destination:
-        host: alldata-api
+        host: data-api
         subset: canary  # 金丝雀版本
       weight: 10  # 调整此值控制灰度比例
     timeout: 30s
@@ -46,12 +46,12 @@ spec:
       retryOn: 5xx,connect-failure,refused-stream,reset
 
 ---
-# VirtualService: Bisheng API with Canary Support
+# VirtualService: Agent API with Canary Support
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: bisheng-api-vs
-  namespace: one-data-bisheng
+  name: agent-api-vs
+  namespace: one-data-agent
 spec:
   hosts:
   - "api.one-data.local"
@@ -65,7 +65,7 @@ spec:
           regex: ".*"
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: canary
       weight: 100
   # 默认流量分配
@@ -80,11 +80,11 @@ spec:
         prefix: /api/v1/sql
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: stable
       weight: 90
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: canary
       weight: 10
     timeout: 60s
@@ -99,7 +99,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: openai-proxy-vs
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   hosts:
   - "api.one-data.local"
@@ -188,11 +188,11 @@ spec:
         prefix: /api/v1/
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: stable
       weight: 0  # 由一致性哈希控制
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: canary
       weight: 0  # 由一致性哈希控制
     # 根据用户 ID 进行一致性哈希路由
@@ -223,7 +223,7 @@ spec:
           exact: "blue"  # 蓝环境
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         subset: blue
       weight: 100
   - match:
@@ -232,13 +232,13 @@ spec:
           exact: "green"  # 绿环境
     route:
     - destination:
-        host: alldata-api
+        host: data-api
         subset: green
       weight: 100
   # 默认路由到蓝环境
   - route:
     - destination:
-        host: alldata-api
+        host: data-api
         subset: blue
       weight: 100
 
@@ -248,7 +248,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: ab-testing-vs
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 spec:
   hosts:
   - "api.one-data.local"
@@ -262,7 +262,7 @@ spec:
           exact: "A"
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: version-a
       weight: 100
   # B 版本（实验组）
@@ -272,16 +272,16 @@ spec:
           exact: "B"
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: version-b
       weight: 100
   # 默认 50/50 分流
   - route:
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: version-a
       weight: 50
     - destination:
-        host: bisheng-api
+        host: agent-api
         subset: version-b
       weight: 50

@@ -89,7 +89,7 @@
 #### Sprint 32: 开发体验优化
 
 **工作流版本控制**
-- `services/bisheng-api/services/workflow_diff.py` - 工作流差异比较服务
+- `services/agent-api/services/workflow_diff.py` - 工作流差异比较服务
   - `WorkflowVersion` 版本数据模型
   - `WorkflowDiffEngine` 差异计算引擎
   - `WorkflowVersionManager` 版本管理器
@@ -103,7 +103,7 @@
   - 差异可视化（节点/边/原始）
 
 **Token 成本追踪**
-- `services/bisheng-api/services/cost_tracker.py` - 成本追踪服务
+- `services/agent-api/services/cost_tracker.py` - 成本追踪服务
   - `CostTracker` 成本追踪器
   - `TokenCounter` Token 计数工具（支持 tiktoken）
   - `CostRecord` 成本记录数据模型
@@ -247,7 +247,7 @@
   - 源仓库白名单
   - 目标集群和命名空间限制
   - RBAC 角色定义
-- `argocd/applications/bisheng-api.yaml` - Bisheng API 应用
+- `argocd/applications/agent-api.yaml` - Agent API 应用
 - `argocd/applications/web-frontend.yaml` - Web 前端应用
 - 自动同步、自愈、清理策略配置
 
@@ -437,8 +437,8 @@
   - 验证时尝试所有有效密钥
 
 - **输入验证集成**
-  - Alldata API 数据集创建接口添加验证装饰器
-  - Bisheng API 聊天、工作流、Text2SQL 接口添加验证
+  - Data API 数据集创建接口添加验证装饰器
+  - Agent API 聊天、工作流、Text2SQL 接口添加验证
   - SQL 注入检测装饰器
 
 - **E2E 测试扩展** - `tests/e2e/`
@@ -447,8 +447,8 @@
 
 #### Sprint 10: 监控与部署
 - **深度健康检查**
-  - Alldata API: 数据库、MinIO、Redis 连通性检查
-  - Bisheng API: 数据库、Redis、Milvus、上游服务检查
+  - Data API: 数据库、MinIO、Redis 连通性检查
+  - Agent API: 数据库、Redis、Milvus、上游服务检查
   - 返回延迟指标和资源统计
 
 - **日志聚合配置** - `deploy/monitoring/`
@@ -609,7 +609,7 @@
 - 工作流页 (`pages/workflows/`) - 基础结构
 
 #### 后端 (docker/)
-- **Alldata API** (Flask)
+- **Data API** (Flask)
   - 数据集注册、查询、更新、删除接口
   - 元数据查询接口
   - MinIO 数据源集成
@@ -620,7 +620,7 @@
   - 模型列表接口 (`/v1/models`)
   - 流式响应支持 (SSE)
 
-- **Bisheng API** (Flask)
+- **Agent API** (Flask)
   - 工作流 CRUD 接口
   - 工作流执行接口
   - Prompt 模板管理
@@ -631,13 +631,13 @@
 #### 部署
 - **Docker Compose** 完整服务编排
   - Web 前端
-  - Alldata API
+  - Data API
   - OpenAI Proxy
-  - Bisheng API
+  - Agent API
   - MySQL、Redis、MinIO、Keycloak
 - **Kubernetes** 部署配置
   - 基础设施服务 (MySQL, Redis, MinIO, Milvus, Keycloak)
-  - 应用服务 (Alldata API, Bisheng API, OpenAI Proxy, Web Frontend, vLLM Serving)
+  - 应用服务 (Data API, Agent API, OpenAI Proxy, Web Frontend, vLLM Serving)
   - HPA 自动扩缩容策略
 - **Helm Charts** 结构
 - 部署脚本

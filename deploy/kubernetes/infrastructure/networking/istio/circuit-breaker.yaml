@@ -2,14 +2,14 @@
 # Sprint 11.1: 服务网格与流量管理 - 熔断器实现
 
 ---
-# Circuit Breaker: Alldata API
+# Circuit Breaker: Data API
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: alldata-api-circuit-breaker
-  namespace: one-data-alldata
+  name: data-api-circuit-breaker
+  namespace: one-data-data
 spec:
-  host: alldata-api
+  host: data-api
   trafficPolicy:
     # 连接池熔断配置
     connectionPool:
@@ -40,19 +40,19 @@ spec:
       successRateStdevFactor: 1900  # 成功率标准差因子
     # 熔断后的降级策略
     fallback:
-      host: alldata-api-fallback  # 降级服务
+      host: data-api-fallback  # 降级服务
       port:
         number: 8080
 
 ---
-# Circuit Breaker: Bisheng API
+# Circuit Breaker: Agent API
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: bisheng-api-circuit-breaker
-  namespace: one-data-bisheng
+  name: agent-api-circuit-breaker
+  namespace: one-data-agent
 spec:
-  host: bisheng-api
+  host: agent-api
   trafficPolicy:
     connectionPool:
       tcp:
@@ -85,7 +85,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: openai-proxy-circuit-breaker
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   host: openai-proxy
   trafficPolicy:
@@ -199,7 +199,7 @@ spec:
         httpStatus: 503  # 50% 返回 503 错误
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
 
 ---
 # Retry Policy: 智能重试配置
@@ -219,7 +219,7 @@ spec:
         prefix: /api/v1/datasets
     route:
     - destination:
-        host: alldata-api
+        host: data-api
       weight: 100
     retries:
       attempts: 3
@@ -245,7 +245,7 @@ spec:
         prefix: /api/v1/
     route:
     - destination:
-        host: bisheng-api
+        host: agent-api
     # 与 RateLimitService 集成
     headers:
       request:

@@ -33,12 +33,12 @@ import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { vscodeDarkInit } from '@uiw/codemirror-theme-vscode';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
+import model from '@/services/model';
 import type {
   QueryResult,
   QueryHistoryItem,
   SavedQuery,
-} from '@/services/cube';
+} from '@/services/model';
 
 const { Option } = Select;
 
@@ -61,26 +61,26 @@ function SqlLabPage() {
   // 获取数据库连接列表
   const { data: connectionsData, isLoading: isLoadingConnections } = useQuery({
     queryKey: ['sqlLabConnections'],
-    queryFn: cube.getSqlLabConnections,
+    queryFn: model.getSqlLabConnections,
   });
 
   // 获取查询历史
   const { data: historyData } = useQuery({
     queryKey: ['queryHistory', selectedDatabase],
-    queryFn: () => cube.getQueryHistory({ database_id: selectedDatabase, limit: 50 }),
+    queryFn: () => model.getQueryHistory({ database_id: selectedDatabase, limit: 50 }),
     enabled: isHistoryDrawerOpen,
   });
 
   // 获取保存的查询
   const { data: savedQueriesData } = useQuery({
     queryKey: ['savedQueries', selectedDatabase],
-    queryFn: () => cube.getSavedQueries({ database_id: selectedDatabase }),
+    queryFn: () => model.getSavedQueries({ database_id: selectedDatabase }),
     enabled: isSavedDrawerOpen,
   });
 
   // 执行查询
   const executeMutation = useMutation({
-    mutationFn: cube.executeSqlQuery,
+    mutationFn: model.executeSqlQuery,
     onSuccess: (data) => {
       setQueryResult(data.data);
       setIsQueryRunning(false);
@@ -102,7 +102,7 @@ function SqlLabPage() {
 
   // 保存查询
   const saveQueryMutation = useMutation({
-    mutationFn: cube.saveQuery,
+    mutationFn: model.saveQuery,
     onSuccess: () => {
       message.success('查询保存成功');
       setIsSaveModalOpen(false);
@@ -116,7 +116,7 @@ function SqlLabPage() {
 
   // 删除保存的查询
   const deleteSavedQueryMutation = useMutation({
-    mutationFn: cube.deleteSavedQuery,
+    mutationFn: model.deleteSavedQuery,
     onSuccess: () => {
       message.success('删除成功');
       queryClient.invalidateQueries({ queryKey: ['savedQueries'] });
@@ -126,7 +126,7 @@ function SqlLabPage() {
   // 获取表列表
   useEffect(() => {
     if (selectedDatabase) {
-      cube.getSqlLabTables(selectedDatabase).then((res) => {
+      model.getSqlLabTables(selectedDatabase).then((res) => {
         setSelectedTables(res.data.tables || []);
       });
     }
@@ -135,7 +135,7 @@ function SqlLabPage() {
   // 获取表结构
   const loadTableSchema = async (tableName: string) => {
     if (selectedDatabase && !tableSchema[tableName]) {
-      const res = await cube.getSqlLabTableSchema(selectedDatabase, tableName);
+      const res = await model.getSqlLabTableSchema(selectedDatabase, tableName);
       setTableSchema((prev) => ({ ...prev, [tableName]: res.data.columns }));
     }
   };
@@ -143,7 +143,7 @@ function SqlLabPage() {
   // 格式化 SQL
   const handleFormatSql = async () => {
     try {
-      const res = await cube.formatSql(sqlQuery);
+      const res = await model.formatSql(sqlQuery);
       setSqlQuery(res.data.formatted_sql);
       message.success('SQL 格式化成功');
     } catch {
@@ -175,7 +175,7 @@ function SqlLabPage() {
   // 停止查询
   const handleStopQuery = async () => {
     if (currentQueryId) {
-      await cube.cancelQuery(currentQueryId);
+      await model.cancelQuery(currentQueryId);
       setIsQueryRunning(false);
       setCurrentQueryId(null);
       message.info('查询已取消');
@@ -186,7 +186,7 @@ function SqlLabPage() {
   const handleExportResult = async (format: 'csv' | 'json' | 'excel') => {
     if (!queryResult?.query_id) return;
     try {
-      const res = await cube.exportQueryResult(queryResult.query_id, format);
+      const res = await model.exportQueryResult(queryResult.query_id, format);
       window.open(res.data.download_url, '_blank');
       message.success('导出成功');
     } catch {

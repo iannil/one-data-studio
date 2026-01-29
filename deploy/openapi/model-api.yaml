@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ONE-DATA-STUDIO Cube API
+  title: ONE-DATA-STUDIO Model API
   description: |
     云原生 MLOps 平台 API
 
@@ -1163,7 +1163,7 @@ components:
           example: ok
         service:
           type: string
-          example: cube-api
+          example: model-api
         version:
           type: string
           example: 1.0.0

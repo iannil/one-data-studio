@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DatasetsPage from './DatasetsPage';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 
 // Mock 服务
 vi.mock('@/services/alldata', () => ({
@@ -71,7 +71,7 @@ describe('DatasetsPage', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: mockDatasets, total: 2 },
     });
@@ -163,12 +163,12 @@ describe('DatasetsPage 创建数据集', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: [], total: 0 },
     });
 
-    vi.mocked(alldata.createDataset).mockResolvedValue({
+    vi.mocked(data.createDataset).mockResolvedValue({
       code: 0,
       data: { dataset_id: 'ds-new' },
     });
@@ -214,7 +214,7 @@ describe('DatasetsPage 详情抽屉', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: mockDatasets, total: 2 },
     });
@@ -241,12 +241,12 @@ describe('DatasetsPage 删除数据集', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: mockDatasets, total: 2 },
     });
 
-    vi.mocked(alldata.deleteDataset).mockResolvedValue({
+    vi.mocked(data.deleteDataset).mockResolvedValue({
       code: 0,
       message: 'success',
     });
@@ -281,7 +281,7 @@ describe('DatasetsPage 空状态', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: [], total: 0 },
     });
@@ -304,7 +304,7 @@ describe('DatasetsPage 分页', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatasets).mockResolvedValue({
+    vi.mocked(data.getDatasets).mockResolvedValue({
       code: 0,
       data: { datasets: mockDatasets, total: 100 },
     });

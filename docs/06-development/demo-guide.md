@@ -27,8 +27,8 @@ docker-compose ps
 ```
 
 预期输出：
-- `alldata-api-*` - Running
-- `bisheng-api-*` - Running
+- `data-api-*` - Running
+- `agent-api-*` - Running
 - `openai-proxy-*` - Running
 - `mysql-*` - Running
 - `minio-*` - Running
@@ -38,10 +38,10 @@ docker-compose ps
 ### 2. 健康检查
 
 ```bash
-# Alldata API
+# Data API
 curl http://localhost:8080/api/v1/health
 
-# Bisheng API
+# Agent API
 curl http://localhost:8081/api/v1/health
 
 # OpenAI Proxy
@@ -60,7 +60,7 @@ http://localhost:3000
 
 ### 场景一：数据治理与元数据管理
 
-**演示目标**：展示 Alldata 的数据治理能力
+**演示目标**：展示 Data 的数据治理能力
 
 #### 步骤 1：查看数据集列表
 
@@ -222,14 +222,14 @@ curl -X POST http://localhost:8081/api/v1/documents/upload \
 
 ## 三大集成验证
 
-### 集成点 1：Alldata → Cube Studio（数据集注册与读取）
+### 集成点 1：Data → Cube Studio（数据集注册与读取）
 
-**验证目标**：确认 Alldata 的数据集可以被 Cube Studio 的训练任务消费
+**验证目标**：确认 Data 的数据集可以被 Cube Studio 的训练任务消费
 
 #### API 验证
 
 ```bash
-# 1. 在 Alldata 注册数据集
+# 1. 在 Data 注册数据集
 curl -X POST http://localhost:8080/api/v1/datasets \
   -H "Content-Type: application/json" \
   -d '{
@@ -253,9 +253,9 @@ curl http://localhost:8080/api/v1/datasets/demo_dataset
 - 元数据正确存储
 - 数据文件可访问
 
-### 集成点 2：Cube Studio → Bisheng（模型服务调用）
+### 集成点 2：Cube Studio → Agent（模型服务调用）
 
-**验证目标**：确认 Bisheng 可以通过 OpenAI 兼容 API 调用 Cube Studio 部署的模型
+**验证目标**：确认 Agent 可以通过 OpenAI 兼容 API 调用 Cube Studio 部署的模型
 
 #### API 验证
 
@@ -263,7 +263,7 @@ curl http://localhost:8080/api/v1/datasets/demo_dataset
 # 1. 查看 Cube Studio 可用模型
 curl http://localhost:8002/v1/models
 
-# 2. 通过 Bisheng 代理调用模型
+# 2. 通过 Agent 代理调用模型
 curl -X POST http://localhost:8081/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
@@ -281,17 +281,17 @@ curl -X POST http://localhost:8081/api/v1/chat \
 - 聊天响应来自真实模型（非 Mock）
 - 流式输出正常工作
 
-### 集成点 3：Alldata → Bisheng（Text-to-SQL 元数据查询）
+### 集成点 3：Data → Agent（Text-to-SQL 元数据查询）
 
-**验证目标**：确认 Bisheng 的 Text-to-SQL 功能能正确获取 Alldata 的元数据
+**验证目标**：确认 Agent 的 Text-to-SQL 功能能正确获取 Data 的元数据
 
 #### API 验证
 
 ```bash
-# 1. 查询 Alldata 元数据
+# 1. 查询 Data 元数据
 curl http://localhost:8080/api/v1/metadata/databases/sales_dw/tables
 
-# 2. 通过 Bisheng 生成 SQL
+# 2. 通过 Agent 生成 SQL
 curl -X POST http://localhost:8081/api/v1/text2sql \
   -H "Content-Type: application/json" \
   -d '{
@@ -425,9 +425,9 @@ bash scripts/upload_demo_docs.sh
 
 ### 集成验证检查
 
-- [ ] Alldata → Cube 数据集可访问
-- [ ] Cube → Bisheng 模型调用成功
-- [ ] Alldata → Bisheng 元数据获取成功
+- [ ] Data → Cube 数据集可访问
+- [ ] Cube → Agent 模型调用成功
+- [ ] Data → Agent 元数据获取成功
 
 ### 结束后检查
 
@@ -459,8 +459,8 @@ kubectl apply -f deploy/kubernetes/
 docker-compose up -d
 
 # 等待服务就绪
-kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-system --timeout=300s
-kubectl wait --for=condition=ready pod -l app=bisheng-api -n one-data-system --timeout=300s
+kubectl wait --for=condition=ready pod -l app=data-api -n one-data-system --timeout=300s
+kubectl wait --for=condition=ready pod -l app=agent-api -n one-data-system --timeout=300s
 kubectl wait --for=condition=ready pod -l app=openai-proxy -n one-data-system --timeout=300s
 ```
 

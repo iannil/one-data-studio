@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ONE-DATA-STUDIO Alldata API
+  title: ONE-DATA-STUDIO Data API
   description: |
     数据治理与开发平台 API
 
@@ -314,7 +314,7 @@ components:
           example: healthy
         service:
           type: string
-          example: alldata-api
+          example: data-api
         version:
           type: string
           example: 2.0.0

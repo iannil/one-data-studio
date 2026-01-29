@@ -35,7 +35,7 @@ class TestKettleExecutionPerformance:
     @pytest.fixture
     def kettle_service(self):
         """创建 Kettle 服务实例"""
-        with patch('services.alldata_api.services.kettle_orchestration_service.requests'):
+        with patch('services.data_api.services.kettle_orchestration_service.requests'):
             service = KettleOrchestrationService()
             return service
 
@@ -204,7 +204,7 @@ class TestConcurrentETLJobs:
 
     def test_concurrent_job_submission(self):
         """测试并发作业提交"""
-        with patch('services.alldata_api.services.kettle_orchestration_service.requests'):
+        with patch('services.data_api.services.kettle_orchestration_service.requests'):
             service = KettleOrchestrationService()
 
             mock_response = Mock()

@@ -3,7 +3,7 @@
 
 groups:
   # ============================================
-  # Alldata API 业务告警
+  # Data API 业务告警
   # ============================================
   - name: alldata_business_alerts
     interval: 30s
@@ -18,7 +18,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: data_quality
         annotations:
           summary: "数据扫描失败率过高"
@@ -31,7 +31,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: sync
         annotations:
           summary: "元数据同步延迟过高"
@@ -44,7 +44,7 @@ groups:
         for: 1m
         labels:
           severity: critical
-          service: alldata-api
+          service: data-api
           category: etl
         annotations:
           summary: "ETL 作业执行失败"
@@ -57,7 +57,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: etl
         annotations:
           summary: "ETL 作业队列积压"
@@ -70,7 +70,7 @@ groups:
         for: 15m
         labels:
           severity: info
-          service: alldata-api
+          service: data-api
           category: maintenance
         annotations:
           summary: "资产价值计算未更新"
@@ -83,7 +83,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: security
         annotations:
           summary: "敏感数据扫描错误过多"
@@ -96,7 +96,7 @@ groups:
         for: 5m
         labels:
           severity: critical
-          service: alldata-api
+          service: data-api
           category: security
         annotations:
           summary: "数据脱敏失败率过高"
@@ -109,14 +109,14 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: ai_service
         annotations:
           summary: "AI 数据填充服务异常"
           description: "AI 填充请求错误率: {{ $value | humanizePercentage }}"
 
   # ============================================
-  # Bisheng API 业务告警
+  # Agent API 业务告警
   # ============================================
   - name: bisheng_business_alerts
     interval: 30s
@@ -130,7 +130,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
           category: performance
         annotations:
           summary: "RAG 检索响应缓慢"
@@ -146,7 +146,7 @@ groups:
         for: 15m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
           category: quality
         annotations:
           summary: "RAG 检索召回率过低"
@@ -162,7 +162,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
           category: quality
         annotations:
           summary: "Text-to-SQL 错误率过高"
@@ -175,7 +175,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
           category: agent
         annotations:
           summary: "Agent 执行失败率过高"
@@ -188,7 +188,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: bisheng-api
+          service: agent-api
           category: workflow
         annotations:
           summary: "工作流队列积压"
@@ -201,7 +201,7 @@ groups:
         for: 5m
         labels:
           severity: critical
-          service: bisheng-api
+          service: agent-api
           category: infrastructure
         annotations:
           summary: "向量存储异常"
@@ -217,7 +217,7 @@ groups:
         for: 3m
         labels:
           severity: critical
-          service: bisheng-api
+          service: agent-api
           category: llm
         annotations:
           summary: "LLM 调用失败率过高"
@@ -359,7 +359,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: lineage
         annotations:
           summary: "血缘事件丢失"
@@ -372,7 +372,7 @@ groups:
         for: 10m
         labels:
           severity: warning
-          service: alldata-api
+          service: data-api
           category: lineage
         annotations:
           summary: "血缘事件队列积压"
@@ -487,7 +487,7 @@ groups:
         for: 30m
         labels:
           severity: info
-          service: alldata-api
+          service: data-api
           category: catalog
         annotations:
           summary: "资产目录未同步"

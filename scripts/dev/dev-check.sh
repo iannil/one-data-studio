@@ -176,7 +176,7 @@ check_ports() {
     echo -e "${BOLD}端口检查${NC}"
     echo ""
 
-    local port_services="mysql redis minio milvus etcd bisheng-api alldata-api cube-api openai-proxy web-frontend prometheus grafana jaeger loki"
+    local port_services="mysql redis minio milvus etcd agent-api data-api model-api openai-proxy web-frontend prometheus grafana jaeger loki"
 
     for service in $port_services; do
         local port=$(get_service_port "$service")
@@ -373,21 +373,21 @@ check_network() {
 
     if [ ${#running_services[@]} -gt 1 ]; then
         # 检查 API 服务是否能连接数据库
-        if is_service_running "bisheng-api" && is_service_running "mysql"; then
-            local container_name="${CONTAINER_NAMES[bisheng-api]}"
+        if is_service_running "agent-api" && is_service_running "mysql"; then
+            local container_name="${CONTAINER_NAMES[agent-api]}"
             if docker exec "$container_name" python -c "import pymysql; pymysql.connect(host='mysql', port=3306)" 2>/dev/null; then
-                check_pass "bisheng-api → mysql 连接正常"
+                check_pass "agent-api → mysql 连接正常"
             else
-                check_warn "bisheng-api → mysql 连接未验证"
+                check_warn "agent-api → mysql 连接未验证"
             fi
         fi
 
-        if is_service_running "bisheng-api" && is_service_running "redis"; then
-            local container_name="${CONTAINER_NAMES[bisheng-api]}"
+        if is_service_running "agent-api" && is_service_running "redis"; then
+            local container_name="${CONTAINER_NAMES[agent-api]}"
             if docker exec "$container_name" python -c "import redis; redis.Redis(host='redis', port=6379).ping()" 2>/dev/null; then
-                check_pass "bisheng-api → redis 连接正常"
+                check_pass "agent-api → redis 连接正常"
             else
-                check_warn "bisheng-api → redis 连接未验证"
+                check_warn "agent-api → redis 连接未验证"
             fi
         fi
     else

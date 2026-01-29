@@ -45,7 +45,7 @@ import {
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { DocumentViewer } from '@/components/alldata/DocumentViewer';
+import { DocumentViewer } from '@/components/data/DocumentViewer';
 import { ocrApi, EnhancedOCRResult } from '@/services/ocr';
 
 const { TabPane } = Tabs;

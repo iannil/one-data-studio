@@ -1,6 +1,6 @@
 # 安全方案设计
 
-本文档定义 ONE-DATA-STUDIO 平台的统一认证和权限管理方案，确保三个平台（Alldata、Cube Studio、Bisheng）能够安全地协同工作。
+本文档定义 ONE-DATA-STUDIO 平台的统一认证和权限管理方案，确保三个平台（Data、Cube Studio、Agent）能够安全地协同工作。
 
 ---
 
@@ -20,7 +20,7 @@
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                         服务层                             │  │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │  │
-│  │  │ Alldata  │  │  Cube    │  │ Bisheng  │                 │  │
+│  │  │ Data  │  │  Cube    │  │ Agent  │                 │  │
 │  │  └──────────┘  └──────────┘  └──────────┘                 │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -117,7 +117,7 @@ sequenceDiagram
 
 ```
 ┌──────────┐      Token       ┌─────────────┐      Token       ┌──────────┐
-│ Bisheng  │ ───────────────→ │ API Gateway │ ───────────────→ │ Alldata │
+│ Agent  │ ───────────────→ │ API Gateway │ ───────────────→ │ Data │
 │ (L4)     │                  │  (Istio)    │                  │  (L2)    │
 └──────────┘                  └─────────────┘                  └──────────┘
 ```
@@ -181,7 +181,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: alldata-api
+      app: data-api
   action: ALLOW
   rules:
   - from:
@@ -210,7 +210,7 @@ spec:
 | **platform_admin** | 平台管理 | 平台配置、用户管理 |
 | **tenant_admin** | 租户管理 | 租户内全部资源 |
 
-#### Alldata 角色层级
+#### Data 角色层级
 
 | 角色 | 数据权限 | 操作权限 |
 |------|----------|----------|
@@ -228,7 +228,7 @@ spec:
 | **ml_developer** | 开发环境 | Notebook 开发 |
 | **ml_viewer** | 只读 | 查看实验 |
 
-#### Bisheng 角色层级
+#### Agent 角色层级
 
 | 角色 | 应用权限 | 操作权限 |
 |------|----------|----------|
@@ -282,9 +282,9 @@ graph TD
 |-----------|------|----------|
 | `one-data-system` | 系统组件 | platform_admin |
 | `tenant-{id}` | 租户资源 | tenant_admin |
-| `tenant-{id}-alldata` | Alldata 实例 | data_admin |
+| `tenant-{id}-alldata` | Data 实例 | data_admin |
 | `tenant-{id}-cube` | Cube 实例 | ml_admin |
-| `tenant-{id}-bisheng` | Bisheng 实例 | app_admin |
+| `tenant-{id}-bisheng` | Agent 实例 | app_admin |
 
 ---
 
@@ -306,7 +306,7 @@ graph TD
          ┌───────────┼───────────┐
          ↓           ↓           ↓
     ┌────────┐ ┌────────┐ ┌────────┐
-    │Alldata │ │  Cube  │ │Bisheng │
+    │Data │ │  Cube  │ │Agent │
     └────────┘ └────────┘ └────────┘
 ```
 

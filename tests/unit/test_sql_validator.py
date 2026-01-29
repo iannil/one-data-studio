@@ -388,4 +388,4 @@ def test_security_rules(query, expected_valid):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--cov=services/bisheng_api/services/sql_validator", "--cov-report=term-missing"])
+    pytest.main([__file__, "-v", "--cov=services/agent_api/services/sql_validator", "--cov-report=term-missing"])

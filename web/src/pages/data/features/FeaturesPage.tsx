@@ -30,13 +30,13 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 import type {
   Feature,
   FeatureGroup,
   FeatureSet,
   FeatureService,
-} from '@/services/alldata';
+} from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -78,41 +78,41 @@ function FeaturesPage() {
   // 获取特征列表
   const { data: featuresData, isLoading: isLoadingFeatures } = useQuery({
     queryKey: ['features', page, pageSize],
-    queryFn: () => alldata.getFeatures({ page, page_size: pageSize }),
+    queryFn: () => data.getFeatures({ page, page_size: pageSize }),
     enabled: activeTab === 'features',
   });
 
   // 获取特征组列表
   const { data: groupsData, isLoading: isLoadingGroups } = useQuery({
     queryKey: ['featureGroups'],
-    queryFn: () => alldata.getFeatureGroups(),
+    queryFn: () => data.getFeatureGroups(),
     enabled: activeTab === 'features' || activeTab === 'groups',
   });
 
   // 获取特征集列表
   const { data: setsData, isLoading: isLoadingSets } = useQuery({
     queryKey: ['featureSets'],
-    queryFn: () => alldata.getFeatureSets(),
+    queryFn: () => data.getFeatureSets(),
     enabled: activeTab === 'sets',
   });
 
   // 获取特征服务列表
   const { data: servicesData, isLoading: isLoadingServices } = useQuery({
     queryKey: ['featureServices'],
-    queryFn: () => alldata.getFeatureServices(),
+    queryFn: () => data.getFeatureServices(),
     enabled: activeTab === 'services',
   });
 
   // 获取特征版本
   const { data: versionsData } = useQuery({
     queryKey: ['featureVersions', selectedFeature?.feature_id],
-    queryFn: () => alldata.getFeatureVersions(selectedFeature!.feature_id),
+    queryFn: () => data.getFeatureVersions(selectedFeature!.feature_id),
     enabled: !!selectedFeature && isFeatureDetailOpen,
   });
 
   // Mutations
   const createFeatureMutation = useMutation({
-    mutationFn: alldata.createFeature,
+    mutationFn: data.createFeature,
     onSuccess: () => {
       message.success('特征创建成功');
       setIsFeatureModalOpen(false);
@@ -122,7 +122,7 @@ function FeaturesPage() {
   });
 
   const deleteFeatureMutation = useMutation({
-    mutationFn: alldata.deleteFeature,
+    mutationFn: data.deleteFeature,
     onSuccess: () => {
       message.success('特征删除成功');
       queryClient.invalidateQueries({ queryKey: ['features'] });
@@ -130,7 +130,7 @@ function FeaturesPage() {
   });
 
   const createGroupMutation = useMutation({
-    mutationFn: alldata.createFeatureGroup,
+    mutationFn: data.createFeatureGroup,
     onSuccess: () => {
       message.success('特征组创建成功');
       setIsGroupModalOpen(false);
@@ -140,7 +140,7 @@ function FeaturesPage() {
   });
 
   const deleteGroupMutation = useMutation({
-    mutationFn: alldata.deleteFeatureGroup,
+    mutationFn: data.deleteFeatureGroup,
     onSuccess: () => {
       message.success('特征组删除成功');
       queryClient.invalidateQueries({ queryKey: ['featureGroups'] });
@@ -148,7 +148,7 @@ function FeaturesPage() {
   });
 
   const createSetMutation = useMutation({
-    mutationFn: alldata.createFeatureSet,
+    mutationFn: data.createFeatureSet,
     onSuccess: () => {
       message.success('特征集创建成功');
       setIsSetModalOpen(false);
@@ -158,7 +158,7 @@ function FeaturesPage() {
   });
 
   const deleteSetMutation = useMutation({
-    mutationFn: (id: string) => alldata.deleteFeature(id),
+    mutationFn: (id: string) => data.deleteFeature(id),
     onSuccess: () => {
       message.success('特征集删除成功');
       queryClient.invalidateQueries({ queryKey: ['featureSets'] });
@@ -166,7 +166,7 @@ function FeaturesPage() {
   });
 
   const createServiceMutation = useMutation({
-    mutationFn: alldata.createFeatureService,
+    mutationFn: data.createFeatureService,
     onSuccess: () => {
       message.success('特征服务创建成功');
       setIsServiceModalOpen(false);
@@ -176,7 +176,7 @@ function FeaturesPage() {
   });
 
   const deleteServiceMutation = useMutation({
-    mutationFn: alldata.deleteFeatureService,
+    mutationFn: data.deleteFeatureService,
     onSuccess: () => {
       message.success('特征服务删除成功');
       queryClient.invalidateQueries({ queryKey: ['featureServices'] });

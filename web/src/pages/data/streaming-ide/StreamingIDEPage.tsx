@@ -23,7 +23,7 @@ import {
   CodeOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 
 const { TextArea } = Input;
 const { Paragraph, Text } = Typography;
@@ -77,13 +77,13 @@ GROUP BY user_id, user_name;
   // 查询模拟作业列表
   const { data: jobsData, refetch } = useQuery({
     queryKey: ['flink-jobs'],
-    queryFn: () => alldata.getFlinkJobs({ page: 1, page_size: 100 }),
+    queryFn: () => data.getFlinkJobs({ page: 1, page_size: 100 }),
   });
 
   // 验证 SQL
   const handleValidate = async () => {
     try {
-      const result = await alldata.validateFlinkSql(sqlCode);
+      const result = await data.validateFlinkSql(sqlCode);
       setValidationResult(result.data);
       if (result.data.valid) {
         message.success('SQL 语法验证通过');

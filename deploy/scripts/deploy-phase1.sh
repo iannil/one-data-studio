@@ -38,14 +38,14 @@ build_images() {
     log_info "开始构建 Docker 镜像..."
 
     log_info "构建 Alldata API 镜像..."
-    docker build -t alldata-api:latest -f docker/services/alldata-api/Dockerfile .
+    docker build -t data-api:latest -f docker/services/data-api/Dockerfile .
 
     log_info "构建 OpenAI Proxy 镜像..."
     docker build -t openai-proxy:latest -f docker/services/openai-proxy/Dockerfile .
 
     # 加载镜像到 Kind 集群
     log_info "加载镜像到 Kind 集群..."
-    kind load docker-image alldata-api:latest --name one-data
+    kind load docker-image data-api:latest --name one-data
     kind load docker-image openai-proxy:latest --name one-data
 
     log_info "镜像构建完成"
@@ -61,7 +61,7 @@ init_database() {
 
     # 执行初始化 SQL
     log_info "执行数据库初始化脚本..."
-    kubectl exec -n one-data-infra mysql-0 -- mysql -uone_data -pOneDataPassword123! < services/alldata-api/migrations/init_schema.sql || true
+    kubectl exec -n one-data-infra mysql-0 -- mysql -uone_data -pOneDataPassword123! < services/data-api/migrations/init_schema.sql || true
 
     log_info "数据库初始化完成"
 }
@@ -72,7 +72,7 @@ deploy_services() {
 
     # 部署 Alldata API (持久化版本)
     log_info "部署 Alldata API..."
-    kubectl apply -f k8s/applications/alldata-api.yaml
+    kubectl apply -f k8s/applications/data-api.yaml
 
     # 部署 OpenAI Proxy
     log_info "部署 OpenAI Proxy..."
@@ -80,7 +80,7 @@ deploy_services() {
 
     # 更新 Bisheng API
     log_info "更新 Bisheng API..."
-    kubectl apply -f k8s/applications/bisheng-api.yaml
+    kubectl apply -f k8s/applications/agent-api.yaml
 
     log_info "服务部署完成"
 }
@@ -90,13 +90,13 @@ wait_for_ready() {
     log_info "等待服务就绪..."
 
     log_info "等待 Alldata API..."
-    kubectl wait --for=condition=ready pod -l app=alldata-api -n one-data-alldata --timeout=120s
+    kubectl wait --for=condition=ready pod -l app=data-api -n one-data-data --timeout=120s
 
     log_info "等待 OpenAI Proxy..."
-    kubectl wait --for=condition=ready pod -l app=openai-proxy -n one-data-cube --timeout=120s
+    kubectl wait --for=condition=ready pod -l app=openai-proxy -n one-data-model --timeout=120s
 
     log_info "等待 Bisheng API..."
-    kubectl wait --for=condition=ready pod -l app=bisheng-api -n one-data-bisheng --timeout=120s
+    kubectl wait --for=condition=ready pod -l app=agent-api -n one-data-agent --timeout=120s
 
     log_info "所有服务已就绪"
 }
@@ -107,15 +107,15 @@ health_check() {
 
     echo ""
     echo "=== Alldata API ==="
-    kubectl exec -n one-data-alldata deploy/alldata-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
+    kubectl exec -n one-data-data deploy/data-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
 
     echo ""
     echo "=== OpenAI Proxy ==="
-    kubectl exec -n one-data-cube deploy/openai-proxy -- curl -s http://localhost:8000/health | jq . || echo "检查失败"
+    kubectl exec -n one-data-model deploy/openai-proxy -- curl -s http://localhost:8000/health | jq . || echo "检查失败"
 
     echo ""
     echo "=== Bisheng API ==="
-    kubectl exec -n one-data-bisheng deploy/bisheng-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
+    kubectl exec -n one-data-agent deploy/agent-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
 
     echo ""
 }
@@ -123,7 +123,7 @@ health_check() {
 # 配置 OpenAI API Key
 configure_openai() {
     log_warn "请设置您的 OpenAI API Key："
-    log_warn "kubectl edit secret openai-secret -n one-data-cube"
+    log_warn "kubectl edit secret openai-secret -n one-data-model"
     log_warn "将 api-key 的值替换为您的真实 API Key"
 }
 
@@ -131,9 +131,9 @@ configure_openai() {
 show_status() {
     log_info "Phase 1 部署状态："
     echo ""
-    kubectl get pods -n one-data-alldata -l app=alldata-api
-    kubectl get pods -n one-data-cube -l app=openai-proxy
-    kubectl get pods -n one-data-bisheng -l app=bisheng-api
+    kubectl get pods -n one-data-data -l app=data-api
+    kubectl get pods -n one-data-model -l app=openai-proxy
+    kubectl get pods -n one-data-agent -l app=agent-api
 }
 
 # 主函数
@@ -168,9 +168,9 @@ main() {
     configure_openai
     echo ""
     log_info "使用以下命令测试 API："
-    echo "  kubectl port-forward -n one-data-alldata svc/alldata-api 8080:8080"
-    echo "  kubectl port-forward -n one-data-cube svc/openai-proxy 8000:8000"
-    echo "  kubectl port-forward -n one-data-bisheng svc/bisheng-api 8081:8080"
+    echo "  kubectl port-forward -n one-data-data svc/data-api 8080:8080"
+    echo "  kubectl port-forward -n one-data-model svc/openai-proxy 8000:8000"
+    echo "  kubectl port-forward -n one-data-agent svc/agent-api 8081:8080"
 }
 
 # 运行主函数

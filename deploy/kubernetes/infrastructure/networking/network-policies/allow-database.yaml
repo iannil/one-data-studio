@@ -3,7 +3,7 @@
 # Allow traffic from application services to database services
 
 ---
-# Allow MySQL access from alldata-api and bisheng-api
+# Allow MySQL access from data-api and agent-api
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -16,31 +16,31 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # From alldata-api
+  # From data-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-alldata
+          kubernetes.io/metadata.name: one-data-data
       podSelector:
         matchLabels:
-          app: alldata-api
+          app: data-api
     ports:
     - protocol: TCP
       port: 3306
-  # From bisheng-api
+  # From agent-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-bisheng
+          kubernetes.io/metadata.name: one-data-agent
       podSelector:
         matchLabels:
-          app: bisheng-api
+          app: agent-api
     ports:
     - protocol: TCP
       port: 3306
 
 ---
-# Allow Redis access from alldata-api and bisheng-api
+# Allow Redis access from data-api and agent-api
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -53,19 +53,19 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # From alldata-api
+  # From data-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-alldata
+          kubernetes.io/metadata.name: one-data-data
     ports:
     - protocol: TCP
       port: 6379
-  # From bisheng-api
+  # From agent-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-bisheng
+          kubernetes.io/metadata.name: one-data-agent
     ports:
     - protocol: TCP
       port: 6379
@@ -79,7 +79,7 @@ spec:
       port: 6379
 
 ---
-# Allow MinIO access from alldata-api and bisheng-api
+# Allow MinIO access from data-api and agent-api
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -92,21 +92,21 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # From alldata-api
+  # From data-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-alldata
+          kubernetes.io/metadata.name: one-data-data
     ports:
     - protocol: TCP
       port: 9000
     - protocol: TCP
       port: 9001
-  # From bisheng-api
+  # From agent-api
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-bisheng
+          kubernetes.io/metadata.name: one-data-agent
     ports:
     - protocol: TCP
       port: 9000
@@ -127,11 +127,11 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # From bisheng-api for RAG operations
+  # From agent-api for RAG operations
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: one-data-bisheng
+          kubernetes.io/metadata.name: one-data-agent
     ports:
     - protocol: TCP
       port: 19530

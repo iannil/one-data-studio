@@ -61,11 +61,11 @@ docker-compose logs --tail=100 | grep -i error
 **诊断命令**:
 ```bash
 # 查看 API 日志
-docker-compose logs -f alldata-api --tail=100
-docker-compose logs -f bisheng-api --tail=100
+docker-compose logs -f data-api --tail=100
+docker-compose logs -f agent-api --tail=100
 
 # 检查数据库连接
-docker-compose exec alldata-api python -c "
+docker-compose exec data-api python -c "
 from database import engine
 with engine.connect() as conn:
     print(conn.execute('SELECT 1').scalar())
@@ -76,7 +76,7 @@ with engine.connect() as conn:
 1. 检查数据库连接配置
 2. 验证数据库服务状态
 3. 检查环境变量配置
-4. 重启服务: `docker-compose restart alldata-api`
+4. 重启服务: `docker-compose restart data-api`
 
 #### 故障: API 响应缓慢
 
@@ -124,7 +124,7 @@ docker-compose logs mysql --tail=100
 docker-compose exec mysql mysql -u root -p
 
 # 4. 检查网络
-docker-compose exec alldata-api ping mysql
+docker-compose exec data-api ping mysql
 ```
 
 **解决方案**:
@@ -179,7 +179,7 @@ docker-compose ps milvus-minio
 docker-compose logs milvus-standalone --tail=100
 
 # 3. 检查集合状态
-docker-compose exec bisheng-api python -c "
+docker-compose exec agent-api python -c "
 from services import VectorStore
 vs = VectorStore()
 print(vs.list_collections())
@@ -246,7 +246,7 @@ curl -H "Origin: http://localhost:3000" \
 docker stats --no-stream | sort -k3 -hr
 
 # 查看进程 CPU 使用
-docker-compose exec alldata-api top -b -n 1
+docker-compose exec data-api top -b -n 1
 ```
 
 **常见原因与解决方案**:
@@ -262,7 +262,7 @@ docker-compose exec alldata-api top -b -n 1
 docker stats --no-stream | sort -k4 -hr
 
 # 检查内存泄漏
-docker-compose exec alldata-api python -c "
+docker-compose exec data-api python -c "
 import tracemalloc
 tracemalloc.start()
 # ... 运行操作 ...
@@ -341,7 +341,7 @@ NEW_KEY=$(openssl rand -hex 32)
 sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=$NEW_KEY/" deploy/.env
 
 # 3. 重启服务
-docker-compose restart alldata-api bisheng-api
+docker-compose restart data-api agent-api
 
 # 4. 验证服务状态
 curl http://localhost:8080/api/v1/health
@@ -355,7 +355,7 @@ curl http://localhost:8080/api/v1/health
 
 ```bash
 # 1. 停止应用服务
-docker-compose stop alldata-api bisheng-api
+docker-compose stop data-api agent-api
 
 # 2. 恢复数据库
 docker-compose exec -T mysql mysql -u root -p"${MYSQL_PASSWORD}" \
@@ -366,14 +366,14 @@ docker-compose exec mysql mysql -u root -p"${MYSQL_PASSWORD}" \
   -e "USE one_data_bisheng; SHOW TABLES;"
 
 # 4. 重启服务
-docker-compose start alldata-api bisheng-api
+docker-compose start data-api agent-api
 ```
 
 ### 向量数据恢复
 
 ```bash
 # 1. 从备份恢复集合
-docker-compose exec bisheng-api python -c "
+docker-compose exec agent-api python -c "
 from services import VectorStore
 vs = VectorStore()
 # 需要预先准备好的向量数据备份
@@ -381,7 +381,7 @@ vs.insert('collection_name', texts, embeddings, metadata_list)
 "
 
 # 2. 验证恢复
-docker-compose exec bisheng-api python -c "
+docker-compose exec agent-api python -c "
 from services import VectorStore
 vs = VectorStore()
 print('Collections:', vs.list_collections())

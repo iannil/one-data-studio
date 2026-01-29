@@ -26,10 +26,10 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import cube, { type ChatCompletionUsage } from '@/services/cube';
+import model, { type ChatCompletionUsage } from '@/services/model';
 import { logError } from '@/services/logger';
-import bisheng, { type Conversation, type ConversationMessage, saveMessage, getConversationUsage } from '@/services/bisheng';
-import type { ChatMessage } from '@/services/cube';
+import agentService, { type Conversation, type ConversationMessage, saveMessage, getConversationUsage } from '@/services/agent-service';
+import type { ChatMessage } from '@/services/model';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const { TextArea } = Input;
@@ -80,14 +80,14 @@ function ChatPage() {
   // 获取可用模型列表
   const { data: modelsData, isLoading: isLoadingModels } = useQuery({
     queryKey: ['models'],
-    queryFn: cube.getModels,
+    queryFn: model.getModels,
     refetchInterval: 60000, // 每分钟刷新一次
   });
 
   // 获取 Prompt 模板
   const { data: templatesData } = useQuery({
     queryKey: ['templates'],
-    queryFn: () => bisheng.getPromptTemplates(),
+    queryFn: () => agentService.getPromptTemplates(),
   });
 
   // 加载会话列表
@@ -104,7 +104,7 @@ function ChatPage() {
   const loadSessions = async () => {
     try {
       setIsLoadingSessions(true);
-      const response = await bisheng.getConversations();
+      const response = await agentService.getConversations();
       if (response.code === 0 && response.data?.conversations) {
         const sessionList = response.data.conversations.map((conv) => ({
           ...conv,
@@ -128,7 +128,7 @@ function ChatPage() {
   const selectSession = async (conversationId: string) => {
     try {
       setCurrentConversationId(conversationId);
-      const response = await bisheng.getConversation(conversationId);
+      const response = await agentService.getConversation(conversationId);
       if (response.code === 0 && response.data) {
         const sessionData = response.data;
         // 转换消息格式
@@ -177,7 +177,7 @@ function ChatPage() {
   const createNewConversation = async (firstMessage: string) => {
     try {
       const title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? '...' : '');
-      const response = await bisheng.createConversation(title);
+      const response = await agentService.createConversation(title);
       if (response.code === 0 && response.data?.conversation_id) {
         const newId = response.data.conversation_id;
         setCurrentConversationId(newId);
@@ -193,7 +193,7 @@ function ChatPage() {
   // 删除会话
   const handleDeleteSession = async (conversationId: string) => {
     try {
-      await bisheng.deleteConversation(conversationId);
+      await agentService.deleteConversation(conversationId);
       message.success('会话已删除');
 
       // 如果删除的是当前会话，清空消息
@@ -223,7 +223,7 @@ function ChatPage() {
     }
 
     try {
-      await bisheng.renameConversation(renamingSessionId, newSessionTitle.trim());
+      await agentService.renameConversation(renamingSessionId, newSessionTitle.trim());
       message.success('重命名成功');
       setRenameModalVisible(false);
       await loadSessions();
@@ -335,7 +335,7 @@ function ChatPage() {
       let fullContent = '';
 
       // 使用流式 API
-      await cube.streamChatCompletion(
+      await model.streamChatCompletion(
         {
           model,
           messages: [

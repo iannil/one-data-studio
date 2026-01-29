@@ -24,14 +24,14 @@ from dataclasses import dataclass, field
 
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/alldata-api"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/data-api"))
 
 # ---------------------------------------------------------------------------
 # 直接从文件加载 table_fusion_service 模块，绕过 services/__init__.py
 # （services/__init__.py → metadata_graph_builder → ImportError）
 # ---------------------------------------------------------------------------
 _MODULE_PATH = os.path.join(
-    os.path.dirname(__file__), "../../services/alldata-api/services/table_fusion_service.py"
+    os.path.dirname(__file__), "../../services/data-api/services/table_fusion_service.py"
 )
 _MODULE_PATH = os.path.normpath(_MODULE_PATH)
 

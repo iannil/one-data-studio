@@ -28,9 +28,9 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DataNode } from 'antd/es/tree';
-import alldata from '@/services/alldata';
-import type { AIAnnotation, SensitivityReport } from '@/services/alldata';
-import AISensitivityScanPanel from '@/pages/alldata/metadata/AISensitivityScanPanel';
+import data from '@/services/data';
+import type { AIAnnotation, SensitivityReport } from '@/services/data';
+import AISensitivityScanPanel from '@/pages/data/metadata/AISensitivityScanPanel';
 
 const { Search } = Input;
 const { TextArea } = Input;
@@ -57,27 +57,27 @@ function MetadataPage() {
   // 获取数据库列表
   const { data: databasesData } = useQuery({
     queryKey: ['databases'],
-    queryFn: alldata.getDatabases,
+    queryFn: data.getDatabases,
   });
 
   // 获取表列表
   const { data: tablesData } = useQuery({
     queryKey: ['tables', selectedDatabase],
-    queryFn: () => alldata.getTables(selectedDatabase),
+    queryFn: () => data.getTables(selectedDatabase),
     enabled: !!selectedDatabase,
   });
 
   // 获取表详情
   const { data: tableDetail, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['tableDetail', selectedDatabase, selectedTable],
-    queryFn: () => alldata.getTableDetail(selectedDatabase, selectedTable),
+    queryFn: () => data.getTableDetail(selectedDatabase, selectedTable),
     enabled: !!(selectedDatabase && selectedTable),
   });
 
   // 智能表搜索
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['tableSearch', searchText],
-    queryFn: () => alldata.searchTables(searchText),
+    queryFn: () => data.searchTables(searchText),
     enabled: searchText.length > 1,
   });
 
@@ -87,7 +87,7 @@ function MetadataPage() {
       if (!selectedDatabase || !selectedTable) {
         throw new Error('请先选择表');
       }
-      return alldata.annotateTable(selectedDatabase, selectedTable, {
+      return data.annotateTable(selectedDatabase, selectedTable, {
         use_llm: true,
         save: true,
       });
@@ -111,7 +111,7 @@ function MetadataPage() {
       if (!selectedDatabase || !selectedTable) {
         throw new Error('请先选择表');
       }
-      return alldata.getSensitivityReport(selectedDatabase, selectedTable);
+      return data.getSensitivityReport(selectedDatabase, selectedTable);
     },
     onSuccess: (response) => {
       if (response?.data) {

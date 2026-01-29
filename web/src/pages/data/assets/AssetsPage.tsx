@@ -36,10 +36,10 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import alldata from '@/services/alldata';
-import type { DataAsset, AssetValueLevel } from '@/services/alldata';
-import { AssetAISearch } from '@/components/alldata/AssetAISearch';
-import { AssetValuePanel } from '@/components/alldata/AssetValuePanel';
+import data from '@/services/data';
+import type { DataAsset, AssetValueLevel } from '@/services/data';
+import { AssetAISearch } from '@/components/data/AssetAISearch';
+import { AssetValuePanel } from '@/components/data/AssetValuePanel';
 import AIAssetValuePanel from './AIAssetValuePanel';
 
 const { Option } = Select;
@@ -59,24 +59,24 @@ function AssetsPage() {
   // Queries
   const { data: assetsData, isLoading: isLoadingAssets } = useQuery({
     queryKey: ['data-assets'],
-    queryFn: () => alldata.getDataAssets(),
+    queryFn: () => data.getDataAssets(),
   });
 
   const { data: inventoriesData } = useQuery({
     queryKey: ['asset-inventories'],
-    queryFn: () => alldata.getAssetInventories(),
+    queryFn: () => data.getAssetInventories(),
     refetchInterval: 5000,
   });
 
   const { data: profileData, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['asset-profile', selectedAsset?.asset_id],
-    queryFn: () => alldata.getDataAsset(selectedAsset!.asset_id),
+    queryFn: () => data.getDataAsset(selectedAsset!.asset_id),
     enabled: !!selectedAsset && isProfileDrawerOpen,
   });
 
   // Mutations
   const createInventoryMutation = useMutation({
-    mutationFn: alldata.createAssetInventory,
+    mutationFn: data.createAssetInventory,
     onSuccess: () => {
       message.success('资产盘点任务创建成功');
       setIsInventoryModalOpen(false);

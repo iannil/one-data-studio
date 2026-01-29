@@ -50,13 +50,13 @@ import {
   detectMappingConflicts,
   suggestDerivedFields,
   listTablesForMapping,
-} from '@/services/alldata';
+} from '@/services/data';
 import type {
   FieldMappingSuggestion,
   FieldMappingResponse,
   MappingConflict,
   SQLGenerationResponse,
-} from '@/services/alldata';
+} from '@/services/data';
 import './FieldMapping.css';
 
 const { TextArea } = Input;

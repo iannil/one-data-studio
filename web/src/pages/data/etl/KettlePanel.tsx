@@ -46,7 +46,7 @@ import {
   validateKettleTransformation,
   executeETLTaskWithKettle,
   getETLTasks,
-} from '@/services/alldata';
+} from '@/services/data';
 import type {
   KettleStatus,
   KettleExecutionResult,
@@ -54,7 +54,7 @@ import type {
   KettleTransformationRequest,
   KettleLogLevel,
   ETLTask,
-} from '@/services/alldata';
+} from '@/services/data';
 
 const { Option } = Select;
 const { TextArea } = Input;

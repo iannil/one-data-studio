@@ -54,7 +54,7 @@ brew install httpie
 
 ---
 
-## 集成点一：Alldata API 测试
+## 集成点一：Data API 测试
 
 ### 2.1 健康检查
 
@@ -357,7 +357,7 @@ curl -X POST $ALDATA_API_URL/api/v1/query/execute \
 
 echo "=== 端到端集成测试 ==="
 
-# 1. Alldata 注册数据集
+# 1. Data 注册数据集
 echo "[1/5] 注册数据集..."
 DS_RESPONSE=$(curl -s -X POST $ALDATA_API_URL/api/v1/datasets \
   -H "Content-Type: application/json" \
@@ -385,11 +385,11 @@ CHAT_RESPONSE=$(curl -s -X POST $CUBE_API_URL/v1/chat/completions \
 REPLY=$(echo $CHAT_RESPONSE | jq -r '.choices[0].message.content')
 echo "模型回复: $REPLY"
 
-# 3. Bisheng 调用数据集
+# 3. Agent 调用数据集
 echo "[3/5] 查询数据集..."
 curl -s $BISHENG_API_URL/api/v1/datasets | jq '.'
 
-# 4. Bisheng 调用模型
+# 4. Agent 调用模型
 echo "[4/5] 跨平台调用模型..."
 curl -s -X POST $BISHENG_API_URL/api/v1/chat \
   -H "Content-Type: application/json" \
@@ -414,7 +414,7 @@ echo "=== 测试完成 ==="
 import pytest
 import requests
 
-class TestAlldataAPI:
+class TestDataAPI:
     base_url = "http://localhost:8080"
 
     def test_health(self):
@@ -503,7 +503,7 @@ pytest test_api.py -v
     ],
     "item": [
         {
-            "name": "Alldata API",
+            "name": "Data API",
             "item": [
                 {
                     "name": "Health Check",
@@ -586,9 +586,9 @@ wrk -t4 -c100 -d30s --latency \
 
 ### 集成测试
 
-- [ ] Alldata → Cube 数据集可读取
-- [ ] Cube → Bisheng 模型调用成功
-- [ ] Alldata → Bisheng 元数据查询成功
+- [ ] Data → Cube 数据集可读取
+- [ ] Cube → Agent 模型调用成功
+- [ ] Data → Agent 元数据查询成功
 - [ ] 端到端流程完整通过
 
 ### 非功能测试

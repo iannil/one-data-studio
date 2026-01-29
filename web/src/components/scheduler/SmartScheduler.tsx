@@ -62,7 +62,7 @@ import {
   type SchedulerTaskStatus,
   type SchedulerStatistics,
   type ResourceDemandPrediction,
-} from '@/services/alldata';
+} from '@/services/data';
 import './SmartScheduler.css';
 
 const { Title, Text, Paragraph } = Typography;

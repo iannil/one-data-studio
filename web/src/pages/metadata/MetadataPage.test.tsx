@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MetadataPage from './MetadataPage';
-import alldata from '@/services/alldata';
+import data from '@/services/data';
 
 // Mock 服务
 vi.mock('@/services/alldata', () => ({
@@ -67,17 +67,17 @@ describe('MetadataPage', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(alldata.getTables).mockResolvedValue({
+    vi.mocked(data.getTables).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(alldata.getTableDetail).mockResolvedValue({
+    vi.mocked(data.getTableDetail).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });
@@ -129,17 +129,17 @@ describe('MetadataPage 浏览功能', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(alldata.getTables).mockResolvedValue({
+    vi.mocked(data.getTables).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(alldata.getTableDetail).mockResolvedValue({
+    vi.mocked(data.getTableDetail).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });
@@ -168,12 +168,12 @@ describe('MetadataPage 搜索功能', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(alldata.searchTables).mockResolvedValue({
+    vi.mocked(data.searchTables).mockResolvedValue({
       code: 0,
       data: {
         results: [
@@ -222,7 +222,7 @@ describe('MetadataPage Text-to-SQL 功能', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
@@ -305,7 +305,7 @@ describe('MetadataPage SQL 结果模态框', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
@@ -346,17 +346,17 @@ describe('MetadataPage 表详情', () => {
     vi.clearAllMocks();
     
 
-    vi.mocked(alldata.getDatabases).mockResolvedValue({
+    vi.mocked(data.getDatabases).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(alldata.getTables).mockResolvedValue({
+    vi.mocked(data.getTables).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(alldata.getTableDetail).mockResolvedValue({
+    vi.mocked(data.getTableDetail).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });

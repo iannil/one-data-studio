@@ -25,8 +25,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import cube from '@/services/cube';
-import type { Notebook, NotebookImage } from '@/services/cube';
+import model from '@/services/model';
+import type { Notebook, NotebookImage } from '@/services/model';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -47,7 +47,7 @@ function NotebooksPage() {
   const { data: notebooksData, isLoading: isLoadingList } = useQuery({
     queryKey: ['notebooks', page, pageSize, statusFilter],
     queryFn: () =>
-      cube.getNotebooks({
+      model.getNotebooks({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -57,12 +57,12 @@ function NotebooksPage() {
   // 获取 Notebook 镜像列表
   const { data: imagesData } = useQuery({
     queryKey: ['notebook-images'],
-    queryFn: () => cube.getNotebookImages(),
+    queryFn: () => model.getNotebookImages(),
   });
 
   // 创建 Notebook
   const createMutation = useMutation({
-    mutationFn: cube.createNotebook,
+    mutationFn: model.createNotebook,
     onSuccess: () => {
       message.success('Notebook 创建成功');
       setIsCreateModalOpen(false);
@@ -76,7 +76,7 @@ function NotebooksPage() {
 
   // 启动 Notebook
   const startMutation = useMutation({
-    mutationFn: cube.startNotebook,
+    mutationFn: model.startNotebook,
     onSuccess: () => {
       message.success('Notebook 启动成功');
       queryClient.invalidateQueries({ queryKey: ['notebooks'] });
@@ -88,7 +88,7 @@ function NotebooksPage() {
 
   // 停止 Notebook
   const stopMutation = useMutation({
-    mutationFn: cube.stopNotebook,
+    mutationFn: model.stopNotebook,
     onSuccess: () => {
       message.success('Notebook 已停止');
       queryClient.invalidateQueries({ queryKey: ['notebooks'] });
@@ -100,7 +100,7 @@ function NotebooksPage() {
 
   // 删除 Notebook
   const deleteMutation = useMutation({
-    mutationFn: cube.deleteNotebook,
+    mutationFn: model.deleteNotebook,
     onSuccess: () => {
       message.success('Notebook 删除成功');
       setIsDetailDrawerOpen(false);

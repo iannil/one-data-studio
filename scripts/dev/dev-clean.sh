@@ -142,10 +142,10 @@ clean_logs() {
     # 清理项目日志目录
     local log_dirs=(
         "$PROJECT_ROOT/logs"
-        "$PROJECT_ROOT/services/alldata-api/logs"
-        "$PROJECT_ROOT/services/bisheng-api/logs"
+        "$PROJECT_ROOT/services/data-api/logs"
+        "$PROJECT_ROOT/services/agent-api/logs"
         "$PROJECT_ROOT/services/openai-proxy/logs"
-        "$PROJECT_ROOT/services/cube-api/logs"
+        "$PROJECT_ROOT/services/model-api/logs"
     )
 
     for dir in "${log_dirs[@]}"; do
@@ -312,8 +312,8 @@ clean_pip() {
         "$PROJECT_ROOT/venv"
         "$PROJECT_ROOT/.venv"
         "$PROJECT_ROOT/env"
-        "$PROJECT_ROOT/services/alldata-api/venv"
-        "$PROJECT_ROOT/services/bisheng-api/venv"
+        "$PROJECT_ROOT/services/data-api/venv"
+        "$PROJECT_ROOT/services/agent-api/venv"
         "$PROJECT_ROOT/services/openai-proxy/venv"
     )
 

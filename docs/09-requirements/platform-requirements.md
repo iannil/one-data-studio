@@ -378,11 +378,11 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
-| 元数据智能识别引擎 | ✅ 已实现 | `services/alldata-api/services/metadata_auto_scan_engine.py` |
-| 跨数据源关联识别 | ✅ 已实现 | `services/alldata-api/services/metadata_graph_builder.py` |
+| 元数据智能识别引擎 | ✅ 已实现 | `services/data-api/services/metadata_auto_scan_engine.py` |
+| 跨数据源关联识别 | ✅ 已实现 | `services/data-api/services/metadata_graph_builder.py` |
 | 元数据图谱可视化 | ✅ 已实现 | `web/src/pages/alldata/MetadataGraphPage.tsx` |
 | 元数据标签管理 | ✅ 已实现 | `/api/v1/metadata` 端点 |
-| 版本管理与回溯 | ✅ 已实现 | `services/alldata-api/services/metadata_version_service.py` |
+| 版本管理与回溯 | ✅ 已实现 | `services/data-api/services/metadata_version_service.py` |
 | 版本差异对比 | ✅ 已实现 | `web/src/components/MetadataVersionDiff.tsx` |
 | 数据标准智能落地 | ✅ 已实现 | `/api/v1/standards` 端点 |
 | 与Kettle联动 | ✅ 已实现 | `web/src/pages/alldata/KettlePage.tsx` |
@@ -392,20 +392,20 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
 | 多源数据智能采集 | ✅ 已实现 | `/api/v1/datasources` (10+数据源类型) |
-| 批量数据抽取 | ✅ 已实现 | `services/alldata-api/routes/datasources.py` |
-| 实时数据采集 | ✅ 已实现 | `services/alldata-api/services/kafka_stream_service.py` |
-| CDC变更数据捕获 | ✅ 已实现 | `services/alldata-api/services/cdc_service.py` |
-| 采集任务智能调度 | ✅ 已实现 | `services/alldata-api/services/smart_scheduler_service.py` |
-| 调度规则自动优化 | ✅ 已实现 | `services/alldata-api/services/scan_scheduler.py` |
+| 批量数据抽取 | ✅ 已实现 | `services/data-api/routes/datasources.py` |
+| 实时数据采集 | ✅ 已实现 | `services/data-api/services/kafka_stream_service.py` |
+| CDC变更数据捕获 | ✅ 已实现 | `services/data-api/services/cdc_service.py` |
+| 采集任务智能调度 | ✅ 已实现 | `services/data-api/services/smart_scheduler_service.py` |
+| 调度规则自动优化 | ✅ 已实现 | `services/data-api/services/scan_scheduler.py` |
 
 ###### （三）数据加工融合系统 ✅ 完成度: 100%
 
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
-| AI辅助清洗规则配置 | ✅ 已实现 | `services/alldata-api/services/ai_cleaning_advisor.py` |
-| 字段转换智能映射 | ✅ 已实现 | `services/alldata-api/services/ai_field_mapping.py` |
-| 多源数据智能融合 | ✅ 已实现 | `services/alldata-api/services/table_fusion_service.py` |
-| 缺失值AI填充 | ✅ 已实现 | `services/alldata-api/services/ai_imputation.py` |
+| AI辅助清洗规则配置 | ✅ 已实现 | `services/data-api/services/ai_cleaning_advisor.py` |
+| 字段转换智能映射 | ✅ 已实现 | `services/data-api/services/ai_field_mapping.py` |
+| 多源数据智能融合 | ✅ 已实现 | `services/data-api/services/table_fusion_service.py` |
+| 缺失值AI填充 | ✅ 已实现 | `services/data-api/services/ai_imputation.py` |
 | OCR文档识别 | ✅ 已实现 | `services/ocr-service/` (25+ API端点) |
 | ETL可视化编排 | ✅ 已实现 | `web/src/pages/alldata/ETLPage.tsx` |
 | Kettle集成 | ✅ 已实现 | `web/src/components/alldata/KettlePanel.tsx` |
@@ -417,17 +417,17 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 | BI智能可视化 | ✅ 已实现 | `web/src/pages/alldata/BIPage.tsx` |
 | 自然语言查询 | ✅ 已实现 | `web/src/pages/Text2SQLPage.tsx` |
 | 拖拽式图表制作 | ✅ 已实现 | `web/src/components/SmartChart.tsx` |
-| AI预测分析 | ✅ 已实现 | `services/alldata-api/services/ai_prediction_service.py` |
-| 智能预警推送 | ✅ 已实现 | `services/alldata-api/services/smart_alert_service.py` |
+| AI预测分析 | ✅ 已实现 | `services/data-api/services/ai_prediction_service.py` |
+| 智能预警推送 | ✅ 已实现 | `services/data-api/services/smart_alert_service.py` |
 | 指标体系管理 | ✅ 已实现 | `/api/v1/metrics` (完整CRUD) |
-| 自然语言转SQL | ✅ 已实现 | `services/bisheng-api/routes/sql.py` |
+| 自然语言转SQL | ✅ 已实现 | `services/agent-api/routes/sql.py` |
 
 ###### （五）数据资产系统 ✅ 完成度: 100%
 
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
-| 资产智能编目 | ✅ 已实现 | `services/alldata-api/services/asset_auto_catalog_service.py` |
-| 资产价值评估 | ✅ 已实现 | `services/alldata-api/services/asset_value_calculator.py` |
+| 资产智能编目 | ✅ 已实现 | `services/data-api/services/asset_auto_catalog_service.py` |
+| 资产价值评估 | ✅ 已实现 | `services/data-api/services/asset_value_calculator.py` |
 | 资产AI检索 | ✅ 已实现 | `web/src/components/alldata/AssetAISearch.tsx` |
 | 数据血缘追踪 | ✅ 已实现 | `web/src/pages/alldata/LineagePage.tsx` |
 | 资产溯源 | ✅ 已实现 | `/api/v1/graph/lineage/{table_name}` |
@@ -437,10 +437,10 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
-| 敏感数据AI识别 | ✅ 已实现 | `services/alldata-api/services/sensitivity_auto_scan_service.py` |
+| 敏感数据AI识别 | ✅ 已实现 | `services/data-api/services/sensitivity_auto_scan_service.py` |
 | 自动脱敏规则 | ✅ 已实现 | `tests/unit/test_masking_rules.py` (验证存在) |
 | 权限智能管控 | ✅ 已实现 | `services/admin-api/routes/` (RBAC完整实现) |
-| SSO单点登录 | ✅ 已实现 | `services/alldata-api/services/enhanced_sso_service.py` |
+| SSO单点登录 | ✅ 已实现 | `services/data-api/services/enhanced_sso_service.py` |
 | 审计日志 | ✅ 已实现 | `/api/v1/audit/logs` |
 | 数据留痕追溯 | ✅ 已实现 | `services/behavior-service/` |
 
@@ -544,9 +544,9 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 
 | 服务 | Python文件数 | API端点数 | 核心服务类 |
 |------|-------------|----------|-----------|
-| alldata-api | 120+ | 100+ | 35+ |
-| cube-api | 50+ | 100+ | 7+ |
-| bisheng-api | 60+ | 100+ | 13+ |
+| data-api | 120+ | 100+ | 35+ |
+| model-api | 50+ | 100+ | 7+ |
+| agent-api | 60+ | 100+ | 13+ |
 | admin-api | 30+ | 80+ | 10+ |
 | behavior-service | 15+ | 30+ | 5+ |
 | ocr-service | 10+ | 25+ | 3+ |
@@ -557,9 +557,9 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 
 | 模块 | 页面数 | 组件数 | 代码行数 |
 |------|--------|--------|---------|
-| Alldata (数据治理) | 20+ | 25+ | 8,000+ |
+| Data (数据治理) | 20+ | 25+ | 8,000+ |
 | Cube (MLOps) | 15+ | 15+ | 5,000+ |
-| Bisheng (LLMOps) | 10+ | 10+ | 4,000+ |
+| Agent (LLMOps) | 10+ | 10+ | 4,000+ |
 | Admin (管理) | 12+ | 10+ | 3,000+ |
 | Portal (门户) | 5+ | 5+ | 2,000+ |
 | 共享组件 | - | 40+ | 16,000+ |

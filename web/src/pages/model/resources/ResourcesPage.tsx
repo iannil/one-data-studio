@@ -20,7 +20,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import cube from '@/services/cube';
+import model from '@/services/model';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -31,21 +31,21 @@ function ResourcesPage() {
   // 获取资源概览
   const { data: overviewData, isLoading: overviewLoading } = useQuery({
     queryKey: ['resource-overview'],
-    queryFn: () => cube.getResourceOverview(),
+    queryFn: () => model.getResourceOverview(),
     refetchInterval: 10000, // 每 10 秒刷新
   });
 
   // 获取 GPU 资源
   const { data: gpuData, isLoading: gpuLoading } = useQuery({
     queryKey: ['gpu-resources'],
-    queryFn: () => cube.getGPUResources(),
+    queryFn: () => model.getGPUResources(),
     refetchInterval: 10000,
   });
 
   // 获取资源池
   const { data: poolsData, isLoading: poolsLoading } = useQuery({
     queryKey: ['resource-pools'],
-    queryFn: () => cube.getResourcePools(),
+    queryFn: () => model.getResourcePools(),
     refetchInterval: 10000,
   });
 

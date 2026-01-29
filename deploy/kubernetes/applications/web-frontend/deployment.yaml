@@ -10,9 +10,9 @@ metadata:
   namespace: one-data-web
 data:
   # API 端点配置（内部 K8s 服务）
-  VITE_API_ALLDATA_URL: "http://alldata-api.one-data-alldata.svc.cluster.local:8080"
-  VITE_API_BISHENG_URL: "http://bisheng-api.one-data-bisheng.svc.cluster.local:8081"
-  VITE_API_CUBE_URL: "http://vllm-serving.one-data-cube.svc.cluster.local:8000"
+  VITE_API_ALLDATA_URL: "http://data-api.one-data-data.svc.cluster.local:8080"
+  VITE_API_BISHENG_URL: "http://agent-api.one-data-agent.svc.cluster.local:8081"
+  VITE_API_CUBE_URL: "http://vllm-serving.one-data-model.svc.cluster.local:8000"
 
   # 认证配置
   VITE_AUTH_MODE: "keycloak"

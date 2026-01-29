@@ -63,7 +63,7 @@ import {
   type NotificationRule,
   type NotificationHistoryItem,
   type SendNotificationRequest,
-} from '@/services/alldata';
+} from '@/services/data';
 import './NotificationCenter.css';
 
 const { Title, Text, Paragraph } = Typography;

@@ -28,7 +28,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { sensitivityAI } from '@/services/alldata';
+import { sensitivityAI } from '@/services/data';
 
 const { Text } = Typography;
 

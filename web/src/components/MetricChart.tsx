@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Card, Select } from 'antd';
-import type { MetricDataPoint } from '@/services/cube';
+import type { MetricDataPoint } from '@/services/model';
 
 const { Option } = Select;
 

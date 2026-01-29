@@ -32,9 +32,9 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import alldata from '@/services/alldata';
-import { text2Sql } from '@/services/bisheng';
-import type { Text2SqlResponse } from '@/services/bisheng';
+import data from '@/services/data';
+import { text2Sql } from '@/services/agent-service';
+import type { Text2SqlResponse } from '@/services/agent-service';
 import { logError } from '@/services/logger';
 
 const { TextArea } = Input;
@@ -88,7 +88,7 @@ function Text2SQLPage() {
   // 获取数据库列表
   const { data: databasesData } = useQuery({
     queryKey: ['databases'],
-    queryFn: alldata.getDatabases,
+    queryFn: data.getDatabases,
   });
 
   const databases = databasesData?.data?.databases || [];
@@ -96,7 +96,7 @@ function Text2SQLPage() {
   // 获取选中数据库的表列表
   const { data: tablesData, isLoading: tablesLoading } = useQuery({
     queryKey: ['tables', selectedDatabase],
-    queryFn: () => alldata.getTables(selectedDatabase),
+    queryFn: () => data.getTables(selectedDatabase),
     enabled: !!selectedDatabase,
   });
 
@@ -173,7 +173,7 @@ function Text2SQLPage() {
 
     setIsExecuting(true);
     try {
-      const response = await alldata.executeQuery({
+      const response = await data.executeQuery({
         database: selectedDatabase,
         sql: sqlResult.sql,
       });

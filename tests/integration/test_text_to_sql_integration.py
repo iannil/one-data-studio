@@ -106,7 +106,7 @@ def sql_validator():
 @pytest.fixture
 def mock_metadata_service():
     """模拟元数据服务"""
-    with patch('services.alldata_api.services.metadata_schema_provider.metadata_service') as mock:
+    with patch('services.data_api.services.metadata_schema_provider.metadata_service') as mock:
         mock.get_table_schema.side_effect = lambda table, db: _get_mock_table_schema(table)
         mock.search_tables_by_keyword.side_effect = lambda keyword, db: _search_mock_tables(keyword)
         yield mock

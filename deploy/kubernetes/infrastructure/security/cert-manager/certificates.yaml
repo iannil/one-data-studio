@@ -60,8 +60,8 @@ spec:
     name: one-data-ca-issuer
     kind: ClusterIssuer
   dnsNames:
-    - bisheng-api.one-data-system.svc.cluster.local
-    - alldata-api.one-data-system.svc.cluster.local
+    - agent-api.one-data-system.svc.cluster.local
+    - data-api.one-data-system.svc.cluster.local
     - "*.one-data-system.svc.cluster.local"
   duration: 8760h  # 1 year for internal certs
   renewBefore: 720h  # 30 days before expiry

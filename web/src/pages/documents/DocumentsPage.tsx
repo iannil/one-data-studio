@@ -27,7 +27,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UploadFile } from 'antd';
 import dayjs from 'dayjs';
-import bisheng, { type IndexedDocument } from '@/services/bisheng';
+import bisheng, { type IndexedDocument } from '@/services/agent-service';
 
 const { Dragger } = Upload;
 const { Option } = Select;
@@ -54,12 +54,12 @@ function DocumentsPage() {
   // 获取文档列表
   const { data: documentsData, isLoading } = useQuery({
     queryKey: ['documents', selectedCollection],
-    queryFn: () => bisheng.getDocuments({ collection: selectedCollection, limit: 100 }),
+    queryFn: () => agentService.getDocuments({ collection: selectedCollection, limit: 100 }),
   });
 
   // 上传文档
   const uploadMutation = useMutation({
-    mutationFn: bisheng.uploadDocument,
+    mutationFn: agentService.uploadDocument,
     onSuccess: () => {
       message.success('文档上传成功');
       setIsUploadModalOpen(false);
@@ -74,7 +74,7 @@ function DocumentsPage() {
 
   // 删除文档
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deleteDocument,
+    mutationFn: agentService.deleteDocument,
     onSuccess: () => {
       message.success('文档删除成功');
       setIsPreviewDrawerOpen(false);
@@ -87,7 +87,7 @@ function DocumentsPage() {
 
   // 批量删除文档
   const batchDeleteMutation = useMutation({
-    mutationFn: bisheng.batchDeleteDocuments,
+    mutationFn: agentService.batchDeleteDocuments,
     onSuccess: (data) => {
       const result = data.data as BatchDeleteResponse | undefined;
       const deleted_count = result?.deleted_count ?? 0;

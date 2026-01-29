@@ -36,14 +36,14 @@ import pytest
 
 # 添加项目路径（仅添加不会触发 services/__init__.py 链式加载的安全路径）
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.insert(0, os.path.join(_project_root, "services", "alldata-api"))
-sys.path.insert(0, os.path.join(_project_root, "services", "alldata-api", "src"))
+sys.path.insert(0, os.path.join(_project_root, "services", "data-api"))
+sys.path.insert(0, os.path.join(_project_root, "services", "data-api", "src"))
 
 logger = logging.getLogger(__name__)
 
 
 # ==================== 内联的 ai_cleaning_advisor 类型和服务 ====================
-# 从 services/alldata-api/src/ai_cleaning_advisor.py 复制的核心类型，
+# 从 services/data-api/src/ai_cleaning_advisor.py 复制的核心类型，
 # 避免导入时触发 services/__init__.py 的模块链式加载失败。
 
 
@@ -385,7 +385,7 @@ class AICleaningAdvisor:
 
 
 # ==================== 内联的 kettle_orchestration_service 类型和服务 ====================
-# 从 services/alldata-api/services/kettle_orchestration_service.py 复制的核心类型
+# 从 services/data-api/services/kettle_orchestration_service.py 复制的核心类型
 
 
 class OrchestrationStatus(str, Enum):

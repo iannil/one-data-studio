@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: openai-proxy
-  namespace: one-data-cube
+  namespace: one-data-model
   labels:
     app: openai-proxy
 spec:

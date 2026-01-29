@@ -36,8 +36,8 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import alldata from '@/services/alldata';
-import type { LineageNode, AIImpactAnalysis, SQLLineageResult } from '@/services/alldata';
+import data from '@/services/data';
+import type { LineageNode, AIImpactAnalysis, SQLLineageResult } from '@/services/data';
 import LineageGraphComponent from '@/components/LineageGraph';
 
 const { TextArea } = Input;
@@ -64,21 +64,21 @@ function LineagePage() {
   // 表级血缘
   const { data: lineageData, isLoading: isLoadingLineage, refetch: refetchLineage } = useQuery({
     queryKey: ['tableLineage', selectedTable, depth],
-    queryFn: () => alldata.getTableLineage(selectedTable, depth),
+    queryFn: () => data.getTableLineage(selectedTable, depth),
     enabled: !!selectedTable && activeTab === 'graph',
   });
 
   // 影响分析
   const { data: impactData } = useQuery({
     queryKey: ['impactAnalysis', impactTable],
-    queryFn: () => alldata.getImpactAnalysis(impactTable),
+    queryFn: () => data.getImpactAnalysis(impactTable),
     enabled: !!impactTable && activeTab === 'impact',
   });
 
   // 搜索血缘
   const { data: searchData, isLoading: isSearching } = useQuery({
     queryKey: ['searchLineage', searchQuery],
-    queryFn: () => alldata.searchLineage(searchQuery),
+    queryFn: () => data.searchLineage(searchQuery),
     enabled: searchQuery.length >= 2,
   });
 
@@ -86,7 +86,7 @@ function LineagePage() {
   const [columnLineageParams, setColumnLineageParams] = useState<{ table: string; column: string } | null>(null);
   const { data: columnLineageData } = useQuery({
     queryKey: ['columnLineage', columnLineageParams?.table, columnLineageParams?.column],
-    queryFn: () => alldata.getColumnLineage(columnLineageParams!.table, columnLineageParams!.column),
+    queryFn: () => data.getColumnLineage(columnLineageParams!.table, columnLineageParams!.column),
     enabled: !!columnLineageParams && activeTab === 'column',
   });
 
@@ -108,7 +108,7 @@ function LineagePage() {
         node_type: 'table',
         impact_level: t.distance,
       })) || [];
-      return alldata.getAIImpactAnalysis(nodeInfo, {
+      return data.getAIImpactAnalysis(nodeInfo, {
         downstream_nodes: downstreamNodes,
         change_type: changeType,
       });
@@ -130,7 +130,7 @@ function LineagePage() {
       if (!sqlInput.trim()) {
         throw new Error('请输入 SQL 语句');
       }
-      return alldata.parseSQLLineage(sqlInput, { use_ai: true });
+      return data.parseSQLLineage(sqlInput, { use_ai: true });
     },
     onSuccess: (response) => {
       if (response?.data) {

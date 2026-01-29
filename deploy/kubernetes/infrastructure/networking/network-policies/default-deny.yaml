@@ -3,36 +3,36 @@
 # Deny all ingress/egress traffic by default for security
 
 ---
-# Default deny all ingress traffic in one-data-alldata namespace
+# Default deny all ingress traffic in one-data-data namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-alldata
+  namespace: one-data-data
 spec:
   podSelector: {}
   policyTypes:
   - Ingress
 
 ---
-# Default deny all ingress traffic in one-data-bisheng namespace
+# Default deny all ingress traffic in one-data-agent namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-bisheng
+  namespace: one-data-agent
 spec:
   podSelector: {}
   policyTypes:
   - Ingress
 
 ---
-# Default deny all ingress traffic in one-data-cube namespace
+# Default deny all ingress traffic in one-data-model namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: one-data-cube
+  namespace: one-data-model
 spec:
   podSelector: {}
   policyTypes:

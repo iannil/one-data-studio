@@ -559,19 +559,19 @@ class TestServiceHealthCheck:
     """服务健康检查测试"""
 
     @pytest.mark.e2e
-    def test_alldata_health(self):
+    def test_data_health(self):
         """测试 Alldata 服务健康"""
         response = requests.get(f"{ALLDATA_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
-    def test_bisheng_health(self):
+    def test_agent_health(self):
         """测试 Bisheng 服务健康"""
         response = requests.get(f"{BISHENG_URL}/api/v1/health")
         assert response.status_code in [200, 404]
 
     @pytest.mark.e2e
-    def test_cube_health(self):
+    def test_model_health(self):
         """测试 Cube Studio 服务健康"""
         response = requests.get(f"{CUBE_URL}/api/v1/health")
         assert response.status_code in [200, 404]

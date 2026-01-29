@@ -24,8 +24,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng from '@/services/bisheng';
-import type { Workflow } from '@/services/bisheng';
+import agentService from '@/services/agent-service';
+import type { Workflow } from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -43,12 +43,12 @@ function WorkflowsPage() {
   // 获取工作流列表
   const { data: workflowsData, isLoading } = useQuery({
     queryKey: ['workflows'],
-    queryFn: bisheng.getWorkflows,
+    queryFn: agentService.getWorkflows,
   });
 
   // 创建工作流
   const createMutation = useMutation({
-    mutationFn: bisheng.createWorkflow,
+    mutationFn: agentService.createWorkflow,
     onSuccess: () => {
       message.success('工作流创建成功');
       setIsCreateModalOpen(false);
@@ -62,7 +62,7 @@ function WorkflowsPage() {
 
   // 启动工作流
   const startMutation = useMutation({
-    mutationFn: (workflowId: string) => bisheng.startWorkflow(workflowId),
+    mutationFn: (workflowId: string) => agentService.startWorkflow(workflowId),
     onSuccess: () => {
       message.success('工作流已启动');
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -74,7 +74,7 @@ function WorkflowsPage() {
 
   // 停止工作流
   const stopMutation = useMutation({
-    mutationFn: (workflowId: string) => bisheng.stopWorkflow(workflowId, { execution_id: '' }),
+    mutationFn: (workflowId: string) => agentService.stopWorkflow(workflowId, { execution_id: '' }),
     onSuccess: () => {
       message.success('工作流已停止');
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -86,7 +86,7 @@ function WorkflowsPage() {
 
   // 删除工作流
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deleteWorkflow,
+    mutationFn: agentService.deleteWorkflow,
     onSuccess: () => {
       message.success('工作流删除成功');
       setIsDetailModalOpen(false);

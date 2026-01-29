@@ -38,7 +38,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleRetryConfig } from '@/services/bisheng';
+import bisheng, { type WorkflowSchedule, type CreateScheduleRequest, type Workflow, type ScheduleRetryConfig } from '@/services/agent-service';
 
 const { Option } = Select;
 
@@ -104,19 +104,19 @@ function SchedulesPage() {
   // 获取工作流列表（用于选择）
   const { data: workflowsData } = useQuery({
     queryKey: ['workflows'],
-    queryFn: bisheng.getWorkflows,
+    queryFn: agentService.getWorkflows,
   });
 
   // 获取调度列表
   const { data: schedulesData, isLoading } = useQuery({
     queryKey: ['schedules', enabledOnly],
-    queryFn: () => bisheng.listAllSchedules({ enabled: enabledOnly || undefined }),
+    queryFn: () => agentService.listAllSchedules({ enabled: enabledOnly || undefined }),
   });
 
   // 创建调度
   const createMutation = useMutation({
     mutationFn: ({ workflowId, data }: { workflowId: string; data: CreateScheduleRequest }) =>
-      bisheng.createSchedule(workflowId, data),
+      agentService.createSchedule(workflowId, data),
     onSuccess: () => {
       message.success('调度创建成功');
       setIsCreateModalOpen(false);
@@ -139,8 +139,8 @@ function SchedulesPage() {
       workflowId: string;
       data: CreateScheduleRequest;
     }) => {
-      await bisheng.deleteSchedule(scheduleId);
-      return bisheng.createSchedule(workflowId, data);
+      await agentService.deleteSchedule(scheduleId);
+      return agentService.createSchedule(workflowId, data);
     },
     onSuccess: () => {
       message.success('调度更新成功');
@@ -156,7 +156,7 @@ function SchedulesPage() {
 
   // 删除调度
   const deleteMutation = useMutation({
-    mutationFn: bisheng.deleteSchedule,
+    mutationFn: agentService.deleteSchedule,
     onSuccess: () => {
       message.success('调度删除成功');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
@@ -168,7 +168,7 @@ function SchedulesPage() {
 
   // 触发调度
   const triggerMutation = useMutation({
-    mutationFn: bisheng.triggerSchedule,
+    mutationFn: agentService.triggerSchedule,
     onSuccess: (data) => {
       message.success(`调度已触发，执行ID: ${data.data?.execution_id || '-'}`);
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
@@ -181,7 +181,7 @@ function SchedulesPage() {
   // 切换启用状态（通过更新实现）
   const toggleEnabledMutation = useMutation({
     mutationFn: async ({ schedule, enabled }: { schedule: WorkflowSchedule; enabled: boolean }) => {
-      await bisheng.deleteSchedule(schedule.schedule_id);
+      await agentService.deleteSchedule(schedule.schedule_id);
       const data: CreateScheduleRequest = {
         type: schedule.schedule_type,
         enabled,
@@ -193,7 +193,7 @@ function SchedulesPage() {
       } else if (schedule.schedule_type === 'event') {
         data.event_trigger = schedule.event_trigger;
       }
-      return bisheng.createSchedule(schedule.workflow_id, data);
+      return agentService.createSchedule(schedule.workflow_id, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
@@ -205,7 +205,7 @@ function SchedulesPage() {
 
   // P4: 暂停调度
   const pauseMutation = useMutation({
-    mutationFn: bisheng.pauseSchedule,
+    mutationFn: agentService.pauseSchedule,
     onSuccess: () => {
       message.success('调度已暂停');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
@@ -217,7 +217,7 @@ function SchedulesPage() {
 
   // P4: 恢复调度
   const resumeMutation = useMutation({
-    mutationFn: bisheng.resumeSchedule,
+    mutationFn: agentService.resumeSchedule,
     onSuccess: () => {
       message.success('调度已恢复');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
@@ -230,7 +230,7 @@ function SchedulesPage() {
   // P4: 更新重试配置
   const updateRetryConfigMutation = useMutation({
     mutationFn: ({ scheduleId, config }: { scheduleId: string; config: Partial<ScheduleRetryConfig> }) =>
-      bisheng.updateScheduleRetryConfig(scheduleId, config),
+      agentService.updateScheduleRetryConfig(scheduleId, config),
     onSuccess: () => {
       message.success('重试配置已更新');
       setIsRetryConfigModalOpen(false);
@@ -244,7 +244,7 @@ function SchedulesPage() {
   // P4: 获取统计信息
   const { data: statisticsData, refetch: refetchStatistics } = useQuery({
     queryKey: ['schedule-statistics', selectedSchedule?.schedule_id],
-    queryFn: () => bisheng.getScheduleStatistics(selectedSchedule!.schedule_id),
+    queryFn: () => agentService.getScheduleStatistics(selectedSchedule!.schedule_id),
     enabled: isStatisticsModalOpen && !!selectedSchedule,
   });
 

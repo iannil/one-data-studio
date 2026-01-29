@@ -28,7 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import bisheng, { type WorkflowExecution, type Workflow } from '@/services/bisheng';
+import bisheng, { type WorkflowExecution, type Workflow } from '@/services/agent-service';
 import ExecutionLogsModal from './ExecutionLogsModal';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
@@ -71,14 +71,14 @@ function ExecutionsDashboard() {
   // 获取工作流列表（用于筛选）
   const { data: workflowsData } = useQuery({
     queryKey: ['workflows'],
-    queryFn: bisheng.getWorkflows,
+    queryFn: agentService.getWorkflows,
   });
 
   // 获取执行列表
   const { data: executionsData, isLoading, refetch } = useQuery({
     queryKey: ['executions', selectedWorkflowId, selectedStatus],
     queryFn: () =>
-      bisheng.listExecutions({
+      agentService.listExecutions({
         workflow_id: selectedWorkflowId,
         status: selectedStatus,
         limit: 100,

@@ -19,12 +19,12 @@ data:
     {
       "service_strategies": [
         {
-          "service": "bisheng-api",
+          "service": "agent-api",
           "type": "probabilistic",
           "param": 0.5
         },
         {
-          "service": "alldata-api",
+          "service": "data-api",
           "type": "probabilistic",
           "param": 0.5
         }

@@ -24,7 +24,7 @@ import {
   RobotOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { qualityAI } from '@/services/alldata';
+import { qualityAI } from '@/services/data';
 
 const { Text } = Typography;
 

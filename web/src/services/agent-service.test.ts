@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as bisheng from './bisheng';
+import * as agentService from './bisheng';
 
 // Mock apiClient
 vi.mock('./api', () => ({
@@ -30,7 +30,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getWorkflows();
+      const result = await agentService.getWorkflows();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/workflows');
       expect(result).toEqual(mockResponse);
@@ -43,7 +43,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getWorkflow('wf-123');
+      const result = await agentService.getWorkflow('wf-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/workflows/wf-123');
       expect(result).toEqual(mockResponse);
@@ -60,7 +60,7 @@ describe('Bisheng Service', () => {
         name: 'New Workflow',
         type: 'custom' as const,
       };
-      const result = await bisheng.createWorkflow(request);
+      const result = await agentService.createWorkflow(request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/workflows', request);
       expect(result).toEqual(mockResponse);
@@ -74,7 +74,7 @@ describe('Bisheng Service', () => {
       vi.mocked(apiClient.put).mockResolvedValue(mockResponse);
 
       const request = { name: 'Updated Workflow' };
-      const result = await bisheng.updateWorkflow('wf-123', request);
+      const result = await agentService.updateWorkflow('wf-123', request);
 
       expect(apiClient.put).toHaveBeenCalledWith('/api/v1/workflows/wf-123', request);
       expect(result).toEqual(mockResponse);
@@ -84,7 +84,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteWorkflow('wf-123');
+      const result = await agentService.deleteWorkflow('wf-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/workflows/wf-123');
       expect(result).toEqual(mockResponse);
@@ -97,7 +97,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.startWorkflow('wf-123', { inputs: { query: 'test' } });
+      const result = await agentService.startWorkflow('wf-123', { inputs: { query: 'test' } });
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/workflows/wf-123/start', { inputs: { query: 'test' } });
       expect(result).toEqual(mockResponse);
@@ -107,7 +107,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.stopWorkflow('wf-123', { execution_id: 'exec-123' });
+      const result = await agentService.stopWorkflow('wf-123', { execution_id: 'exec-123' });
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/workflows/wf-123/stop', { execution_id: 'exec-123' });
       expect(result).toEqual(mockResponse);
@@ -120,7 +120,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getWorkflowExecutions('wf-123');
+      const result = await agentService.getWorkflowExecutions('wf-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/workflows/wf-123/executions?limit=20');
       expect(result).toEqual(mockResponse);
@@ -133,7 +133,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getExecutionLogs('exec-123');
+      const result = await agentService.getExecutionLogs('exec-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/executions/exec-123/logs');
       expect(result).toEqual(mockResponse);
@@ -148,7 +148,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getConversations();
+      const result = await agentService.getConversations();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/conversations');
       expect(result).toEqual(mockResponse);
@@ -161,7 +161,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getConversation('conv-123');
+      const result = await agentService.getConversation('conv-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/conversations/conv-123');
       expect(result).toEqual(mockResponse);
@@ -174,7 +174,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.createConversation('New Chat');
+      const result = await agentService.createConversation('New Chat');
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/conversations', { title: 'New Chat' });
       expect(result).toEqual(mockResponse);
@@ -184,7 +184,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteConversation('conv-123');
+      const result = await agentService.deleteConversation('conv-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/conversations/conv-123');
       expect(result).toEqual(mockResponse);
@@ -194,7 +194,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.put).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.renameConversation('conv-123', 'New Title');
+      const result = await agentService.renameConversation('conv-123', 'New Title');
 
       expect(apiClient.put).toHaveBeenCalledWith('/api/v1/conversations/conv-123', { title: 'New Title' });
       expect(result).toEqual(mockResponse);
@@ -209,7 +209,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getDocuments();
+      const result = await agentService.getDocuments();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/documents');
       expect(result).toEqual(mockResponse);
@@ -222,7 +222,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getDocument('doc-123');
+      const result = await agentService.getDocument('doc-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/documents/doc-123');
       expect(result).toEqual(mockResponse);
@@ -232,7 +232,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteDocument('doc-123');
+      const result = await agentService.deleteDocument('doc-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/documents/doc-123');
       expect(result).toEqual(mockResponse);
@@ -247,7 +247,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.listAgentTemplates();
+      const result = await agentService.listAgentTemplates();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/agent/templates');
       expect(result).toEqual(mockResponse);
@@ -260,7 +260,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getAgentTemplate('tpl-123');
+      const result = await agentService.getAgentTemplate('tpl-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/agent/templates/tpl-123');
       expect(result).toEqual(mockResponse);
@@ -278,7 +278,7 @@ describe('Bisheng Service', () => {
         agent_type: 'react',
         model: 'gpt-4',
       };
-      const result = await bisheng.runAgent(request);
+      const result = await agentService.runAgent(request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/agent/run', request);
       expect(result).toEqual(mockResponse);
@@ -291,7 +291,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.listTools();
+      const result = await agentService.listTools();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/tools');
       expect(result).toEqual(mockResponse);
@@ -306,7 +306,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getPromptTemplates();
+      const result = await agentService.getPromptTemplates();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/templates', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -319,7 +319,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getPromptTemplate('tpl-123');
+      const result = await agentService.getPromptTemplate('tpl-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/templates/tpl-123');
       expect(result).toEqual(mockResponse);
@@ -336,7 +336,7 @@ describe('Bisheng Service', () => {
         name: 'Test Template',
         content: 'You are a helpful assistant.',
       };
-      const result = await bisheng.createPromptTemplate(request);
+      const result = await agentService.createPromptTemplate(request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/templates', request);
       expect(result).toEqual(mockResponse);
@@ -350,7 +350,7 @@ describe('Bisheng Service', () => {
       vi.mocked(apiClient.put).mockResolvedValue(mockResponse);
 
       const request = { name: 'Updated Template' };
-      const result = await bisheng.updatePromptTemplate('tpl-123', request);
+      const result = await agentService.updatePromptTemplate('tpl-123', request);
 
       expect(apiClient.put).toHaveBeenCalledWith('/api/v1/templates/tpl-123', request);
       expect(result).toEqual(mockResponse);
@@ -360,7 +360,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deletePromptTemplate('tpl-123');
+      const result = await agentService.deletePromptTemplate('tpl-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/templates/tpl-123');
       expect(result).toEqual(mockResponse);
@@ -375,7 +375,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getPendingHumanTasks();
+      const result = await agentService.getPendingHumanTasks();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/human-tasks', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -388,7 +388,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getHumanTask('task-123');
+      const result = await agentService.getHumanTask('task-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/human-tasks/task-123');
       expect(result).toEqual(mockResponse);
@@ -402,7 +402,7 @@ describe('Bisheng Service', () => {
         approved: true,
         comment: 'Approved',
       };
-      const result = await bisheng.submitHumanTask('task-123', request);
+      const result = await agentService.submitHumanTask('task-123', request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/human-tasks/task-123/submit', request);
       expect(result).toEqual(mockResponse);
@@ -415,7 +415,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getMyTaskStatistics();
+      const result = await agentService.getMyTaskStatistics();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/human-tasks/my-tasks/statistics');
       expect(result).toEqual(mockResponse);
@@ -430,7 +430,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.listSchedules('wf-123');
+      const result = await agentService.listSchedules('wf-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/workflows/wf-123/schedules');
       expect(result).toEqual(mockResponse);
@@ -443,7 +443,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.createSchedule('wf-123');
+      const result = await agentService.createSchedule('wf-123');
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/workflows/wf-123/schedules', undefined);
       expect(result).toEqual(mockResponse);
@@ -453,7 +453,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: { schedule_id: 'sch-123', paused: true } };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.pauseSchedule('sch-123');
+      const result = await agentService.pauseSchedule('sch-123');
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/schedules/sch-123/pause');
       expect(result).toEqual(mockResponse);
@@ -463,7 +463,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: { schedule_id: 'sch-123', paused: false } };
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.resumeSchedule('sch-123');
+      const result = await agentService.resumeSchedule('sch-123');
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/schedules/sch-123/resume');
       expect(result).toEqual(mockResponse);
@@ -473,7 +473,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteSchedule('sch-123');
+      const result = await agentService.deleteSchedule('sch-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/schedules/sch-123');
       expect(result).toEqual(mockResponse);
@@ -488,7 +488,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getKnowledgeBases();
+      const result = await agentService.getKnowledgeBases();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/knowledge-bases', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -501,7 +501,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getKnowledgeBase('kb-123');
+      const result = await agentService.getKnowledgeBase('kb-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/knowledge-bases/kb-123');
       expect(result).toEqual(mockResponse);
@@ -511,7 +511,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteKnowledgeBase('kb-123');
+      const result = await agentService.deleteKnowledgeBase('kb-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/knowledge-bases/kb-123');
       expect(result).toEqual(mockResponse);
@@ -530,7 +530,7 @@ describe('Bisheng Service', () => {
         query: 'What is AI?',
         collection: 'default',
       };
-      const result = await bisheng.ragQuery(request);
+      const result = await agentService.ragQuery(request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/rag/query', request);
       expect(result).toEqual(mockResponse);
@@ -549,7 +549,7 @@ describe('Bisheng Service', () => {
         question: 'Show me all users',
         database: 'default',
       };
-      const result = await bisheng.text2Sql(request);
+      const result = await agentService.text2Sql(request);
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/text2sql', request);
       expect(result).toEqual(mockResponse);
@@ -564,7 +564,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getEvaluationTasks();
+      const result = await agentService.getEvaluationTasks();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/evaluation/tasks', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -577,7 +577,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getEvaluationTask('eval-123');
+      const result = await agentService.getEvaluationTask('eval-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/evaluation/tasks/eval-123');
       expect(result).toEqual(mockResponse);
@@ -587,7 +587,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteEvaluationTask('eval-123');
+      const result = await agentService.deleteEvaluationTask('eval-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/evaluation/tasks/eval-123');
       expect(result).toEqual(mockResponse);
@@ -602,7 +602,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getSFTTasks();
+      const result = await agentService.getSFTTasks();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/sft/tasks', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -615,7 +615,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getSFTTask('sft-123');
+      const result = await agentService.getSFTTask('sft-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/sft/tasks/sft-123');
       expect(result).toEqual(mockResponse);
@@ -625,7 +625,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteSFTTask('sft-123');
+      const result = await agentService.deleteSFTTask('sft-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/sft/tasks/sft-123');
       expect(result).toEqual(mockResponse);
@@ -638,7 +638,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getBaseModels();
+      const result = await agentService.getBaseModels();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/sft/base-models');
       expect(result).toEqual(mockResponse);
@@ -653,7 +653,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getPublishedApps();
+      const result = await agentService.getPublishedApps();
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/apps', { params: undefined });
       expect(result).toEqual(mockResponse);
@@ -666,7 +666,7 @@ describe('Bisheng Service', () => {
       };
       vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.getPublishedApp('app-123');
+      const result = await agentService.getPublishedApp('app-123');
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/apps/app-123');
       expect(result).toEqual(mockResponse);
@@ -676,7 +676,7 @@ describe('Bisheng Service', () => {
       const mockResponse = { code: 0, data: null };
       vi.mocked(apiClient.delete).mockResolvedValue(mockResponse);
 
-      const result = await bisheng.deleteApp('app-123');
+      const result = await agentService.deleteApp('app-123');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/apps/app-123');
       expect(result).toEqual(mockResponse);

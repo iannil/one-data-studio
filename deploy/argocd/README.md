@@ -8,8 +8,8 @@ This directory contains ArgoCD configurations for GitOps-based deployment.
 ```
 argocd/
 ├── applications/           # ArgoCD Application definitions
-│   ├── alldata-api.yaml   # Alldata API application
-│   ├── bisheng-api.yaml   # Bisheng API application
+│   ├── data-api.yaml   # Data API application
+│   ├── agent-api.yaml   # Agent API application
 │   ├── web-frontend.yaml  # Web frontend application
 │   └── monitoring.yaml    # Monitoring stack application
 ├── projects/              # ArgoCD Project definitions
@@ -62,33 +62,33 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 ### Sync an Application
 
 ```bash
-argocd app sync bisheng-api
+argocd app sync agent-api
 ```
 
 ### View Application Status
 
 ```bash
-argocd app get bisheng-api
+argocd app get agent-api
 ```
 
 ### Rollback
 
 ```bash
-argocd app rollback bisheng-api <revision>
+argocd app rollback agent-api <revision>
 ```
 
 ### View Sync History
 
 ```bash
-argocd app history bisheng-api
+argocd app history agent-api
 ```
 
 ## Sync Strategies
 
 | Application | Auto-Sync | Self-Heal | Prune |
 |-------------|-----------|-----------|-------|
-| bisheng-api | ✅ | ✅ | ✅ |
-| alldata-api | ✅ | ✅ | ✅ |
+| agent-api | ✅ | ✅ | ✅ |
+| data-api | ✅ | ✅ | ✅ |
 | web-frontend | ✅ | ✅ | ✅ |
 | monitoring | ❌ | ✅ | ❌ |
 

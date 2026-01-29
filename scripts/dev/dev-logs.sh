@@ -42,16 +42,16 @@ show_logs_help() {
   -h, --help         显示帮助信息
 
 服务别名:
-  b, bisheng     = bisheng-api
-  a, alldata     = alldata-api
-  c, cube        = cube-api
+  b, bisheng     = agent-api
+  a, alldata     = data-api
+  c, cube        = model-api
   o, openai      = openai-proxy
   w, web         = web-frontend
   m, db, mysql   = mysql
   r, redis       = redis" \
         "  dev-logs.sh              # 查看所有服务最近 100 行日志
   dev-logs.sh -f           # 持续查看所有日志
-  dev-logs.sh b            # 查看 bisheng-api 日志
+  dev-logs.sh b            # 查看 agent-api 日志
   dev-logs.sh -f b a       # 持续查看 bisheng 和 alldata 日志
   dev-logs.sh -t 50 mysql  # 查看 MySQL 最后 50 行
   dev-logs.sh --since 10m  # 查看最近 10 分钟的日志

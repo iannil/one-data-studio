@@ -27,8 +27,8 @@ import {
   GithubOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import cube from '@/services/cube';
-import type { HubModel, ModelDeploymentConfig } from '@/services/cube';
+import model from '@/services/model';
+import type { HubModel, ModelDeploymentConfig } from '@/services/model';
 
 const { Option } = Select;
 
@@ -51,7 +51,7 @@ function AIHubPage() {
   const { data: modelsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['hub-models', page, pageSize, searchKeyword, taskTypeFilter, frameworkFilter, paramsFilter],
     queryFn: () =>
-      cube.getHubModels({
+      model.getHubModels({
         page,
         page_size: pageSize,
         search: searchKeyword || undefined,
@@ -63,12 +63,12 @@ function AIHubPage() {
 
   const { data: categoriesData } = useQuery({
     queryKey: ['hub-categories'],
-    queryFn: () => cube.getHubCategories(),
+    queryFn: () => model.getHubCategories(),
   });
 
   // Mutations
   const downloadMutation = useMutation({
-    mutationFn: cube.downloadHubModel,
+    mutationFn: model.downloadHubModel,
     onSuccess: () => {
       message.success('模型下载任务已创建');
       setIsDetailDrawerOpen(false);
@@ -81,7 +81,7 @@ function AIHubPage() {
 
   const deployMutation = useMutation({
     mutationFn: ({ modelId, config }: { modelId: string; config: ModelDeploymentConfig }) =>
-      cube.deployHubModel(modelId, config),
+      model.deployHubModel(modelId, config),
     onSuccess: () => {
       message.success('模型部署任务已创建');
       setIsDeployModalOpen(false);

@@ -48,8 +48,8 @@ cd web && npm i --package-lock-only && npm audit
 
 ### 扫描命令
 ```bash
-trivy image one-data-studio/alldata-api:latest
-trivy image one-data-studio/bisheng-api:latest
+trivy image one-data-studio/data-api:latest
+trivy image one-data-studio/agent-api:latest
 trivy image one-data-studio/openai-proxy:latest
 trivy image one-data-studio/web:latest
 ```
@@ -171,7 +171,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pip-audit
-      - run: pip-audit -r services/bisheng-api/requirements.txt
+      - run: pip-audit -r services/agent-api/requirements.txt
 
   npm-audit:
     runs-on: ubuntu-latest

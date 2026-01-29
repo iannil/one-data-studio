@@ -35,9 +35,9 @@ touch "${PID_FILE}"
 # 端口转发配置
 # 格式: "本地端口:服务端口:命名空间:服务名"
 declare -a FORWARDS=(
-    "8000:8000:one-data-bisheng:bisheng-api"
-    "8001:8001:one-data-alldata:alldata-api"
-    "8002:8002:one-data-cube:cube-api"
+    "8000:8000:one-data-agent:agent-api"
+    "8001:8001:one-data-data:data-api"
+    "8002:8002:one-data-model:model-api"
     "8003:8000:one-data-openai:openai-proxy"
     "3000:80:one-data-web:web-frontend"
     "9001:9001:one-data-infra:minio"

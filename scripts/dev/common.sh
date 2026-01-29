@@ -83,7 +83,7 @@ print_separator() {
 INFRA_SERVICES="mysql redis minio etcd milvus"
 
 # 应用服务
-APP_SERVICES="bisheng-api alldata-api openai-proxy cube-api web-frontend"
+APP_SERVICES="agent-api data-api openai-proxy model-api web-frontend"
 
 # 监控服务
 MONITORING_SERVICES="prometheus grafana jaeger loki"
@@ -97,10 +97,10 @@ ALL_SERVICES="$INFRA_SERVICES $APP_SERVICES"
 resolve_service_alias() {
     local input=$1
     case "$input" in
-        b|bisheng) echo "bisheng-api" ;;
-        a|alldata) echo "alldata-api" ;;
+        b|bisheng) echo "agent-api" ;;
+        a|alldata) echo "data-api" ;;
         o|openai|proxy) echo "openai-proxy" ;;
-        c|cube) echo "cube-api" ;;
+        c|cube) echo "model-api" ;;
         w|web|frontend) echo "web-frontend" ;;
         m|db) echo "mysql" ;;
         r|cache) echo "redis" ;;
@@ -120,9 +120,9 @@ get_service_port() {
         minio-console) echo "9001" ;;
         milvus) echo "19530" ;;
         etcd) echo "2379" ;;
-        bisheng-api) echo "8000" ;;
-        alldata-api) echo "8001" ;;
-        cube-api) echo "8002" ;;
+        agent-api) echo "8000" ;;
+        data-api) echo "8001" ;;
+        model-api) echo "8002" ;;
         openai-proxy) echo "8003" ;;
         web-frontend) echo "3000" ;;
         prometheus) echo "9090" ;;
@@ -137,9 +137,9 @@ get_service_port() {
 get_health_url() {
     local service=$1
     case "$service" in
-        bisheng-api) echo "http://localhost:8000/api/v1/health" ;;
-        alldata-api) echo "http://localhost:8001/api/v1/health" ;;
-        cube-api) echo "http://localhost:8002/api/v1/health" ;;
+        agent-api) echo "http://localhost:8000/api/v1/health" ;;
+        data-api) echo "http://localhost:8001/api/v1/health" ;;
+        model-api) echo "http://localhost:8002/api/v1/health" ;;
         openai-proxy) echo "http://localhost:8003/health" ;;
         web-frontend) echo "http://localhost:3000" ;;
         minio) echo "http://localhost:9000/minio/health/live" ;;
@@ -158,10 +158,10 @@ get_container_name() {
         minio) echo "one-data-minio" ;;
         milvus) echo "one-data-milvus" ;;
         etcd) echo "one-data-etcd" ;;
-        bisheng-api) echo "one-data-bisheng-api" ;;
-        alldata-api) echo "one-data-alldata-api" ;;
+        agent-api) echo "one-data-agent-api" ;;
+        data-api) echo "one-data-data-api" ;;
         openai-proxy) echo "one-data-openai-proxy" ;;
-        cube-api) echo "one-data-cube-api" ;;
+        model-api) echo "one-data-model-api" ;;
         web-frontend) echo "one-data-web" ;;
         prometheus) echo "one-data-prometheus" ;;
         grafana) echo "one-data-grafana" ;;

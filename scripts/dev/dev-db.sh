@@ -270,7 +270,7 @@ run_migrations() {
     log_step "运行数据库迁移..."
 
     # 对各服务执行迁移
-    local services="bisheng-api alldata-api cube-api"
+    local services="agent-api data-api model-api"
 
     for service in $services; do
         local container_name=$(get_container_name "$service")

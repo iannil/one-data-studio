@@ -80,7 +80,7 @@ scrape_configs:
     pipeline_stages:
       # 解析 JSON 格式的日志
       - match:
-          selector: '{container=~"alldata-api|bisheng-api|openai-proxy"}'
+          selector: '{container=~"data-api|agent-api|openai-proxy"}'
           stages:
             - json:
                 expressions:

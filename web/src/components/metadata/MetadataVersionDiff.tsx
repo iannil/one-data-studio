@@ -54,7 +54,7 @@ import {
   type MetadataComparisonResult,
   type TableDiff,
   type ColumnDiff,
-} from '@/services/alldata';
+} from '@/services/data';
 import './MetadataVersionDiff.css';
 
 const { Title, Text, Paragraph } = Typography;

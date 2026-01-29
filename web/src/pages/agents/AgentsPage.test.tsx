@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AgentsPage from './AgentsPage';
-import * as bisheng from '@/services/bisheng';
+import * as agentService from '@/services/agent-service';
 
 // Mock 服务
 vi.mock('@/services/bisheng', () => ({
@@ -27,7 +27,7 @@ describe('AgentsPage', () => {
     vi.clearAllMocks();
 
     // 默认 mock 返回值
-    vi.mocked(bisheng.default.listTools).mockResolvedValue({
+    vi.mocked(agentService.default.listTools).mockResolvedValue({
       code: 0,
       data: {
         tools: [
@@ -51,7 +51,7 @@ describe('AgentsPage', () => {
       },
     });
 
-    vi.mocked(bisheng.default.getToolSchemas).mockResolvedValue({
+    vi.mocked(agentService.default.getToolSchemas).mockResolvedValue({
       code: 0,
       data: {
         schemas: [
@@ -72,7 +72,7 @@ describe('AgentsPage', () => {
       },
     });
 
-    vi.mocked(bisheng.default.listAgentTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.listAgentTemplates).mockResolvedValue({
       code: 0,
       data: {
         templates: [],
@@ -81,7 +81,7 @@ describe('AgentsPage', () => {
     });
 
     // 添加 runAgentStream mock
-    vi.mocked(bisheng.default.runAgentStream).mockImplementation(async () => {});
+    vi.mocked(agentService.default.runAgentStream).mockImplementation(async () => {});
   });
 
   it('应该正确渲染 Agents 页面', async () => {
@@ -100,7 +100,7 @@ describe('AgentsPage', () => {
 
     await waitFor(() => {
       // 检查 listTools 被调用
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -109,7 +109,7 @@ describe('AgentsPage', () => {
 
     await waitFor(() => {
       // 检查 API 被调用
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -137,7 +137,7 @@ describe('AgentsPage', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -145,7 +145,7 @@ describe('AgentsPage', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 });
@@ -154,7 +154,7 @@ describe('AgentsPage 工具管理', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.listTools).mockResolvedValue({
+    vi.mocked(agentService.default.listTools).mockResolvedValue({
       code: 0,
       data: {
         tools: [
@@ -164,24 +164,24 @@ describe('AgentsPage 工具管理', () => {
       },
     });
 
-    vi.mocked(bisheng.default.getToolSchemas).mockResolvedValue({
+    vi.mocked(agentService.default.getToolSchemas).mockResolvedValue({
       code: 0,
       data: { schemas: [] },
     });
 
-    vi.mocked(bisheng.default.listAgentTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.listAgentTemplates).mockResolvedValue({
       code: 0,
       data: { templates: [], total: 0 },
     });
 
-    vi.mocked(bisheng.default.runAgentStream).mockImplementation(async () => {});
+    vi.mocked(agentService.default.runAgentStream).mockImplementation(async () => {});
   });
 
   it('应该加载工具列表', async () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -189,7 +189,7 @@ describe('AgentsPage 工具管理', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -197,7 +197,7 @@ describe('AgentsPage 工具管理', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 });
@@ -206,17 +206,17 @@ describe('AgentsPage Agent 模板', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.listTools).mockResolvedValue({
+    vi.mocked(agentService.default.listTools).mockResolvedValue({
       code: 0,
       data: { tools: [], total: 0 },
     });
 
-    vi.mocked(bisheng.default.getToolSchemas).mockResolvedValue({
+    vi.mocked(agentService.default.getToolSchemas).mockResolvedValue({
       code: 0,
       data: { schemas: [] },
     });
 
-    vi.mocked(bisheng.default.listAgentTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.listAgentTemplates).mockResolvedValue({
       code: 0,
       data: {
         templates: [
@@ -239,14 +239,14 @@ describe('AgentsPage Agent 模板', () => {
       },
     });
 
-    vi.mocked(bisheng.default.runAgentStream).mockImplementation(async () => {});
+    vi.mocked(agentService.default.runAgentStream).mockImplementation(async () => {});
   });
 
   it('应该加载模板列表', async () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listAgentTemplates).toHaveBeenCalled();
+      expect(agentService.default.listAgentTemplates).toHaveBeenCalled();
     });
   });
 
@@ -254,7 +254,7 @@ describe('AgentsPage Agent 模板', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listAgentTemplates).toHaveBeenCalled();
+      expect(agentService.default.listAgentTemplates).toHaveBeenCalled();
     });
   });
 
@@ -262,7 +262,7 @@ describe('AgentsPage Agent 模板', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listAgentTemplates).toHaveBeenCalled();
+      expect(agentService.default.listAgentTemplates).toHaveBeenCalled();
     });
   });
 
@@ -270,7 +270,7 @@ describe('AgentsPage Agent 模板', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listAgentTemplates).toHaveBeenCalled();
+      expect(agentService.default.listAgentTemplates).toHaveBeenCalled();
     });
   });
 });
@@ -279,29 +279,29 @@ describe('AgentsPage Agent 类型选择', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(bisheng.default.listTools).mockResolvedValue({
+    vi.mocked(agentService.default.listTools).mockResolvedValue({
       code: 0,
       data: { tools: [], total: 0 },
     });
 
-    vi.mocked(bisheng.default.getToolSchemas).mockResolvedValue({
+    vi.mocked(agentService.default.getToolSchemas).mockResolvedValue({
       code: 0,
       data: { schemas: [] },
     });
 
-    vi.mocked(bisheng.default.listAgentTemplates).mockResolvedValue({
+    vi.mocked(agentService.default.listAgentTemplates).mockResolvedValue({
       code: 0,
       data: { templates: [], total: 0 },
     });
 
-    vi.mocked(bisheng.default.runAgentStream).mockImplementation(async () => {});
+    vi.mocked(agentService.default.runAgentStream).mockImplementation(async () => {});
   });
 
   it('应该显示 Agent 类型选择器', async () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 
@@ -309,7 +309,7 @@ describe('AgentsPage Agent 类型选择', () => {
     render(<AgentsPage />);
 
     await waitFor(() => {
-      expect(bisheng.default.listTools).toHaveBeenCalled();
+      expect(agentService.default.listTools).toHaveBeenCalled();
     });
   });
 });

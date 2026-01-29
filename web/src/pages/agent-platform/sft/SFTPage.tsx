@@ -33,8 +33,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import bisheng from '@/services/bisheng';
-import type { SFTTask, CreateSFTTaskRequest, SFTDataset } from '@/services/bisheng';
+import agentService from '@/services/agent-service';
+import type { SFTTask, CreateSFTTaskRequest, SFTDataset } from '@/services/agent-service';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -58,7 +58,7 @@ function SFTPage() {
   const { data: tasksData, isLoading: isLoadingList } = useQuery({
     queryKey: ['sft-tasks', page, pageSize, statusFilter],
     queryFn: () =>
-      bisheng.getSFTTasks({
+      agentService.getSFTTasks({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -67,12 +67,12 @@ function SFTPage() {
 
   const { data: datasetsData } = useQuery({
     queryKey: ['sft-datasets'],
-    queryFn: () => bisheng.getSFTDatasets(),
+    queryFn: () => agentService.getSFTDatasets(),
   });
 
   // Mutations
   const createTaskMutation = useMutation({
-    mutationFn: bisheng.createSFTTask,
+    mutationFn: agentService.createSFTTask,
     onSuccess: () => {
       message.success('SFT 任务创建成功');
       setIsCreateModalOpen(false);
@@ -85,7 +85,7 @@ function SFTPage() {
   });
 
   const startMutation = useMutation({
-    mutationFn: bisheng.startSFTTask,
+    mutationFn: agentService.startSFTTask,
     onSuccess: () => {
       message.success('SFT 任务已启动');
       queryClient.invalidateQueries({ queryKey: ['sft-tasks'] });
@@ -96,7 +96,7 @@ function SFTPage() {
   });
 
   const stopMutation = useMutation({
-    mutationFn: bisheng.stopSFTTask,
+    mutationFn: agentService.stopSFTTask,
     onSuccess: () => {
       message.success('SFT 任务已停止');
       queryClient.invalidateQueries({ queryKey: ['sft-tasks'] });
@@ -107,7 +107,7 @@ function SFTPage() {
   });
 
   const createDatasetMutation = useMutation({
-    mutationFn: bisheng.createSFTTask,
+    mutationFn: agentService.createSFTTask,
     onSuccess: () => {
       message.success('SFT 任务创建成功');
       setIsCreateModalOpen(false);
@@ -121,7 +121,7 @@ function SFTPage() {
 
   const exportMutation = useMutation({
     mutationFn: ({ taskId, format }: { taskId: string; format: 'pytorch' | 'safetensors' | 'gguf' }) =>
-      bisheng.exportSFTModel(taskId, format),
+      agentService.exportSFTModel(taskId, format),
     onSuccess: () => {
       message.success('模型导出成功');
     },

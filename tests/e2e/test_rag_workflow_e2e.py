@@ -256,7 +256,7 @@ class TestRAGWorkflowIntegration:
     def test_complete_rag_pipeline_mock(self):
         """测试完整的 RAG 流水线（使用 Mock）"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         # Mock 向量存储和嵌入服务
         mock_vector_store = MagicMock()
@@ -298,7 +298,7 @@ class TestRAGWorkflowIntegration:
     def test_rag_error_handling(self):
         """测试 RAG 错误处理"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         # 测试向量存储连接失败
         mock_vector_store = MagicMock()
@@ -327,7 +327,7 @@ class TestRAGWorkflowIntegration:
     def test_embedding_dimension_validation(self):
         """测试嵌入维度验证"""
         import sys
-        sys.path.insert(0, 'services/bisheng-api/engine')
+        sys.path.insert(0, 'services/agent-api/engine')
 
         # 测试维度不匹配
         mock_vector_store = MagicMock()

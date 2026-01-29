@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Cube API - MLOps 平台服务
+  title: Model API - MLOps 平台服务
   description: |
-    ONE-DATA-STUDIO Cube API 提供完整的 MLOps 能力：
+    ONE-DATA-STUDIO Model API 提供完整的 MLOps 能力：
     - 模型管理与版本控制
     - 训练任务管理
     - 模型部署与服务
@@ -24,7 +24,7 @@ info:
 servers:
   - url: http://localhost:8083/api/v1
     description: 本地开发环境
-  - url: https://cube-api.one-data-studio.io/api/v1
+  - url: https://model-api.one-data-studio.io/api/v1
     description: 生产环境
 
 tags:
@@ -1330,7 +1330,7 @@ components:
           example: ok
         service:
           type: string
-          example: cube-api
+          example: model-api
         version:
           type: string
           example: 1.0.0

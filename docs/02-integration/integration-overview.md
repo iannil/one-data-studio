@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Bisheng (L4)                             │
+│                        Agent (L4)                             │
 │                    应用编排 | Agent | RAG                       │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
@@ -16,12 +16,12 @@
          │                     │                     │
          ↓                     ↓                     ↓
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│   Alldata (L2)  │──→│  Cube Studio    │──→│   Alldata       │
+│   Data (L2)  │──→│  Cube Studio    │──→│   Data       │
 │  元数据/数仓    │   │   (L3)          │   │  向量数据库     │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
-## 集成点一：Alldata → Cube Studio
+## 集成点一：Data → Cube Studio
 
 ### 痛点
 算法工程师通常需要花 80% 时间找数据、洗数据。
@@ -30,7 +30,7 @@
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Alldata    │────→│  MinIO/HDFS │←────│ Cube Studio │
+│  Data    │────→│  MinIO/HDFS │←────│ Cube Studio │
 │  ETL 任务   │     │  数据湖存储 │     │  训练任务   │
 └─────────────┘     └─────────────┘     └─────────────┘
        │                                      │
@@ -44,14 +44,14 @@
 
 ### 实施步骤
 
-1. Alldata 完成 ETL 任务后，将清洗后的数据（CSV/Parquet/TFRecord）写入对象存储（如 MinIO）
-2. Alldata 调用 Cube Studio 的 API，自动注册一个"Dataset"对象
+1. Data 完成 ETL 任务后，将清洗后的数据（CSV/Parquet/TFRecord）写入对象存储（如 MinIO）
+2. Data 调用 Cube Studio 的 API，自动注册一个"Dataset"对象
 3. Cube Studio 的 Pipeline 中，用户直接通过 `mount` 方式或 SDK 读取该 Dataset
 
 ### API 示例
 
 ```python
-# Alldata 侧：注册数据集
+# Data 侧：注册数据集
 POST /api/v1/datasets
 {
     "name": "sales_data_v1.0",
@@ -69,16 +69,16 @@ df = ds.read()  # 自动挂载，直接读取
 
 ---
 
-## 集成点二：Cube Studio → Bisheng
+## 集成点二：Cube Studio → Agent
 
 ### 痛点
-Bisheng 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API。
+Agent 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API。
 
 ### 技术方案：Model-as-a-Service (MaaS) 接口标准化
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  Bisheng (L4)                           │
+│                  Agent (L4)                           │
 │                 应用编排层                               │
 └────────────────────────┬────────────────────────────────┘
                          │ OpenAI 兼容 API
@@ -98,13 +98,13 @@ Bisheng 默认使用公有云 LLM，私有化部署需要稳定的本地模型 A
 
 1. Cube Studio 利用 **vLLM** 或 **TGI** 容器化部署微调好的模型
 2. Cube Studio 通过 Istio 网关暴露 Service Endpoint
-3. Bisheng 后台增加"自定义模型接入"配置
+3. Agent 后台增加"自定义模型接入"配置
 4. **弹性伸缩**：依靠 K8s HPA 自动增加推理 Pod
 
 ### 配置示例
 
 ```yaml
-# Bisheng 模型配置
+# Agent 模型配置
 models:
   - name: "enterprise-llama"
     type: "openai-compatible"
@@ -115,7 +115,7 @@ models:
 
 ---
 
-## 集成点三：Alldata → Bisheng
+## 集成点三：Data → Agent
 
 ### 痛点
 大模型通常不懂企业的数据库表结构，无法准确查询业务数据。
@@ -124,14 +124,14 @@ models:
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   用户提问   │────→│   Bisheng    │────→│    LLM       │
+│   用户提问   │────→│   Agent    │────→│    LLM       │
 │ "上月销售额?" │     │  SQL Agent   │     │  生成 SQL    │
 └──────────────┘     └──────┬───────┘     └──────────────┘
                             ↑
                             │ 获取元数据
                             ↓
                    ┌──────────────────┐
-                   │    Alldata       │
+                   │    Data       │
                    │  元数据中心 API   │
                    │  表结构 | 注释    │
                    │  关联关系        │
@@ -140,10 +140,10 @@ models:
 
 ### 实施步骤
 
-1. Alldata 管理企业数仓的**元数据**（表名、字段、注释、关联关系）
-2. Bisheng 开发专用组件"SQL Agent"
-3. 用户提问时，Bisheng 从 Alldata 获取相关表元数据，注入 Prompt
-4. LLM 生成 SQL，回传给 Alldata 执行
+1. Data 管理企业数仓的**元数据**（表名、字段、注释、关联关系）
+2. Agent 开发专用组件"SQL Agent"
+3. 用户提问时，Agent 从 Data 获取相关表元数据，注入 Prompt
+4. LLM 生成 SQL，回传给 Data 执行
 
 ### Prompt 模板
 
@@ -167,6 +167,6 @@ models:
 
 | 阶段 | 集成点 | 优先级 | 说明 |
 |------|--------|--------|------|
-| 第一阶段 | Alldata → Cube | P0 | 数据是基础，先打通数据链路 |
-| 第二阶段 | Cube → Bisheng | P0 | 模型服务是核心能力 |
-| 第三阶段 | Alldata → Bisheng | P1 | Text-to-SQL 是增强功能 |
+| 第一阶段 | Data → Cube | P0 | 数据是基础，先打通数据链路 |
+| 第二阶段 | Cube → Agent | P0 | 模型服务是核心能力 |
+| 第三阶段 | Data → Agent | P1 | Text-to-SQL 是增强功能 |

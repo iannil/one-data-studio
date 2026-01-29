@@ -64,58 +64,58 @@ spec:
     secretName: internal-ca-tls
 
 ---
-# Alldata API TLS Certificate
+# Data API TLS Certificate
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: alldata-api-tls
-  namespace: one-data-alldata
+  name: data-api-tls
+  namespace: one-data-data
 spec:
-  secretName: alldata-api-tls
+  secretName: data-api-tls
   duration: 2160h  # 90 days
   renewBefore: 720h  # 30 days before expiration
   commonName: alldata.example.com
   dnsNames:
   - alldata.example.com
-  - alldata-api.one-data-alldata.svc.cluster.local
+  - data-api.one-data-data.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
 
 ---
-# Bisheng API TLS Certificate
+# Agent API TLS Certificate
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: bisheng-api-tls
-  namespace: one-data-bisheng
+  name: agent-api-tls
+  namespace: one-data-agent
 spec:
-  secretName: bisheng-api-tls
+  secretName: agent-api-tls
   duration: 2160h
   renewBefore: 720h
   commonName: bisheng.example.com
   dnsNames:
   - bisheng.example.com
-  - bisheng-api.one-data-bisheng.svc.cluster.local
+  - agent-api.one-data-agent.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
 
 ---
-# Cube API TLS Certificate
+# Model API TLS Certificate
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: cube-api-tls
-  namespace: one-data-cube
+  name: model-api-tls
+  namespace: one-data-model
 spec:
-  secretName: cube-api-tls
+  secretName: model-api-tls
   duration: 2160h
   renewBefore: 720h
   commonName: cube.example.com
   dnsNames:
   - cube.example.com
-  - vllm-serving.one-data-cube.svc.cluster.local
+  - vllm-serving.one-data-model.svc.cluster.local
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
