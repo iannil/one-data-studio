@@ -299,7 +299,7 @@ class PortalService:
             QuickLink(
                 link_id="link_workflows",
                 title="工作流编排",
-                description="Bisheng 应用编排",
+                description="Agent 应用编排",
                 url="/agent/workflows",
                 icon="⚙️",
                 category="agent",
@@ -307,18 +307,18 @@ class PortalService:
             QuickLink(
                 link_id="link_models",
                 title="模型服务",
-                description="Cube Studio 模型管理",
-                url="/cube/models",
+                description="Model 模型管理",
+                url="/model/models",
                 icon="🤖",
-                category="cube",
+                category="model",
             ),
             QuickLink(
                 link_id="link_notebooks",
                 title="在线开发",
                 description="JupyterLab 笔记本",
-                url="/cube/notebooks",
+                url="/model/notebooks",
                 icon="📓",
-                category="cube",
+                category="model",
             ),
             QuickLink(
                 link_id="link_chatbi",
@@ -350,9 +350,9 @@ class PortalService:
         获取仪表盘数据
 
         汇总来自各系统的数据：
-        - Alldata: 数据资产、元数据、质量规则
-        - Bisheng: 工作流、应用
-        - Cube: 模型、任务、Notebook
+        - Data: 数据资产、元数据、质量规则
+        - Agent: 工作流、应用
+        - Model: 模型、任务、Notebook
         - 通用: 告警、通知
         """
         # 这里简化处理，实际应该调用各系统的 API
@@ -441,7 +441,7 @@ class PortalService:
                     "id": "act_003",
                     "title": "模型训练任务完成",
                     "time": "1 小时前",
-                    "source": "cube",
+                    "source": "model",
                     "type": "info",
                     "icon": "🤖",
                 },
@@ -543,15 +543,15 @@ class PortalService:
                 type="success",
                 title="模型训练完成",
                 content="您的时间序列预测模型训练已完成",
-                source="cube",
+                source="model",
                 priority="normal",
-                action_url="/cube/models/model_123",
+                action_url="/model/models/model_123",
             ),
             PortalNotification(
                 notification_id="notif_004",
                 type="info",
                 title="新版本发布",
-                content="Bisheng v2.5.0 已发布，包含多项新功能",
+                content="Agent v2.5.0 已发布，包含多项新功能",
                 source="agent",
                 priority="low",
             ),
@@ -638,10 +638,10 @@ class PortalService:
                 todo_id="todo_004",
                 title="审批模型发布申请",
                 description="李四申请将模型「销量预测」发布到生产",
-                source="cube",
+                source="model",
                 priority="high",
                 due_date=datetime.now() + timedelta(hours=12),
-                action_url="/cube/approvals/002",
+                action_url="/model/approvals/002",
             ),
         ]
 
@@ -735,7 +735,7 @@ class PortalService:
                 "id": "search_002",
                 "type": "workflow",
                 "title": "数据清洗工作流",
-                "description": "Bisheng 数据清洗 ETL 流程",
+                "description": "Agent 数据清洗 ETL 流程",
                 "category": "agent",
                 "url": "/agent/workflows/data_cleaning",
                 "icon": "⚙️",
@@ -746,8 +746,8 @@ class PortalService:
                 "type": "model",
                 "title": "销量预测模型",
                 "description": "基于 XGBoost 的商品销量预测模型",
-                "category": "cube",
-                "url": "/cube/models/sales_forecast",
+                "category": "model",
+                "url": "/model/models/sales_forecast",
                 "icon": "🤖",
                 "highlight": "<b>销量</b>预测",
             },
@@ -779,21 +779,21 @@ class PortalService:
             "systems": [
                 {
                     "id": "data",
-                    "name": "Alldata 数据治理",
+                    "name": "Data",
                     "status": "healthy",
                     "uptime_percent": 99.95,
                     "last_check": datetime.now().isoformat(),
                 },
                 {
                     "id": "agent",
-                    "name": "Bisheng 应用编排",
+                    "name": "Agent",
                     "status": "healthy",
                     "uptime_percent": 99.8,
                     "last_check": datetime.now().isoformat(),
                 },
                 {
-                    "id": "cube",
-                    "name": "Cube Studio",
+                    "id": "model",
+                    "name": "Model",
                     "status": "healthy",
                     "uptime_percent": 99.9,
                     "last_check": datetime.now().isoformat(),

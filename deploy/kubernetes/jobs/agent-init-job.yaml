@@ -98,7 +98,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: bisheng-db-credentials
+  name: agent-db-credentials
   namespace: one-data-agent
 type: Opaque
 stringData:
@@ -108,7 +108,7 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: bisheng-jwt-credentials
+  name: agent-jwt-credentials
   namespace: one-data-agent
 type: Opaque
 stringData:

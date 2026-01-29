@@ -675,8 +675,8 @@ echo
 
 # 测试 3: Agent 应用层
 echo "[3/4] 测试 Agent 应用层..."
-BISHENG_URL="http://localhost:8081"
-response=$(curl -s $BISHENG_URL/api/v1/health)
+agent_URL="http://localhost:8081"
+response=$(curl -s $agent_URL/api/v1/health)
 if echo $response | grep -q "healthy"; then
     echo "✓ Agent API 正常"
 else
@@ -686,7 +686,7 @@ echo
 
 # 测试 4: 端到端调用
 echo "[4/4] 测试端到端调用..."
-response=$(curl -s -X POST $BISHENG_URL/api/v1/chat \
+response=$(curl -s -X POST $agent_URL/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "2+2等于几？"}')
 if echo $response | grep -q "4"; then

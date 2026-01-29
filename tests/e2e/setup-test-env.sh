@@ -98,10 +98,6 @@ AGENT_API_PORT=8000
 DATA_API_PORT=8001
 MODEL_API_PORT=8002
 OPENAI_PROXY_PORT=8003
-# 兼容旧名称
-BISHENG_API_PORT=8000
-ALLDATA_API_PORT=8001
-CUBE_API_PORT=8002
 KEYCLOAK_PORT=8080
 
 # 测试超时设置
@@ -205,36 +201,36 @@ done
 # 等待 API 服务
 log_info "等待 API 服务启动..."
 
-# Bisheng API
+# Agent API
 timeout=60
 elapsed=0
 while [ $elapsed -lt $timeout ]; do
     if curl -sf http://localhost:8000/api/v1/health &> /dev/null; then
-        log_info "✓ Bisheng API 已就绪"
+        log_info "✓ Agent API 已就绪"
         break
     fi
     sleep 2
     elapsed=$((elapsed + 2))
 done
 
-# Alldata API
+# Data API
 timeout=60
 elapsed=0
 while [ $elapsed -lt $timeout ]; do
     if curl -sf http://localhost:8001/api/v1/health &> /dev/null; then
-        log_info "✓ Alldata API 已就绪"
+        log_info "✓ Data API 已就绪"
         break
     fi
     sleep 2
     elapsed=$((elapsed + 2))
 done
 
-# Cube API
+# Model API
 timeout=60
 elapsed=0
 while [ $elapsed -lt $timeout ]; do
     if curl -sf http://localhost:8002/api/v1/health &> /dev/null; then
-        log_info "✓ Cube API 已就绪"
+        log_info "✓ Model API 已就绪"
         break
     fi
     sleep 2
@@ -271,9 +267,9 @@ log_info "======================================"
 log_info ""
 log_info "服务访问地址："
 log_info "  - 前端应用:     http://localhost:3000"
-log_info "  - Bisheng API:  http://localhost:8000"
-log_info "  - Alldata API:  http://localhost:8001"
-log_info "  - Cube API:     http://localhost:8002"
+log_info "  - Agent API:    http://localhost:8000"
+log_info "  - Data API:     http://localhost:8001"
+log_info "  - Model API:    http://localhost:8002"
 log_info "  - OpenAI Proxy: http://localhost:8003"
 log_info "  - Keycloak:     http://localhost:8080"
 log_info "  - MinIO 控制台: http://localhost:9001"

@@ -1,5 +1,5 @@
 """
-Alembic Environment Configuration for Alldata-API
+Alembic Environment Configuration for data-API
 ONE-DATA-STUDIO Database Migration Management
 
 This file is used by Alembic to generate and run migrations.

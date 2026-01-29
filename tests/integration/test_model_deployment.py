@@ -80,7 +80,7 @@ def sample_embedding_model_config():
 def mock_deployment_service():
     """Mock 部署服务
 
-    模拟 Cube Studio 的模型部署管理层，包括创建/删除部署、
+    模拟 model 的模型部署管理层，包括创建/删除部署、
     查询状态以及生成 Endpoint 等功能。
     """
     service = MagicMock()

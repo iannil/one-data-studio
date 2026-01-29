@@ -106,10 +106,10 @@ mlops,基础功能,项目组管理,项目组配置资源组,2,项目组资源组
 mlops,基础功能,项目组管理,项目组配置集群,2,项目组K8s集群绑定功能，允许在项目中修改绑定的k8s集群，确保notebook、pipeline和推理服务在指定的k8s集群上部署。,使用——项目空间——项目组控制调度集群cluster（管理员学习）,需要有k8s集群config文件,创建多个k8s集群,在项目中修改绑定的k8s集群，查看修改前后notebook，任务，推理服务部署k8s集群的变化,notebook，piepline，推理服务会在项目组中指定的k8s集群上部署
 mlops,基础功能,项目组管理,项目组配置代理ip,2,项目组代理IP设置功能，实现对项目组中推理服务的代理IP设置与修改，确保推理服务的部署时IP地址为配置的IP地址或当前IP地址。,使用——项目空间——项目组控制服务service代理ip（管理员学习）,,创建多机集群,在项目组中设置绑定的代理ip，查看修改前后，推理服务的代理ip变化,推理的部署时ip地址会使用项目组中配置的ip地址，或者当前ip地址
 mlops,基础功能,网络,支持非80端口访问,1,支持非80端口访问，该功能允许用户通过修改ingress gateway的端口，实现在新端口下访问cube-studio平台。,部署-单机部署,,无,修改ingress gateway的端口，测试是否在新端口下可以访问,可以正常访问cube-studio平台
-mlops,基础功能,网络,支持域名访问,2,支持域名访问，该功能允许用户通过设置域名到cube studio的代理，并配置gateway为域名代理模式，实现使用域名正常访问cube-studio平台。,部署-单机部署,,无,本地host设置域名到cube studio的代理，并配置gateway为域名代理模式，查看使用域名是否正常访问,可以正常访问cube-studio平台
+mlops,基础功能,网络,支持域名访问,2,支持域名访问，该功能允许用户通过设置域名到model的代理，并配置gateway为域名代理模式，实现使用域名正常访问cube-studio平台。,部署-单机部署,,无,本地host设置域名到model的代理，并配置gateway为域名代理模式，查看使用域名是否正常访问,可以正常访问cube-studio平台
 mlops,基础功能,网络,支持公网ip访问,2,支持公网IP访问，该功能允许用户通过云服务器部署，并配置公网IP，实现使用云服务器的公网访问cube-studio平台。,部署-单机部署,,云服务器部署，并配置公网ip,使用云服务器的公网访问，查看是否正常,可以正常访问cube-studio平台
 mlops,基础功能,网络,支持公网域名访问,2,支持公网域名访问，该功能允许用户通过设置域名到公网IP，并配置gateway为域名代理模式，实现使用公网域名正常访问cube-studio平台。,部署-单机部署,,云服务器部署，并配置公网ip,本地host设置域名到公网ip，并配置gateway为域名代理模式，查看使用域名是否正常访问,可以正常访问cube-studio平台
-mlops,基础功能,网络,支持nginx反向代理访问,1,支持nginx反向代理访问，该功能允许用户通过部署nginx代理cube studio服务，实现访问nginx的IP地址来正常访问cube-studio平台。,部署-单机部署,,部署nginx代理cube studio服务,访问nginx的ip地址，查看是否正常访问,可以正常访问cube-studio平台
+mlops,基础功能,网络,支持nginx反向代理访问,1,支持nginx反向代理访问，该功能允许用户通过部署nginx代理model服务，实现访问nginx的IP地址来正常访问cube-studio平台。,部署-单机部署,,部署nginx代理model服务,访问nginx的ip地址，查看是否正常访问,可以正常访问cube-studio平台
 mlops,基础功能,网络,支持内网穿透形式访问,1,支持内网穿透形式访问，该功能允许用户通过内网部署+云服务器代理，并配置公网IP，实现访问公网IP来正常访问cube-studio平台。,部署-单机部署,,内网部署+云服务器代理，并配置公网ip,访问公网ip，查看是否正常访问,可以正常访问cube-studio平台
 mlops,基础功能,网络,支持https协议访问,2,支持https协议访问，该功能允许用户通过部署nginx代理，并生成https证书，实现使用https访问nginx地址来正常访问cube-studio平台。,部署-单机部署,,部署nginx代理，并生成https证书,使用哪个https访问nginx地址，查看是否则正常访问,可以正常访问cube-studio平台
 mlops,基础功能,"用户/
@@ -137,12 +137,12 @@ mlops,基础功能,边缘集群,支持边缘集群部署cube-studio,3,在云厂�
 mlops,基础功能,边缘集群,支持在边缘服务器上启动notebook，训练，推理,5,在边缘服务器部署cube-studio的基础条件下，cube-studio可以调度边缘集群模式下的非同网段边缘服务器，进行notebook，pipeline和推理服务，并可通过对应边缘服务器的代理节点进行访问。,部署-边缘集群方式部署平台,,边缘服务器部署cube-studio,边缘集群模式下的cube tudio添加内网服务作为边缘服务器，查看是否可以正常调度和访问,cube-studio可以调度边缘集群模式下的非同网段边缘服务器，进行notebook，pipeline和推理服务。并可通过对应边缘服务器的代理节点进行访问
 mlops,基础功能,serverless集群模式,支持腾讯云serverless集群模式,4,该功能支持在项目组绑定腾讯云serverless模式集群，可以正常调度notebook、pipeline和推理服务。该集群需具备云分布式存储、NAT网络访问和镜像缓存功能。,部署-serverless集群方式部署,按照腾讯云serverless的资源占用方式和计费方式来对接。受限于云厂商的能力,腾讯云serverless模式集群，云分布式存储，nat网络访问，镜像缓存,项目组绑定腾讯云serverless集群，查看是否可以正常调度notebook，pipeline，推服务,可以在腾讯云serverless集群上调度notebook，pipeline，推理服务
 mlops,基础功能,serverless集群模式,支持阿里云serverless集群模式,4,该功能支持在项目组绑定阿里云serverless模式集群，可以正常调度notebook、pipeline和推理服务。该集群需具备云分布式存储、NAT网络访问和镜像缓存功能。,部署-serverless集群方式部署,按照阿里云serverless的资源占用方式和计费方式来对接。受限于云厂商的能力,阿里云serverless模式集群，云分布式存储，nat网络访问，镜像缓存,项目组绑定阿里云serverless集群，查看是否可以正常调度notebook，pipeline，推理服务,可以在阿里云serverless集群上调度notebook，pipeline，推理服务
-mlops,基础功能,数据库存储,支持mysql作为元数据库存储,2,支持将MySQL作为元数据库存储。当部署外部MySQL数据库并在配置文件中设置MySQL的地址后，Cube Studio可以将其元数据存储在MySQL数据库中，并可以正常访问。,运维-元数据库.md,,部署外部mysql数据库,config中配置mysql的地址，部署cube-studio，查看是否正常访问,cube-studio元数据存储在了mysql，并可以正常访问
-mlops,基础功能,数据库存储,支持postgresql作为元数据库存储,3,支持将PostgreSQL作为元数据库存储。当部署外部PostgreSQL数据库并在配置文件中设置PostgreSQL的地址后，Cube Studio可以将其元数据存储在PostgreSQL数据库中，并可以正常访问。,运维-元数据库.md,,部署外部postgresql数据库,config中配置postgresql的地址，部署cube-studio，查看是否正常访问,cube-studio元数据存储在了postgresql，并可以正常访问
+mlops,基础功能,数据库存储,支持mysql作为元数据库存储,2,支持将MySQL作为元数据库存储。当部署外部MySQL数据库并在配置文件中设置MySQL的地址后，Model可以将其元数据存储在MySQL数据库中，并可以正常访问。,运维-元数据库.md,,部署外部mysql数据库,config中配置mysql的地址，部署cube-studio，查看是否正常访问,cube-studio元数据存储在了mysql，并可以正常访问
+mlops,基础功能,数据库存储,支持postgresql作为元数据库存储,3,支持将PostgreSQL作为元数据库存储。当部署外部PostgreSQL数据库并在配置文件中设置PostgreSQL的地址后，Model可以将其元数据存储在PostgreSQL数据库中，并可以正常访问。,运维-元数据库.md,,部署外部postgresql数据库,config中配置postgresql的地址，部署cube-studio，查看是否正常访问,cube-studio元数据存储在了postgresql，并可以正常访问
 mlops,基础功能,存储盘管理,支持外部存储盘管理，挂载成k8s pv，支持nfs/cfs,3,该功能支持将外部存储盘（如nfs/cfs）挂载成k8s的pv，实现对外部存储盘的管理。当外部nfs分布式存储配置添加并挂载后，k8s将创建与该分布式存储绑定的pv。,使用-资源配置,,外部nfs分布式存储,添加nfs分布式存储配置，点击挂载操作，查看k8s pv是否正常添加,k8s创建了绑定该分布式存储的pv
 mlops,基础功能,存储盘管理,支持项目组绑定存储盘，并在notebook/pipline/推理服务的pod中挂载该存储盘,3,该功能支持将项目组绑定到存储盘，并在notebook、pipeline、推理服务的pod中挂载该存储盘。当项目组绑定存储挂载并新建启动notebook、pipeline、推理服务后，pod进程中可以直接使用该分布式存储作为容器本地路径。,使用-资源配置,,外部nfs分布式存储,项目组绑定存储挂载，并新建启动notebook，pipeline，推理服务，查看pod是否添加该挂载,pod进程中可以直接使用该分布式存储成容器本地路径
 mlops,基础功能,国际化,mlops支持配置多语言配置，目前支持中英文,　,　,　,　,　,　,
-mlops,数据管理,数据地图,库表管理,3,库表管理功能，支持离线库表同步元数据到cube studio，实现中心化查看和快捷操作，可以导入离线库表并进行远程函数操作。,使用-库表,离线库表，需同步元数据到cube studio，由cube-studio进行中心化查看，并二开快捷操作，有cube-studio进行统一操作,准备离线库表元数据csv文件,导入离线库表，查看是否可以正常搜索查看，二开远程操作函数，查看是否可以正常操作远程表,可以导入离线库表，并进行远程函数操作
+mlops,数据管理,数据地图,库表管理,3,库表管理功能，支持离线库表同步元数据到model，实现中心化查看和快捷操作，可以导入离线库表并进行远程函数操作。,使用-库表,离线库表，需同步元数据到model，由cube-studio进行中心化查看，并二开快捷操作，有cube-studio进行统一操作,准备离线库表元数据csv文件,导入离线库表，查看是否可以正常搜索查看，二开远程操作函数，查看是否可以正常操作远程表,可以导入离线库表，并进行远程函数操作
 mlops,数据管理,数据地图,指标管理,3,指标管理功能，支持对指标进行增删改查操作。,使用——指标,,无,新建指标，看是否可以正常增删改查指标,可以增删改查指标
 mlops,数据管理,数据地图,维表管理(mysql+postgresql存储),5,维表管理功能，支持使用mysql和postgresql存储，实现对维表的增删改查操作。,使用-维表,,无,创建到mysql和postgresql的维表，查看是否可以正常对维表增删改查,可以使用mysql和postgresql来进行维表的增删改查
 mlops,数据管理,数据地图,维表支持批量导入导出，清空等操作,2,维表批量导入导出功能，支持维表数据的文件批量导入和批量导出，以及清空等操作。,使用——维表——批量导入、导出,,,将维表数据导出，查看内容是否和在线一直，下载导入模板，并添加数据内容，再将内容导入，查看是否可以批量导入,维表数据可以通过文件批量导入和批量导出
@@ -301,8 +301,8 @@ mlops,监控,监控体系,所有机器的gpu资源的使用情况,2,该功能通
 mlops,监控,监控体系,所有机器的内存/cpu/网络io/磁盘io的负载情况，,3,监控并展示所有机器的内存、CPU、网络IO和磁盘IO负载情况，确保数据采集准确并在Grafana中正常显示,运维-监控,,,在grafana中查看机器的内存 cpu，网络io，磁盘io负载是否正常采集，采集指标是否准确,机器负载正常采集和展示
 mlops,监控,监控体系,所有pod的内存/cpu/gpu/网络io负载情况,3,监控并展示所有Pod的内存、CPU、GPU和网络IO负载情况，确保数据采集准确并在Grafana中正常显示。,运维-监控,,,在grafana中查看pod的内存 cpu，gpu，网络io负载是否正常采集，采集指标是否准确,pod负载正常采集和展示
 mlops,监控,监控体系,所有推理服务的内存/cpu/gpu/qps/吞吐/vgpu负载情况,5,监控并展示所有推理服务的内存、CPU、GPU、QPS、吞吐和VGPU负载情况，确保数据采集准确并在Grafana中正常显示。,运维-监控,,,在grafana中查看推理服务的内存 cpu，gpu，qps，吞吐负载是否正常采集，采集指标是否准确,推理服务负载正常采集和展示
-AIHub,SDK,模型应用管理方案,提供cube studio sdk，提供容器中使用cube-studio sdk的方法，每个模型应用可使用独立环境进行开发,7,提供 Cube Studio SDK，使得每个模型应用可以在独立的环境中进行开发。通过使用 Cube Studio SDK，AIHub 模型应用可以导入相关的包并使用其中的功能。,使用-aihub,,,尝试按照标准开发调试自己的aihub应用，以DAMOYOLO-高性能通用图像目标检测模型为例，查看是否可以导入使用cube-studio的sdk包,aihub模型应用可以导入cube-studio的包，并使用包含的功能
-AIHub,SDK,模型应用管理方案,标准化模型应用开发规范，按照标准格式进行模型应用的复写，会自动具有一键微调，一键开发，一键部署等能力,7,实现标准化模型应用开发规范，使得按照标准格式进行模型应用的复写后，可以自动具备一键微调、一键开发和一键部署等能力。通过复写 Cube Studio 基础类函数，如加载模型函数、推理函数和训练函数，可以实现在启动时直接启动对应功能。,使用——AIHUB,,,尝试复写cube-studio基础类函数，包括加载模型函数，推理函数，训练函数，查看是否可以实现python app.py直接启动对应的功能，,复写推理函数，训练函数等基础函数，可以在启动时直接启动对应功能
+AIHub,SDK,模型应用管理方案,提供model sdk，提供容器中使用cube-studio sdk的方法，每个模型应用可使用独立环境进行开发,7,提供 Model SDK，使得每个模型应用可以在独立的环境中进行开发。通过使用 Model SDK，AIHub 模型应用可以导入相关的包并使用其中的功能。,使用-aihub,,,尝试按照标准开发调试自己的aihub应用，以DAMOYOLO-高性能通用图像目标检测模型为例，查看是否可以导入使用cube-studio的sdk包,aihub模型应用可以导入cube-studio的包，并使用包含的功能
+AIHub,SDK,模型应用管理方案,标准化模型应用开发规范，按照标准格式进行模型应用的复写，会自动具有一键微调，一键开发，一键部署等能力,7,实现标准化模型应用开发规范，使得按照标准格式进行模型应用的复写后，可以自动具备一键微调、一键开发和一键部署等能力。通过复写 Model 基础类函数，如加载模型函数、推理函数和训练函数，可以实现在启动时直接启动对应功能。,使用——AIHUB,,,尝试复写cube-studio基础类函数，包括加载模型函数，推理函数，训练函数，查看是否可以实现python app.py直接启动对应的功能，,复写推理函数，训练函数等基础函数，可以在启动时直接启动对应功能
 AIHub,SDK,模型应用管理方案,支持web界面可视化体验，手机版,7,支持web界面可视化体验，手机版。,使用——AIHUB——模型部署,,,以yolo模型为例，尝试docker run直接运行是否可以直接打开web界面，并体验模型应用,运行后可以 打开手机端页面
 AIHub,SDK,模型应用管理方案,支持web界面可视化体验，gradio，pc版本,7,支持web界面可视化体验，gradio，pc版本。,使用——AIHUB——模型部署,,,以yolo模型为例，尝试docker run直接运行pc子命令，是否可以访问pc版本gradio界面,运行后可以打开pc端界面
 AIHub,SDK,模型应用管理方案,支持模型应用同步api推理，,7,支持模型应用同步api推理。,使用——AIHUB——模型推理,,,以yolo模型为利，尝试docker run是否可以直接访问推理api,运行后可以访问推理服务api
@@ -323,7 +323,7 @@ AIHub,平台对接,模型自动化标注,添加对应标注处理函数和部署
 AIHub,SDK,数据集sdk,支持通过cube-studio sdk对接平台数据模块进行数据集上传下载，加解密，压缩解压缩，数据分区追加,2,支持通过Cube-Studio SDK对接平台数据模块进行数据集操作。用户可以使用SDK进行数据集的上传、下载、加解密、压缩解压缩、数据分区追加等操作，并获取数据集的基础信息。,开发-sdk,,,使用cube-studio sdk创建一个数据集，并将本地的数据文件压缩后更新到数据集的存储中，然后查看cube-studio平台上是否包含新建的数据集，然后在本地将数据文件删除，使用从cube-studio中下载数据集，并解压，然后loader数据集，查看数据集的基础信息,可以使用sdk上传下载，压缩，解压缩，加密解密数据集文件，并可以加载数据集文件，获取数据集的基础信息
 AIHub,SDK,notebook sdk,支持外部平台通过cube-stuido平台api，创建启动notebook，并跳转到指定目录，用于其他算法平台在当前平台的调试和演示,2,支持外部平台通过Cube-Studio平台API创建启动Notebook。用户可以通过API自动创建Notebook并跳转到指定目录，实现其他算法平台在当前平台的调试和演示。,开发-sdk,,,打开指定url，自动创建notebook，并打开指定文件，并尝试在其他平台和cube-studio通过分布式存储打通，使用该功能，进行机器学习算法应用到可视化展示和调试,可以通过api自动创建notebook，并直接跳转到其他平台运行后的ipynb上
 AIHub,SDK,pipeline训练sdk,提供Python SDK支持用户通过SDK来进行pipeline任务流管理和训练任务启动,2,提供Python SDK支持用户进行Pipeline任务流管理和训练任务启动。用户可以通过SDK创建、跟踪Pipeline中的任务，包括创建任务流、使用模板创建任务、启动任务、跟踪任务日志、清理任务等。,开发-sdk,,,使用cube-studio sdk创建任务流，并尝试在任务流中使用模板创建任务，并启动任务跟踪任务日志，清理任务,可以通过sdk创建、跟踪pipeline中的任务
-AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务的发布，服务升级,2,提供Python SDK对接Cube Studio进行推理服务的发布和服务升级。用户可以通过SDK创建、部署、清理推理服务，实现推理服务的快速发布和升级。,开发-sdk,,,使用cube-studio sdk创建推理服务，并尝试部署、清理推理服务,可以通过sdk 创建、部署、清理推理服务
+AIHub,SDK,推理服务sdk,提供python sdk，对接model进行推理服务的发布，服务升级,2,提供Python SDK对接Model进行推理服务的发布和服务升级。用户可以通过SDK创建、部署、清理推理服务，实现推理服务的快速发布和升级。,开发-sdk,,,使用cube-studio sdk创建推理服务，并尝试部署、清理推理服务,可以通过sdk 创建、部署、清理推理服务
 大模型,微调,大模型分布式多机多卡,提供deepspeed分布式训练框架,4,提供了一个可以正常运行的Deepspeed分布式训练环境，用户可以通过使用Deepspeed示例代码进行分布式训练，以便更好地利用计算资源并提高训练速度。,使用-模板使用,按照deepspeed的官方hostfile形式使用,,使用deepspeed示例代码尝试该框架的分布式训练，查看是否可以运行该分布式框架,可以正常运行deepspeed分布式训练
 大模型,微调,大模型分布式多机多卡,提供colossal-ai分布式训练框架,4,提供了一个可以正常运行的colossal-ai分布式训练环境，用户可以通过使用colossal-ai示例代码进行分布式训练，以便更好地利用计算资源并提高训练速度。,使用-模板使用,按照colossalai的官方hostfile形式使用,,使用colossal-ai示例代码尝试该框架的分布式训练，查看是否可以运行该分布式框架,可以正常运行colossal-ai分布式训练
 大模型,微调,大模型分布式多机多卡,提供mpi分布式训练框架,4,提供了一个可以正常运行的MPI分布式训练环境，用户可以通过使用MPI示例代码进行分布式训练，以便更好地利用计算资源并提高训练速度。,使用-模板使用,,,使用mpi示例代码尝试该框架的分布式训练，查看是否可以运行该分布式框架,可以正常运行mpi分布式训练
@@ -380,12 +380,12 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 |---------|---------|-------------|
 | 元数据智能识别引擎 | ✅ 已实现 | `services/data-api/services/metadata_auto_scan_engine.py` |
 | 跨数据源关联识别 | ✅ 已实现 | `services/data-api/services/metadata_graph_builder.py` |
-| 元数据图谱可视化 | ✅ 已实现 | `web/src/pages/alldata/MetadataGraphPage.tsx` |
+| 元数据图谱可视化 | ✅ 已实现 | `web/src/pages/data/MetadataGraphPage.tsx` |
 | 元数据标签管理 | ✅ 已实现 | `/api/v1/metadata` 端点 |
 | 版本管理与回溯 | ✅ 已实现 | `services/data-api/services/metadata_version_service.py` |
 | 版本差异对比 | ✅ 已实现 | `web/src/components/MetadataVersionDiff.tsx` |
 | 数据标准智能落地 | ✅ 已实现 | `/api/v1/standards` 端点 |
-| 与Kettle联动 | ✅ 已实现 | `web/src/pages/alldata/KettlePage.tsx` |
+| 与Kettle联动 | ✅ 已实现 | `web/src/pages/data/KettlePage.tsx` |
 
 ###### （二）数据感知汇聚系统 ✅ 完成度: 100%
 
@@ -407,14 +407,14 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 | 多源数据智能融合 | ✅ 已实现 | `services/data-api/services/table_fusion_service.py` |
 | 缺失值AI填充 | ✅ 已实现 | `services/data-api/services/ai_imputation.py` |
 | OCR文档识别 | ✅ 已实现 | `services/ocr-service/` (25+ API端点) |
-| ETL可视化编排 | ✅ 已实现 | `web/src/pages/alldata/ETLPage.tsx` |
-| Kettle集成 | ✅ 已实现 | `web/src/components/alldata/KettlePanel.tsx` |
+| ETL可视化编排 | ✅ 已实现 | `web/src/pages/data/ETLPage.tsx` |
+| Kettle集成 | ✅ 已实现 | `web/src/components/data/KettlePanel.tsx` |
 
 ###### （四）数据分析挖掘系统（AI+BI）✅ 完成度: 95%
 
 | 需求功能 | 实现状态 | 对应代码位置 |
 |---------|---------|-------------|
-| BI智能可视化 | ✅ 已实现 | `web/src/pages/alldata/BIPage.tsx` |
+| BI智能可视化 | ✅ 已实现 | `web/src/pages/data/BIPage.tsx` |
 | 自然语言查询 | ✅ 已实现 | `web/src/pages/Text2SQLPage.tsx` |
 | 拖拽式图表制作 | ✅ 已实现 | `web/src/components/SmartChart.tsx` |
 | AI预测分析 | ✅ 已实现 | `services/data-api/services/ai_prediction_service.py` |
@@ -428,8 +428,8 @@ AIHub,SDK,推理服务sdk,提供python sdk，对接cube studio进行推理服务
 |---------|---------|-------------|
 | 资产智能编目 | ✅ 已实现 | `services/data-api/services/asset_auto_catalog_service.py` |
 | 资产价值评估 | ✅ 已实现 | `services/data-api/services/asset_value_calculator.py` |
-| 资产AI检索 | ✅ 已实现 | `web/src/components/alldata/AssetAISearch.tsx` |
-| 数据血缘追踪 | ✅ 已实现 | `web/src/pages/alldata/LineagePage.tsx` |
+| 资产AI检索 | ✅ 已实现 | `web/src/components/data/AssetAISearch.tsx` |
+| 数据血缘追踪 | ✅ 已实现 | `web/src/pages/data/LineagePage.tsx` |
 | 资产溯源 | ✅ 已实现 | `/api/v1/graph/lineage/{table_name}` |
 | 数据服务接口 | ✅ 已实现 | `/api/v1/services` (完整CRUD) |
 

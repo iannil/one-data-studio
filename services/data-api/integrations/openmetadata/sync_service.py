@@ -134,7 +134,7 @@ class MetadataSyncService:
         return self.client.health_check()
 
     # ========================================
-    # 推送同步 (Alldata -> OpenMetadata)
+    # 推送同步 (data -> OpenMetadata)
     # ========================================
 
     def ensure_database_service(self, description: Optional[str] = None) -> Dict:
@@ -152,7 +152,7 @@ class MetadataSyncService:
         return self.client.create_database_service(
             name=self._service_name,
             service_type="Mysql",
-            description=description or "Alldata 数据治理平台数据源",
+            description=description or "data 数据治理平台数据源",
         )
 
     def sync_database(
@@ -207,7 +207,7 @@ class MetadataSyncService:
         Args:
             db_name: 数据库名称
             table_name: 表名称
-            columns: Alldata 格式的列定义列表
+            columns: data 格式的列定义列表
             description: 表描述
             table_type: 表类型
             custom_properties: 自定义属性扩展
@@ -406,18 +406,18 @@ class MetadataSyncService:
 
         return None
 
-    def _convert_columns(self, alldata_columns: List[Dict[str, Any]]) -> List[Dict]:
+    def _convert_columns(self, data_columns: List[Dict[str, Any]]) -> List[Dict]:
         """
-        将 Alldata 列定义转换为 OpenMetadata 格式
+        将 data 列定义转换为 OpenMetadata 格式
 
         Args:
-            alldata_columns: Alldata 格式的列列表
+            data_columns: data 格式的列列表
 
         Returns:
             OpenMetadata 格式的列列表
         """
         om_columns = []
-        for col in alldata_columns:
+        for col in data_columns:
             # 获取数据类型
             data_type = col.get("data_type", col.get("type", "VARCHAR"))
             data_type_lower = data_type.lower().split("(")[0]  # 移除长度定义
@@ -495,10 +495,10 @@ class MetadataSyncService:
 
     def sync_metadata_table(self, metadata_table) -> Dict:
         """
-        同步 Alldata MetadataTable 模型到 OpenMetadata
+        同步 data MetadataTable 模型到 OpenMetadata
 
         Args:
-            metadata_table: Alldata MetadataTable 模型实例
+            metadata_table: data MetadataTable 模型实例
 
         Returns:
             同步后的 OpenMetadata 表对象
@@ -531,7 +531,7 @@ class MetadataSyncService:
         )
 
     # ========================================
-    # 拉取同步 (OpenMetadata -> Alldata)
+    # 拉取同步 (OpenMetadata -> data)
     # ========================================
 
     def fetch_tables(self, database: Optional[str] = None) -> List[Dict]:

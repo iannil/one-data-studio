@@ -68,7 +68,7 @@ spec:
         - name: MODEL_API_URL
           value: "http://openai-proxy.one-data-model.svc.cluster.local:8000"
         # 兼容旧环境变量名
-        - name: ALLDATA_API_URL
+        - name: data_API_URL
           value: "http://data-api.one-data-data.svc.cluster.local:8080"
         - name: CUBE_API_URL
           value: "http://openai-proxy.one-data-model.svc.cluster.local:8000"
@@ -118,13 +118,13 @@ spec:
   type: ClusterIP
 
 ---
-# Bisheng Ingress
+# agent Ingress
 # SECURITY: TLS is required for production deployments
 # Configure cert-manager for automatic certificate management
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: bisheng-ingress
+  name: agent-ingress
   namespace: one-data-agent
   annotations:
     # SECURITY: Force HTTPS redirect
@@ -136,10 +136,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - bisheng.example.com
-    secretName: bisheng-tls-secret
+    - agent.example.com
+    secretName: agent-tls-secret
   rules:
-  - host: bisheng.example.com
+  - host: agent.example.com
     http:
       paths:
       - path: /

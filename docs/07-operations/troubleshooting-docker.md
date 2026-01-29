@@ -363,7 +363,7 @@ docker-compose exec -T mysql mysql -u root -p"${MYSQL_PASSWORD}" \
 
 # 3. 验证数据
 docker-compose exec mysql mysql -u root -p"${MYSQL_PASSWORD}" \
-  -e "USE one_data_bisheng; SHOW TABLES;"
+  -e "USE one_data_agent; SHOW TABLES;"
 
 # 4. 重启服务
 docker-compose start data-api agent-api

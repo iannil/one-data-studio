@@ -1,5 +1,5 @@
 """
-Alldata API 模型
+data API 模型
 Sprint 4.1: SQLAlchemy 数据模型
 P4: Flink 实时计算、特征存储
 P5: 数据监控、BI、离线处理、资产、标准、服务

@@ -273,11 +273,11 @@ test.describe('用户删除阶段', () => {
     const user = await userManager.createUser(userData);
 
     // 在各服务中创建资源
-    const agentResponse = await request.post(`${process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations`, {
+    const agentResponse = await request.post(`${process.env.AGENT_API_URL || process.env.agent_API_URL || 'http://localhost:8000'}/api/v1/conversations`, {
       data: { title: 'Test', user_id: user.id },
     });
 
-    const dataResponse = await request.post(`${process.env.DATA_API_URL || process.env.ALLDATA_API_URL || 'http://localhost:8001'}/api/v1/datasets`, {
+    const dataResponse = await request.post(`${process.env.DATA_API_URL || process.env.data_API_URL || 'http://localhost:8001'}/api/v1/datasets`, {
       data: { name: 'Test', user_id: user.id },
     });
 
@@ -289,7 +289,7 @@ test.describe('用户删除阶段', () => {
       const agentJson = await agentResponse.json();
       const conversationId = agentJson.data?.id;
       if (conversationId) {
-        const checkResponse = await request.get(`${process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000'}/api/v1/conversations/${conversationId}`);
+        const checkResponse = await request.get(`${process.env.AGENT_API_URL || process.env.agent_API_URL || 'http://localhost:8000'}/api/v1/conversations/${conversationId}`);
         // 资源可能被删除或标记为已删除
         expect([404, 403, 410]).toContain(checkResponse.status());
       }

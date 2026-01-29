@@ -222,9 +222,9 @@ curl -X POST http://localhost:8081/api/v1/documents/upload \
 
 ## 三大集成验证
 
-### 集成点 1：Data → Cube Studio（数据集注册与读取）
+### 集成点 1：Data → Model（数据集注册与读取）
 
-**验证目标**：确认 Data 的数据集可以被 Cube Studio 的训练任务消费
+**验证目标**：确认 Data 的数据集可以被 Model 的训练任务消费
 
 #### API 验证
 
@@ -244,8 +244,8 @@ curl -X POST http://localhost:8080/api/v1/datasets \
 # 2. 获取数据集详情
 curl http://localhost:8080/api/v1/datasets/demo_dataset
 
-# 3. 检查数据集是否可被 Cube Studio 访问
-# (Cube Studio 应能通过统一的存储协议访问数据)
+# 3. 检查数据集是否可被 Model 访问
+# (Model 应能通过统一的存储协议访问数据)
 ```
 
 **验证点**：
@@ -253,14 +253,14 @@ curl http://localhost:8080/api/v1/datasets/demo_dataset
 - 元数据正确存储
 - 数据文件可访问
 
-### 集成点 2：Cube Studio → Agent（模型服务调用）
+### 集成点 2：Model → Agent（模型服务调用）
 
-**验证目标**：确认 Agent 可以通过 OpenAI 兼容 API 调用 Cube Studio 部署的模型
+**验证目标**：确认 Agent 可以通过 OpenAI 兼容 API 调用 Model 部署的模型
 
 #### API 验证
 
 ```bash
-# 1. 查看 Cube Studio 可用模型
+# 1. 查看 Model 可用模型
 curl http://localhost:8002/v1/models
 
 # 2. 通过 Agent 代理调用模型

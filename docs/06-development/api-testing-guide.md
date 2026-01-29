@@ -28,7 +28,7 @@ echo $TOKEN
 # API 端点
 export ALDATA_API_URL="http://localhost:8080"
 export CUBE_API_URL="http://localhost:8000"
-export BISHENG_API_URL="http://localhost:8081"
+export agent_API_URL="http://localhost:8081"
 
 # 认证信息（如需要）
 export API_TOKEN="your-api-token"
@@ -387,11 +387,11 @@ echo "模型回复: $REPLY"
 
 # 3. Agent 调用数据集
 echo "[3/5] 查询数据集..."
-curl -s $BISHENG_API_URL/api/v1/datasets | jq '.'
+curl -s $agent_API_URL/api/v1/datasets | jq '.'
 
 # 4. Agent 调用模型
 echo "[4/5] 跨平台调用模型..."
-curl -s -X POST $BISHENG_API_URL/api/v1/chat \
+curl -s -X POST $agent_API_URL/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "测试消息"}' | jq '.'
 

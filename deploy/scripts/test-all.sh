@@ -13,8 +13,8 @@ DATA_API_URL="${DATA_API_URL:-http://localhost:8001}"
 MODEL_API_URL="${MODEL_API_URL:-http://localhost:8002}"
 OPENAI_PROXY_URL="${OPENAI_PROXY_URL:-http://localhost:8003}"
 # 兼容旧名称
-BISHENG_API_URL="${BISHENG_API_URL:-${AGENT_API_URL}}"
-ALLDATA_API_URL="${ALLDATA_API_URL:-${DATA_API_URL}}"
+agent_API_URL="${agent_API_URL:-${AGENT_API_URL}}"
+data_API_URL="${data_API_URL:-${DATA_API_URL}}"
 CUBE_API_URL="${CUBE_API_URL:-${MODEL_API_URL}}"
 
 # 测试计数器

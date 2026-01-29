@@ -490,7 +490,7 @@ components:
         connections:
           type: object
           properties:
-            alldata_api:
+            data_api:
               type: string
             cube_api:
               type: string

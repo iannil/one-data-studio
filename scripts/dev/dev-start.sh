@@ -50,7 +50,7 @@ show_start_help() {
   dev-start.sh --build      # 强制重建镜像
   dev-start.sh --seed       # 启动并导入种子数据
   dev-start.sh mysql redis  # 启动指定服务
-  dev-start.sh b a          # 使用别名（bisheng, alldata）"
+  dev-start.sh agent data   # 启动指定 API 服务"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -304,9 +304,9 @@ print_access_info() {
 
     echo -e "${BOLD}应用服务:${NC}"
     echo "  Web 前端:        http://localhost:$(get_service_port web-frontend)"
-    echo "  Bisheng API:     http://localhost:$(get_service_port agent-api)"
-    echo "  Alldata API:     http://localhost:$(get_service_port data-api)"
-    echo "  Cube API:        http://localhost:$(get_service_port model-api)"
+    echo "  Agent API:       http://localhost:$(get_service_port agent-api)"
+    echo "  Data API:        http://localhost:$(get_service_port data-api)"
+    echo "  Model API:       http://localhost:$(get_service_port model-api)"
     echo "  OpenAI Proxy:    http://localhost:$(get_service_port openai-proxy)"
     echo ""
     echo -e "${BOLD}基础设施:${NC}"

@@ -31,7 +31,7 @@ scrape_configs:
           - localhost
         labels:
           job: data-api
-          service: alldata
+          service: data
           env: production
 
     # 采集标准输出日志
@@ -66,7 +66,7 @@ scrape_configs:
           - localhost
         labels:
           job: agent-api
-          service: bisheng
+          service: agent
           env: production
 
     pipeline_stages:

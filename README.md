@@ -379,8 +379,9 @@ limitations under the License.
 This project builds upon the shoulders of giants:
 
 - [OpenMetadata](https://open-metadata.org/) - Open source metadata platform (optional integration)
-- [Cube Studio](https://github.com/tencentmusic/cube-studio) - Cloud-native MLOps platform (Model layer inspiration)
-- [Bisheng](https://github.com/dataelement/bisheng) - LLM application development platform (Agent layer inspiration)
+- [Ray](https://github.com/ray-project/ray) - Distributed computing framework
+- [vLLM](https://github.com/vllm-project/vllm) - High-throughput LLM serving
+- [LangChain](https://github.com/langchain-ai/langchain) - LLM application framework
 
 ## Community
 

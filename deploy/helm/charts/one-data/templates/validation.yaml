@@ -40,4 +40,4 @@ data:
 
   # Security configuration
   is-production: {{ if include "one-data.isProduction" . }}"true"{{ else }}"false"{{ end }}
-  tls-enabled: {{ if and .Values.alldata.ingress.tls .Values.bisheng.ingress.tls }}"true"{{ else }}"false"{{ end }}
+  tls-enabled: {{ if and .Values.data.ingress.tls .Values.agent.ingress.tls }}"true"{{ else }}"false"{{ end }}

@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8081")
 OPENAI_PROXY_URL = os.getenv("TEST_OPENAI_PROXY_URL", "http://localhost:8080")
-DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082"))
+DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_data_API_URL", "http://localhost:8082"))
 # 兼容旧名称
-ALLDATA_API_URL = DATA_API_URL
+data_API_URL = DATA_API_URL
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
 HEADERS = {
@@ -450,7 +450,7 @@ Return only the SQL query, no explanation."""
         """测试带 Schema 注入的 Text-to-SQL"""
         # 首先获取表的 Schema
         schema_response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/tables/warehouse/customers/schema",
+            f"{data_API_URL}/api/v1/metadata/tables/warehouse/customers/schema",
             headers=HEADERS
         )
 
@@ -604,7 +604,7 @@ Return only the SQL query, no explanation."""
                 if has_dangerous:
                     # 尝试执行应该被阻止
                     exec_response = requests.post(
-                        f"{ALLDATA_API_URL}/api/v1/sql/execute",
+                        f"{data_API_URL}/api/v1/sql/execute",
                         headers=HEADERS,
                         json={"sql": sql, "dry_run": True},
                         timeout=30
@@ -623,7 +623,7 @@ class TestMetadataDrivenSQL:
     def test_01_get_table_schema_for_sql(self):
         """测试获取表 Schema 用于 SQL 生成"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/tables/warehouse/orders/schema",
+            f"{data_API_URL}/api/v1/metadata/tables/warehouse/orders/schema",
             headers=HEADERS
         )
 
@@ -640,7 +640,7 @@ class TestMetadataDrivenSQL:
     def test_02_search_relevant_tables(self):
         """测试搜索相关表（用于 SQL 生成）"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/search",
+            f"{data_API_URL}/api/v1/metadata/search",
             headers=HEADERS,
             params={
                 "q": "customer order",
@@ -662,7 +662,7 @@ class TestMetadataDrivenSQL:
     def test_03_get_table_relationships(self):
         """测试获取表关系（用于 JOIN 生成）"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/table",
+            f"{data_API_URL}/api/v1/lineage/table",
             headers=HEADERS,
             params={
                 "database": "warehouse",
@@ -859,7 +859,7 @@ class TestSQLErrorRecovery:
 
         for sql in invalid_sqls:
             response = requests.post(
-                f"{ALLDATA_API_URL}/api/v1/sql/validate",
+                f"{data_API_URL}/api/v1/sql/validate",
                 headers=HEADERS,
                 json={"sql": sql},
                 timeout=30

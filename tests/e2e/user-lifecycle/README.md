@@ -114,8 +114,8 @@ npx playwright test --project=user-lifecycle --reporter=junit
 BASE_URL=http://localhost:3000
 
 # API URLs
-BISHENG_API_URL=http://localhost:8000
-ALLDATA_API_URL=http://localhost:8001
+agent_API_URL=http://localhost:8000
+data_API_URL=http://localhost:8001
 CUBE_API_URL=http://localhost:8002
 OPENAI_API_URL=http://localhost:8003
 

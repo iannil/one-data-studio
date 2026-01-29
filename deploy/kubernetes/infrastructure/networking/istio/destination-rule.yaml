@@ -68,7 +68,7 @@ spec:
         httpHeaderName: x-session-id
         # 备选：使用 cookie
         # httpCookie:
-        #   name: bisheng_session
+        #   name: agent_session
         #   path: /
         #   ttl: 86400s
     connectionPool:

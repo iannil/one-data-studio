@@ -1,5 +1,5 @@
 """
-Alldata API - 持久化版本
+Data API - 持久化版本
 基于 SQLAlchemy + MySQL 的数据集管理 API
 """
 
@@ -79,7 +79,7 @@ def initialize_app():
             logger.info("Development mode: Creating missing database tables...")
             db_manager.create_tables()
         init_storage()
-        logger.info("Alldata API initialized successfully")
+        logger.info("Data API initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         # 启动时数据库未就绪是允许的，健康检查会反映状态
@@ -3512,7 +3512,7 @@ def list_notebooks():
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("page_size", 50))
 
-        # 返回空列表，Notebook功能后续可以通过Cube Studio集成
+        # 返回空列表，Notebook功能后续可以通过model集成
         return jsonify({
             "code": 0,
             "message": "success",

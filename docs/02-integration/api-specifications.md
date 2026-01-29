@@ -1,6 +1,6 @@
 # API 规范设计
 
-本文档定义 ONE-DATA-STUDIO 平台各层之间的 API 接口规范，确保 Data、Cube Studio 和 Agent 三个平台能够无缝协作。
+本文档定义 ONE-DATA-STUDIO 平台各层之间的 API 接口规范，确保 Data、Model 和 Agent 三个平台能够无缝协作。
 
 ---
 
@@ -62,7 +62,7 @@
 
 ---
 
-## 集成点一：Data → Cube Studio
+## 集成点一：Data → Model
 
 ### 1.1 数据集注册 API
 
@@ -204,7 +204,7 @@ Authorization: Bearer {token}
 
 ---
 
-## 集成点二：Cube Studio → Agent
+## 集成点二：Model → Agent
 
 ### 2.1 模型服务 API（OpenAI 兼容）
 

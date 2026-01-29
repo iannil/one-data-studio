@@ -322,16 +322,16 @@ verify_deployment() {
             log_info "Checking service health..."
 
             if curl -sf "http://localhost:8080/api/v1/health" > /dev/null 2>&1; then
-                log_success "Alldata API: healthy"
+                log_success "data API: healthy"
             else
-                log_error "Alldata API: unhealthy"
+                log_error "data API: unhealthy"
                 all_healthy=false
             fi
 
             if curl -sf "http://localhost:8081/api/v1/health" > /dev/null 2>&1; then
-                log_success "Bisheng API: healthy"
+                log_success "agent API: healthy"
             else
-                log_error "Bisheng API: unhealthy"
+                log_error "agent API: unhealthy"
                 all_healthy=false
             fi
 
@@ -385,8 +385,8 @@ print_deployment_info() {
         local)
             echo "Services:"
             echo "  - Web UI:        http://localhost:3000"
-            echo "  - Alldata API:   http://localhost:8080"
-            echo "  - Bisheng API:   http://localhost:8081"
+            echo "  - data API:   http://localhost:8080"
+            echo "  - agent API:   http://localhost:8081"
             echo ""
             echo "Monitoring:"
             echo "  - Prometheus:    http://localhost:9090"

@@ -72,7 +72,7 @@ test.describe('API响应验证 - 核心接口', () => {
   });
 });
 
-test.describe('API响应验证 - Alldata 数据治理', () => {
+test.describe('API响应验证 - data 数据治理', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);
@@ -161,7 +161,7 @@ test.describe('API响应验证 - Alldata 数据治理', () => {
   });
 });
 
-test.describe('API响应验证 - Cube Studio', () => {
+test.describe('API响应验证 - model', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);
@@ -273,7 +273,7 @@ test.describe('API响应验证 - Cube Studio', () => {
   });
 });
 
-test.describe('API响应验证 - Bisheng LLMOps', () => {
+test.describe('API响应验证 - agent LLMOps', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);

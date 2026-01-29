@@ -235,18 +235,18 @@ class TestOpenMetadataClient:
         """测试创建数据库服务"""
         mock_request.return_value = MagicMock(
             status_code=201,
-            text='{"name": "alldata-service"}',
+            text='{"name": "data-service"}',
         )
-        mock_request.return_value.json.return_value = {"name": "alldata-service"}
+        mock_request.return_value.json.return_value = {"name": "data-service"}
         mock_request.return_value.raise_for_status = MagicMock()
 
         client = self._make_client()
         result = client.create_database_service(
-            name="alldata-service",
+            name="data-service",
             service_type="Mysql",
             description="Test service",
         )
-        assert result["name"] == "alldata-service"
+        assert result["name"] == "data-service"
 
     @patch("requests.Session.request")
     def test_get_database_service_not_found(self, mock_request):
@@ -275,7 +275,7 @@ class TestOpenMetadataClient:
         client = self._make_client()
         result = client.create_table(
             name="users",
-            database_fqn="alldata-service.mydb",
+            database_fqn="data-service.mydb",
             columns=[{"name": "id", "dataType": "INT"}],
             description="Users table",
         )
@@ -365,20 +365,20 @@ class TestMetadataSyncService:
     def test_ensure_database_service_exists(self):
         """测试确保数据库服务存在（已存在）"""
         service, mock_client = self._make_service()
-        mock_client.get_database_service.return_value = {"name": "alldata-service"}
+        mock_client.get_database_service.return_value = {"name": "data-service"}
 
         result = service.ensure_database_service()
-        assert result["name"] == "alldata-service"
+        assert result["name"] == "data-service"
         mock_client.create_database_service.assert_not_called()
 
     def test_ensure_database_service_creates(self):
         """测试确保数据库服务存在（需要创建）"""
         service, mock_client = self._make_service()
         mock_client.get_database_service.return_value = None
-        mock_client.create_database_service.return_value = {"name": "alldata-service"}
+        mock_client.create_database_service.return_value = {"name": "data-service"}
 
         result = service.ensure_database_service()
-        assert result["name"] == "alldata-service"
+        assert result["name"] == "data-service"
         mock_client.create_database_service.assert_called_once()
 
     def test_sync_database_not_available(self):
@@ -390,7 +390,7 @@ class TestMetadataSyncService:
     def test_sync_database_existing(self):
         """测试同步已存在的数据库"""
         service, mock_client = self._make_service()
-        mock_client.get_database_service.return_value = {"name": "alldata-service"}
+        mock_client.get_database_service.return_value = {"name": "data-service"}
         mock_client.get_database.return_value = {"name": "testdb"}
 
         result = service.sync_database("testdb")
@@ -400,7 +400,7 @@ class TestMetadataSyncService:
     def test_sync_database_new(self):
         """测试同步新数据库"""
         service, mock_client = self._make_service()
-        mock_client.get_database_service.return_value = {"name": "alldata-service"}
+        mock_client.get_database_service.return_value = {"name": "data-service"}
         mock_client.get_database.return_value = None
         mock_client.create_database.return_value = {"name": "testdb"}
 
@@ -417,7 +417,7 @@ class TestMetadataSyncService:
     def test_sync_table_new(self):
         """测试同步新表"""
         service, mock_client = self._make_service()
-        mock_client.get_database_service.return_value = {"name": "alldata-service"}
+        mock_client.get_database_service.return_value = {"name": "data-service"}
         mock_client.get_database.return_value = {"name": "testdb"}
         mock_client.get_table.return_value = None
         mock_client.create_table.return_value = {"name": "users"}
@@ -518,7 +518,7 @@ class TestMetadataSyncService:
         service, mock_client = self._make_service()
 
         # 设置 mock
-        mock_client.get_database_service.return_value = {"name": "alldata-service"}
+        mock_client.get_database_service.return_value = {"name": "data-service"}
         mock_client.get_database.return_value = {"name": "db"}
 
         # 创建 mock 表
@@ -595,8 +595,8 @@ class TestOpenLineageService:
 
         # 验证 FQN 格式
         call_args = mock_client.add_lineage.call_args
-        assert call_args.kwargs["from_entity_fqn"] == "alldata-service.source_db.source_table"
-        assert call_args.kwargs["to_entity_fqn"] == "alldata-service.target_db.target_table"
+        assert call_args.kwargs["from_entity_fqn"] == "data-service.source_db.source_table"
+        assert call_args.kwargs["to_entity_fqn"] == "data-service.target_db.target_table"
 
     def test_push_pipeline_lineage(self):
         """测试推送 Pipeline 血缘"""
@@ -640,7 +640,7 @@ class TestOpenLineageService:
         assert "downstreamEdges" in result
         mock_client.get_lineage.assert_called_once_with(
             entity_type="table",
-            entity_fqn="alldata-service.db.table",
+            entity_fqn="data-service.db.table",
             upstream_depth=2,
             downstream_depth=1,
         )
@@ -694,7 +694,7 @@ class TestOpenLineageService:
         node.table_name = "mytable"
 
         fqn = service._build_fqn(node)
-        assert fqn == "alldata-service.mydb.mytable"
+        assert fqn == "data-service.mydb.mytable"
 
     def test_build_fqn_table_no_db(self):
         """测试构建表 FQN（无数据库名）"""
@@ -706,7 +706,7 @@ class TestOpenLineageService:
         node.table_name = "mytable"
 
         fqn = service._build_fqn(node)
-        assert fqn == "alldata-service.default.mytable"
+        assert fqn == "data-service.default.mytable"
 
     def test_build_fqn_table_use_name(self):
         """测试构建表 FQN（使用 name 替代 table_name）"""
@@ -719,7 +719,7 @@ class TestOpenLineageService:
         node.name = "alt_name"
 
         fqn = service._build_fqn(node)
-        assert fqn == "alldata-service.mydb.alt_name"
+        assert fqn == "data-service.mydb.alt_name"
 
     def test_build_fqn_table_no_name(self):
         """测试构建表 FQN（无任何名称）"""
@@ -743,7 +743,7 @@ class TestOpenLineageService:
         node.name = "etl_task_1"
 
         fqn = service._build_fqn(node)
-        assert fqn == "alldata-pipelines.etl_task_1"
+        assert fqn == "data-pipelines.etl_task_1"
 
     def test_build_fqn_unknown_type(self):
         """测试构建未知类型 FQN"""

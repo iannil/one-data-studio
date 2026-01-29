@@ -177,11 +177,11 @@ def main():
         "OCR服务客户端"
     )
     all_passed &= check_file_exists(
-        web_dir / "src" / "components" / "alldata" / "DocumentViewer.tsx",
+        web_dir / "src" / "components" / "data" / "DocumentViewer.tsx",
         "文档查看器组件"
     )
     all_passed &= check_file_exists(
-        web_dir / "src" / "components" / "alldata" / "DocumentViewer.css",
+        web_dir / "src" / "components" / "data" / "DocumentViewer.css",
         "文档查看器样式"
     )
 

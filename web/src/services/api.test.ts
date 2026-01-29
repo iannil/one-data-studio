@@ -187,7 +187,7 @@ describe('Request wrapper', () => {
 });
 
 describe('API endpoint tests', () => {
-  describe('Alldata API endpoints', () => {
+  describe('data API endpoints', () => {
     it('should construct datasets endpoint', () => {
       const baseUrl = '/api/v1';
       const endpoint = `${baseUrl}/datasets`;
@@ -212,7 +212,7 @@ describe('API endpoint tests', () => {
     });
   });
 
-  describe('Bisheng API endpoints', () => {
+  describe('agent API endpoints', () => {
     it('should construct workflows endpoint', () => {
       const baseUrl = '/api/v1';
       const endpoint = `${baseUrl}/workflows`;

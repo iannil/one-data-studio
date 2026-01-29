@@ -23,7 +23,7 @@
 │  ┌─────────────────────────────────────────────────────────────┐     │
 │  │                    Application Layer                         │     │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │     │
-│  │  │   Data    │  │  Cube Studio │  │   Agent    │       │     │
+│  │  │   Data    │  │  Model │  │   Agent    │       │     │
 │  │  │  (L2 数据层) │  │  (L3 模型层) │  │ (L4 应用层)  │       │     │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘       │     │
 │  └─────────────────────────────────────────────────────────────┘     │
@@ -61,12 +61,12 @@ one-data-infra           # 基础设施（存储、中间件）
 
 one-data-data         # Data 平台
 ├── data-api
-├── alldata-etl
-├── alldata-metadata
-├── alldata-frontend
-└── alldata-jobs
+├── data-etl
+├── data-metadata
+├── data-frontend
+└── data-jobs
 
-one-data-model            # Cube Studio 平台
+one-data-model            # Model 平台
 ├── model-api
 ├── cube-scheduler
 ├── jupyterhub
@@ -75,14 +75,14 @@ one-data-model            # Cube Studio 平台
 
 one-data-agent         # Agent 平台
 ├── agent-api
-├── bisheng-frontend
-├── bisheng-workflow
-└── bisheng-knowledgebase
+├── agent-frontend
+├── agent-workflow
+└── agent-knowledgebase
 
 tenant-{id}              # 租户命名空间（可选多租户隔离）
-├── tenant-{id}-alldata
+├── tenant-{id}-data
 ├── tenant-{id}-cube
-└── tenant-{id}-bisheng
+└── tenant-{id}-agent
 ```
 
 ### 1.2 Namespace 配置
@@ -293,9 +293,9 @@ spec:
       credentialName: one-data-tls-cert
     hosts:
     - "one-data.example.com"
-    - "alldata.example.com"
+    - "data.example.com"
     - "cube.example.com"
-    - "bisheng.example.com"
+    - "agent.example.com"
 ```
 
 ### 3.2 VirtualService 配置
@@ -306,11 +306,11 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: alldata-vs
+  name: data-vs
   namespace: one-data-data
 spec:
   hosts:
-  - "alldata.example.com"
+  - "data.example.com"
   gateways:
   - one-data-system/one-data-gateway
   http:
@@ -324,7 +324,7 @@ spec:
           number: 8080
   - route:
     - destination:
-        host: alldata-frontend
+        host: data-frontend
         port:
           number: 80
 ```
@@ -392,7 +392,7 @@ helm-charts/
 │   ├── values.yaml
 │   └── charts/
 │
-├── alldata/                     # Data 平台 Chart
+├── data/                     # Data 平台 Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -403,7 +403,7 @@ helm-charts/
 │       ├── metadata/
 │       └── frontend/
 │
-├── cube-studio/                 # Cube Studio Chart
+├── cube-studio/                 # Model Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -414,7 +414,7 @@ helm-charts/
 │       ├── serving/
 │       └── training/
 │
-├── bisheng/                     # Agent Chart
+├── agent/                     # Agent Chart
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   ├── values-dev.yaml
@@ -462,8 +462,8 @@ global:
   database:
     host: mysql.one-data-infra.svc.cluster.local
     port: 3306
-    name: alldata
-    existingSecret: alldata-db-credentials
+    name: data
+    existingSecret: data-db-credentials
 
 # API 服务
 api:
@@ -496,7 +496,7 @@ api:
     enabled: true
     className: istio
     hosts:
-      - host: alldata.example.com
+      - host: data.example.com
         paths:
           - path: /api
             pathType: Prefix
@@ -507,7 +507,7 @@ etl:
   replicaCount: 3
 
   image:
-    repository: alldata-etl
+    repository: data-etl
     tag: "v1.0.0"
 
   resources:
@@ -524,7 +524,7 @@ frontend:
   replicaCount: 2
 
   image:
-    repository: alldata-frontend
+    repository: data-frontend
     tag: "v1.0.0"
 
   service:
@@ -532,10 +532,10 @@ frontend:
     port: 80
 ```
 
-#### Cube Studio values.yaml
+#### Model values.yaml
 
 ```yaml
-# Cube Studio 平台配置
+# Model 平台配置
 global:
   namespace: one-data-model
   imageRegistry: harbor.example.com/one-data
@@ -633,19 +633,19 @@ helm install infrastructure one-data/infrastructure \
   -f infrastructure/values-prod.yaml
 
 # 4. 部署 Data
-helm install alldata one-data/alldata \
+helm install data one-data/data \
   -n one-data-data \
-  -f alldata/values-prod.yaml
+  -f data/values-prod.yaml
 
-# 5. 部署 Cube Studio
+# 5. 部署 Model
 helm install cube one-data/cube-studio \
   -n one-data-model \
   -f cube-studio/values-prod.yaml
 
 # 6. 部署 Agent
-helm install bisheng one-data/bisheng \
+helm install agent one-data/agent \
   -n one-data-agent \
-  -f bisheng/values-prod.yaml
+  -f agent/values-prod.yaml
 
 # 7. 部署监控
 helm install monitoring one-data/monitoring \
@@ -667,7 +667,7 @@ graph TD
     D --> E[部署基础设施 Chart]
     E --> F[等待基础设施就绪]
     F --> G[部署 Data Chart]
-    G --> H[部署 Cube Studio Chart]
+    G --> H[部署 Model Chart]
     H --> I[部署 Agent Chart]
     I --> J[部署监控 Chart]
     J --> K[健康检查]
@@ -681,10 +681,10 @@ graph TD
 
 ```bash
 # 1. 备份配置
-helm get values alldata -n one-data-data > alldata-backup.yaml
+helm get values data -n one-data-data > data-backup.yaml
 
 # 2. 更新镜像版本
-helm upgrade alldata one-data/alldata \
+helm upgrade data one-data/data \
   -n one-data-data \
   --set global.imageTag=v1.1.0 \
   --wait \
@@ -695,7 +695,7 @@ kubectl rollout status deployment/data-api -n one-data-data
 kubectl get pods -n one-data-data
 
 # 4. 回滚（如需要）
-helm rollback alldata -n one-data-data
+helm rollback data -n one-data-data
 ```
 
 ---

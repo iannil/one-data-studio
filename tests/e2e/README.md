@@ -101,8 +101,11 @@ npm run test:data
 # Agent
 npm run test:agent
 
-# Bisheng
-npm run test:bisheng
+# Data
+npm run test:data
+
+# Model
+npm run test:model
 
 # 管理后台
 npm run test:admin
@@ -152,9 +155,9 @@ export API_URL=http://localhost:8081   # API地址
 | 模块 | 页面覆盖率 | 功能覆盖率 |
 |------|-----------|-----------|
 | 核心页面 | 100% | 85% |
-| Cube Studio | 100% | 80% |
-| Alldata | 100% | 75% |
-| Bisheng | 100% | 80% |
+| model | 100% | 80% |
+| data | 100% | 75% |
+| agent | 100% | 80% |
 | 管理后台 | 100% | 85% |
 
 ## CI/CD 集成

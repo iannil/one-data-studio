@@ -123,4 +123,4 @@ metadata:
   namespace: one-data-system
 data:
   MYSQL_HOST: "mysql.one-data-infra.svc.cluster.local"
-  MYSQL_DATABASE: "one_data_bisheng"
+  MYSQL_DATABASE: "one_data_agent"

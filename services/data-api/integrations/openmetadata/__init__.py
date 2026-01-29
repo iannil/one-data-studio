@@ -2,7 +2,7 @@
 OpenMetadata 集成模块
 
 提供与 OpenMetadata 平台的双向集成:
-- 元数据同步 (Alldata <-> OpenMetadata)
+- 元数据同步 (data <-> OpenMetadata)
 - OpenLineage 血缘标准化
 - 数据质量集成
 """

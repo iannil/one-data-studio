@@ -197,7 +197,7 @@ class TestRedisCache:
         """测试键生成"""
         cache = RedisCache()
         key = cache._make_key("user:123")
-        assert key == "bisheng:user:123"
+        assert key == "agent:user:123"
 
 
 class TestCacheDecorator:

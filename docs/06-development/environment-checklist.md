@@ -85,9 +85,9 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 | 用途 | 示例域名 |
 |------|----------|
 | 平台入口 | one-data.example.com |
-| Data | alldata.example.com |
+| Data | data.example.com |
 | Cube | cube.example.com |
-| Agent | bisheng.example.com |
+| Agent | agent.example.com |
 | MinIO | minio.example.com |
 
 ### 网络连通性检查

@@ -1,5 +1,5 @@
 """
-Alldata API 服务模块
+data API 服务模块
 """
 
 from .metadata_graph_builder import MetadataGraphBuilder

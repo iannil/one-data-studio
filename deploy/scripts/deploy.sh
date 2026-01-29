@@ -225,13 +225,13 @@ post_deploy_check() {
 
     case $ENVIRONMENT in
         dev)
-            checks+=("Alldata API:${base_url}:8080/api/v1/health")
-            checks+=("Bisheng API:${base_url}:8081/api/v1/health")
+            checks+=("data API:${base_url}:8080/api/v1/health")
+            checks+=("agent API:${base_url}:8081/api/v1/health")
             checks+=("Web UI:${base_url}:3000")
             ;;
         staging|prod)
-            checks+=("Alldata API:${base_url}:8080/api/v1/health")
-            checks+=("Bisheng API:${base_url}:8081/api/v1/health")
+            checks+=("data API:${base_url}:8080/api/v1/health")
+            checks+=("agent API:${base_url}:8081/api/v1/health")
             checks+=("Web UI:${base_url}:3000")
             ;;
     esac
@@ -267,8 +267,8 @@ main() {
     echo ""
     echo "服务访问地址:"
     echo "  Web UI:      http://localhost:3000"
-    echo "  Alldata API: http://localhost:8080"
-    echo "  Bisheng API: http://localhost:8081"
+    echo "  data API: http://localhost:8080"
+    echo "  agent API: http://localhost:8081"
     echo "  Prometheus:  http://localhost:9090"
     echo "  Grafana:     http://localhost:3001"
     echo ""

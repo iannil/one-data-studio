@@ -31,8 +31,8 @@ class TestFullLifecycleE2E:
     def config(self) -> Dict[str, str]:
         """测试配置"""
         return {
-            "data_api_url": os.getenv("DATA_API_URL") or os.getenv("ALLDATA_API_URL", "http://localhost:8080"),
-            "agent_api_url": os.getenv("AGENT_API_URL") or os.getenv("BISHENG_API_URL", "http://localhost:8000"),
+            "data_api_url": os.getenv("DATA_API_URL") or os.getenv("data_API_URL", "http://localhost:8080"),
+            "agent_api_url": os.getenv("AGENT_API_URL") or os.getenv("agent_API_URL", "http://localhost:8000"),
             "openai_proxy_url": os.getenv("OPENAI_PROXY_URL", "http://localhost:8001"),
             "test_database": os.getenv("TEST_DATABASE", "test_dw"),
         }

@@ -1,6 +1,6 @@
 # 系统时序图
 
-本文档包含两个核心场景的详细时序图，展示 Data、Cube Studio 和 Agent 三者如何协同工作。
+本文档包含两个核心场景的详细时序图，展示 Data、Model 和 Agent 三者如何协同工作。
 
 ---
 
@@ -26,7 +26,7 @@ sequenceDiagram
         participant VectorDB as 向量数据库
     end
 
-    box "Cube Studio (AI中台)" #e8f5e9
+    box "Model (AI中台)" #e8f5e9
         participant Cube_NB as Notebook/开发环境
         participant Cube_Job as 训练任务(K8s)
         participant Cube_Serving as 模型服务(API)
@@ -64,7 +64,7 @@ sequenceDiagram
 - **Data** 将数据位置通知给元数据中心，打破数据与算法的壁垒
 
 **阶段2：模型开发与微调 (步骤 6-11)**
-- **Cube Studio** 直接消费 Data 产出的数据进行训练
+- **Model** 直接消费 Data 产出的数据进行训练
 - 训练任务自动挂载存储，无需手动下载数据
 - 模型权重保存回共享存储
 
@@ -96,7 +96,7 @@ sequenceDiagram
         participant DataWarehouse as 业务数仓 (Doris/Hive)
     end
 
-    box "Cube Studio (算力引擎)" #e8f5e9
+    box "Model (算力引擎)" #e8f5e9
         participant LLM_API as 私有大模型 API
     end
 
@@ -148,7 +148,7 @@ sequenceDiagram
 通过这两个时序图可以看出：
 
 1. **Data 是"供货商"**：保证原材料（数据）的质量和供给。
-2. **Cube Studio 是"加工厂"**：提供机器（算力）和工艺（模型），把原材料变成能力（API）。
+2. **Model 是"加工厂"**：提供机器（算力）和工艺（模型），把原材料变成能力（API）。
 3. **Agent 是"零售商"**：把能力包装成产品（App），直接服务消费者（用户）。
 
 这种架构实现了**数据流、模型流、业务流**的完美闭环。
@@ -172,7 +172,7 @@ sequenceDiagram
         participant Agent as Agent引擎
     end
 
-    box "L3 算法引擎层 (Cube Studio)" #e8f5e9
+    box "L3 算法引擎层 (Model)" #e8f5e9
         participant vLLM as vLLM 推理服务
     end
 
@@ -311,9 +311,9 @@ sequenceDiagram
     activate Data
     Note right of Data: MetadataSyncService
 
-    Data->>OM: GET /services/databaseServices/name/alldata-service
+    Data->>OM: GET /services/databaseServices/name/data-service
     OM-->>Data: 404 (不存在)
-    Data->>OM: POST /services/databaseServices<br/>创建 alldata-service (MySQL类型)
+    Data->>OM: POST /services/databaseServices<br/>创建 data-service (MySQL类型)
     OM->>MySQL: 持久化服务注册
     OM->>ES: 索引服务元数据
     OM-->>Data: 服务创建成功
@@ -323,7 +323,7 @@ sequenceDiagram
         Data->>OM: POST /tables<br/>{name, databaseSchema, columns[], tags[], description}
         OM->>MySQL: 持久化表+列元数据
         OM->>ES: 全文索引 (支持搜索)
-        OM-->>Data: FQN: alldata-service.{db}.{table}
+        OM-->>Data: FQN: data-service.{db}.{table}
     end
 
     Note right of Data: ▶ 血缘推送 (OpenLineageService)
@@ -513,7 +513,7 @@ graph TB
         Fusion[表融合]
     end
 
-    subgraph "L3 算法引擎层 — Cube Studio"
+    subgraph "L3 算法引擎层 — Model"
         vLLM[vLLM推理]
         Embed[Embedding服务]
     end

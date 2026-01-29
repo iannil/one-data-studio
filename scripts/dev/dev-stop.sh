@@ -39,7 +39,7 @@ show_stop_help() {
         "  dev-stop.sh              # 停止所有服务
   dev-stop.sh -v           # 停止并删除数据卷
   dev-stop.sh mysql redis  # 仅停止指定服务
-  dev-stop.sh b a          # 使用别名（bisheng, alldata）"
+  dev-stop.sh agent data   # 停止指定 API 服务"
 }
 
 while [[ $# -gt 0 ]]; do

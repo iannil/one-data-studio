@@ -114,12 +114,12 @@ test.describe('核心页面测试', () => {
 });
 
 test.describe('API 健康检查', () => {
-  test('Alldata API 应可用', async ({ request }) => {
+  test('data API 应可用', async ({ request }) => {
     const response = await request.get('http://localhost:8001/api/v1/health');
     expect(response.ok()).toBeTruthy();
   });
 
-  test('Bisheng API 应可用', async ({ request }) => {
+  test('agent API 应可用', async ({ request }) => {
     const response = await request.get('http://localhost:8000/api/v1/health');
     expect(response.ok()).toBeTruthy();
   });

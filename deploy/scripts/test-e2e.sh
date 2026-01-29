@@ -12,8 +12,8 @@ AGENT_API_URL="${AGENT_API_URL:-http://localhost:8000}"
 DATA_API_URL="${DATA_API_URL:-http://localhost:8001}"
 MODEL_API_URL="${MODEL_API_URL:-http://localhost:8002}"
 # 兼容旧名称
-BISHENG_API_URL="${BISHENG_API_URL:-${AGENT_API_URL}}"
-ALLDATA_API_URL="${ALLDATA_API_URL:-${DATA_API_URL}}"
+agent_API_URL="${agent_API_URL:-${AGENT_API_URL}}"
+data_API_URL="${data_API_URL:-${DATA_API_URL}}"
 CUBE_API_URL="${CUBE_API_URL:-${MODEL_API_URL}}"
 
 # 测试计数器
@@ -108,7 +108,7 @@ else
 fi
 
 echo -n "  2.2 获取会话列表... "
-if curl -s -f "${BISHENG_API_URL}/api/v1/conversations" > /dev/null 2>&1; then
+if curl -s -f "${agent_API_URL}/api/v1/conversations" > /dev/null 2>&1; then
     pass
 else
     fail "无法获取会话列表"
@@ -118,14 +118,14 @@ echo ""
 # E2E 场景 3: 元数据查询
 echo "==> E2E 场景 3: 元数据操作"
 echo -n "  3.1 获取数据库列表... "
-if curl -s -f "${ALLDATA_API_URL}/api/v1/metadata/databases" > /dev/null 2>&1; then
+if curl -s -f "${data_API_URL}/api/v1/metadata/databases" > /dev/null 2>&1; then
     pass
 else
     fail "无法获取数据库列表"
 fi
 
 echo -n "  3.2 获取数据集列表... "
-if curl -s -f "${ALLDATA_API_URL}/api/v1/datasets" > /dev/null 2>&1; then
+if curl -s -f "${data_API_URL}/api/v1/datasets" > /dev/null 2>&1; then
     pass
 else
     fail "无法获取数据集列表"

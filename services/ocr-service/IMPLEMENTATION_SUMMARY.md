@@ -96,9 +96,9 @@
 | 文件 | 操作 | 说明 |
 |------|------|------|
 | `web/src/services/ocr.ts` | 修改 | 新增接口类型和API方法 |
-| `web/src/components/alldata/DocumentViewer.tsx` | 新建 | 增强结果查看器 |
-| `web/src/components/alldata/DocumentViewer.css` | 新建 | 组件样式文件 |
-| `web/src/pages/alldata/ocr/OCRPage.tsx` | 修改 | 集成新功能 |
+| `web/src/components/data/DocumentViewer.tsx` | 新建 | 增强结果查看器 |
+| `web/src/components/data/DocumentViewer.css` | 新建 | 组件样式文件 |
+| `web/src/pages/data/ocr/OCRPage.tsx` | 修改 | 集成新功能 |
 
 ### 测试和文档 ✅
 
@@ -156,7 +156,7 @@ services/ocr-service/
 ├── pytest.ini                   # 新建
 └── README.md                    # 更新
 
-web/src/components/alldata/
+web/src/components/data/
 └── DocumentViewer.{tsx, css}  # 新建
 ```
 

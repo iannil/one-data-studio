@@ -1,7 +1,7 @@
 {
   "dashboard": {
     "title": "ONE-DATA Data API 监控",
-    "tags": ["alldata", "dataops", "governance"],
+    "tags": ["data", "dataops", "governance"],
     "timezone": "browser",
     "refresh": "30s",
     "time": {
@@ -93,11 +93,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
         "targets": [
           {
-            "expr": "alldata_db_connections_active",
+            "expr": "data_db_connections_active",
             "legendFormat": "活跃连接"
           },
           {
-            "expr": "alldata_db_connections_idle",
+            "expr": "data_db_connections_idle",
             "legendFormat": "空闲连接"
           }
         ],
@@ -112,11 +112,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
         "targets": [
           {
-            "expr": "sum(rate(alldata_scan_total[5m]))",
+            "expr": "sum(rate(data_scan_total[5m]))",
             "legendFormat": "扫描速率"
           },
           {
-            "expr": "sum(rate(alldata_scan_errors_total[5m]))",
+            "expr": "sum(rate(data_scan_errors_total[5m]))",
             "legendFormat": "错误速率"
           }
         ],
@@ -131,7 +131,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 20},
         "targets": [
           {
-            "expr": "alldata_metadata_sync_lag_seconds",
+            "expr": "data_metadata_sync_lag_seconds",
             "legendFormat": "延迟"
           }
         ],
@@ -158,7 +158,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 18, "y": 20},
         "targets": [
           {
-            "expr": "alldata_assets_scanned_total",
+            "expr": "data_assets_scanned_total",
             "legendFormat": "已扫描资产"
           }
         ]
@@ -205,7 +205,7 @@
         "gridPos": {"h": 10, "w": 12, "x": 12, "y": 38},
         "targets": [
           {
-            "expr": "sum by (sensitivity_level) (alldata_sensitivity_findings_total)",
+            "expr": "sum by (sensitivity_level) (data_sensitivity_findings_total)",
             "legendFormat": "{{sensitivity_level}}"
           }
         ]
@@ -217,7 +217,7 @@
         "gridPos": {"h": 6, "w": 12, "x": 0, "y": 44},
         "targets": [
           {
-            "expr": "sum(rate(alldata_masking_operations_total[5m])) by (masking_type)",
+            "expr": "sum(rate(data_masking_operations_total[5m])) by (masking_type)",
             "legendFormat": "{{masking_type}}"
           }
         ]
@@ -249,11 +249,11 @@
         "gridPos": {"h": 6, "w": 12, "x": 0, "y": 50},
         "targets": [
           {
-            "expr": "sum(rate(alldata_vector_embeddings_generated[5m]))",
+            "expr": "sum(rate(data_vector_embeddings_generated[5m]))",
             "legendFormat": "嵌入生成速率"
           },
           {
-            "expr": "sum(rate(alldata_vector_documents_indexed[5m]))",
+            "expr": "sum(rate(data_vector_documents_indexed[5m]))",
             "legendFormat": "文档索引速率"
           }
         ]
@@ -265,7 +265,7 @@
         "gridPos": {"h": 6, "w": 6, "x": 12, "y": 50},
         "targets": [
           {
-            "expr": "alldata_cache_hit_rate",
+            "expr": "data_cache_hit_rate",
             "legendFormat": "命中率"
           }
         ],
@@ -292,7 +292,7 @@
         "gridPos": {"h": 8, "w": 18, "x": 18, "y": 50},
         "targets": [
           {
-            "expr": "sum by (value_tier, asset_type) (alldata_asset_value_score)",
+            "expr": "sum by (value_tier, asset_type) (data_asset_value_score)",
             "legendFormat": "{{value_tier}} - {{asset_type}}"
           }
         ]

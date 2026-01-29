@@ -26,8 +26,8 @@ import requests
 logger = logging.getLogger(__name__)
 
 # 测试配置
-AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_BISHENG_URL", "http://localhost:8081"))
-DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_ALLDATA_URL", "http://localhost:8082"))
+AGENT_URL = os.getenv("TEST_AGENT_URL", os.getenv("TEST_agent_URL", "http://localhost:8081"))
+DATA_URL = os.getenv("TEST_DATA_URL", os.getenv("TEST_data_URL", "http://localhost:8082"))
 MODEL_URL = os.getenv("TEST_MODEL_URL", os.getenv("TEST_CUBE_URL", "http://localhost:8083"))
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
@@ -251,7 +251,7 @@ class TestAPIResponseBenchmark:
     def test_health_check_latency(self):
         """健康检查接口延迟"""
         def request_func():
-            response = requests.get(f"{BISHENG_URL}/api/v1/health", timeout=10)
+            response = requests.get(f"{agent_URL}/api/v1/health", timeout=10)
             response.raise_for_status()
 
         result = self.runner.run_sync_benchmark(
@@ -270,7 +270,7 @@ class TestAPIResponseBenchmark:
         """列出工作流接口延迟"""
         def request_func():
             response = requests.get(
-                f"{BISHENG_URL}/api/v1/workflows",
+                f"{agent_URL}/api/v1/workflows",
                 headers=HEADERS,
                 timeout=30
             )
@@ -379,7 +379,7 @@ class TestDatabaseQueryBenchmark:
         """元数据查询延迟"""
         def request_func():
             response = requests.get(
-                f"{ALLDATA_URL}/api/v1/metadata/tables",
+                f"{data_URL}/api/v1/metadata/tables",
                 headers=HEADERS,
                 params={"keywords": "sales"},
                 timeout=30
@@ -411,7 +411,7 @@ class TestVectorSearchBenchmark:
         """向量检索延迟"""
         def request_func():
             response = requests.post(
-                f"{ALLDATA_URL}/api/v1/vector/search",
+                f"{data_URL}/api/v1/vector/search",
                 headers=HEADERS,
                 json={
                     "query": "销售政策变化",
@@ -439,7 +439,7 @@ class TestVectorSearchBenchmark:
         """大 top_k 向量检索延迟"""
         def request_func():
             response = requests.post(
-                f"{ALLDATA_URL}/api/v1/vector/search",
+                f"{data_URL}/api/v1/vector/search",
                 headers=HEADERS,
                 json={
                     "query": "销售政策变化",
@@ -474,7 +474,7 @@ class TestConcurrencyBenchmark:
         """低并发测试 (10 并发)"""
         def request_func():
             response = requests.get(
-                f"{BISHENG_URL}/api/v1/health",
+                f"{agent_URL}/api/v1/health",
                 timeout=10
             )
             response.raise_for_status()
@@ -495,7 +495,7 @@ class TestConcurrencyBenchmark:
         """中等并发测试 (50 并发)"""
         def request_func():
             response = requests.get(
-                f"{BISHENG_URL}/api/v1/health",
+                f"{agent_URL}/api/v1/health",
                 timeout=10
             )
             response.raise_for_status()
@@ -516,7 +516,7 @@ class TestConcurrencyBenchmark:
         """高并发测试 (100 并发)"""
         def request_func():
             response = requests.get(
-                f"{BISHENG_URL}/api/v1/health",
+                f"{agent_URL}/api/v1/health",
                 timeout=15
             )
             response.raise_for_status()
@@ -545,7 +545,7 @@ class TestWorkflowThroughputBenchmark:
     def setup(self):
         """创建测试工作流"""
         response = requests.post(
-            f"{BISHENG_URL}/api/v1/workflows",
+            f"{agent_URL}/api/v1/workflows",
             headers=HEADERS,
             json={
                 "name": f"Benchmark Workflow {int(time.time())}",
@@ -569,7 +569,7 @@ class TestWorkflowThroughputBenchmark:
             }
 
             requests.put(
-                f"{BISHENG_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}",
+                f"{agent_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}",
                 headers=HEADERS,
                 json={"definition": workflow_def}
             )
@@ -579,7 +579,7 @@ class TestWorkflowThroughputBenchmark:
         # 清理
         if TestWorkflowThroughputBenchmark.workflow_id:
             requests.delete(
-                f"{BISHENG_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}",
+                f"{agent_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}",
                 headers=HEADERS
             )
 
@@ -592,7 +592,7 @@ class TestWorkflowThroughputBenchmark:
 
         def request_func():
             response = requests.post(
-                f"{BISHENG_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}/start",
+                f"{agent_URL}/api/v1/workflows/{TestWorkflowThroughputBenchmark.workflow_id}/start",
                 headers=HEADERS,
                 json={"inputs": {"query": "benchmark test"}},
                 timeout=60
@@ -703,7 +703,7 @@ class TestMemoryPressureBenchmark:
 
         def request_func():
             response = requests.post(
-                f"{BISHENG_URL}/api/v1/chat",
+                f"{agent_URL}/api/v1/chat",
                 headers=HEADERS,
                 json={
                     "conversation_id": "benchmark-conv",

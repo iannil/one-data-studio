@@ -1,4 +1,4 @@
-# Alldata API
+# data API
 
 数据治理与开发平台 API 服务。
 

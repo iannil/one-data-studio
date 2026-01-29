@@ -145,8 +145,8 @@ restart_deployments() {
     log_step "Triggering rolling restart of deployments..."
 
     local deployments=(
-        "bisheng-api"
-        "alldata-api"
+        "agent-api"
+        "data-api"
         "openai-proxy"
     )
 
@@ -174,8 +174,8 @@ wait_for_rollout() {
     log_step "Waiting for deployments to be ready..."
 
     local deployments=(
-        "bisheng-api"
-        "alldata-api"
+        "agent-api"
+        "data-api"
         "openai-proxy"
     )
 
@@ -214,7 +214,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: reencrypt
-        image: one-data-studio/bisheng-api:latest
+        image: one-data-studio/agent-api:latest
         command: ["python", "-c"]
         args:
         - |

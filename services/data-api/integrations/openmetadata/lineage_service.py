@@ -122,7 +122,7 @@ class OpenLineageService:
     """
     OpenLineage 血缘集成服务
 
-    将 Alldata 的血缘模型转换为 OpenLineage 标准格式，
+    将 data 的血缘模型转换为 OpenLineage 标准格式，
     并与 OpenMetadata 进行双向同步。
     """
 
@@ -149,7 +149,7 @@ class OpenLineageService:
         return self.client.health_check()
 
     # ========================================
-    # 血缘推送 (Alldata -> OpenMetadata)
+    # 血缘推送 (data -> OpenMetadata)
     # ========================================
 
     def push_lineage(
@@ -251,7 +251,7 @@ class OpenLineageService:
         从 ETL 任务推送血缘关系
 
         Args:
-            etl_task: Alldata ETLTask 模型实例
+            etl_task: data ETLTask 模型实例
 
         Returns:
             创建的血缘关系列表
@@ -294,10 +294,10 @@ class OpenLineageService:
 
     def push_lineage_edge(self, lineage_edge) -> Dict:
         """
-        从 Alldata LineageEdge 模型推送血缘
+        从 data LineageEdge 模型推送血缘
 
         Args:
-            lineage_edge: Alldata LineageEdge 模型实例
+            lineage_edge: data LineageEdge 模型实例
 
         Returns:
             创建的血缘关系对象
@@ -333,8 +333,8 @@ class OpenLineageService:
             description=lineage_edge.description,
         )
 
-    def _convert_node_type(self, alldata_type: str) -> str:
-        """将 Alldata 节点类型转换为 OpenMetadata 实体类型"""
+    def _convert_node_type(self, data_type: str) -> str:
+        """将 data 节点类型转换为 OpenMetadata 实体类型"""
         type_mapping = {
             "database": EntityType.TABLE.value,
             "table": EntityType.TABLE.value,
@@ -343,7 +343,7 @@ class OpenLineageService:
             "dataset": EntityType.TABLE.value,
             "model": EntityType.MLMODEL.value,
         }
-        return type_mapping.get(alldata_type, EntityType.TABLE.value)
+        return type_mapping.get(data_type, EntityType.TABLE.value)
 
     def _build_fqn(self, lineage_node) -> Optional[str]:
         """从 LineageNode 构建 OpenMetadata FQN"""
@@ -374,7 +374,7 @@ class OpenLineageService:
         return None
 
     # ========================================
-    # 血缘获取 (OpenMetadata -> Alldata)
+    # 血缘获取 (OpenMetadata -> data)
     # ========================================
 
     def get_table_lineage(

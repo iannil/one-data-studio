@@ -456,7 +456,7 @@ const CreateConsumerModal: React.FC<{
           name="group_id"
           rules={[{ required: true, message: '请输入消费者组 ID' }]}
         >
-          <Input placeholder="alldata-consumer-group" />
+          <Input placeholder="data-consumer-group" />
         </Form.Item>
 
         <Form.Item

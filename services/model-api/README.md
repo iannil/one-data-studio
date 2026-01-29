@@ -59,6 +59,6 @@ pytest tests/
 
 Model API 与其他服务的集成：
 
-- **Bisheng API**: 提供模型推理服务
-- **Alldata API**: 获取训练数据集
+- **agent API**: 提供模型推理服务
+- **data API**: 获取训练数据集
 - **MinIO**: 模型存储

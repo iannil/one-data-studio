@@ -173,10 +173,10 @@ def test_dataset_create_with_invalid_name_returns_400():
 
 ```bash
 # 功能添加
-git commit -m "feat(bisheng): add workflow version control"
+git commit -m "feat(agent): add workflow version control"
 
 # Bug 修复
-git commit -m "fix(alldata): resolve metadata query timeout issue"
+git commit -m "fix(data): resolve metadata query timeout issue"
 
 # 文档更新
 git commit -m "docs: update API documentation for behavior service"

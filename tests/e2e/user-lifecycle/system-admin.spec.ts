@@ -12,7 +12,7 @@ import { navigateToUserManagement, generateTestUserData } from '../helpers/user-
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = process.env.API_BASE || 'http://localhost:8080';
 const ADMIN_API = process.env.ADMIN_API || 'http://localhost:8004';
-const AGENT_API = process.env.AGENT_API || process.env.BISHENG_API || 'http://localhost:8000';
+const AGENT_API = process.env.AGENT_API || process.env.agent_API || 'http://localhost:8000';
 
 test.describe('系统管理员完整流程', () => {
   let adminToken: string;
@@ -211,10 +211,10 @@ test.describe('系统管理员完整流程', () => {
     });
 
     test('SA-MN-001: 各服务健康检查', async ({ request }) => {
-      const ALLDATA_API = process.env.ALLDATA_API || 'http://localhost:8001';
+      const data_API = process.env.data_API || 'http://localhost:8001';
       const services = [
-        { name: 'alldata', url: `${ALLDATA_API}/api/v1/health` },
-        { name: 'bisheng', url: `${BISHENG_API}/api/v1/health` },
+        { name: 'data', url: `${data_API}/api/v1/health` },
+        { name: 'agent', url: `${agent_API}/api/v1/health` },
         { name: 'admin', url: `${ADMIN_API}/api/v1/health` },
       ];
 

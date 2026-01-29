@@ -19,13 +19,13 @@ import { test, expect } from '@playwright/test';
 const CONFIG = {
   BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
   KEYCLOAK_URL: process.env.KEYCLOAK_URL || 'http://localhost:8080',
-  AGENT_API: process.env.AGENT_API_URL || process.env.BISHENG_API_URL || 'http://localhost:8000',
-  DATA_API: process.env.DATA_API_URL || process.env.ALLDATA_API_URL || 'http://localhost:8001',
+  AGENT_API: process.env.AGENT_API_URL || process.env.agent_API_URL || 'http://localhost:8000',
+  DATA_API: process.env.DATA_API_URL || process.env.data_API_URL || 'http://localhost:8001',
   MODEL_API: process.env.MODEL_API_URL || process.env.CUBE_API_URL || 'http://localhost:8002',
   OPENAI_API: process.env.OPENAI_API_URL || 'http://localhost:8003',
   // 兼容旧名称
-  BISHENG_API: process.env.BISHENG_API_URL || 'http://localhost:8000',
-  ALLDATA_API: process.env.ALLDATA_API_URL || 'http://localhost:8001',
+  agent_API: process.env.agent_API_URL || 'http://localhost:8000',
+  data_API: process.env.data_API_URL || 'http://localhost:8001',
   CUBE_API: process.env.CUBE_API_URL || 'http://localhost:8002',
 };
 
@@ -340,17 +340,17 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 // API 服务健康检查测试
 // ============================================
 test.describe('API 服务健康检查', () => {
-  test('Bisheng API', async ({ request }) => {
-    console.log('\n[API] 检查 Bisheng API...');
-    const response = await request.get(`${CONFIG.BISHENG_API}/api/v1/health`);
-    console.log(`[API] Bisheng API 状态: ${response.status()}`);
+  test('agent API', async ({ request }) => {
+    console.log('\n[API] 检查 agent API...');
+    const response = await request.get(`${CONFIG.agent_API}/api/v1/health`);
+    console.log(`[API] agent API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
-  test('Alldata API', async ({ request }) => {
-    console.log('\n[API] 检查 Alldata API...');
-    const response = await request.get(`${CONFIG.ALLDATA_API}/api/v1/health`);
-    console.log(`[API] Alldata API 状态: ${response.status()}`);
+  test('data API', async ({ request }) => {
+    console.log('\n[API] 检查 data API...');
+    const response = await request.get(`${CONFIG.data_API}/api/v1/health`);
+    console.log(`[API] data API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 

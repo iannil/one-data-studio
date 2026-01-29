@@ -1,5 +1,5 @@
 /**
- * Alldata 组件导出
+ * data 组件导出
  */
 
 export { AssetAISearch } from './AssetAISearch';

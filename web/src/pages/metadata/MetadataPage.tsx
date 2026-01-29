@@ -150,7 +150,7 @@ function MetadataPage() {
     }
 
     try {
-      // 调用 Bisheng Text2SQL API
+      // 调用 agent Text2SQL API
       const response = await fetch('/api/v1/text2sql', {
         method: 'POST',
         headers: {

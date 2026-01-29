@@ -134,8 +134,8 @@ sequenceDiagram
 - `services/data-api/services/ai_data_cleaning.py` - AI清洗分析
 - `services/data-api/services/cleaning_rule_generator.py` - 规则生成器
 - `services/data-api/models/cleaning_rule.py` - 清洗规则模型
-- `web/src/pages/alldata/cleaning/CleaningRulePage.tsx` - 清洗规则配置页
-- `web/src/components/alldata/cleaning/RuleSuggestionPanel.tsx` - AI建议面板
+- `web/src/pages/data/cleaning/CleaningRulePage.tsx` - 清洗规则配置页
+- `web/src/components/data/cleaning/RuleSuggestionPanel.tsx` - AI建议面板
 
 #### 3.2 字段转换智能映射 【NEW】
 
@@ -206,10 +206,10 @@ services/ocr-service/
 
 **前端集成**:
 
-- `web/src/pages/alldata/ocr/OCRPage.tsx` - OCR任务管理
-- `web/src/components/alldata/ocr/DocumentUpload.tsx` - 文档上传
-- `web/src/components/alldata/ocr/ResultViewer.tsx` - 结果预览
-- `web/src/components/alldata/ocr/TemplateEditor.tsx` - 模板编辑器
+- `web/src/pages/data/ocr/OCRPage.tsx` - OCR任务管理
+- `web/src/components/data/ocr/DocumentUpload.tsx` - 文档上传
+- `web/src/components/data/ocr/ResultViewer.tsx` - 结果预览
+- `web/src/components/data/ocr/TemplateEditor.tsx` - 模板编辑器
 
 #### 3.4 缺失值AI填充 【NEW】
 
@@ -230,7 +230,7 @@ services/ocr-service/
 
 - `services/data-api/services/anomaly_detector.py` - 异常检测
 - `services/data-api/services/alert_manager.py` - 告警管理
-- `web/src/pages/alldata/alerts/AlertPage.tsx` - 告警管理页
+- `web/src/pages/data/alerts/AlertPage.tsx` - 告警管理页
 
 ---
 
@@ -263,7 +263,7 @@ services/ocr-service/
 - `services/data-api/api/data_service.py` - 数据服务API
 - `services/data-api/models/data_service.py` - 服务模型
 - `services/data-api/models/service_call_log.py` - 调用日志
-- `web/src/pages/alldata/services/DataServicePage.tsx` - 服务管理页
+- `web/src/pages/data/services/DataServicePage.tsx` - 服务管理页
 
 ---
 

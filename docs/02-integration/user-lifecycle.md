@@ -521,11 +521,11 @@ useEffect(() => {
 | 功能模块 | 路由 | 权限 |
 |---------|------|------|
 | 工作台 | `/` | 查看 |
-| 数据管理 | `/alldata/*` | 全部 |
-| 数据开发 | `/alldata/etl`, `/alldata/quality` 等 | 全部 |
+| 数据管理 | `/data/*` | 全部 |
+| 数据开发 | `/data/etl`, `/data/quality` 等 | 全部 |
 | 模型开发 | `/cube/*` | 全部 |
 | 模型服务 | `/cube/serving` | 全部 |
-| AI 应用 | `/bisheng/*`, `/chat`, `/agents` | 全部 |
+| AI 应用 | `/agent/*`, `/chat`, `/agents` | 全部 |
 | 运维中心 | `/schedules`, `/executions` | 全部 |
 | **用户管理** | `/admin/users` | CRUD |
 | **用户组管理** | `/admin/groups` | CRUD |
@@ -538,21 +538,21 @@ useEffect(() => {
 | 功能模块 | 路由 | 权限 |
 |---------|------|------|
 | 工作台 | `/` | 查看 |
-| **数据源** | `/alldata/datasources` | CRUD |
+| **数据源** | `/data/datasources` | CRUD |
 | **数据集** | `/datasets` | CRUD |
 | **元数据** | `/metadata` | CRUD/Read |
-| **特征存储** | `/alldata/features` | Read |
-| **数据标准** | `/alldata/standards` | Read |
-| **数据资产** | `/alldata/assets` | Read |
-| **数据服务** | `/alldata/services` | Read |
-| **BI 报表** | `/alldata/bi` | Read |
-| **指标体系** | `/alldata/metrics` | Read |
-| **ETL 任务** | `/alldata/etl` | CRUD |
-| **数据质量** | `/alldata/quality` | CRUD |
-| **数据血缘** | `/alldata/lineage` | CRUD |
-| **离线开发** | `/alldata/offline` | Read/Execute |
-| **实时开发** | `/alldata/streaming` | Read/Execute |
-| **实时 IDE** | `/alldata/streaming-ide` | Read/Execute |
+| **特征存储** | `/data/features` | Read |
+| **数据标准** | `/data/standards` | Read |
+| **数据资产** | `/data/assets` | Read |
+| **数据服务** | `/data/services` | Read |
+| **BI 报表** | `/data/bi` | Read |
+| **指标体系** | `/data/metrics` | Read |
+| **ETL 任务** | `/data/etl` | CRUD |
+| **数据质量** | `/data/quality` | CRUD |
+| **数据血缘** | `/data/lineage` | CRUD |
+| **离线开发** | `/data/offline` | Read/Execute |
+| **实时开发** | `/data/streaming` | Read/Execute |
+| **实时 IDE** | `/data/streaming-ide` | Read/Execute |
 | **Notebook** | `/cube/notebooks` | Read/Execute |
 | **SQL Lab** | `/cube/sql-lab` | Read/Execute |
 | **实验管理** | `/cube/experiments` | Read |
@@ -565,15 +565,15 @@ useEffect(() => {
 | **资源管理** | `/cube/resources` | Read |
 | **监控告警** | `/cube/monitoring` | Read |
 | **AI 对话** | `/chat` | Execute |
-| **Prompt 管理** | `/bisheng/prompts` | Read |
-| **知识库** | `/bisheng/knowledge` | Read |
-| **模型评估** | `/bisheng/evaluation` | Read |
-| **SFT 微调** | `/bisheng/sft` | Read |
+| **Prompt 管理** | `/agent/prompts` | Read |
+| **知识库** | `/agent/knowledge` | Read |
+| **模型评估** | `/agent/evaluation` | Read |
+| **SFT 微调** | `/agent/sft` | Read |
 | **Agent** | `/agents` | Read |
 | **工作流** | `/workflows` | Read |
 | **Text2SQL** | `/text2sql` | Read |
-| **应用发布** | `/bisheng/apps` | Read |
-| **系统监控** | `/alldata/monitoring` | Read |
+| **应用发布** | `/agent/apps` | Read |
+| **系统监控** | `/data/monitoring` | Read |
 | **调度管理** | `/schedules` | Read |
 | **执行记录** | `/executions` | Read |
 | **文档中心** | `/documents` | Read |
@@ -597,15 +597,15 @@ useEffect(() => {
 | 资源管理 | `/cube/resources` | Read |
 | 监控告警 | `/cube/monitoring` | Read |
 | **AI 对话** | `/chat` | Execute |
-| **Prompt 管理** | `/bisheng/prompts` | CRUD |
-| **知识库** | `/bisheng/knowledge` | CRUD |
-| **模型评估** | `/bisheng/evaluation` | Execute |
-| **SFT 微调** | `/bisheng/sft` | Execute |
+| **Prompt 管理** | `/agent/prompts` | CRUD |
+| **知识库** | `/agent/knowledge` | CRUD |
+| **模型评估** | `/agent/evaluation` | Execute |
+| **SFT 微调** | `/agent/sft` | Execute |
 | **Agent** | `/agents` | Execute |
 | **工作流** | `/workflows` | CRUD/Execute |
 | **Text2SQL** | `/text2sql` | Execute |
-| **应用发布** | `/bisheng/apps` | CRUD |
-| 系统监控 | `/alldata/monitoring` | Read |
+| **应用发布** | `/agent/apps` | CRUD |
+| 系统监控 | `/data/monitoring` | Read |
 | 调度管理 | `/schedules` | Read |
 | 执行记录 | `/executions` | Read |
 | 文档中心 | `/documents` | Read |
@@ -615,12 +615,12 @@ useEffect(() => {
 | 功能模块 | 路由 | 权限 |
 |---------|------|------|
 | 工作台 | `/` | 查看 |
-| 数据源 | `/alldata/datasources` | Read |
+| 数据源 | `/data/datasources` | Read |
 | 数据集 | `/datasets` | Read |
 | 元数据 | `/metadata` | Read |
-| 特征存储 | `/alldata/features` | Read |
-| BI 报表 | `/alldata/bi` | Read |
-| 指标体系 | `/alldata/metrics` | Read |
+| 特征存储 | `/data/features` | Read |
+| BI 报表 | `/data/bi` | Read |
+| 指标体系 | `/data/metrics` | Read |
 | SQL Lab | `/cube/sql-lab` | Execute |
 | 模型仓库 | `/cube/models` | Read |
 | 工作流 | `/workflows` | Read |

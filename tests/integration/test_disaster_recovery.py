@@ -205,7 +205,7 @@ class TestServiceRecovery:
     """服务恢复测试"""
 
     def test_data_api_restart(self):
-        """测试 Alldata API 重启后恢复"""
+        """测试 data API 重启后恢复"""
         import requests
 
         # 检查健康状态
@@ -216,7 +216,7 @@ class TestServiceRecovery:
         assert response.status_code == 200
 
     def test_agent_api_restart(self):
-        """测试 Bisheng API 重启后恢复"""
+        """测试 agent API 重启后恢复"""
         import requests
 
         response = requests.get(
@@ -307,13 +307,13 @@ class TestKubernetesRecovery:
 
         v1 = client.CoreV1Api()
 
-        # 检查 Alldata API Pod
+        # 检查 data API Pod
         pods = v1.list_namespaced_pod(
             namespace="one-data-data",
             label_selector="app=data-api"
         )
 
-        assert len(pods.items) > 0, "No Alldata API pods found"
+        assert len(pods.items) > 0, "No data API pods found"
 
         # 检查 Pod 状态
         for pod in pods.items:

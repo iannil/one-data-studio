@@ -60,7 +60,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bisheng_workflow_executions_total)",
+          "expr": "sum(agent_workflow_executions_total)",
           "legendFormat": "Total",
           "refId": "A"
         }
@@ -110,7 +110,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bisheng_documents_indexed_total)",
+          "expr": "sum(agent_documents_indexed_total)",
           "legendFormat": "Indexed",
           "refId": "A"
         }
@@ -160,7 +160,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bisheng_active_users)",
+          "expr": "sum(agent_active_users)",
           "legendFormat": "Active",
           "refId": "A"
         }
@@ -216,7 +216,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(bisheng_workflow_executions_total{status=\"failed\"}[5m])) / sum(rate(bisheng_workflow_executions_total[5m]))",
+          "expr": "sum(rate(agent_workflow_executions_total{status=\"failed\"}[5m])) / sum(rate(agent_workflow_executions_total[5m]))",
           "legendFormat": "Failure Rate",
           "refId": "A"
         }
@@ -285,7 +285,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(bisheng_chat_messages_total[5m])) by (conversation_id)",
+          "expr": "sum(rate(agent_chat_messages_total[5m])) by (conversation_id)",
           "legendFormat": "{{conversation_id}}",
           "refId": "A"
         }
@@ -354,12 +354,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, bisheng_vector_search_duration_seconds_bucket)",
+          "expr": "histogram_quantile(0.95, agent_vector_search_duration_seconds_bucket)",
           "legendFormat": "P95",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.99, bisheng_vector_search_duration_seconds_bucket)",
+          "expr": "histogram_quantile(0.99, agent_vector_search_duration_seconds_bucket)",
           "legendFormat": "P99",
           "refId": "B"
         }
@@ -405,7 +405,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bisheng_workflow_executions_total) by (workflow_name)",
+          "expr": "sum(agent_workflow_executions_total) by (workflow_name)",
           "legendFormat": "{{workflow_name}}",
           "refId": "A"
         }
@@ -474,7 +474,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(increase(bisheng_workflow_executions_total{status=\"completed\"}[1d])) by (workflow_name)",
+          "expr": "sum(increase(agent_workflow_executions_total{status=\"completed\"}[1d])) by (workflow_name)",
           "legendFormat": "{{workflow_name}}",
           "refId": "A"
         }
@@ -543,7 +543,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bisheng_vector_collection_entities) by (collection_name)",
+          "expr": "sum(agent_vector_collection_entities) by (collection_name)",
           "legendFormat": "{{collection_name}}",
           "refId": "A"
         }

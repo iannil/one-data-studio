@@ -96,7 +96,7 @@ groups:
   - name: application
     rules:
       # API-specific alerts
-      - alert: AlldataAPIDown
+      - alert: DataAPIDown
         expr: up{job="data-api"} == 0
         for: 1m
         labels:
@@ -105,7 +105,7 @@ groups:
           summary: "Data API is down"
           description: "Data API has been unreachable for more than 1 minute."
 
-      - alert: BishengAPIDown
+      - alert: AgentAPIDown
         expr: up{job="agent-api"} == 0
         for: 1m
         labels:
@@ -114,7 +114,7 @@ groups:
           summary: "Agent API is down"
           description: "Agent API has been unreachable for more than 1 minute."
 
-      - alert: CubeAPIDown
+      - alert: ModelAPIDown
         expr: up{job="model-api"} == 0
         for: 1m
         labels:

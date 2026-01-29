@@ -261,7 +261,7 @@ spec:
             -param=OUTPUT_TABLE=${OUTPUT_TABLE}
         env:
         - name: INPUT_FILE
-          value: "s3a://alldata/input/data.csv"
+          value: "s3a://data/input/data.csv"
         - name: OUTPUT_TABLE
           value: "target_table"
         resources:

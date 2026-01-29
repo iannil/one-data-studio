@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 # 测试配置
 BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8082")
-DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_ALLDATA_API_URL", "http://localhost:8082"))
+DATA_API_URL = os.getenv("TEST_DATA_API_URL", os.getenv("TEST_data_API_URL", "http://localhost:8082"))
 MODEL_API_URL = os.getenv("TEST_MODEL_API_URL", os.getenv("TEST_CUBE_API_URL", "http://localhost:8083"))
 # 兼容旧名称
-ALLDATA_API_URL = DATA_API_URL
+data_API_URL = DATA_API_URL
 CUBE_API_URL = MODEL_API_URL
 AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
 
@@ -597,7 +597,7 @@ class TestKettleOrchestration:
     def test_01_create_orchestration_request(self):
         """测试创建编排请求"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            f"{data_API_URL}/api/v1/kettle/orchestrate",
             headers=HEADERS,
             json={
                 "name": f"E2E Kettle Orchestration {int(time.time())}",
@@ -637,7 +637,7 @@ class TestKettleOrchestration:
             pytest.skip("No orchestration created")
 
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}",
+            f"{data_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}",
             headers=HEADERS
         )
 
@@ -654,7 +654,7 @@ class TestKettleOrchestration:
     def test_03_list_orchestrations(self):
         """测试列出编排任务"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            f"{data_API_URL}/api/v1/kettle/orchestrate",
             headers=HEADERS,
             params={"limit": 10}
         )
@@ -668,7 +668,7 @@ class TestKettleOrchestration:
             pytest.skip("No orchestration created")
 
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/xml",
+            f"{data_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/xml",
             headers=HEADERS
         )
 
@@ -686,7 +686,7 @@ class TestKettleOrchestration:
             pytest.skip("No orchestration created")
 
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/execute",
+            f"{data_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/execute",
             headers=HEADERS,
             json={"poll_timeout": 60}
         )
@@ -701,7 +701,7 @@ class TestKettleOrchestration:
             pytest.skip("No orchestration created")
 
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/quality",
+            f"{data_API_URL}/api/v1/kettle/orchestrate/{TestKettleOrchestration.orchestration_id}/quality",
             headers=HEADERS
         )
 
@@ -717,7 +717,7 @@ class TestTableFusion:
     def test_01_detect_join_keys(self):
         """测试检测 JOIN 关键字"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/detect-joins",
+            f"{data_API_URL}/api/v1/fusion/detect-joins",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -747,7 +747,7 @@ class TestTableFusion:
     def test_02_validate_join_quality(self):
         """测试验证 JOIN 质量"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/validate-join",
+            f"{data_API_URL}/api/v1/fusion/validate-join",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -775,7 +775,7 @@ class TestTableFusion:
     def test_03_recommend_join_strategy(self):
         """测试推荐 JOIN 策略"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/recommend-strategy",
+            f"{data_API_URL}/api/v1/fusion/recommend-strategy",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -809,7 +809,7 @@ class TestTableFusion:
     def test_04_generate_kettle_join_config(self):
         """测试生成 Kettle JOIN 配置"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/kettle-config",
+            f"{data_API_URL}/api/v1/fusion/kettle-config",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -839,7 +839,7 @@ class TestTableFusion:
     def test_05_detect_multi_table_paths(self):
         """测试检测多表关联路径"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/multi-table-paths",
+            f"{data_API_URL}/api/v1/fusion/multi-table-paths",
             headers=HEADERS,
             json={
                 "tables": ["orders", "customers", "products", "categories"],
@@ -868,7 +868,7 @@ class TestMetadataChangeDetection:
     def test_01_trigger_metadata_scan(self):
         """测试触发元数据扫描"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/metadata/scan",
+            f"{data_API_URL}/api/v1/metadata/scan",
             headers=HEADERS,
             json={
                 "database_name": "warehouse",
@@ -893,7 +893,7 @@ class TestMetadataChangeDetection:
             pytest.skip("No scan created")
 
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/scan/{TestMetadataChangeDetection.scan_id}",
+            f"{data_API_URL}/api/v1/metadata/scan/{TestMetadataChangeDetection.scan_id}",
             headers=HEADERS
         )
 
@@ -910,7 +910,7 @@ class TestMetadataChangeDetection:
     def test_03_get_table_changes(self):
         """测试获取表变更"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/changes/tables",
+            f"{data_API_URL}/api/v1/metadata/changes/tables",
             headers=HEADERS,
             params={
                 "database": "warehouse",
@@ -932,7 +932,7 @@ class TestMetadataChangeDetection:
     def test_04_get_column_changes(self):
         """测试获取列变更"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/metadata/changes/columns",
+            f"{data_API_URL}/api/v1/metadata/changes/columns",
             headers=HEADERS,
             params={
                 "table": "orders",
@@ -946,7 +946,7 @@ class TestMetadataChangeDetection:
     def test_05_compare_snapshots(self):
         """测试快照对比"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/metadata/snapshots/compare",
+            f"{data_API_URL}/api/v1/metadata/snapshots/compare",
             headers=HEADERS,
             json={
                 "snapshot_id_1": "snapshot_001",
@@ -966,7 +966,7 @@ class TestOpenLineage:
     def test_01_export_lineage_dag(self):
         """测试导出血缘 DAG"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            f"{data_API_URL}/api/v1/lineage/export",
             headers=HEADERS,
             params={
                 "format": "mermaid",
@@ -986,7 +986,7 @@ class TestOpenLineage:
     def test_02_export_lineage_json(self):
         """测试导出血缘 JSON"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            f"{data_API_URL}/api/v1/lineage/export",
             headers=HEADERS,
             params={
                 "format": "json",
@@ -1007,7 +1007,7 @@ class TestOpenLineage:
     def test_03_get_upstream_lineage(self):
         """测试获取上游血缘"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/upstream",
+            f"{data_API_URL}/api/v1/lineage/upstream",
             headers=HEADERS,
             params={
                 "database": "warehouse",
@@ -1028,7 +1028,7 @@ class TestOpenLineage:
     def test_04_get_downstream_lineage(self):
         """测试获取下游血缘"""
         response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/downstream",
+            f"{data_API_URL}/api/v1/lineage/downstream",
             headers=HEADERS,
             params={
                 "database": "warehouse",
@@ -1043,7 +1043,7 @@ class TestOpenLineage:
     def test_05_trace_data_path(self):
         """测试追溯数据路径"""
         response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/lineage/trace",
+            f"{data_API_URL}/api/v1/lineage/trace",
             headers=HEADERS,
             json={
                 "source": {"database": "raw", "table": "customers"},
@@ -1066,7 +1066,7 @@ class TestEndToEndScenarios:
         """测试完整数据流水线: 元数据扫描 -> ETL -> 质量检测 -> 编目"""
         # 步骤 1: 扫描源表元数据
         scan_response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/metadata/scan",
+            f"{data_API_URL}/api/v1/metadata/scan",
             headers=HEADERS,
             json={
                 "database_name": "source_db",
@@ -1078,7 +1078,7 @@ class TestEndToEndScenarios:
 
         # 步骤 2: 创建编排请求
         orch_response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/kettle/orchestrate",
+            f"{data_API_URL}/api/v1/kettle/orchestrate",
             headers=HEADERS,
             json={
                 "name": f"Full Pipeline {int(time.time())}",
@@ -1103,7 +1103,7 @@ class TestEndToEndScenarios:
         """测试多表融合流水线"""
         # 步骤 1: 检测关联键
         detect_response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/detect-joins",
+            f"{data_API_URL}/api/v1/fusion/detect-joins",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -1115,7 +1115,7 @@ class TestEndToEndScenarios:
 
         # 步骤 2: 验证最佳 JOIN
         validate_response = requests.post(
-            f"{ALLDATA_API_URL}/api/v1/fusion/validate-join",
+            f"{data_API_URL}/api/v1/fusion/validate-join",
             headers=HEADERS,
             json={
                 "source_table": "orders",
@@ -1133,7 +1133,7 @@ class TestEndToEndScenarios:
         """测试变更影响分析"""
         # 步骤 1: 获取表的上游依赖
         upstream_response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/upstream",
+            f"{data_API_URL}/api/v1/lineage/upstream",
             headers=HEADERS,
             params={
                 "database": "warehouse",
@@ -1144,7 +1144,7 @@ class TestEndToEndScenarios:
 
         # 步骤 2: 获取表的下游影响
         downstream_response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/downstream",
+            f"{data_API_URL}/api/v1/lineage/downstream",
             headers=HEADERS,
             params={
                 "database": "raw",
@@ -1155,7 +1155,7 @@ class TestEndToEndScenarios:
 
         # 步骤 3: 导出完整 DAG
         dag_response = requests.get(
-            f"{ALLDATA_API_URL}/api/v1/lineage/export",
+            f"{data_API_URL}/api/v1/lineage/export",
             headers=HEADERS,
             params={"format": "json"}
         )

@@ -285,7 +285,7 @@ class SchemaProvider:
     """
     元数据 Schema 提供器
 
-    从 Alldata 元数据服务获取智能筛选的 Schema，
+    从 data 元数据服务获取智能筛选的 Schema，
     用于 Text-to-SQL Prompt 注入。
     """
 

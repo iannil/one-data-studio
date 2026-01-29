@@ -1,6 +1,6 @@
 """
 Kettle ETL 引擎桥接服务
-连接 Alldata 原生 Kettle (Pentaho Data Integration) 能力
+连接 data 原生 Kettle (Pentaho Data Integration) 能力
 
 支持:
 - Kitchen: 执行 Kettle 作业 (.kjb)

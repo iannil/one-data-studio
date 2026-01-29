@@ -16,12 +16,12 @@
          │                     │                     │
          ↓                     ↓                     ↓
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│   Data (L2)  │──→│  Cube Studio    │──→│   Data       │
+│   Data (L2)  │──→│  Model    │──→│   Data       │
 │  元数据/数仓    │   │   (L3)          │   │  向量数据库     │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
-## 集成点一：Data → Cube Studio
+## 集成点一：Data → Model
 
 ### 痛点
 算法工程师通常需要花 80% 时间找数据、洗数据。
@@ -30,7 +30,7 @@
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Data    │────→│  MinIO/HDFS │←────│ Cube Studio │
+│  Data    │────→│  MinIO/HDFS │←────│ Model │
 │  ETL 任务   │     │  数据湖存储 │     │  训练任务   │
 └─────────────┘     └─────────────┘     └─────────────┘
        │                                      │
@@ -45,8 +45,8 @@
 ### 实施步骤
 
 1. Data 完成 ETL 任务后，将清洗后的数据（CSV/Parquet/TFRecord）写入对象存储（如 MinIO）
-2. Data 调用 Cube Studio 的 API，自动注册一个"Dataset"对象
-3. Cube Studio 的 Pipeline 中，用户直接通过 `mount` 方式或 SDK 读取该 Dataset
+2. Data 调用 Model 的 API，自动注册一个"Dataset"对象
+3. Model 的 Pipeline 中，用户直接通过 `mount` 方式或 SDK 读取该 Dataset
 
 ### API 示例
 
@@ -61,7 +61,7 @@ POST /api/v1/datasets
     "tags": ["sales", "cleansed"]
 }
 
-# Cube Studio 侧：使用数据集
+# Model 侧：使用数据集
 from cube_sdk import Dataset
 ds = Dataset.get("sales_data_v1.0")
 df = ds.read()  # 自动挂载，直接读取
@@ -69,7 +69,7 @@ df = ds.read()  # 自动挂载，直接读取
 
 ---
 
-## 集成点二：Cube Studio → Agent
+## 集成点二：Model → Agent
 
 ### 痛点
 Agent 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API。
@@ -85,7 +85,7 @@ Agent 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API
                          │ /v1/chat/completions
                          ↓
 ┌─────────────────────────────────────────────────────────┐
-│               Cube Studio (L3)                          │
+│               Model (L3)                          │
 │         Istio Gateway → vLLM/TGI Pods                   │
 │                                                         │
 │    ┌─────────┐  ┌─────────┐  ┌─────────┐               │
@@ -96,8 +96,8 @@ Agent 默认使用公有云 LLM，私有化部署需要稳定的本地模型 API
 
 ### 实施步骤
 
-1. Cube Studio 利用 **vLLM** 或 **TGI** 容器化部署微调好的模型
-2. Cube Studio 通过 Istio 网关暴露 Service Endpoint
+1. Model 利用 **vLLM** 或 **TGI** 容器化部署微调好的模型
+2. Model 通过 Istio 网关暴露 Service Endpoint
 3. Agent 后台增加"自定义模型接入"配置
 4. **弹性伸缩**：依靠 K8s HPA 自动增加推理 Pod
 

@@ -214,7 +214,7 @@ def create_test_knowledge_base():
     """创建测试知识库"""
     logger.info("创建测试知识库...")
 
-    api_url = os.getenv('AGENT_API_URL', os.getenv('BISHENG_API_URL', 'http://localhost:8000'))
+    api_url = os.getenv('AGENT_API_URL', os.getenv('agent_API_URL', 'http://localhost:8000'))
     url = f"{api_url}/api/v1/knowledge"
 
     data = {
@@ -234,7 +234,7 @@ def create_test_workflow():
     """创建测试工作流"""
     logger.info("创建测试工作流...")
 
-    api_url = os.getenv('AGENT_API_URL', os.getenv('BISHENG_API_URL', 'http://localhost:8000'))
+    api_url = os.getenv('AGENT_API_URL', os.getenv('agent_API_URL', 'http://localhost:8000'))
     url = f"{api_url}/api/v1/workflows"
 
     data = {
@@ -336,8 +336,8 @@ def wait_for_services():
     logger.info("等待服务就绪...")
 
     services = [
-        ('Agent API', os.getenv('AGENT_API_URL', os.getenv('BISHENG_API_URL', 'http://localhost:8000')) + '/api/v1/health'),
-        ('Data API', os.getenv('DATA_API_URL', os.getenv('ALLDATA_API_URL', 'http://localhost:8001')) + '/api/v1/health'),
+        ('Agent API', os.getenv('AGENT_API_URL', os.getenv('agent_API_URL', 'http://localhost:8000')) + '/api/v1/health'),
+        ('Data API', os.getenv('DATA_API_URL', os.getenv('data_API_URL', 'http://localhost:8001')) + '/api/v1/health'),
         ('Model API', os.getenv('MODEL_API_URL', os.getenv('CUBE_API_URL', 'http://localhost:8002')) + '/api/v1/health'),
     ]
 

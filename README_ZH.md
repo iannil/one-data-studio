@@ -375,9 +375,10 @@ limitations under the License.
 
 本项目建立在以下优秀开源项目的基础之上：
 
-- [Alldata](https://github.com/Computing-Data/Alldata) - 数据治理平台（Data 层灵感来源）
-- [Cube Studio](https://github.com/tencentmusic/cube-studio) - 云原生 MLOps 平台（Model 层灵感来源）
-- [Bisheng](https://github.com/dataelement/bisheng) - 大模型应用开发平台（Agent 层灵感来源）
+- [OpenMetadata](https://open-metadata.org/) - 开源元数据平台（可选集成）
+- [Ray](https://github.com/ray-project/ray) - 分布式计算框架
+- [vLLM](https://github.com/vllm-project/vllm) - 高吞吐量 LLM 服务
+- [LangChain](https://github.com/langchain-ai/langchain) - LLM 应用框架
 
 ## 社区
 

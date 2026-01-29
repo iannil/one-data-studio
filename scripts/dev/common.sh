@@ -97,10 +97,7 @@ ALL_SERVICES="$INFRA_SERVICES $APP_SERVICES"
 resolve_service_alias() {
     local input=$1
     case "$input" in
-        b|bisheng) echo "agent-api" ;;
-        a|alldata) echo "data-api" ;;
         o|openai|proxy) echo "openai-proxy" ;;
-        c|cube) echo "model-api" ;;
         w|web|frontend) echo "web-frontend" ;;
         m|db) echo "mysql" ;;
         r|cache) echo "redis" ;;

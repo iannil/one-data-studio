@@ -613,9 +613,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Alldata 平台测试
+  // data 平台测试
   // ============================================
-  test.describe('Alldata 数据治理平台', () => {
+  test.describe('data 数据治理平台', () => {
     test('数据源管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
@@ -830,9 +830,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Cube Studio 平台测试
+  // model 平台测试
   // ============================================
-  test.describe('Cube Studio MLOps 平台', () => {
+  test.describe('model MLOps 平台', () => {
     test('Notebook 开发', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
@@ -1023,9 +1023,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
   });
 
   // ============================================
-  // Bisheng 平台测试
+  // agent 平台测试
   // ============================================
-  test.describe('Bisheng LLMOps 平台', () => {
+  test.describe('agent LLMOps 平台', () => {
     test('Prompt 管理', async ({ browser }) => {
       const page = await authContext.newPage();
       try {
@@ -1219,17 +1219,17 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 // API 服务健康检查测试
 // ============================================
 test.describe('API 服务健康检查', () => {
-  test('Bisheng API', async ({ request }) => {
-    console.log('\n[API] 检查 Bisheng API...');
+  test('agent API', async ({ request }) => {
+    console.log('\n[API] 检查 agent API...');
     const response = await request.get(`${CONFIG.AGENT_API}/api/v1/health`);
-    console.log(`[API] Bisheng API 状态: ${response.status()}`);
+    console.log(`[API] agent API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
-  test('Alldata API', async ({ request }) => {
-    console.log('\n[API] 检查 Alldata API...');
+  test('data API', async ({ request }) => {
+    console.log('\n[API] 检查 data API...');
     const response = await request.get(`${CONFIG.DATA_API}/api/v1/health`);
-    console.log(`[API] Alldata API 状态: ${response.status()}`);
+    console.log(`[API] data API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 

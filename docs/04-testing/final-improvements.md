@@ -36,10 +36,10 @@
 ### 1. 业务用户测试 (17/17 = 100%)
 
 **API 路由修复**:
-- `text2sql` → BISHENG_API (8000)
-- `/api/v1/bi/dashboards` → `/api/v1/bi/reports` (ALLDATA_API)
-- `/api/v1/alerts/rules` → `/api/v1/alerts/metric-rules` (ALLDATA_API)
-- `/api/v1/assets/search` → `/api/v1/assets` (ALLDATA_API)
+- `text2sql` → agent_API (8000)
+- `/api/v1/bi/dashboards` → `/api/v1/bi/reports` (data_API)
+- `/api/v1/alerts/rules` → `/api/v1/alerts/metric-rules` (data_API)
+- `/api/v1/assets/search` → `/api/v1/assets` (data_API)
 
 **字段名修复**:
 - `question` → `natural_language`
@@ -95,13 +95,13 @@
 
 | 功能 | 端点 | 服务 | 说明 |
 |------|------|------|------|
-| Text-to-SQL | `/api/v1/text2sql` | BISHENG_API 8000 | 需要 `natural_language` |
-| 知识库 | `/api/v1/knowledge-bases` | BISHENG_API 8000 | 返回 `knowledge_base_id` |
-| 文档上传 | `/api/v1/documents/upload` | BISHENG_API 8000 | 需要 `collection`, `file_name` |
-| BI 报表 | `/api/v1/bi/reports` | ALLDATA_API 8001 | - |
-| 预警规则 | `/api/v1/alerts/metric-rules` | ALLDATA_API 8001 | - |
-| 质量告警 | `/api/v1/quality/alerts` | ALLDATA_API 8001 | - |
-| 资产列表 | `/api/v1/assets` | ALLDATA_API 8001 | - |
+| Text-to-SQL | `/api/v1/text2sql` | agent_API 8000 | 需要 `natural_language` |
+| 知识库 | `/api/v1/knowledge-bases` | agent_API 8000 | 返回 `knowledge_base_id` |
+| 文档上传 | `/api/v1/documents/upload` | agent_API 8000 | 需要 `collection`, `file_name` |
+| BI 报表 | `/api/v1/bi/reports` | data_API 8001 | - |
+| 预警规则 | `/api/v1/alerts/metric-rules` | data_API 8001 | - |
+| 质量告警 | `/api/v1/quality/alerts` | data_API 8001 | - |
+| 资产列表 | `/api/v1/assets` | data_API 8001 | - |
 | 角色 | `/api/v1/roles` | ADMIN_API 8004 | 返回 `data.roles` |
 | 用户管理 | `/api/v1/users` | ADMIN_API 8004 | POST/PUT/DELETE |
 | 角色分配 | `/api/v1/users/{id}` | ADMIN_API 8004 | PUT with `role_ids` |

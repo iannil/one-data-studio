@@ -79,7 +79,7 @@ groups:
       # 敏感数据扫描异常
       - alert: DataSensitivityScanError
         expr: |
-          increase(alldata_sensitivity_scan_errors[1h]) > 10
+          increase(data_sensitivity_scan_errors[1h]) > 10
         for: 5m
         labels:
           severity: warning
@@ -90,9 +90,9 @@ groups:
           description: "过去 1 小时内发生 {{ $value }} 次敏感数据扫描错误"
 
       # 数据脱敏失败
-      - alert: AlldataDataMaskingFailure
+      - alert: dataDataMaskingFailure
         expr: |
-          rate(alldata_masking_errors_total[5m]) > 0.1
+          rate(data_masking_errors_total[5m]) > 0.1
         for: 5m
         labels:
           severity: critical
@@ -103,9 +103,9 @@ groups:
           description: "数据脱敏操作失败率超过阈值"
 
       # AI 填充服务异常
-      - alert: AlldataAIImputationError
+      - alert: dataAIImputationError
         expr: |
-          rate(alldata_ai_imputation_errors[5m]) > 0.05
+          rate(data_ai_imputation_errors[5m]) > 0.05
         for: 10m
         labels:
           severity: warning
@@ -118,14 +118,14 @@ groups:
   # ============================================
   # Agent API 业务告警
   # ============================================
-  - name: bisheng_business_alerts
+  - name: agent_business_alerts
     interval: 30s
     rules:
       # RAG 检索延迟
-      - alert: BishengRAGRetrievalSlow
+      - alert: AgentRAGRetrievalSlow
         expr: |
           histogram_quantile(0.95,
-            sum(rate(bisheng_rag_retrieval_duration_seconds_bucket[5m])) by (le)
+            sum(rate(agent_rag_retrieval_duration_seconds_bucket[5m])) by (le)
           ) > 5
         for: 5m
         labels:
@@ -137,11 +137,11 @@ groups:
           description: "P95 检索延迟 {{ $value | humanizeDuration }}，超过 5 秒"
 
       # RAG 检索召回率低
-      - alert: BishengRAGRecallLow
+      - alert: AgentRAGRecallLow
         expr: |
           (
-            sum(rate(bisheng_rag_relevant_documents_total[10m])) /
-            sum(rate(bisheng_rag_retrieved_documents_total[10m]))
+            sum(rate(agent_rag_relevant_documents_total[10m])) /
+            sum(rate(agent_rag_retrieved_documents_total[10m]))
           ) < 0.7
         for: 15m
         labels:
@@ -153,11 +153,11 @@ groups:
           description: "召回率 {{ $value | humanizePercentage }}，低于 70%"
 
       # Text-to-SQL 错误率高
-      - alert: BishengTextToSQLErrorRateHigh
+      - alert: AgentTextToSQLErrorRateHigh
         expr: |
           (
-            sum(rate(bisheng_text2sql_errors_total[5m])) /
-            sum(rate(bisheng_text2sql_total[5m]))
+            sum(rate(agent_text2sql_errors_total[5m])) /
+            sum(rate(agent_text2sql_total[5m]))
           ) > 0.2
         for: 5m
         labels:
@@ -169,9 +169,9 @@ groups:
           description: "SQL 生成错误率 {{ $value | humanizePercentage }}"
 
       # Agent 执行失败
-      - alert: BishengAgentExecutionFailure
+      - alert: AgentAgentExecutionFailure
         expr: |
-          rate(bisheng_agent_execution_errors[5m]) > 0.1
+          rate(agent_agent_execution_errors[5m]) > 0.1
         for: 5m
         labels:
           severity: warning
@@ -182,9 +182,9 @@ groups:
           description: "Agent 执行错误率: {{ $value | humanizePercentage }}"
 
       # 工作流执行积压
-      - alert: BishengWorkflowBacklog
+      - alert: AgentWorkflowBacklog
         expr: |
-          bisheng_workflow_queue_length > 20
+          agent_workflow_queue_length > 20
         for: 10m
         labels:
           severity: warning
@@ -195,9 +195,9 @@ groups:
           description: "当前有 {{ $value }} 个工作流等待执行"
 
       # 向量存储异常
-      - alert: BishengVectorStoreError
+      - alert: AgentVectorStoreError
         expr: |
-          rate(bisheng_vector_store_errors[5m]) > 0.05
+          rate(agent_vector_store_errors[5m]) > 0.05
         for: 5m
         labels:
           severity: critical
@@ -208,11 +208,11 @@ groups:
           description: "向量存储操作错误率: {{ $value | humanizePercentage }}"
 
       # LLM 调用失败
-      - alert: BishengLLMCallFailure
+      - alert: AgentLLMCallFailure
         expr: |
           (
-            sum(rate(bisheng_llm_errors_total[5m])) /
-            sum(rate(bisheng_llm_requests_total[5m]))
+            sum(rate(agent_llm_errors_total[5m])) /
+            sum(rate(agent_llm_requests_total[5m]))
           ) > 0.15
         for: 3m
         labels:
@@ -224,13 +224,13 @@ groups:
           description: "LLM 调用失败率 {{ $value | humanizePercentage }}"
 
   # ============================================
-  # Cube (vLLM) 业务告警
+  # Model (vLLM) 业务告警
   # ============================================
-  - name: cube_business_alerts
+  - name: model_business_alerts
     interval: 30s
     rules:
       # 模型服务延迟
-      - alert: CubeModelServingSlow
+      - alert: ModelModelServingSlow
         expr: |
           histogram_quantile(0.95,
             sum(rate(vllm_request_duration_seconds_bucket[5m])) by (le, model)
@@ -245,7 +245,7 @@ groups:
           description: "模型 {{ $labels.model }} P95 延迟 {{ $value | humanizeDuration }}"
 
       # 模型服务错误率高
-      - alert: CubeModelErrorRateHigh
+      - alert: ModelModelErrorRateHigh
         expr: |
           (
             sum(rate(vllm_request_errors_total[5m])) /
@@ -261,7 +261,7 @@ groups:
           description: "请求错误率 {{ $value | humanizePercentage }}"
 
       # Token 吞吐量过低
-      - alert: CubeTokenThroughputLow
+      - alert: ModelTokenThroughputLow
         expr: |
           sum(rate(vllm_tokens_generated_total[5m])) < 100
         for: 10m
@@ -274,7 +274,7 @@ groups:
           description: "当前吞吐量 {{ $value | humanize }} tokens/秒"
 
       # GPU 内存不足
-      - alert: CubeGPUMemoryHigh
+      - alert: ModelGPUMemoryHigh
         expr: |
           (vllm_gpu_memory_used_bytes / vllm_gpu_memory_total_bytes) > 0.9
         for: 5m
@@ -287,7 +287,7 @@ groups:
           description: "GPU 内存使用率 {{ $value | humanizePercentage }}"
 
       # 模型加载失败
-      - alert: CubeModelLoadFailure
+      - alert: ModelModelLoadFailure
         expr: |
           increase(vllm_model_load_errors[10m]) > 0
         for: 1m
@@ -308,7 +308,7 @@ groups:
       # 数据新鲜度异常
       - alert: DataFreshnessIssue
         expr: |
-          time() - max(alldata_table_last_updated_timestamp) by (database, table) > 7200
+          time() - max(data_table_last_updated_timestamp) by (database, table) > 7200
         for: 15m
         labels:
           severity: warning
@@ -321,8 +321,8 @@ groups:
       - alert: DataRowCountDrop
         expr: |
           (
-            alldata_table_row_count - alldata_table_row_count_offset
-          ) < (alldata_table_row_count_baseline * 0.5)
+            data_table_row_count - data_table_row_count_offset
+          ) < (data_table_row_count_baseline * 0.5)
         for: 10m
         labels:
           severity: warning
@@ -334,7 +334,7 @@ groups:
       # 数据完整性检查失败
       - alert: DataIntegrityCheckFailure
         expr: |
-          increase(alldata_integrity_check_failures[1h]) > 5
+          increase(data_integrity_check_failures[1h]) > 5
         for: 5m
         labels:
           severity: warning
@@ -483,7 +483,7 @@ groups:
       # 资产目录未同步
       - alert: AssetCatalogNotSynced
         expr: |
-          time() - alldata_asset_catalog_last_sync_timestamp > 43200
+          time() - data_asset_catalog_last_sync_timestamp > 43200
         for: 30m
         labels:
           severity: info

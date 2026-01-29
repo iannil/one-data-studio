@@ -286,17 +286,17 @@ class TestRAGScenario:
                 "content": """
                 ONE-DATA-STUDIO 是一个企业级 AI 平台，整合了三个核心系统：
 
-                1. Alldata - 数据治理平台
+                1. data - 数据治理平台
                    - 数据集成和 ETL
                    - 元数据管理
                    - 数据质量监控
 
-                2. Cube Studio - MLOps 平台
+                2. model - MLOps 平台
                    - 模型训练
                    - 模型部署
                    - 模型服务
 
-                3. Bisheng - LLMOps 平台
+                3. agent - LLMOps 平台
                    - RAG 流水线
                    - Agent 编排
                    - Prompt 管理

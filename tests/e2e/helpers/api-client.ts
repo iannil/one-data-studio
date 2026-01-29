@@ -14,8 +14,8 @@ const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:8002';
 const OPENAI_API_URL = process.env.OPENAI_API_URL || 'http://localhost:8003';
 
 // 兼容旧的环境变量名 (已废弃，建议使用新的环境变量名)
-const BISHENG_API_URL = process.env.BISHENG_API_URL || AGENT_API_URL;
-const ALLDATA_API_URL = process.env.ALLDATA_API_URL || DATA_API_URL;
+const agent_API_URL = process.env.agent_API_URL || AGENT_API_URL;
+const data_API_URL = process.env.data_API_URL || DATA_API_URL;
 const CUBE_API_URL = process.env.CUBE_API_URL || MODEL_API_URL;
 
 // 认证信息
@@ -289,7 +289,7 @@ export class ApiClient {
 }
 
 /**
- * Agent API 客户端 (原 Bisheng API)
+ * Agent API 客户端 (原 agent API)
  */
 export class AgentApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
@@ -414,7 +414,7 @@ export class AgentApiClient extends ApiClient {
 }
 
 /**
- * Data API 客户端 (原 Alldata API)
+ * Data API 客户端 (原 data API)
  */
 export class DataApiClient extends ApiClient {
   constructor(request: APIRequestContext, auth?: AuthInfo) {
@@ -769,15 +769,15 @@ export class OpenAIProxyClient extends ApiClient {
  */
 export function createApiClient(
   request: APIRequestContext,
-  type: 'agent_api' | 'data_api' | 'model_api' | 'openai' | 'bisheng' | 'alldata' | 'cube',
+  type: 'agent_api' | 'data_api' | 'model_api' | 'openai' | 'agent' | 'data' | 'cube',
   auth?: AuthInfo
 ): ApiClient {
   switch (type) {
     case 'agent_api':
-    case 'bisheng':
+    case 'agent':
       return new AgentApiClient(request, auth);
     case 'data_api':
-    case 'alldata':
+    case 'data':
       return new DataApiClient(request, auth);
     case 'model_api':
     case 'cube':
@@ -790,6 +790,6 @@ export function createApiClient(
 }
 
 // 兼容性别名 - 支持旧的类名
-export const BishengApiClient = AgentApiClient;
-export const AlldataApiClient = DataApiClient;
+export const agentApiClient = AgentApiClient;
+export const dataApiClient = DataApiClient;
 export const CubeApiClient = ModelApiClient;

@@ -5,9 +5,9 @@
  *
  * 测试覆盖范围：
  * - L1: 基础设施层 (页面可访问性)
- * - L2: 数据底座层 (Alldata)
- * - L3: 算法引擎层 (Cube Studio)
- * - L4: 应用编排层 (Bisheng)
+ * - L2: 数据底座层 (data)
+ * - L3: 算法引擎层 (model)
+ * - L4: 应用编排层 (agent)
  * - Admin: 管理后台
  */
 
@@ -148,7 +148,7 @@ test.describe('综合验收测试 - 平台架构验证', () => {
 });
 
 test.describe('综合验收测试 - 关键集成点验证', () => {
-  test('Alldata → Cube Studio 集成验证', async ({ page }) => {
+  test('data → model 集成验证', async ({ page }) => {
     // 验证数据集能被模型训练使用
     page.route('**/api/v1/health', async (route) => {
       await route.fulfill({
@@ -175,7 +175,7 @@ test.describe('综合验收测试 - 关键集成点验证', () => {
     expect(pageLoaded).toBeTruthy();
   });
 
-  test('Cube Studio → Bisheng 集成验证', async ({ page }) => {
+  test('model → agent 集成验证', async ({ page }) => {
     // 验证模型服务可被应用使用
     page.route('**/api/v1/health', async (route) => {
       await route.fulfill({
@@ -198,7 +198,7 @@ test.describe('综合验收测试 - 关键集成点验证', () => {
     await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
   });
 
-  test('Alldata → Bisheng Text2SQL 集成验证', async ({ page }) => {
+  test('data → agent Text2SQL 集成验证', async ({ page }) => {
     // 验证元数据可用于 Text2SQL
     page.route('**/api/v1/health', async (route) => {
       await route.fulfill({

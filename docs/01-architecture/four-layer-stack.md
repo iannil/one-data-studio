@@ -11,7 +11,7 @@
 └─────────────────────────────────────────────────────────────────┘
                               ↕ OpenAI API / 元数据
 ┌─────────────────────────────────────────────────────────────────┐
-│                    L3 算法引擎层 (Cube Studio)                   │
+│                    L3 算法引擎层 (Model)                   │
 │            Notebook | 分布式训练 | 模型仓库 | 模型服务化           │
 └─────────────────────────────────────────────────────────────────┘
                               ↕ 挂载数据卷
@@ -38,7 +38,7 @@
 * **存储**：S3/MinIO（对象存储）、HDFS（分布式存储）、PVC（持久卷）
 
 ### 功能
-* Cube Studio 的基础组件（Volcano/Ray）在此层负责异构算力的调度
+* Model 的基础组件（Volcano/Ray）在此层负责异构算力的调度
 * 通过 Namespace 实现多租户资源隔离
 
 ## L2 数据底座层 (Data Foundation - Data Core)
@@ -58,7 +58,7 @@
 * **Atlas/DataHub**：元数据管理
 * **DolphinScheduler**：任务调度
 
-## L3 算法引擎层 (Model Engine - Cube Studio Core)
+## L3 算法引擎层 (Model Engine - Model Core)
 
 ### 功能模块
 * **Notebook 交互式开发**：JupyterLab 在线开发环境
@@ -99,11 +99,11 @@
 
 ### L2 → L3：数据驱动训练
 * Data 完成 ETL 后，数据写入对象存储
-* 自动注册数据集到 Cube Studio
+* 自动注册数据集到 Model
 * 训练任务直接挂载数据集，无需重复搬运
 
 ### L3 → L4：模型即服务
-* Cube Studio 部署模型为 OpenAI 兼容 API
+* Model 部署模型为 OpenAI 兼容 API
 * Agent 配置自定义模型端点
 - 弹性伸缩支持高并发推理
 

@@ -312,7 +312,7 @@ kubectl get networkpolicy -A
 
 **症状**：
 ```
-curl http://alldata.example.com/api/v1/health
+curl http://data.example.com/api/v1/health
 # 502 Bad Gateway
 ```
 
@@ -327,7 +327,7 @@ kubectl get endpoints -n one-data-data
 2. **检查 Ingress 配置**
 ```bash
 kubectl get ingress -A
-kubectl describe ingress alldata-ingress -n one-data-data
+kubectl describe ingress data-ingress -n one-data-data
 ```
 
 3. **检查 Ingress Controller**

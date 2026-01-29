@@ -1,7 +1,7 @@
 {
   "dashboard": {
     "title": "ONE-DATA Agent API 监控",
-    "tags": ["bisheng", "llmops", "rag", "agent"],
+    "tags": ["agent", "llmops", "rag", "agent"],
     "timezone": "browser",
     "refresh": "30s",
     "time": {
@@ -44,7 +44,7 @@
         "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
         "targets": [
           {
-            "expr": "bisheng_active_sessions",
+            "expr": "agent_active_sessions",
             "legendFormat": "会话数"
           }
         ]
@@ -56,7 +56,7 @@
         "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
         "targets": [
           {
-            "expr": "increase(bisheng_conversations_total[1d])",
+            "expr": "increase(agent_conversations_total[1d])",
             "legendFormat": "对话数"
           }
         ]
@@ -68,7 +68,7 @@
         "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(bisheng_request_duration_seconds_bucket[5m])) by (le))",
+            "expr": "histogram_quantile(0.95, sum(rate(agent_request_duration_seconds_bucket[5m])) by (le))",
             "legendFormat": "P95 延迟"
           }
         ],
@@ -93,7 +93,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_requests_total[5m])) by (endpoint)",
+            "expr": "sum(rate(agent_requests_total[5m])) by (endpoint)",
             "legendFormat": "{{endpoint}}"
           }
         ],
@@ -108,7 +108,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_llm_tokens_total[5m])) by (token_type)",
+            "expr": "sum(rate(agent_llm_tokens_total[5m])) by (token_type)",
             "legendFormat": "{{token_type}}"
           }
         ],
@@ -123,11 +123,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(bisheng_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+            "expr": "histogram_quantile(0.95, sum(rate(agent_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
             "legendFormat": "P95 检索延迟"
           },
           {
-            "expr": "histogram_quantile(0.50, sum(rate(bisheng_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
+            "expr": "histogram_quantile(0.50, sum(rate(agent_rag_retrieval_duration_seconds_bucket[5m])) by (le))",
             "legendFormat": "P50 检索延迟"
           }
         ],
@@ -142,7 +142,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 12},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_rag_relevant_documents_total[10m])) / sum(rate(bisheng_rag_retrieved_documents_total[10m]))",
+            "expr": "sum(rate(agent_rag_relevant_documents_total[10m])) / sum(rate(agent_rag_retrieved_documents_total[10m]))",
             "legendFormat": "召回率"
           }
         ],
@@ -169,7 +169,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 18, "y": 12},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_vector_searches_total[5m]))",
+            "expr": "sum(rate(agent_vector_searches_total[5m]))",
             "legendFormat": "检索/秒"
           }
         ]
@@ -181,15 +181,15 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_text2sql_total[5m]))",
+            "expr": "sum(rate(agent_text2sql_total[5m]))",
             "legendFormat": "总请求"
           },
           {
-            "expr": "sum(rate(bisheng_text2sql_success_total[5m]))",
+            "expr": "sum(rate(agent_text2sql_success_total[5m]))",
             "legendFormat": "成功"
           },
           {
-            "expr": "sum(rate(bisheng_text2sql_errors_total[5m]))",
+            "expr": "sum(rate(agent_text2sql_errors_total[5m]))",
             "legendFormat": "失败"
           }
         ],
@@ -204,7 +204,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 20},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_text2sql_success_total[5m])) / sum(rate(bisheng_text2sql_total[5m]))",
+            "expr": "sum(rate(agent_text2sql_success_total[5m])) / sum(rate(agent_text2sql_total[5m]))",
             "legendFormat": "准确率"
           }
         ],
@@ -231,11 +231,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(bisheng_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+            "expr": "histogram_quantile(0.95, sum(rate(agent_llm_request_duration_seconds_bucket[5m])) by (le, model))",
             "legendFormat": "{{model}} P95"
           },
           {
-            "expr": "histogram_quantile(0.50, sum(rate(bisheng_llm_request_duration_seconds_bucket[5m])) by (le, model))",
+            "expr": "histogram_quantile(0.50, sum(rate(agent_llm_request_duration_seconds_bucket[5m])) by (le, model))",
             "legendFormat": "{{model}} P50"
           }
         ],
@@ -250,7 +250,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 28},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_llm_errors_total[5m])) / sum(rate(bisheng_llm_requests_total[5m]))",
+            "expr": "sum(rate(agent_llm_errors_total[5m])) / sum(rate(agent_llm_requests_total[5m]))",
             "legendFormat": "错误率"
           }
         ],
@@ -265,7 +265,7 @@
         "gridPos": {"h": 8, "w": 6, "x": 18, "y": 28},
         "targets": [
           {
-            "expr": "sum by (model) (bisheng_llm_requests_total)",
+            "expr": "sum by (model) (agent_llm_requests_total)",
             "legendFormat": "{{model}}"
           }
         ]
@@ -277,11 +277,11 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_agent_steps_total[5m])) by (agent_type)",
+            "expr": "sum(rate(agent_agent_steps_total[5m])) by (agent_type)",
             "legendFormat": "{{agent_type}} 步骤/秒"
           },
           {
-            "expr": "sum(rate(bisheng_agent_errors_total[5m])) by (agent_type)",
+            "expr": "sum(rate(agent_agent_errors_total[5m])) by (agent_type)",
             "legendFormat": "{{agent_type}} 错误/秒"
           }
         ]
@@ -293,15 +293,15 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
         "targets": [
           {
-            "expr": "bisheng_workflow_running",
+            "expr": "agent_workflow_running",
             "legendFormat": "运行中"
           },
           {
-            "expr": "bisheng_workflow_pending",
+            "expr": "agent_workflow_pending",
             "legendFormat": "等待中"
           },
           {
-            "expr": "sum(rate(bisheng_workflow_completed_total[5m]))",
+            "expr": "sum(rate(agent_workflow_completed_total[5m]))",
             "legendFormat": "完成/秒"
           }
         ]
@@ -313,7 +313,7 @@
         "gridPos": {"h": 10, "w": 12, "x": 0, "y": 44},
         "targets": [
           {
-            "expr": "bisheng_knowledgebase_documents",
+            "expr": "agent_knowledgebase_documents",
             "format": "table",
             "instant": true
           }
@@ -326,7 +326,7 @@
         "gridPos": {"h": 10, "w": 12, "x": 12, "y": 44},
         "targets": [
           {
-            "expr": "sum by (template_name) (bisheng_prompt_usage_total)",
+            "expr": "sum by (template_name) (agent_prompt_usage_total)",
             "legendFormat": "{{template_name}}"
           }
         ]
@@ -338,7 +338,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 54},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_conversation_duration_seconds[5m])) by (bucket)",
+            "expr": "sum(rate(agent_conversation_duration_seconds[5m])) by (bucket)",
             "legendFormat": "{{le}}"
           }
         ]
@@ -350,7 +350,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 54},
         "targets": [
           {
-            "expr": "sum(bisheng_active_users)",
+            "expr": "sum(agent_active_users)",
             "legendFormat": "活跃用户"
           }
         ]
@@ -362,7 +362,7 @@
         "gridPos": {"h": 4, "w": 8, "x": 0, "y": 62},
         "targets": [
           {
-            "expr": "sum(increase(bisheng_llm_tokens_total[1d])) * 0.00002",
+            "expr": "sum(increase(agent_llm_tokens_total[1d])) * 0.00002",
             "legendFormat": "今日成本 ($)"
           }
         ],
@@ -379,7 +379,7 @@
         "gridPos": {"h": 4, "w": 8, "x": 8, "y": 62},
         "targets": [
           {
-            "expr": "sum(bisheng_llm_cost_per_1k_tokens) by (model)",
+            "expr": "sum(agent_llm_cost_per_1k_tokens) by (model)",
             "legendFormat": "{{model}}"
           }
         ]
@@ -391,7 +391,7 @@
         "gridPos": {"h": 4, "w": 8, "x": 16, "y": 62},
         "targets": [
           {
-            "expr": "sum(rate(bisheng_conversation_turns_total[5m])) / sum(rate(bisheng_conversations_started_total[5m]))",
+            "expr": "sum(rate(agent_conversation_turns_total[5m])) / sum(rate(agent_conversations_started_total[5m]))",
             "legendFormat": "平均轮次"
           }
         ]

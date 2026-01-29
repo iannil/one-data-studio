@@ -81,7 +81,7 @@ def init_database():
                 message_id="msg-002",
                 conversation_id="conv-001",
                 role="assistant",
-                content="ONE-DATA-STUDIO 是一个融合了 Alldata（数据治理）、Cube Studio（模型训练）、Bisheng（应用编排）的企业级 AI 平台。",
+                content="ONE-DATA-STUDIO 是一个融合了 Data（数据治理）、Model（模型训练）、Agent（应用编排）的企业级 AI 平台。",
                 tokens=80
             ),
         ]

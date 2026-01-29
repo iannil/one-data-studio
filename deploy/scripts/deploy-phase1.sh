@@ -37,7 +37,7 @@ check_cluster() {
 build_images() {
     log_info "开始构建 Docker 镜像..."
 
-    log_info "构建 Alldata API 镜像..."
+    log_info "构建 data API 镜像..."
     docker build -t data-api:latest -f docker/services/data-api/Dockerfile .
 
     log_info "构建 OpenAI Proxy 镜像..."
@@ -70,16 +70,16 @@ init_database() {
 deploy_services() {
     log_info "部署 Phase 1 服务..."
 
-    # 部署 Alldata API (持久化版本)
-    log_info "部署 Alldata API..."
+    # 部署 data API (持久化版本)
+    log_info "部署 data API..."
     kubectl apply -f k8s/applications/data-api.yaml
 
     # 部署 OpenAI Proxy
     log_info "部署 OpenAI Proxy..."
     kubectl apply -f k8s/applications/openai-proxy.yaml
 
-    # 更新 Bisheng API
-    log_info "更新 Bisheng API..."
+    # 更新 agent API
+    log_info "更新 agent API..."
     kubectl apply -f k8s/applications/agent-api.yaml
 
     log_info "服务部署完成"
@@ -89,13 +89,13 @@ deploy_services() {
 wait_for_ready() {
     log_info "等待服务就绪..."
 
-    log_info "等待 Alldata API..."
+    log_info "等待 data API..."
     kubectl wait --for=condition=ready pod -l app=data-api -n one-data-data --timeout=120s
 
     log_info "等待 OpenAI Proxy..."
     kubectl wait --for=condition=ready pod -l app=openai-proxy -n one-data-model --timeout=120s
 
-    log_info "等待 Bisheng API..."
+    log_info "等待 agent API..."
     kubectl wait --for=condition=ready pod -l app=agent-api -n one-data-agent --timeout=120s
 
     log_info "所有服务已就绪"
@@ -106,7 +106,7 @@ health_check() {
     log_info "执行健康检查..."
 
     echo ""
-    echo "=== Alldata API ==="
+    echo "=== data API ==="
     kubectl exec -n one-data-data deploy/data-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
 
     echo ""
@@ -114,7 +114,7 @@ health_check() {
     kubectl exec -n one-data-model deploy/openai-proxy -- curl -s http://localhost:8000/health | jq . || echo "检查失败"
 
     echo ""
-    echo "=== Bisheng API ==="
+    echo "=== agent API ==="
     kubectl exec -n one-data-agent deploy/agent-api -- curl -s http://localhost:8080/api/v1/health | jq . || echo "检查失败"
 
     echo ""

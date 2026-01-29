@@ -88,26 +88,26 @@ class OneDataTestClient:
 
     def __init__(
         self,
-        alldata_url: str = "http://localhost:8080",
+        data_url: str = "http://localhost:8080",
         cube_url: str = "http://localhost:8000",
-        bisheng_url: str = "http://localhost:8081",
+        agent_url: str = "http://localhost:8081",
     ):
-        self.alldata_url = alldata_url.rstrip("/")
+        self.data_url = data_url.rstrip("/")
         self.cube_url = cube_url.rstrip("/")
-        self.bisheng_url = bisheng_url.rstrip("/")
+        self.agent_url = agent_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
 
     # ============================================
     # 健康检查
     # ============================================
-    def check_alldata_health(self) -> Dict:
+    def check_data_health(self) -> Dict:
         try:
-            r = self.session.get(f"{self.alldata_url}/api/v1/health", timeout=5)
+            r = self.session.get(f"{self.data_url}/api/v1/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
         except Exception as e:
-            logger.debug(f"Alldata health check failed: {e}")
+            logger.debug(f"data health check failed: {e}")
         return {}
 
     def check_cube_health(self) -> Dict:
@@ -119,21 +119,21 @@ class OneDataTestClient:
             logger.debug(f"Cube health check failed: {e}")
         return {}
 
-    def check_bisheng_health(self) -> Dict:
+    def check_agent_health(self) -> Dict:
         try:
-            r = self.session.get(f"{self.bisheng_url}/api/v1/health", timeout=5)
+            r = self.session.get(f"{self.agent_url}/api/v1/health", timeout=5)
             if r.status_code == 200:
                 return r.json()
         except Exception as e:
-            logger.debug(f"Bisheng health check failed: {e}")
+            logger.debug(f"agent health check failed: {e}")
         return {}
 
     # ============================================
-    # Alldata API 测试
+    # data API 测试
     # ============================================
     def list_datasets(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.alldata_url}/api/v1/datasets", timeout=5)
+            r = self.session.get(f"{self.data_url}/api/v1/datasets", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
         except Exception as e:
@@ -150,7 +150,7 @@ class OneDataTestClient:
                 "storage_type": kwargs.get("storage_type", "s3")
             }
             r = self.session.post(
-                f"{self.alldata_url}/api/v1/datasets",
+                f"{self.data_url}/api/v1/datasets",
                 json=payload,
                 timeout=5
             )
@@ -162,7 +162,7 @@ class OneDataTestClient:
 
     def get_dataset(self, dataset_id: str) -> Optional[Dict]:
         try:
-            r = self.session.get(f"{self.alldata_url}/api/v1/datasets/{dataset_id}", timeout=5)
+            r = self.session.get(f"{self.data_url}/api/v1/datasets/{dataset_id}", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data")
         except Exception as e:
@@ -172,7 +172,7 @@ class OneDataTestClient:
     def update_dataset(self, dataset_id: str, **kwargs) -> bool:
         try:
             r = self.session.put(
-                f"{self.alldata_url}/api/v1/datasets/{dataset_id}",
+                f"{self.data_url}/api/v1/datasets/{dataset_id}",
                 json=kwargs,
                 timeout=5
             )
@@ -183,7 +183,7 @@ class OneDataTestClient:
 
     def delete_dataset(self, dataset_id: str) -> bool:
         try:
-            r = self.session.delete(f"{self.alldata_url}/api/v1/datasets/{dataset_id}", timeout=5)
+            r = self.session.delete(f"{self.data_url}/api/v1/datasets/{dataset_id}", timeout=5)
             return r.status_code == 200
         except Exception as e:
             logger.debug(f"Delete dataset {dataset_id} failed: {e}")
@@ -192,7 +192,7 @@ class OneDataTestClient:
     def get_upload_url(self, dataset_id: str, file_name: str) -> Optional[Dict]:
         try:
             r = self.session.post(
-                f"{self.alldata_url}/api/v1/datasets/{dataset_id}/upload-url",
+                f"{self.data_url}/api/v1/datasets/{dataset_id}/upload-url",
                 json={"file_name": file_name},
                 timeout=5
             )
@@ -204,7 +204,7 @@ class OneDataTestClient:
 
     def list_databases(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.alldata_url}/api/v1/metadata/databases", timeout=5)
+            r = self.session.get(f"{self.data_url}/api/v1/metadata/databases", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("databases", [])
         except Exception as e:
@@ -214,7 +214,7 @@ class OneDataTestClient:
     def list_tables(self, database: str) -> Optional[List]:
         try:
             r = self.session.get(
-                f"{self.alldata_url}/api/v1/metadata/databases/{database}/tables",
+                f"{self.data_url}/api/v1/metadata/databases/{database}/tables",
                 timeout=5
             )
             if r.status_code == 200:
@@ -226,7 +226,7 @@ class OneDataTestClient:
     def get_table_schema(self, database: str, table: str) -> Optional[Dict]:
         try:
             r = self.session.get(
-                f"{self.alldata_url}/api/v1/metadata/databases/{database}/tables/{table}",
+                f"{self.data_url}/api/v1/metadata/databases/{database}/tables/{table}",
                 timeout=5
             )
             if r.status_code == 200:
@@ -238,7 +238,7 @@ class OneDataTestClient:
     def list_dataset_versions(self, dataset_id: str) -> Optional[List]:
         try:
             r = self.session.get(
-                f"{self.alldata_url}/api/v1/datasets/{dataset_id}/versions",
+                f"{self.data_url}/api/v1/datasets/{dataset_id}/versions",
                 timeout=5
             )
             if r.status_code == 200:
@@ -250,7 +250,7 @@ class OneDataTestClient:
     def create_dataset_version(self, dataset_id: str, **kwargs) -> Optional[Dict]:
         try:
             r = self.session.post(
-                f"{self.alldata_url}/api/v1/datasets/{dataset_id}/versions",
+                f"{self.data_url}/api/v1/datasets/{dataset_id}/versions",
                 json=kwargs,
                 timeout=5
             )
@@ -307,36 +307,36 @@ class OneDataTestClient:
         return None
 
     # ============================================
-    # Bisheng API 测试
+    # agent API 测试
     # ============================================
-    def bisheng_chat(self, message: str, **kwargs) -> Optional[Dict]:
+    def agent_chat(self, message: str, **kwargs) -> Optional[Dict]:
         try:
             payload = {"message": message}
             payload.update(kwargs)
             r = self.session.post(
-                f"{self.bisheng_url}/api/v1/chat",
+                f"{self.agent_url}/api/v1/chat",
                 json=payload,
                 timeout=60
             )
             if r.status_code == 200:
                 return r.json()
         except RequestException as e:
-            logger.debug(f"Bisheng chat failed: {e}")
+            logger.debug(f"agent chat failed: {e}")
         return None
 
-    def bisheng_list_datasets(self) -> Optional[List]:
+    def agent_list_datasets(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.bisheng_url}/api/v1/datasets", timeout=5)
+            r = self.session.get(f"{self.agent_url}/api/v1/datasets", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", [])
         except RequestException as e:
-            logger.debug(f"Bisheng list datasets failed: {e}")
+            logger.debug(f"agent list datasets failed: {e}")
         return None
 
     def rag_query(self, question: str) -> Optional[Dict]:
         try:
             r = self.session.post(
-                f"{self.bisheng_url}/api/v1/rag/query",
+                f"{self.agent_url}/api/v1/rag/query",
                 json={"question": question},
                 timeout=60
             )
@@ -349,7 +349,7 @@ class OneDataTestClient:
     def text2sql(self, question: str, database: str = "sales_dw") -> Optional[Dict]:
         try:
             r = self.session.post(
-                f"{self.bisheng_url}/api/v1/text2sql",
+                f"{self.agent_url}/api/v1/text2sql",
                 json={"question": question, "database": database},
                 timeout=60
             )
@@ -361,7 +361,7 @@ class OneDataTestClient:
 
     def list_workflows(self) -> Optional[List]:
         try:
-            r = self.session.get(f"{self.bisheng_url}/api/v1/workflows", timeout=5)
+            r = self.session.get(f"{self.agent_url}/api/v1/workflows", timeout=5)
             if r.status_code == 200:
                 return r.json().get("data", {}).get("workflows", [])
         except RequestException as e:
@@ -379,14 +379,14 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     # ============================================
     test_logger.info(f"{Colors.YELLOW}[1/8] 健康检查{Colors.NC}")
 
-    alldata_health = client.check_alldata_health()
-    if alldata_health:
-        result.pass_test("Alldata API 健康检查")
-        db_status = alldata_health.get("database", "unknown")
-        result.pass_test(f"Alldata 数据库连接 ({db_status})",
+    data_health = client.check_data_health()
+    if data_health:
+        result.pass_test("data API 健康检查")
+        db_status = data_health.get("database", "unknown")
+        result.pass_test(f"data 数据库连接 ({db_status})",
                    "数据库未连接" if db_status != "connected" else "")
     else:
-        result.fail_test("Alldata API 健康检查", "服务未响应")
+        result.fail_test("data API 健康检查", "服务未响应")
 
     cube_health = client.check_cube_health()
     if cube_health:
@@ -399,16 +399,16 @@ def run_tests(client: OneDataTestClient, result: TestResult):
     else:
         result.fail_test("OpenAI Proxy 健康检查", "服务未响应")
 
-    bisheng_health = client.check_bisheng_health()
-    if bisheng_health:
-        result.pass_test("Bisheng API 健康检查")
+    agent_health = client.check_agent_health()
+    if agent_health:
+        result.pass_test("agent API 健康检查")
     else:
-        result.fail_test("Bisheng API 健康检查", "服务未响应")
+        result.fail_test("agent API 健康检查", "服务未响应")
 
     # ============================================
-    # 2. Alldata 数据集 CRUD 测试
+    # 2. data 数据集 CRUD 测试
     # ============================================
-    test_logger.info(f"\n{Colors.YELLOW}[2/8] Alldata 数据集 CRUD{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[2/8] data 数据集 CRUD{Colors.NC}")
 
     datasets = client.list_datasets()
     if datasets is not None:
@@ -464,9 +464,9 @@ def run_tests(client: OneDataTestClient, result: TestResult):
             result.fail_test("删除数据集", "API 调用失败")
 
     # ============================================
-    # 3. Alldata 元数据 API 测试
+    # 3. data 元数据 API 测试
     # ============================================
-    test_logger.info(f"\n{Colors.YELLOW}[3/8] Alldata 元数据 API{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[3/8] data 元数据 API{Colors.NC}")
 
     databases = client.list_databases()
     if databases:
@@ -491,7 +491,7 @@ def run_tests(client: OneDataTestClient, result: TestResult):
                 result.fail_test("获取表结构 Schema", "API 调用失败或无数据")
 
     # ============================================
-    # 4. Alldata 版本管理测试
+    # 4. data 版本管理测试
     # ============================================
     test_logger.info(f"\n{Colors.YELLOW}[4/8] 数据集版本管理{Colors.NC}")
 
@@ -551,23 +551,23 @@ def run_tests(client: OneDataTestClient, result: TestResult):
         result.fail_test("获取 Prompt 模板", "API 调用失败")
 
     # ============================================
-    # 7. Bisheng 应用层测试
+    # 7. agent 应用层测试
     # ============================================
-    test_logger.info(f"\n{Colors.YELLOW}[7/8] Bisheng 应用层{Colors.NC}")
+    test_logger.info(f"\n{Colors.YELLOW}[7/8] agent 应用层{Colors.NC}")
 
     # 调用聊天接口
-    bisheng_result = client.bisheng_chat("你好")
-    if bisheng_result and bisheng_result.get("code") == 0:
-        result.pass_test("Bisheng 聊天接口")
+    agent_result = client.agent_chat("你好")
+    if agent_result and agent_result.get("code") == 0:
+        result.pass_test("agent 聊天接口")
     else:
-        result.fail_test("Bisheng 聊天接口", "API 调用失败")
+        result.fail_test("agent 聊天接口", "API 调用失败")
 
     # 查询数据集
-    bisheng_datasets = client.bisheng_list_datasets()
-    if bisheng_datasets is not None:
-        result.pass_test("Bisheng 查询数据集")
+    agent_datasets = client.agent_list_datasets()
+    if agent_datasets is not None:
+        result.pass_test("agent 查询数据集")
     else:
-        result.fail_test("Bisheng 查询数据集", "API 调用失败")
+        result.fail_test("agent 查询数据集", "API 调用失败")
 
     # 工作流列表
     workflows = client.list_workflows()
@@ -605,15 +605,15 @@ def run_tests(client: OneDataTestClient, result: TestResult):
 def main():
     # 配置端点
     client = OneDataTestClient(
-        alldata_url="http://localhost:8080",
+        data_url="http://localhost:8080",
         cube_url="http://localhost:8000",
-        bisheng_url="http://localhost:8081",
+        agent_url="http://localhost:8081",
     )
 
     # 等待服务启动
     test_logger.info(f"{Colors.BLUE}等待服务启动...{Colors.NC}")
     for i in range(30):
-        if client.check_alldata_health():
+        if client.check_data_health():
             test_logger.info(f"{Colors.GREEN}服务已就绪{Colors.NC}")
             break
         if i % 5 == 0:

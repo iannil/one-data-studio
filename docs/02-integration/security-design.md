@@ -1,6 +1,6 @@
 # 安全方案设计
 
-本文档定义 ONE-DATA-STUDIO 平台的统一认证和权限管理方案，确保三个平台（Data、Cube Studio、Agent）能够安全地协同工作。
+本文档定义 ONE-DATA-STUDIO 平台的统一认证和权限管理方案，确保三个平台（Data、Model、Agent）能够安全地协同工作。
 
 ---
 
@@ -89,7 +89,7 @@ sequenceDiagram
 {
     "iss": "https://keycloak.example.com/realms/one-data",
     "sub": "user-123",
-    "aud": ["alldata", "cube", "bisheng"],
+    "aud": ["data", "cube", "agent"],
     "exp": 1705995600,
     "iat": 1705992000,
     "jti": "token-id-123",
@@ -130,7 +130,7 @@ sequenceDiagram
 Authorization: Bearer {jwt_token}
 X-User-ID: {user_id}
 X-Tenant-ID: {tenant_id}
-X-Original-Service: bisheng
+X-Original-Service: agent
 ```
 
 #### Token 验证流程
@@ -219,7 +219,7 @@ spec:
 | **data_analyst** | 只读 | 查询、导出 |
 | **data_viewer** | 只读（受限） | 仅查看 |
 
-#### Cube Studio 角色层级
+#### Model 角色层级
 
 | 角色 | 算力权限 | 操作权限 |
 |------|----------|----------|
@@ -282,9 +282,9 @@ graph TD
 |-----------|------|----------|
 | `one-data-system` | 系统组件 | platform_admin |
 | `tenant-{id}` | 租户资源 | tenant_admin |
-| `tenant-{id}-alldata` | Data 实例 | data_admin |
+| `tenant-{id}-data` | Data 实例 | data_admin |
 | `tenant-{id}-cube` | Cube 实例 | ml_admin |
-| `tenant-{id}-bisheng` | Agent 实例 | app_admin |
+| `tenant-{id}-agent` | Agent 实例 | app_admin |
 
 ---
 
@@ -433,11 +433,11 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: alldata-db-credentials
+  name: data-db-credentials
 type: Opaque
 stringData:
-  username: ${vault.alldata.db.username}
-  password: ${vault.alldata.db.password}
+  username: ${vault.data.db.username}
+  password: ${vault.data.db.password}
 ```
 
 #### 环境变量注入
@@ -447,7 +447,7 @@ env:
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: alldata-db-credentials
+        name: data-db-credentials
         key: password
 ```
 
@@ -473,7 +473,7 @@ env:
     "event_type": "api_call",
     "user_id": "user-123",
     "tenant_id": "tenant-001",
-    "service": "alldata",
+    "service": "data",
     "operation": "dataset.create",
     "resource_id": "ds-001",
     "result": "success",

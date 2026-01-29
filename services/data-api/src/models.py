@@ -1,5 +1,5 @@
 """
-Alldata API 数据模型
+data API 数据模型
 使用 SQLAlchemy ORM 定义数据库模型
 """
 

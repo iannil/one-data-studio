@@ -108,10 +108,10 @@ gantt
 
 | 子模块 | 用例数 | 现有测试文件 | 覆盖状态 |
 |--------|--------|--------------|----------|
-| 数据源管理 (DM-DS) | 7 | `tests/unit/alldata/test_datasource.py` | ✅ 已覆盖 |
+| 数据源管理 (DM-DS) | 7 | `tests/unit/data/test_datasource.py` | ✅ 已覆盖 |
 | 元数据自动扫描 (DM-MS) | 7 | `tests/integration/test_metadata_scanning.py` | ✅ 已覆盖 |
-| 敏感数据识别 (DM-SD) | 10 | `tests/unit/alldata/test_sensitive_data.py` | ⚠️ 部分覆盖 |
-| 元数据标签与版本 (DM-TG) | 5 | `tests/unit/alldata/test_metadata.py` | ⚠️ 部分覆盖 |
+| 敏感数据识别 (DM-SD) | 10 | `tests/unit/data/test_sensitive_data.py` | ⚠️ 部分覆盖 |
+| 元数据标签与版本 (DM-TG) | 5 | `tests/unit/data/test_metadata.py` | ⚠️ 部分覆盖 |
 | 数据标准管理 (DM-ST) | 4 | 待新增 | ❌ 未覆盖 |
 | 资产编目与评估 (DM-AS) | 8 | `tests/integration/test_asset_management.py` | ✅ 已覆盖 |
 | 元数据同步与血缘 (DM-SY) | 8 | `tests/integration/test_lineage_tracking.py` | ✅ 已覆盖 |
@@ -121,12 +121,12 @@ gantt
 
 | 子模块 | 用例数 | 现有测试文件 | 覆盖状态 |
 |--------|--------|--------------|----------|
-| 数据采集任务 (DE-DC) | 8 | `tests/unit/alldata/test_data_collection.py` | ⚠️ 部分覆盖 |
+| 数据采集任务 (DE-DC) | 8 | `tests/unit/data/test_data_collection.py` | ⚠️ 部分覆盖 |
 | ETL编排 (DE-ETL) | 10 | `tests/integration/test_etl_pipeline.py` | ✅ 已覆盖 |
 | 缺失值AI填充 (DE-AI) | 6 | 待新增 | ❌ 未覆盖 |
-| 数据脱敏 (DE-DM) | 7 | `tests/unit/alldata/test_masking.py` | ✅ 已覆盖 |
+| 数据脱敏 (DE-DM) | 7 | `tests/unit/data/test_masking.py` | ✅ 已覆盖 |
 | 多表融合 (DE-FU) | 9 | `tests/integration/test_table_fusion.py` | ✅ 已覆盖 |
-| 非结构化文档处理 (DE-OCR) | 8 | `tests/unit/bisheng/test_document_*.py` | ⚠️ 部分覆盖 |
+| 非结构化文档处理 (DE-OCR) | 8 | `tests/unit/agent/test_document_*.py` | ⚠️ 部分覆盖 |
 
 ### 3.3 算法工程师模块 (29 用例)
 
@@ -142,11 +142,11 @@ gantt
 | 子模块 | 用例数 | 现有测试文件 | 覆盖状态 |
 |--------|--------|--------------|----------|
 | 知识库文档管理 (BU-KB) | 10 | `tests/integration/test_knowledge_base.py` | ✅ 已覆盖 |
-| 智能查询 (BU-IQ) | 11 | `tests/unit/bisheng/test_text_to_sql.py`, `test_hybrid_retrieval.py` | ✅ 已覆盖 |
+| 智能查询 (BU-IQ) | 11 | `tests/unit/agent/test_text_to_sql.py`, `test_hybrid_retrieval.py` | ✅ 已覆盖 |
 | BI可视化 (BU-BI) | 8 | `tests/e2e/user-lifecycle/` | ⚠️ 部分覆盖 |
 | AI预测分析 (BU-AI) | 4 | 待新增 | ❌ 未覆盖 |
 | 智能预警 (BU-WN) | 7 | 待新增 | ❌ 未覆盖 |
-| 数据资产检索 (BU-AS) | 8 | `tests/unit/alldata/test_asset_search.py` | ⚠️ 部分覆盖 |
+| 数据资产检索 (BU-AS) | 8 | `tests/unit/data/test_asset_search.py` | ⚠️ 部分覆盖 |
 
 ### 3.5 系统管理员模块 (31 用例)
 
@@ -221,7 +221,7 @@ CREATE DATABASE IF NOT EXISTS one_data_studio_test;
 | 系统管理员 | admin | admin123 | 全部权限 |
 | 数据管理员 | data_admin | da123456 | 数据治理模块 |
 | 数据工程师 | data_engineer | de123456 | ETL、数据采集模块 |
-| 算法工程师 | algo_engineer | ae123456 | Cube Studio 模块 |
+| 算法工程师 | algo_engineer | ae123456 | Model 模块 |
 | 业务用户 | business_user | bu123456 | 查询、BI 模块 |
 
 **3. 测试文档准备**
@@ -252,8 +252,8 @@ tests/fixtures/documents/
 pytest tests/unit/ -v --cov=services --cov-report=html
 
 # 按模块运行
-pytest tests/unit/alldata/ -v    # 数据治理模块
-pytest tests/unit/bisheng/ -v    # 应用编排模块
+pytest tests/unit/data/ -v    # 数据治理模块
+pytest tests/unit/agent/ -v    # 应用编排模块
 pytest tests/unit/cube/ -v       # 算法引擎模块
 pytest tests/unit/shared/ -v     # 共享模块
 
@@ -523,10 +523,10 @@ npm run test:acceptance
 
 | 场景 | 测试文件 | 覆盖用例 |
 |------|----------|----------|
-| 数据源管理流程 | `alldata-deep.spec.ts` | DM-DS-* |
-| ETL 编排流程 | `alldata-deep.spec.ts` | DE-ETL-* |
-| 知识库管理流程 | `bisheng-deep.spec.ts` | BU-KB-* |
-| 智能问答流程 | `bisheng-deep.spec.ts` | BU-IQ-* |
+| 数据源管理流程 | `data-deep.spec.ts` | DM-DS-* |
+| ETL 编排流程 | `data-deep.spec.ts` | DE-ETL-* |
+| 知识库管理流程 | `agent-deep.spec.ts` | BU-KB-* |
+| 智能问答流程 | `agent-deep.spec.ts` | BU-IQ-* |
 | 模型训练部署 | `cube-deep.spec.ts` | AE-TR-*, AE-DP-* |
 | 用户权限管理 | `admin-deep.spec.ts` | SA-UM-* |
 | 用户生命周期 | `user-lifecycle/` | 跨角色场景 |

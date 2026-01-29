@@ -123,8 +123,8 @@ rotate_jwt() {
         --dry-run=client -o yaml | kubectl apply -f -
 
     # Trigger rolling restart of affected deployments
-    kubectl rollout restart deployment/bisheng-api -n "$NAMESPACE" || true
-    kubectl rollout restart deployment/alldata-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/agent-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/data-api -n "$NAMESPACE" || true
 
     log_info "JWT secret key rotated successfully"
     log_info "Note: Users will need to re-authenticate"
@@ -163,8 +163,8 @@ rotate_database() {
     log_info "Run: ALTER USER 'one_data'@'%' IDENTIFIED BY '${new_password}';"
 
     # Trigger rolling restart
-    kubectl rollout restart deployment/bisheng-api -n "$NAMESPACE" || true
-    kubectl rollout restart deployment/alldata-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/agent-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/data-api -n "$NAMESPACE" || true
 
     log_info "Database secret updated. Remember to update the actual database password!"
 }
@@ -191,8 +191,8 @@ rotate_redis() {
     log_warn "IMPORTANT: You must also update the Redis configuration!"
     log_info "Update redis.conf: requirepass $new_password"
 
-    kubectl rollout restart deployment/bisheng-api -n "$NAMESPACE" || true
-    kubectl rollout restart deployment/alldata-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/agent-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/data-api -n "$NAMESPACE" || true
 
     log_info "Redis secret updated"
 }
@@ -222,8 +222,8 @@ rotate_minio() {
     log_warn "IMPORTANT: You must also update MinIO server configuration!"
     log_info "Use mc admin user to update the credentials"
 
-    kubectl rollout restart deployment/bisheng-api -n "$NAMESPACE" || true
-    kubectl rollout restart deployment/alldata-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/agent-api -n "$NAMESPACE" || true
+    kubectl rollout restart deployment/data-api -n "$NAMESPACE" || true
 
     log_info "MinIO secrets updated"
 }

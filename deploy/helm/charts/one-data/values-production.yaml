@@ -104,7 +104,7 @@ data:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # 配置 TLS secret（cert-manager 自动创建）
-    tlsSecret: alldata-tls
+    tlsSecret: data-tls
 
   # Pod 安全配置
   podSecurityContext:
@@ -122,9 +122,9 @@ data:
         - ALL
 
 # ============================================
-# Bisheng 平台 - 生产配置
+# agent 平台 - 生产配置
 # ============================================
-bisheng:
+agent:
   replicaCount: 3
 
   resources:
@@ -148,7 +148,7 @@ bisheng:
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    tlsSecret: bisheng-tls
+    tlsSecret: agent-tls
 
   # 生产环境配置
   config:
@@ -157,7 +157,7 @@ bisheng:
     # 启用 SSL 验证
     verifySSL: true
     # 缓存签名密钥（从 Secret 注入）
-    cacheSigningKeySecret: bisheng-cache-signing-key
+    cacheSigningKeySecret: agent-cache-signing-key
 
   podSecurityContext:
     runAsNonRoot: true
@@ -174,7 +174,7 @@ bisheng:
         - ALL
 
 # ============================================
-# Cube Studio - 生产配置
+# model - 生产配置
 # ============================================
 cube:
   modelServing:

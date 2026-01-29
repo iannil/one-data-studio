@@ -484,7 +484,7 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
 kubectl get ingress -A
 
 # 测试 Ingress
-curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
+curl -H "Host: data.example.com" http://<ingress-ip>/api/v1/health
 ```
 
 #### 解决方案
@@ -495,7 +495,7 @@ curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
    kind: Ingress
    spec:
      rules:
-     - host: alldata.example.com
+     - host: data.example.com
        http:
          paths:
          - path: /
@@ -510,7 +510,7 @@ curl -H "Host: alldata.example.com" http://<ingress-ip>/api/v1/health
 2. **检查 TLS 证书**
    ```bash
    kubectl get certificate -A
-   kubectl describe certificate alldata-cert -n one-data-data
+   kubectl describe certificate data-cert -n one-data-data
    ```
 
 ---

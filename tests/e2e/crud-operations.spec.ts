@@ -286,7 +286,7 @@ test.describe('CRUD - 用户管理 (Admin)', () => {
   });
 });
 
-test.describe('CRUD - 提示词模板 (Bisheng)', () => {
+test.describe('CRUD - 提示词模板 (agent)', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);
@@ -401,7 +401,7 @@ test.describe('CRUD - 知识库管理 (Agent)', () => {
   });
 });
 
-test.describe('CRUD - 模型管理 (Cube Studio)', () => {
+test.describe('CRUD - 模型管理 (model)', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);
@@ -468,7 +468,7 @@ test.describe('CRUD - 模型管理 (Cube Studio)', () => {
   });
 });
 
-test.describe('CRUD - 数据源管理 (Alldata)', () => {
+test.describe('CRUD - 数据源管理 (data)', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     setupCommonMocks(page);

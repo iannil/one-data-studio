@@ -75,8 +75,8 @@ if [ -z "$BASE_URL" ]; then
   export BASE_URL="http://localhost:3000"
 fi
 
-if [ -z "$BISHENG_API_URL" ]; then
-  echo -e "${YELLOW}警告: BISHENG_API_URL 未设置${NC}"
+if [ -z "$agent_API_URL" ]; then
+  echo -e "${YELLOW}警告: agent_API_URL 未设置${NC}"
 fi
 
 echo "BASE_URL: $BASE_URL"

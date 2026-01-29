@@ -1,5 +1,5 @@
 """
-Alldata API 外部集成模块
+data API 外部集成模块
 
 支持的集成:
 - OpenMetadata: 元数据治理平台

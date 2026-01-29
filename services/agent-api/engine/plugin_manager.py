@@ -269,7 +269,7 @@ class PluginManager:
                     ToolMetadata(
                         name=tool.name,
                         version=ToolVersion(1, 0, 0),
-                        author="Bisheng Team",
+                        author="agent Team",
                         description=tool.description,
                         source=PluginSource.BUILTIN,
                     )
