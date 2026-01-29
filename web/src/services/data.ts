@@ -691,7 +691,7 @@ export async function getETLTaskLogs(taskId: string, executionId?: string, limit
 export type QualityDimension = 'completeness' | 'accuracy' | 'consistency' | 'timeliness' | 'validity' | 'uniqueness';
 export type QualityRuleType = 'null_check' | 'range_check' | 'regex_check' | 'enum_check' | 'foreign_key_check' | 'custom_sql' | 'duplicate_check';
 export type QualityTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'disabled';
-export type AlertChannel = 'email' | 'webhook' | 'dingtalk' | 'feishu' | 'wechat';
+export type AlertChannelType = 'email' | 'webhook' | 'dingtalk' | 'feishu' | 'wechat';
 
 export interface QualityRule {
   rule_id: string;
@@ -819,7 +819,7 @@ export interface QualityAlert {
 }
 
 export interface AlertConfig {
-  channels: AlertChannel[];
+  channels: AlertChannelType[];
   email_recipients?: string[];
   webhook_url?: string;
   dingtalk_webhook?: string;
@@ -2305,7 +2305,7 @@ export interface TaskMetrics {
   error_message?: string;
 }
 
-export interface AlertRule {
+export interface QualityAlertRule {
   rule_id: string;
   name: string;
   metric: string;
@@ -3738,9 +3738,9 @@ export function downloadKettleConfig(
 // ==================== AI 能力增强 API ====================
 
 /**
- * 清洗规则推荐结果
+ * 清洗规则推荐结果 (Kettle)
  */
-export interface CleaningRecommendation {
+export interface KettleCleaningRecommendation {
   id: string;
   rule_type: string;
   column_name: string;
@@ -4261,7 +4261,6 @@ export default {
   downloadKettleConfig,
 
   // AI 能力增强
-  recommendCleaningRules,
   imputeMissingValues,
   previewImputation,
 
@@ -4280,15 +4279,6 @@ export default {
   getMetadataVersionDetail,
   compareMetadataVersions,
   rollbackMetadataVersion,
-
-  // 元数据图谱
-  getMetadataGraph,
-  getTableLineageGraph,
-  getColumnRelationGraph,
-  searchMetadataNodes,
-  getImpactAnalysis,
-  getGraphStatistics,
-  getNodeNeighbors,
 };
 
 // ============= 元数据图谱 API 类型定义 =============
@@ -7578,7 +7568,7 @@ export interface QualityRuleTemplatesResponse {
   fallback?: boolean;
 }
 
-export interface AlertRule {
+export interface MetricAlertRule {
   rule_name: string;
   metric_name: string;
   rule_type: string;
@@ -7590,9 +7580,9 @@ export interface AlertRule {
   severity: string;
 }
 
-export interface AlertRulesResponse {
+export interface MetricAlertRulesResponse {
   metric_name: string;
-  alert_rules: AlertRule[];
+  alert_rules: MetricAlertRule[];
   total: number;
   statistics?: {
     count: number;
