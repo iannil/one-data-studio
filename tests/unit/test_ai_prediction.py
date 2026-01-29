@@ -9,6 +9,19 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
+# 检查 pandas 是否可用
+try:
+    import pandas as pd
+    _PANDAS_AVAILABLE = True
+except ImportError:
+    _PANDAS_AVAILABLE = False
+
+# 如果 pandas 不可用则跳过所有测试
+pytestmark = pytest.mark.skipif(
+    not _PANDAS_AVAILABLE,
+    reason="pandas is not installed"
+)
+
 
 class TestAIPredictionService:
     """AI 预测分析服务测试"""

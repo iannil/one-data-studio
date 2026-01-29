@@ -12,7 +12,12 @@
 
 import pytest
 import asyncio
-import aiohttp
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    AIOHTTP_AVAILABLE = False
+    aiohttp = None
 import time
 import os
 import logging

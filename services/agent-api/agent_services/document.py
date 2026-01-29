@@ -129,9 +129,12 @@ class DocumentService:
                 chunks.append(chunk)
 
             # 移动到下一个位置，考虑重叠
-            current_position = end_position - self.chunk_overlap
-            if current_position < 0:
+            new_position = end_position - self.chunk_overlap
+            # 确保始终向前移动，防止无限循环
+            if new_position <= current_position:
                 current_position = end_position
+            else:
+                current_position = new_position
 
         return chunks
 

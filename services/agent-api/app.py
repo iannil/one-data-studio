@@ -45,10 +45,10 @@ from models import (
 from engine import WorkflowExecutor, register_execution, unregister_execution, stop_execution
 
 # 导入服务
-from services import VectorStore, EmbeddingService, DocumentService, AGENT_TEMPLATE_AVAILABLE
+from agent_services import VectorStore, EmbeddingService, DocumentService, AGENT_TEMPLATE_AVAILABLE
 
 if AGENT_TEMPLATE_AVAILABLE:
-    from services import get_agent_template_service
+    from agent_services import get_agent_template_service
 
 # 导入 Agent 相关模块
 try:
@@ -1972,8 +1972,8 @@ def batch_delete_documents():
 
 # 尝试导入图片处理模块
 try:
-    from services.image_processor import ImageProcessor, get_image_processor
-    from services.vision_embedding import VisionEmbeddingService, get_vision_service
+    from agent_services.image_processor import ImageProcessor, get_image_processor
+    from agent_services.vision_embedding import VisionEmbeddingService, get_vision_service
     IMAGE_PROCESSING_AVAILABLE = True
 except ImportError:
     IMAGE_PROCESSING_AVAILABLE = False
@@ -2975,7 +2975,7 @@ def create_schedule(workflow_id):
 
         # 注册到调度器 (P4: 使用 add_schedule_from_model)
         try:
-            from services.scheduler import get_scheduler
+            from agent_services.scheduler import get_scheduler
             scheduler = get_scheduler()
             scheduler.add_schedule_from_model(schedule)
         except Exception as e:
@@ -3012,7 +3012,7 @@ def delete_schedule(schedule_id):
 
         # 从调度器移除
         try:
-            from services.scheduler import get_scheduler
+            from agent_services.scheduler import get_scheduler
             scheduler = get_scheduler()
             scheduler.remove_schedule(schedule_id)
         except Exception as e:
@@ -3157,7 +3157,7 @@ def pause_schedule(schedule_id):
 
         # 暂停调度器中的作业
         try:
-            from services.scheduler import get_scheduler
+            from agent_services.scheduler import get_scheduler
             scheduler = get_scheduler()
             scheduler.pause_schedule(schedule_id)
         except Exception as e:
@@ -3206,7 +3206,7 @@ def resume_schedule(schedule_id):
 
         # 恢复调度器中的作业
         try:
-            from services.scheduler import get_scheduler
+            from agent_services.scheduler import get_scheduler
             scheduler = get_scheduler()
             scheduler.resume_schedule(schedule_id)
         except Exception as e:
@@ -3254,7 +3254,7 @@ def get_schedule_statistics(schedule_id):
 
         # 从执行跟踪器获取内存中的统计
         try:
-            from services.scheduler import get_execution_tracker
+            from agent_services.scheduler import get_execution_tracker
             tracker = get_execution_tracker()
             stats = tracker.get_statistics(schedule_id)
         except Exception as e:
@@ -4866,7 +4866,7 @@ def create_alert_rule():
 def get_cost_summary():
     """获取 Token 成本摘要"""
     try:
-        from services.cost_tracker import get_cost_tracker
+        from agent_services.cost_tracker import get_cost_tracker
         tracker = get_cost_tracker()
 
         period = request.args.get("period", "daily")
@@ -4884,7 +4884,7 @@ def get_cost_summary():
 def record_token_usage():
     """记录 Token 使用"""
     try:
-        from services.cost_tracker import get_cost_tracker
+        from agent_services.cost_tracker import get_cost_tracker
         tracker = get_cost_tracker()
         data = request.get_json()
 
@@ -4905,7 +4905,7 @@ def record_token_usage():
 def check_budget():
     """检查预算"""
     try:
-        from services.cost_tracker import get_cost_tracker
+        from agent_services.cost_tracker import get_cost_tracker
         tracker = get_cost_tracker()
 
         remaining = tracker.get_remaining_budget()
@@ -4920,7 +4920,7 @@ def check_budget():
 def get_daily_cost_breakdown():
     """获取每日成本明细"""
     try:
-        from services.cost_tracker import get_cost_tracker
+        from agent_services.cost_tracker import get_cost_tracker
         tracker = get_cost_tracker()
 
         days = int(request.args.get("days", 7))
@@ -4938,7 +4938,7 @@ def get_daily_cost_breakdown():
 def validate_sql():
     """验证 SQL 安全性"""
     try:
-        from services.sql_validator import get_sql_validator
+        from agent_services.sql_validator import get_sql_validator
         validator = get_sql_validator()
         data = request.get_json()
 
@@ -4965,7 +4965,7 @@ def validate_sql():
 def sanitize_sql():
     """清理和安全化 SQL"""
     try:
-        from services.sql_validator import get_sql_validator
+        from agent_services.sql_validator import get_sql_validator
         validator = get_sql_validator()
         data = request.get_json()
 
@@ -4994,7 +4994,7 @@ def sanitize_sql():
 def get_workflow_versions(workflow_id):
     """获取工作流版本历史"""
     try:
-        from services.workflow_diff import get_version_manager
+        from agent_services.workflow_diff import get_version_manager
         db = next(get_db())
         try:
             manager = get_version_manager(session=db)
@@ -5017,7 +5017,7 @@ def get_workflow_versions(workflow_id):
 def create_workflow_version(workflow_id):
     """创建工作流版本"""
     try:
-        from services.workflow_diff import get_version_manager
+        from agent_services.workflow_diff import get_version_manager
         db = next(get_db())
         try:
             manager = get_version_manager(session=db)
@@ -5045,7 +5045,7 @@ def create_workflow_version(workflow_id):
 def compare_workflow_versions(workflow_id):
     """对比工作流版本"""
     try:
-        from services.workflow_diff import get_version_manager
+        from agent_services.workflow_diff import get_version_manager
         db = next(get_db())
         try:
             manager = get_version_manager(session=db)
@@ -5066,7 +5066,7 @@ def compare_workflow_versions(workflow_id):
 def rollback_workflow_version(workflow_id, version_id):
     """回滚工作流到指定版本"""
     try:
-        from services.workflow_diff import get_version_manager
+        from agent_services.workflow_diff import get_version_manager
         db = next(get_db())
         try:
             manager = get_version_manager(session=db)
@@ -5086,7 +5086,7 @@ def rollback_workflow_version(workflow_id, version_id):
 def hybrid_retrieve():
     """混合检索（向量 + BM25）"""
     try:
-        from services.hybrid_retriever import get_hybrid_retriever
+        from agent_services.hybrid_retriever import get_hybrid_retriever
         retriever = get_hybrid_retriever()
         data = request.get_json()
 
@@ -5117,7 +5117,7 @@ def hybrid_retrieve():
 def retrieve_with_rerank():
     """混合检索 + 重排序"""
     try:
-        from services.hybrid_retriever import get_hybrid_retriever
+        from agent_services.hybrid_retriever import get_hybrid_retriever
         retriever = get_hybrid_retriever()
         data = request.get_json()
 
@@ -5150,7 +5150,7 @@ def retrieve_with_rerank():
 def interpret_results():
     """AI 结果解释（Text-to-SQL 结果可视化建议）"""
     try:
-        from services.result_interpreter import get_result_interpreter
+        from agent_services.result_interpreter import get_result_interpreter
         interpreter = get_result_interpreter()
         data = request.get_json()
 
@@ -5184,7 +5184,7 @@ def interpret_results():
 def get_integration_metadata():
     """获取数据平台元数据（跨服务集成）"""
     try:
-        from services.data_integration import DataIntegrationService
+        from agent_services.data_integration import DataIntegrationService
         service = DataIntegrationService.get_instance()
 
         database = request.args.get("database")
@@ -5202,7 +5202,7 @@ def get_integration_metadata():
 def enhanced_text2sql():
     """增强版 Text-to-SQL"""
     try:
-        from services.data_integration import DataIntegrationService
+        from agent_services.data_integration import DataIntegrationService
         service = DataIntegrationService.get_instance()
         data = request.get_json()
 
@@ -5222,7 +5222,7 @@ def enhanced_text2sql():
 def enhanced_vector_search():
     """增强版向量搜索"""
     try:
-        from services.data_integration import DataIntegrationService
+        from agent_services.data_integration import DataIntegrationService
         service = DataIntegrationService.get_instance()
         data = request.get_json()
 

@@ -227,6 +227,8 @@ one-data-studio/
 │   ├── model-api/            # 模型服务 API (FastAPI)
 │   ├── openai-proxy/         # OpenAI 兼容代理 (FastAPI)
 │   ├── admin-api/            # 平台管理 API (Flask)
+│   ├── ocr-service/          # OCR 文档识别服务
+│   ├── behavior-service/     # 用户行为分析服务
 │   └── shared/               # 共享模块（认证、存储、工具）
 ├── web/                      # 前端应用 (React + TypeScript)
 │   ├── src/
@@ -241,19 +243,21 @@ one-data-studio/
 │   ├── kubernetes/           # Kubernetes 清单文件
 │   ├── helm/                 # Helm Charts
 │   ├── dockerfiles/          # Docker 构建文件
+│   ├── argocd/               # ArgoCD 配置
+│   ├── monitoring/           # 监控栈配置
 │   └── scripts/              # 部署脚本
 ├── scripts/                  # 开发和运维脚本
 │   └── dev/                  # 开发环境脚本
 ├── tests/                    # 测试文件
 │   ├── unit/                 # 单元测试
 │   ├── integration/          # 集成测试
-│   └── e2e/                  # 端到端测试
+│   └── e2e/                  # 端到端测试 (Playwright)
 ├── docs/                     # 文档
 │   ├── 01-architecture/      # 架构文档
 │   ├── 02-integration/       # 集成指南
-│   ├── 05-development/       # 开发指南
-│   ├── 06-operations/        # 运维指南
-│   └── 07-user-guide/        # 用户文档
+│   ├── 06-development/       # 开发指南
+│   ├── 07-operations/        # 运维指南
+│   └── 08-user-guide/        # 用户文档
 └── examples/                 # 使用示例
     ├── langchain/            # LangChain 集成示例
     ├── python/               # Python SDK 示例
@@ -284,9 +288,9 @@ one-data-studio/
 - [四层架构](docs/01-architecture/four-layer-stack.md)
 - [集成指南](docs/02-integration/integration-overview.md)
 - [API 规范](docs/02-integration/api-specifications.md)
-- [开发指南](docs/05-development/poc-playbook.md)
-- [运维指南](docs/06-operations/operations-guide.md)
-- [用户手册](docs/07-user-guide/getting-started.md)
+- [开发指南](docs/06-development/poc-playbook.md)
+- [运维指南](docs/07-operations/operations-guide.md)
+- [用户手册](docs/08-user-guide/getting-started.md)
 
 ## 贡献指南
 

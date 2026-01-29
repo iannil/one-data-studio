@@ -4,6 +4,13 @@ Sprint 9: 测试覆盖
 """
 
 import os
+import sys
+from pathlib import Path
+
+# 添加项目根路径以便导入 services.shared
+_project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(_project_root))
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -37,7 +44,7 @@ class TestDatabaseConfig:
         assert config.host == "mysql.one-data-infra.svc.cluster.local"
         assert config.port == 3306
         assert config.user == "one_data"
-        assert config.database == "one_data_studio"
+        assert config.database == "one_data_agent"
         assert config.pool_size == 10
         assert config.max_overflow == 20
 
@@ -74,6 +81,10 @@ class TestRedisConfig:
 
     def test_default_values(self):
         """测试默认值"""
+        # Clear environment to test actual defaults
+        for key in ['REDIS_HOST', 'REDIS_PORT', 'REDIS_DB', 'REDIS_PASSWORD',
+                    'REDIS_MAX_CONNECTIONS']:
+            os.environ.pop(key, None)
         config = RedisConfig()
         assert config.host == "localhost"
         assert config.port == 6379

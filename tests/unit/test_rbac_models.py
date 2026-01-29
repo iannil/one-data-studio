@@ -12,16 +12,19 @@ class TestRoleModel:
     """角色模型测试"""
 
     def test_role_default_values(self):
-        """测试角色默认值"""
+        """测试角色默认值（通过 Column 定义）"""
         from services.shared.models.rbac import Role
 
-        role = Role(name='test_role')
+        # 检查 Column 的默认值定义（SQLAlchemy 默认只在 DB 插入时生效）
+        role_type_col = Role.__table__.c.role_type
+        is_active_col = Role.__table__.c.is_active
+        is_system_col = Role.__table__.c.is_system
+        priority_col = Role.__table__.c.priority
 
-        assert role.name == 'test_role'
-        assert role.role_type == 'custom'
-        assert role.is_active is True
-        assert role.is_system is False
-        assert role.priority == 0
+        assert role_type_col.default.arg == 'custom'
+        assert is_active_col.default.arg is True
+        assert is_system_col.default.arg is False
+        assert priority_col.default.arg == 0
 
     def test_role_to_dict(self):
         """测试角色转字典"""
@@ -160,18 +163,17 @@ class TestPermissionModel:
     """权限模型测试"""
 
     def test_permission_default_values(self):
-        """测试权限默认值"""
+        """测试权限默认值（通过 Column 定义）"""
         from services.shared.models.rbac import Permission
 
-        permission = Permission(
-            name='test:read',
-            resource='test',
-            operation='read'
-        )
+        # 检查 Column 的默认值定义（SQLAlchemy 默认只在 DB 插入时生效）
+        scope_col = Permission.__table__.c.scope
+        is_active_col = Permission.__table__.c.is_active
+        is_system_col = Permission.__table__.c.is_system
 
-        assert permission.scope == 'all'
-        assert permission.is_active is True
-        assert permission.is_system is False
+        assert scope_col.default.arg == 'all'
+        assert is_active_col.default.arg is True
+        assert is_system_col.default.arg is False
 
     def test_permission_to_dict(self):
         """测试权限转字典"""

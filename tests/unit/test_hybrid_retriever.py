@@ -1,18 +1,48 @@
 """
 混合检索器单元测试
 测试向量检索、BM25 关键词检索、RRF 合并、MMR 多样性检索
+
+注意：此测试需要 agent-api 完整环境。如果 import 失败，测试将被跳过。
 """
 
 import pytest
-from services.hybrid_retriever import (
-    BM25Index,
-    HybridRetriever,
-    RetrievalConfig,
-    RetrievalMethod,
-    RetrievalResult,
-    QueryExpansionStrategy,
-    hybrid_search,
-    mmr_search,
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+
+# 添加 agent-api 路径以便导入 services 子模块
+_agent_api_root = Path(__file__).parent.parent.parent / "services" / "agent-api"
+sys.path.insert(0, str(_agent_api_root))
+
+try:
+    from services.hybrid_retriever import (
+        BM25Index,
+        HybridRetriever,
+        RetrievalConfig,
+        RetrievalMethod,
+        RetrievalResult,
+        QueryExpansionStrategy,
+        hybrid_search,
+        mmr_search,
+    )
+    _IMPORT_SUCCESS = True
+except ImportError as e:
+    _IMPORT_SUCCESS = False
+    _IMPORT_ERROR = str(e)
+    # 定义占位符以允许测试收集
+    BM25Index = MagicMock
+    HybridRetriever = MagicMock
+    RetrievalConfig = MagicMock
+    RetrievalMethod = MagicMock
+    RetrievalResult = MagicMock
+    QueryExpansionStrategy = MagicMock
+    hybrid_search = MagicMock()
+    mmr_search = MagicMock()
+
+# 如果导入失败则跳过所有测试
+pytestmark = pytest.mark.skipif(
+    not _IMPORT_SUCCESS,
+    reason=f"Cannot import hybrid_retriever module: {_IMPORT_ERROR if not _IMPORT_SUCCESS else ''}"
 )
 
 

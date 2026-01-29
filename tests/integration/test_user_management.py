@@ -19,8 +19,11 @@ from unittest.mock import Mock, MagicMock, patch, PropertyMock
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../services/shared'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../services'))
+
+# 添加项目根目录（不直接添加 services 目录，避免命名空间冲突）
+_project_root = os.path.join(os.path.dirname(__file__), "../..")
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 logger = logging.getLogger(__name__)
 

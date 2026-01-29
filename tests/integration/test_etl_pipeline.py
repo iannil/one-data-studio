@@ -34,10 +34,10 @@ from xml.dom import minidom
 
 import pytest
 
-# 添加项目路径（仅添加不会触发 services/__init__.py 链式加载的安全路径）
+# 添加项目根目录（不添加 data-api 子目录，避免 services 命名空间冲突）
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.insert(0, os.path.join(_project_root, "services", "data-api"))
-sys.path.insert(0, os.path.join(_project_root, "services", "data-api", "src"))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 logger = logging.getLogger(__name__)
 

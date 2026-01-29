@@ -334,9 +334,10 @@ class TestRateLimitBugFixes:
         assert result is True
 
     def test_rate_limit_checker_get_remaining_no_limiter(self):
-        """测试无限流器时获取剩余返回 -1（无限制）"""
+        """测试无使用记录时获取剩余返回完整限制"""
         from services.shared.rate_limit import RateLimitChecker
 
         checker = RateLimitChecker()
         result = checker.get_remaining('test-key', '100/minute')
-        assert result == -1
+        # 无使用记录时返回完整限制（100）
+        assert result == 100

@@ -218,12 +218,20 @@ class TestRequirePermissionDecorator:
 
     def test_denies_user_without_permission(self, app):
         """测试无权限的用户被拒绝"""
-        with app.test_client() as client:
-            with app.test_request_context('/create-dataset', method='POST'):
-                g.roles = ["guest"]
+        from services.shared.auth.permissions import require_permission, Resource, Operation
 
-                response = client.post('/create-dataset')
-                # 由于 g 在请求之间不共享，这里需要模拟
+        with app.test_request_context('/create-dataset', method='POST'):
+            g.roles = ["guest"]  # guest 没有创建数据集的权限
+            g.user = "test-user"  # 设置 user 避免 AttributeError
+
+            @require_permission(Resource.DATASET, Operation.CREATE)
+            def test_func():
+                return {"status": "ok"}
+
+            # 装饰器返回 (json_response, 403) 而不是抛出异常
+            result = test_func()
+            # 检查返回 403 状态码
+            assert result[1] == 403
 
 
 class TestRequireAnyPermissionDecorator:

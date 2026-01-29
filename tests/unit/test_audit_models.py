@@ -15,7 +15,8 @@ class TestAuditLogModel:
         """测试审计日志默认值"""
         from services.shared.models.audit import AuditLog
 
-        log = AuditLog(action='login')
+        # 使用显式默认值创建（SQLAlchemy 默认值只在 DB 插入时生效）
+        log = AuditLog(action='login', severity='info', status='success')
 
         assert log.action == 'login'
         assert log.severity == 'info'
@@ -38,14 +39,14 @@ class TestAuditLogModel:
             request_id='req-001',
             resource_type='user',
             resource_id='user-new',
-            metadata={'extra': 'data'}
+            extra_metadata={'extra': 'data'}
         )
 
         assert log.id == 'log-123'
         assert log.action == 'user_create'
         assert log.user_id == 'user-456'
         assert log.tenant_id == 'tenant-789'
-        assert log.metadata == {'extra': 'data'}
+        assert log.extra_metadata == {'extra': 'data'}
 
     def test_audit_log_with_error(self):
         """测试带错误的审计日志"""
@@ -77,7 +78,7 @@ class TestAuditLogModel:
             ip_address='192.168.1.1',
             resource_type='dataset',
             resource_id='ds-001',
-            metadata={'query': 'SELECT *'}
+            extra_metadata={'query': 'SELECT *'}
         )
         log.timestamp = datetime(2024, 1, 1, 12, 0, 0)
         log.created_at = datetime(2024, 1, 1, 12, 0, 0)
@@ -89,7 +90,7 @@ class TestAuditLogModel:
         assert data['user_id'] == 'user-456'
         assert data['tenant_id'] == 'tenant-789'
         assert data['timestamp'] == '2024-01-01T12:00:00'
-        assert data['metadata'] == {'query': 'SELECT *'}
+        assert data['extra_metadata'] == {'query': 'SELECT *'}
 
     def test_audit_log_to_dict_with_none_timestamps(self):
         """测试审计日志转字典处理 None 时间戳"""
@@ -320,7 +321,8 @@ class TestAuditLogFields:
         from services.shared.models.audit import AuditLog
         from sqlalchemy import JSON
 
-        metadata_col = AuditLog.__table__.c.metadata
+        # 实际字段名是 extra_metadata
+        metadata_col = AuditLog.__table__.c.extra_metadata
         assert isinstance(metadata_col.type, JSON)
 
 
@@ -328,11 +330,12 @@ class TestAuditLogSeverityLevels:
     """审计日志严重级别测试"""
 
     def test_default_severity_is_info(self):
-        """测试默认严重级别是 info"""
+        """测试默认严重级别是 info（通过 Column 定义）"""
         from services.shared.models.audit import AuditLog
 
-        log = AuditLog(action='test')
-        assert log.severity == 'info'
+        # 检查 Column 的默认值定义
+        severity_col = AuditLog.__table__.c.severity
+        assert severity_col.default.arg == 'info'
 
     def test_custom_severity_levels(self):
         """测试自定义严重级别"""
@@ -347,11 +350,12 @@ class TestAuditLogStatusValues:
     """审计日志状态值测试"""
 
     def test_default_status_is_success(self):
-        """测试默认状态是 success"""
+        """测试默认状态是 success（通过 Column 定义）"""
         from services.shared.models.audit import AuditLog
 
-        log = AuditLog(action='test')
-        assert log.status == 'success'
+        # 检查 Column 的默认值定义
+        status_col = AuditLog.__table__.c.status
+        assert status_col.default.arg == 'success'
 
     def test_custom_status_values(self):
         """测试自定义状态值"""

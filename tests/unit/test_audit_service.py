@@ -8,6 +8,14 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 
 
+# 全局 fixture 阻止 AuditLogger 创建文件处理器
+@pytest.fixture(autouse=True)
+def mock_audit_logger_setup():
+    """阻止 AuditLogger 创建日志文件"""
+    with patch("services.shared.audit.AuditLogger._setup_audit_logger"):
+        yield
+
+
 class TestAuditAction:
     """审计动作类型测试"""
 

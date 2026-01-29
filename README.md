@@ -230,6 +230,8 @@ one-data-studio/
 │   ├── model-api/            # Model service API (FastAPI)
 │   ├── openai-proxy/         # OpenAI-compatible proxy (FastAPI)
 │   ├── admin-api/            # Platform administration API (Flask)
+│   ├── ocr-service/          # OCR document recognition service
+│   ├── behavior-service/     # User behavior analytics service
 │   └── shared/               # Shared modules (auth, storage, utils)
 ├── web/                      # Frontend application (React + TypeScript)
 │   ├── src/
@@ -244,19 +246,21 @@ one-data-studio/
 │   ├── kubernetes/           # Kubernetes manifests
 │   ├── helm/                 # Helm charts
 │   ├── dockerfiles/          # Docker build files
+│   ├── argocd/               # ArgoCD configurations
+│   ├── monitoring/           # Monitoring stack configs
 │   └── scripts/              # Deployment scripts
 ├── scripts/                  # Development & operations scripts
 │   └── dev/                  # Development environment scripts
 ├── tests/                    # Test files
 │   ├── unit/                 # Unit tests
 │   ├── integration/          # Integration tests
-│   └── e2e/                  # End-to-end tests
+│   └── e2e/                  # End-to-end tests (Playwright)
 ├── docs/                     # Documentation
 │   ├── 01-architecture/      # Architecture documentation
 │   ├── 02-integration/       # Integration guides
-│   ├── 05-development/       # Development guides
-│   ├── 06-operations/        # Operations guides
-│   └── 07-user-guide/        # User documentation
+│   ├── 06-development/       # Development guides
+│   ├── 07-operations/        # Operations guides
+│   └── 08-user-guide/        # User documentation
 └── examples/                 # Usage examples
     ├── langchain/            # LangChain integration examples
     ├── python/               # Python SDK examples
@@ -287,9 +291,9 @@ Build sophisticated AI applications using the visual workflow builder. Combine R
 - [Four-Layer Stack](docs/01-architecture/four-layer-stack.md)
 - [Integration Guide](docs/02-integration/integration-overview.md)
 - [API Specifications](docs/02-integration/api-specifications.md)
-- [Development Guide](docs/05-development/poc-playbook.md)
-- [Operations Guide](docs/06-operations/operations-guide.md)
-- [User Guide](docs/07-user-guide/getting-started.md)
+- [Development Guide](docs/06-development/poc-playbook.md)
+- [Operations Guide](docs/07-operations/operations-guide.md)
+- [User Guide](docs/08-user-guide/getting-started.md)
 
 ## Contributing
 

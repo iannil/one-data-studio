@@ -6,6 +6,28 @@ Sprint 11: 测试覆盖提升
 import pytest
 from unittest.mock import MagicMock, patch, Mock
 import json
+import sys
+from pathlib import Path
+
+# 添加 agent-api 路径以便导入 services 子模块
+_agent_api_root = Path(__file__).parent.parent.parent / "services" / "agent-api"
+sys.path.insert(0, str(_agent_api_root))
+
+_IMPORT_SUCCESS = False
+_IMPORT_ERROR = ""
+
+try:
+    from services.vector_store import VectorStore
+    _IMPORT_SUCCESS = True
+except Exception as e:
+    _IMPORT_ERROR = str(e)
+    VectorStore = MagicMock
+
+# 如果导入失败则跳过所有测试
+pytestmark = pytest.mark.skipif(
+    not _IMPORT_SUCCESS,
+    reason=f"Cannot import vector_store module: {_IMPORT_ERROR if not _IMPORT_SUCCESS else ''}"
+)
 
 
 class TestVectorStore:

@@ -22,9 +22,10 @@ from typing import Dict, List, Any
 from enum import Enum
 from dataclasses import dataclass, field
 
-# 添加项目路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/data-api"))
+# 添加项目根目录（不添加 data-api 子目录，避免 services 命名空间冲突）
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 # ---------------------------------------------------------------------------
 # 直接从文件加载 table_fusion_service 模块，绕过 services/__init__.py
@@ -39,8 +40,8 @@ _spec = importlib.util.spec_from_file_location("table_fusion_service", _MODULE_P
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 
-# 注入到 sys.modules 以便 patch.object 和其他引用正常工作
-sys.modules["services.table_fusion_service"] = _mod
+# 注入到 sys.modules（使用不冲突的名称，避免污染 services 命名空间）
+sys.modules["_test_table_fusion_service"] = _mod
 
 TableFusionService = _mod.TableFusionService
 JoinKeyPair = _mod.JoinKeyPair
@@ -1520,7 +1521,7 @@ class TestHelperMethods:
 
     def test_get_table_fusion_service_singleton(self):
         """get_table_fusion_service 应返回单例"""
-        mod = sys.modules["services.table_fusion_service"]
+        mod = sys.modules["_test_table_fusion_service"]
         original = mod._table_fusion_service
         mod._table_fusion_service = None
 

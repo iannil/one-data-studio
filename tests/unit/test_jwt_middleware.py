@@ -220,6 +220,7 @@ class TestGetKeycloakPublicKey:
     def test_returns_cached_key_within_ttl(self, mock_get):
         """测试在 TTL 内返回缓存"""
         import services.shared.auth.jwt_middleware as module
+        from services.shared.auth.jwt_middleware import get_keycloak_public_key
 
         # 设置缓存
         cached_key = "-----BEGIN PUBLIC KEY-----\nCACHED\n-----END PUBLIC KEY-----"
@@ -234,6 +235,7 @@ class TestGetKeycloakPublicKey:
     def test_returns_cached_on_error(self, mock_get):
         """测试获取失败时返回缓存"""
         import services.shared.auth.jwt_middleware as module
+        from services.shared.auth.jwt_middleware import get_keycloak_public_key
 
         module._public_key_cache = "cached_key"
         module._public_key_cache_time = 0  # 缓存过期

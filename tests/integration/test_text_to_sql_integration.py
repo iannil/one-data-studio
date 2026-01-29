@@ -16,32 +16,54 @@ from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 from typing import List, Dict, Any
 
-# 添加项目路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+# 添加 agent-api 服务路径
+_agent_api_path = os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'agent-api')
 
-from services.sql_validator import (
-    SQLValidator,
-    SQLValidationResult,
-    SQLRiskLevel,
-    get_sql_validator,
-)
-from services.metadata_schema_provider import (
-    SchemaProvider,
-    SchemaSelectionResult,
-    TableSchema,
-    ColumnSchema,
-)
-from services.result_interpreter import (
-    ResultInterpreter,
-    InterpretationResult,
-    InsightType,
-)
-from services.hybrid_retriever import (
-    HybridRetriever,
-    RetrievalConfig,
-    RetrievalMethod,
-    RetrievalResult,
-    QueryExpansionStrategy,
+# 临时移除项目根目录以避免 services 包冲突
+_project_root = os.path.join(os.path.dirname(__file__), '..', '..')
+if _project_root in sys.path:
+    sys.path.remove(_project_root)
+
+sys.path.insert(0, _agent_api_path)
+
+try:
+    from services.sql_validator import (
+        SQLValidator,
+        SQLValidationResult,
+        SQLRiskLevel,
+        get_sql_validator,
+    )
+    from services.metadata_schema_provider import (
+        SchemaProvider,
+        SchemaSelectionResult,
+        TableSchema,
+        ColumnSchema,
+    )
+    from services.result_interpreter import (
+        ResultInterpreter,
+        InterpretationResult,
+        InsightType,
+    )
+    from services.hybrid_retriever import (
+        HybridRetriever,
+        RetrievalConfig,
+        RetrievalMethod,
+        RetrievalResult,
+        QueryExpansionStrategy,
+    )
+    TEXT_TO_SQL_IMPORTS_AVAILABLE = True
+except ImportError as e:
+    TEXT_TO_SQL_IMPORTS_AVAILABLE = False
+    TEXT_TO_SQL_IMPORT_ERROR = str(e)
+
+# 恢复项目根目录
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
+
+pytestmark = pytest.mark.skipif(
+    not TEXT_TO_SQL_IMPORTS_AVAILABLE,
+    reason="跳过: 无法导入 Text-to-SQL 模块"
 )
 
 

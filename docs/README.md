@@ -14,7 +14,8 @@
 | 快速开始 | [QUICKSTART](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
 | 当前状态 | [current-status](03-progress/current-status.md) | 项目进度追踪 |
 | 路线图 | [roadmap](05-planning/roadmap.md) | 开发计划与里程碑 |
-| 代码审计 | [code-audit](03-progress/code-audit-2026-01-28.md) | 最新代码审计报告 |
+| 功能清单 | [features](00-project/features.md) | 功能列表与完成度 |
+| 安全概览 | [security-overview](07-operations/security-overview.md) | 安全策略与配置 |
 
 ---
 
@@ -42,6 +43,7 @@ docs/
 | 文档 | 说明 |
 |------|------|
 | [README](00-project/README.md) | 仓库概述和使用指南 |
+| [features](00-project/features.md) | 功能清单与完成度 |
 
 ---
 
@@ -129,6 +131,7 @@ docs/
 | [灾备恢复](07-operations/disaster-recovery.md) | 灾备与恢复方案 |
 | [安全扫描报告](07-operations/security-scan-report.md) | 安全扫描与审计报告 |
 | [安全加固](07-operations/security-hardening.md) | 安全加固指南 |
+| [安全概览](07-operations/security-overview.md) | 安全策略与配置总览 |
 
 ---
 
@@ -153,6 +156,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-01-29 | 文档整理：移动 FEATURES.md 到 00-project/features.md，移动 SECURITY.md 到 07-operations/security-overview.md，删除重复文档 |
 | 2026-01-29 | 新增项目依赖全面评估报告 `01-architecture/dependency-assessment.md` |
 | 2026-01-29 | 文档整理：归档过时测试文档，创建技术债务清单，添加 Behavior Service 文档，创建代码清理指南 |
 | 2026-01-28 | 文档整理：修复目录编号冲突，归类散落文档，更新代码统计，创建代码审计报告 |

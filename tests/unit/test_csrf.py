@@ -7,10 +7,12 @@ import pytest
 import time
 from unittest.mock import Mock, patch, MagicMock
 
-# Add the services/shared path
+# Add services/shared path for direct imports from security module
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../services/shared'))
+_services_shared = os.path.join(os.path.dirname(__file__), '../../services/shared')
+if _services_shared not in sys.path:
+    sys.path.append(_services_shared)  # Use append to not interfere with project root
 
 
 class TestCSRFProtection:

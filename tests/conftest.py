@@ -72,16 +72,32 @@ def setup_test_env():
 setup_test_env()
 
 # 添加服务路径到 sys.path
+# 注意：项目根目录必须在最前面，这样 `import services` 才能找到正确的顶层 services 包
+# 而不是 services/agent-api/services/ 等子目录中的 services 包
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "services"))
-sys.path.insert(0, str(project_root / "services" / "agent-api"))
-sys.path.insert(0, str(project_root / "services" / "data-api"))
-sys.path.insert(0, str(project_root / "services" / "data-api" / "src"))
-sys.path.insert(0, str(project_root / "services" / "model-api"))
-sys.path.insert(0, str(project_root / "services" / "shared"))
-sys.path.insert(0, str(project_root / "services" / "admin-api"))
-sys.path.insert(0, str(project_root / "services" / "openai-proxy"))
+
+# 先添加服务特定路径（它们会被 insert(0) 放到前面）
+# 注意：不添加 data-api 目录，因为它包含 services/ 子目录，会导致命名空间冲突
+service_paths = [
+    str(project_root / "services" / "openai-proxy"),
+    str(project_root / "services" / "admin-api"),
+    str(project_root / "services" / "shared"),
+    str(project_root / "services" / "data-api" / "src"),
+    # 不添加 services/data-api - 会导致 services 命名空间冲突
+]
+for path in service_paths:
+    if path not in sys.path:
+        sys.path.append(path)  # 使用 append 而不是 insert(0)
+
+# 项目根目录必须在最前面，确保 from services.xxx import 能正确找到顶层 services 包
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# ==================== 预加载 services 包 ====================
+# 在任何测试导入之前，确保顶层 services 包被正确加载到 sys.modules
+# 这可以防止后续测试文件意外创建错误的 services 命名空间
+import services
+import services.shared
 
 try:
     import pymysql

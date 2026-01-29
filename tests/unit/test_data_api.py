@@ -8,6 +8,13 @@ Sprint 24: 测试覆盖率扩展
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import json
+import sys
+from pathlib import Path
+
+# 添加 data-api 路径
+_data_api_root = Path(__file__).parent.parent.parent / "services" / "data-api"
+sys.path.insert(0, str(_data_api_root))
+sys.path.insert(0, str(_data_api_root / "src"))
 
 
 class TestSQLSanitizer:
@@ -226,8 +233,6 @@ class TestAPIHealthEndpoint:
     def client(self):
         """创建测试客户端"""
         try:
-            import sys
-            sys.path.insert(0, '/app')
             from app import app
             app.config['TESTING'] = True
             with app.test_client() as client:

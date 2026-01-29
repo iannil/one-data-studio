@@ -26,11 +26,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import AsyncMock, MagicMock, Mock, patch, PropertyMock
 
-# 添加项目路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/shared"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../services/agent-api"))
+# 添加项目根目录（不直接添加 services 目录，避免命名空间冲突）
+_project_root = os.path.join(os.path.dirname(__file__), "../..")
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 logger = logging.getLogger(__name__)
 
