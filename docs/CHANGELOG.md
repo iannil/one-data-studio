@@ -4,6 +4,43 @@
 
 ---
 
+## [1.3.3] - 2026-01-30
+
+### Fixed
+
+- **修复 sql_upper 未定义变量 BUG**
+  - 位置：`services/agent-api/engine/base_tools.py:380`
+  - 问题：在 mock 数据模式下使用了未定义的 `sql_upper` 变量
+  - 解决：在第 379 行后添加 `sql_upper = sql.upper()`
+
+### Added
+
+- **创建文档标准和模板目录**
+  - `docs/progress/` - 进行中的修改文档
+  - `docs/reports/` - 验收报告
+  - `docs/reports/completed/` - 已完成修改的文档
+  - `docs/standards/` - 文档标准
+  - `docs/templates/` - 文档模板
+
+- **新增文档规范**
+  - `docs/standards/naming-conventions.md` - 命名规范
+  - `docs/standards/document-structure.md` - 文档结构规范
+  - `docs/templates/progress-template.md` - 进度更新模板
+  - `docs/templates/completion-report.md` - 完成报告模板
+
+- **生成项目进展报告**
+  - `docs/reports/project-status-2026-01-30.md` - 综合项目进展报告
+
+### Removed
+
+- **清理冗余文件**（共 508MB）
+  - `/htmlcov/` (23MB) - 测试覆盖率缓存
+  - `/test-results/` (16MB) - 测试结果缓存
+  - `/web/dist/` (3.8MB) - 前端构建输出
+  - `/tests/e2e/test-results/` (465MB) - E2E 测试结果缓存
+
+---
+
 ## [1.3.2] - 2026-01-29
 
 ### Added
@@ -677,6 +714,7 @@
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| 1.3.3 | 2026-01-30 | 修复 sql_upper BUG；创建文档标准和模板；清理冗余文件 |
 | 1.3.2 | 2026-01-29 | 新增项目依赖全面评估报告 |
 | 1.3.1 | 2026-01-29 | 文档整理：归档过时测试文档，创建技术债务清单 |
 | 1.3.0 | 2026-01-28 | 文档整理：目录编号修复、散落文档归类、代码统计更新、代码审计报告 |

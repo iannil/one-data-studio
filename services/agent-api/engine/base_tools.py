@@ -377,6 +377,7 @@ class SQLQueryTool(BaseTool):
                     "SQL query returning mock data. This is only acceptable in development/testing."
                 )
                 # 模拟数据返回
+                sql_upper = sql.upper()
                 if "SELECT" in sql_upper:
                     return {
                         "success": True,

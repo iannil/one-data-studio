@@ -33,6 +33,11 @@ docs/
 ├── 07-operations/       # 运维指南
 ├── 08-user-guide/       # 用户手册
 ├── 09-requirements/     # 需求文档
+├── progress/            # 进行中的修改（未完成）
+├── reports/             # 验收报告与项目进展报告
+│   └── completed/       # 已完成修改的文档
+├── standards/           # 文档标准和规范
+├── templates/           # 文档模板
 └── 99-archived/         # 归档文档
 ```
 
@@ -152,10 +157,23 @@ docs/
 
 ---
 
+## 文档管理
+
+| 目录 | 说明 |
+|------|------|
+| [进行中的修改](progress/README.md) | 未完成的修改文档存放位置 |
+| [验收报告](reports/README.md) | 验收报告与项目进展报告 |
+| [已完成修改](reports/completed/README.md) | 已完成并验收通过的修改文档 |
+| [文档标准](standards/README.md) | 文档命名和结构规范 |
+| [文档模板](templates/README.md) | 进度更新和完成报告模板 |
+
+---
+
 ## 文档更新记录
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-01-30 | 创建文档标准和模板目录；修复 sql_upper BUG；清理冗余文件（508MB） |
 | 2026-01-29 | 文档整理：移动 FEATURES.md 到 00-project/features.md，移动 SECURITY.md 到 07-operations/security-overview.md，删除重复文档 |
 | 2026-01-29 | 新增项目依赖全面评估报告 `01-architecture/dependency-assessment.md` |
 | 2026-01-29 | 文档整理：归档过时测试文档，创建技术债务清单，添加 Behavior Service 文档，创建代码清理指南 |
