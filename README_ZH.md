@@ -9,288 +9,619 @@
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.27%2B-326ce5.svg)](https://kubernetes.io/)
 [![Docker](https://img.shields.io/badge/Docker-20.10%2B-2496ED.svg)](https://www.docker.com/)
 
-**企业级 DataOps + MLOps + LLMOps 融合平台**
+企业级 DataOps + MLOps + LLMOps 融合平台
 
-[功能特性](#功能特性) | [快速开始](#快速开始) | [架构设计](#架构设计) | [文档](#文档) | [贡献指南](#贡献指南) | [English](README.md)
+*从原始数据到智能应用 —— 一站式解决方案*
+
+[功能特性](#-功能特性) | [快速开始](#-快速开始) | [架构设计](#-架构设计) | [应用场景](#-应用场景) | [竞品对比](#-竞品对比) | [文档](#-文档) | [English](README.md)
 
 </div>
 
 ---
 
-## 项目简介
+## 什么是 ONE-DATA-STUDIO？
 
-**ONE-DATA-STUDIO** 是一个开源的企业级平台，融合了三个关键的 AI 基础设施层：
+ONE-DATA-STUDIO 是一个开源的企业级平台，将三个关键的 AI 基础设施层融合为一个统一系统：
 
-- **Data** - 数据治理与开发平台（DataOps 层）
-- **Model** - 云原生 MLOps 平台（模型/计算层）
-- **Agent** - 大模型应用开发平台（LLMOps 层）
+| 层级 | 名称 | 描述 |
+| ------ | ------ | ------ |
+| Data | 数据运营平台 | 数据集成、ETL、治理、特征存储、向量存储 |
+| Model | 机器学习平台 | Jupyter Notebook、分布式训练、模型注册、模型服务 |
+| Agent | 大模型应用平台 | RAG 流水线、Agent 编排、工作流构建、Prompt 管理 |
 
-该平台打通了从**原始数据治理**到**模型训练部署**，再到**生成式 AI 应用构建**的完整价值链。
+与将这三层作为独立系统的传统平台不同，ONE-DATA-STUDIO 在各层之间创建了无缝的集成点，使企业能够从原始数据构建端到端的 AI 解决方案直至生产应用。
 
-## 为什么选择 ONE-DATA-STUDIO？
+### 核心价值
 
-### 打破数据与 AI 的孤岛
+1. 完整价值链：原始数据 → 治理后的数据集 → 训练好的模型 → 部署的应用
+2. 统一治理：数据血缘、模型血缘、应用日志的统一视图
+3. 私有安全：完全本地化部署，数据、算力、模型全在企业内部
+4. 生产就绪：企业级安全、监控、可扩展性经过实战验证
 
-数据团队（使用 Data 平台）和算法团队（使用 Model 平台）往往各自为政。我们的整合实现了**无缝的特征平台**，算法工程师可以直接使用经过治理的高质量数据，无需重复清洗。
-
-### 结构化与非结构化数据的统一
-
-Data 平台擅长处理结构化数据，Agent 平台擅长处理非结构化文档。两者结合后，企业可以构建**"ChatBI"**——既能查询文档知识库，又能用自然语言查询数据库中的销售报表（Text-to-SQL）。
-
-### 私有化大模型落地的完整闭环
-
-许多企业只想用 Agent 平台做应用，但缺乏模型微调能力；或者只有 Model 平台训练了模型，但缺乏好用的应用构建工具。
-
-**三者结合 = 私有数据 (Data) + 私有算力/模型 (Model) + 私有应用 (Agent)**。这构成了最安全的企业级 AGI 解决方案。
-
-### 全生命周期治理
-
-从数据血缘（Data 平台）到模型血缘（Model 平台）再到应用日志，整个链路可追溯。如果 AI 回答出错，可以一路追溯是 Prompt 问题、模型过拟合，还是原始数据本身就是脏数据。
+---
 
 ## 功能特性
 
-### 数据运营 (DataOps)
+### Data 层（数据运营）
 
-- 数据集成和 ETL 流水线
-- 元数据管理和数据治理
-- 面向机器学习的特征存储
-- 面向 RAG 应用的向量存储（Milvus）
+| 功能 | 描述 | 实现方式 |
+| ------ | ------ | ---------- |
+| 数据集成 | 连接 50+ 种数据源（数据库、API、文件） | Flask 连接器 + 异步 I/O |
+| ETL 流水线 | 可视化流水线构建器，支持 Flink/Spark 执行 | 声明式 DAG 定义 |
+| 元数据管理 | 自动 Schema 发现和编目 | OpenMetadata 集成 |
+| 数据质量 | 规则验证和异常检测 | 自定义质量引擎 |
+| 数据血缘 | 追踪从源到消费的数据流 | 列级血缘追踪 |
+| 特征存储 | 统一的 ML 模型特征管理 | MinIO + 版本化数据集 |
+| 向量存储 | 面向 RAG 的高性能向量数据库 | Milvus 2.3 集成 |
 
-### 机器学习运营 (MLOps)
+### Model 层（机器学习运营）
 
-- Jupyter Notebook 开发环境
-- 基于 Ray 的分布式模型训练
-- 模型注册和版本管理
-- 基于 vLLM 的模型服务（OpenAI 兼容 API）
+| 功能 | 描述 | 实现方式 |
+| ------ | ------ | ---------- |
+| Notebook 环境 | 支持 GPU 的 JupyterHub | K8s 原生部署 |
+| 分布式训练 | 多 GPU、多节点训练 | Ray 集成 |
+| 模型注册 | 模型版本控制 | MLflow 兼容 API |
+| 模型服务 | 高吞吐量推理 | vLLM + OpenAI 兼容 API |
+| 实验追踪 | 记录指标、参数、产物 | 内置追踪系统 |
+| A/B 部署 | 渐进式发布和流量分割 | Istio 服务网格 |
 
-### 大模型运营 (LLMOps)
+### Agent 层（大模型运营）
 
-- RAG（检索增强生成）流水线
-- Agent 编排和可视化工作流构建器
-- Prompt 管理和模板
-- 知识库管理
+| 功能 | 描述 | 实现方式 |
+| ------ | ------ | ---------- |
+| RAG 流水线 | 端到端检索增强生成 | LangChain + Milvus |
+| Agent 编排 | 支持工具使用的多 Agent 系统 | 自定义 Agent 框架 |
+| 可视化工作流 | 拖拽式工作流构建器 | ReactFlow 画布 |
+| Prompt 管理 | 带版本控制的模板库 | 支持 A/B 测试 |
+| 知识库 | 文档摄取和分块 | 支持 PDF、DOCX、Markdown |
+| Text-to-SQL | 自然语言数据库查询 | 元数据增强的 Prompt |
+| Token 追踪 | 用量监控和成本控制 | 按请求统计 Token |
 
 ### 平台管理
 
-- 基于 Keycloak 的统一用户管理和 SSO
-- 基于角色的访问控制（RBAC）
-- 多租户支持
-- 全面的审计日志
+| 功能 | 描述 | 实现方式 |
+| ------ | ------ | ---------- |
+| 身份管理 | 支持 OIDC/SAML 的 SSO | Keycloak 23.0 |
+| 访问控制 | 细粒度 RBAC | 基于角色的权限 |
+| 多租户 | 隔离的工作空间 | 命名空间级隔离 |
+| 审计日志 | 全面的活动追踪 | 可搜索的审计轨迹 |
+| 可观测性 | 指标、链路追踪、日志 | Prometheus + Grafana + Jaeger |
+
+---
 
 ## 架构设计
 
+### 四层架构
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    L4 应用编排层 (Agent)                          │
-│                RAG 流水线 | Agent 编排 | 工作流                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↕ OpenAI API / 元数据
-┌─────────────────────────────────────────────────────────────────┐
-│                   L3 算法引擎层 (Model)                           │
-│               Notebook | 分布式训练 | 模型服务化                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↕ 挂载数据卷
-┌─────────────────────────────────────────────────────────────────┐
-│                    L2 数据底座层 (Data)                           │
-│           数据集成 | ETL | 数据治理 | 特征存储 | 向量存储            │
-└─────────────────────────────────────────────────────────────────┘
-                              ↕ 存储协议
-┌─────────────────────────────────────────────────────────────────┐
-│                    L1 基础设施层 (Kubernetes)                     │
-│              CPU/GPU 资源池 | 存储 | 网络 | 监控                   │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       L4 应用编排层 (Agent)                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│  │ RAG 流水线  │   │ Agent 系统   │  │ 工作流       │  │ Text-to-SQL │      │
+│  │ • 嵌入      │   │ • 规划      │  │ • ReactFlow │  │ • Schema    │      │
+│  │ • 检索      │   │ • 工具调用   │  │ • 节点       │  │ • SQL 生成  │      │
+│  │ • 生成      │   │ • 记忆      │  │ • 执行       │  │ • 结果      │      │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
+└───────────────────────────────────────────────────────────────────────────┘
+                        ↕ OpenAI 兼容 API / 元数据注入
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       L3 算法引擎层 (Model)                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│  │ Notebook    │  │ 分布式      │  │ 模型        │  │ 推理        │      │
+│  │ • Jupyter   │  │ 训练        │  │ 注册中心    │  │ • vLLM      │      │
+│  │ • GPU       │  │ • Ray       │  │ • 版本      │  │ • 批处理    │      │
+│  │ • 内核      │  │ • 多 GPU    │  │ • 产物      │  │ • 弹性伸缩  │      │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
+└───────────────────────────────────────────────────────────────────────────┘
+                        ↕ 数据集挂载 / 特征获取
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       L2 数据底座层 (Data)                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│  │ 数据集成     │  │ ETL 引擎     │  │ 数据治理     │  │ 存储        │      │
+│  │ • 连接器     │  │ • Flink     │  │ • 元数据    │  │ • MinIO     │      │
+│  │ • CDC       │  │ • Spark     │  │ • 质量      │  │ • Milvus    │      │
+│  │ • 流式       │  │ • 转换      │  │ • 血缘      │  │ • Redis     │      │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
+└───────────────────────────────────────────────────────────────────────────┘
+                        ↕ 存储协议 / 资源调度
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       L1 基础设施层 (Kubernetes)                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│  │ 计算        │  │ 存储         │  │ 网络         │  │ 可观测性    │      │
+│  │ • CPU 池    │  │ • PVC       │  │ • Istio     │  │ • Prometheus│      │
+│  │ • GPU 池    │  │ • MinIO     │  │ • Ingress   │  │ • Grafana   │      │
+│  │ • 自动伸缩  │  │ • HDFS      │  │ • DNS       │  │ • Jaeger    │      │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 核心集成点
+### 核心服务
 
-| 集成方向 | 描述 | 完成度 |
-| ---------- | ------ | -------- |
-| **Data → Model** | 统一存储协议与数据集版本化 | 90% |
-| **Model → Agent** | OpenAI 兼容的模型即服务 API | 85% |
-| **Data → Agent** | 基于元数据的 Text-to-SQL | 75% |
+| 服务 | 端口 | 框架 | 描述 |
+| ------ | ------ | ------ | ------ |
+| web | 3000 | React + Vite | 主应用前端 |
+| agent-api | 8000 | Flask | LLMOps 编排服务 |
+| data-api | 8001 | Flask | 数据治理服务 |
+| model-api | 8002 | FastAPI | MLOps 管理服务 |
+| openai-proxy | 8003 | FastAPI | OpenAI 兼容代理 |
+| admin-api | 8004 | Flask | 平台管理 |
+| ocr-service | 8005 | FastAPI | 文档识别 |
+| behavior-service | 8006 | Flask | 用户分析 |
 
-## 技术栈
+### 集成架构
 
-### 前端
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            集成点                                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────┐     Data → Model (90%)      ┌──────────┐                  │
+│  │   Data   │ ─────────────────────────▶  │  Model   │                  │
+│  │   层     │   • 统一存储（MinIO）        │   层     │                  │
+│  │          │   • 数据集版本化             │          │                  │
+│  │          │   • 自动数据集注册           │          │                  │
+│  └──────────┘                             └──────────┘                  │
+│       │                                        │                         │
+│       │                                        │                         │
+│       │  Data → Agent (75%)    Model → Agent (85%)                      │
+│       │  • 元数据注入          • OpenAI API                              │
+│       │  • Text-to-SQL         • vLLM 服务                              │
+│       │  • Schema 上下文       • 模型路由                                │
+│       ▼                                        ▼                         │
+│                        ┌──────────┐                                      │
+│                        │  Agent   │                                      │
+│                        │   层     │                                      │
+│                        └──────────┘                                      │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-| 技术 | 版本 | 用途 |
-| ------ | ------ | ------ |
-| React | 18.3 | UI 框架 |
-| TypeScript | 5.4 | 类型安全 |
-| Ant Design | 5.14 | UI 组件库 |
-| React Router | 6.22 | 路由管理 |
-| React Query | 5.24 | 服务端状态管理 |
-| Zustand | 4.5 | 客户端状态管理 |
-| ReactFlow | 11.10 | 工作流画布 |
-| Vite | 5.1 | 构建工具 |
-| Vitest | 1.3 | 测试框架 |
-
-### 后端服务
-
-| 技术 | 版本 | 用途 |
-| ------ | ------ | ------ |
-| Python | 3.10+ | 运行时 |
-| Flask | - | Web 框架 (Data, Agent) |
-| FastAPI | - | Web 框架 (OpenAI Proxy, Model) |
-| MySQL | 8.0 | 持久化存储 |
-| Redis | 7.0 | 缓存和会话 |
-| MinIO | Latest | S3 兼容对象存储 |
-| Milvus | 2.3 | 向量数据库 |
-
-### 基础设施
-
-| 技术 | 版本 | 用途 |
-| ------ | ------ | ------ |
-| Kubernetes | 1.27+ | 容器编排 |
-| Docker | 20.10+ | 容器化 |
-| Helm | 3.13+ | 包管理 |
-| Keycloak | 23.0 | 身份认证与访问管理 |
-| Prometheus | - | 指标采集 |
-| Grafana | - | 监控面板 |
+---
 
 ## 快速开始
 
 ### 前置要求
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- Node.js 18+（前端开发需要）
-- Python 3.10+（后端开发需要）
-- kubectl 1.25+（Kubernetes 部署需要）
-- Helm 3.x（Helm 部署需要）
+| 要求 | 版本 | 说明 |
+| ------ | ------ | ------ |
+| Docker | 20.10+ | 所有部署方式都需要 |
+| Docker Compose | 2.0+ | 本地开发使用 |
+| Node.js | 18+ | 前端开发使用 |
+| Python | 3.10+ | 后端开发使用 |
+| kubectl | 1.25+ | Kubernetes 部署使用 |
+| Helm | 3.x | Helm 部署使用 |
 
-### 方式一：Docker Compose（推荐开发环境）
+### 方式一：Docker Compose（开发环境）
 
 ```bash
 # 克隆仓库
 git clone https://github.com/iannil/one-data-studio.git
 cd one-data-studio
 
-# 复制环境配置
+# 配置环境
 cp .env.example .env
-# 编辑 .env 文件，设置必要的密码（MYSQL_PASSWORD, REDIS_PASSWORD 等）
+# 编辑 .env 设置密码：MYSQL_PASSWORD, REDIS_PASSWORD, MINIO_SECRET_KEY 等
 
 # 启动所有服务
 docker-compose -f deploy/local/docker-compose.yml up -d
 
-# 查看服务状态
+# 查看状态
 docker-compose -f deploy/local/docker-compose.yml ps
+
+# 查看日志
+docker-compose -f deploy/local/docker-compose.yml logs -f
 ```
 
-或使用 Makefile 快捷命令：
+使用 Makefile：
 
 ```bash
-make dev        # 启动开发环境
-make dev-status # 查看服务状态
-make dev-logs   # 查看服务日志
-make dev-stop   # 停止所有服务
+make dev          # 启动开发环境
+make dev-status   # 查看服务状态
+make dev-logs     # 查看服务日志
+make dev-stop     # 停止所有服务
+make dev-clean    # 清理数据卷
 ```
 
-### 方式二：Kubernetes（推荐生产环境）
+### 方式二：Kubernetes（生产环境）
 
 ```bash
-# 创建 Kind 集群（本地测试用）
+# 创建本地 Kind 集群（用于测试）
 make kind-cluster
 
-# 部署所有服务
-make install
+# 使用 Kustomize 安装
+kubectl apply -k deploy/kubernetes/overlays/production
+
+# 或使用 Helm 安装
+helm install one-data deploy/helm/charts/one-data \
+  --namespace one-data \
+  --create-namespace \
+  --values deploy/helm/charts/one-data/values-production.yaml
 
 # 查看状态
-make status
+kubectl get pods -n one-data
 
-# 转发端口访问服务
+# 转发端口以本地访问
 make forward
 ```
 
 ### 访问平台
 
-| 服务 | 地址 | 说明 |
+| 服务 | 地址 | 凭证 |
 | ------ | ------ | ------ |
-| Web UI | <http://localhost:3000> | 主应用界面 |
-| Agent API | <http://localhost:8000> | 应用编排 API |
-| Data API | <http://localhost:8001> | 数据治理 API |
-| Model API | <http://localhost:8002> | 模型服务 API |
-| OpenAI Proxy | <http://localhost:8003> | OpenAI 兼容代理 |
-| Admin API | <http://localhost:8004> | 平台管理 API |
-| Keycloak | <http://localhost:8080> | 身份管理 |
-| MinIO 控制台 | <http://localhost:9001> | 对象存储控制台 |
-| Prometheus | <http://localhost:9090> | 指标监控 |
-| Grafana | <http://localhost:3001> | 监控面板 (admin/admin) |
+| Web UI | <http://localhost:3000> | - |
+| Agent API | <http://localhost:8000/docs> | - |
+| Data API | <http://localhost:8001/docs> | - |
+| Model API | <http://localhost:8002/docs> | - |
+| OpenAI Proxy | <http://localhost:8003/docs> | API Key |
+| Keycloak | <http://localhost:8080> | admin/admin |
+| MinIO | <http://localhost:9001> | minioadmin/minioadmin |
+| Grafana | <http://localhost:3001> | admin/admin |
+| Prometheus | <http://localhost:9090> | - |
+
+---
+
+## 应用场景
+
+### 1. 企业知识中台
+
+场景：企业各部门有大量分散的文档——政策、流程、技术文档、FAQ。员工难以快速找到所需信息。
+
+ONE-DATA-STUDIO 解决方案：
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  文档       │    │   Data      │    │   Agent     │    │   对话      │
+│  来源       │───▶│   层        │───▶│   层        │───▶│   界面      │
+│             │    │             │    │             │    │             │
+│ • PDF       │    │ • 分块      │    │ • RAG       │    │ • 问答      │
+│ • DOCX      │    │ • 嵌入      │    │ • 重排序    │    │ • 引用      │
+│ • Markdown  │    │ • Milvus    │    │ • 生成      │    │ • 历史      │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+收益：
+
+- 员工查询响应时间减少 70%
+- 自动文档更新和版本控制
+- 每个回答都有来源引用
+
+### 2. ChatBI（对话式商业智能）
+
+场景：业务人员需要数据洞察但不会写 SQL。每次查询都依赖数据分析师，形成瓶颈。
+
+ONE-DATA-STUDIO 解决方案：
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  自然语言   │    │   Data      │    │   Agent     │    │   可视化    │
+│  查询       │───▶│   层        │───▶│   层        │───▶│   结果      │
+│             │    │             │    │             │    │             │
+│             │    │ • 元数据    │    │ • Text2SQL  │    │ • 图表      │
+│ "显示Q4     │    │ • Schema    │    │ • 查询      │    │ • 表格      │
+│  各地区     │    │ • 关系      │    │ • 验证      │    │ • 导出      │
+│  销售额"   │    │ • 上下文    │    │ • 执行      │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+收益：
+
+- 无需 SQL 知识即可自助分析
+- 数据分析师临时查询工作量减少 80%
+- 元数据增强的复杂查询准确性
+
+### 3. 私有化大模型部署
+
+场景：企业想使用大模型但有严格的数据隐私要求。云端 API 不是可选项。
+
+ONE-DATA-STUDIO 解决方案：
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  私有       │    │   Model     │    │   OpenAI    │    │   Agent     │
+│  数据       │───▶│   层        │───▶│   Proxy     │───▶│   应用      │
+│             │    │             │    │             │    │             │
+│ • 训练      │    │ • 微调      │    │ • 兼容 API  │    │ • 对话      │
+│   数据      │    │ • vLLM      │    │ • 路由      │    │ • RAG       │
+│ • 文档      │    │ • 多 GPU    │    │ • 限流      │    │ • 工作流    │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+收益：
+
+- 100% 本地化部署
+- OpenAI 兼容 API，易于集成
+- 私有 GPU 集群成本可控
+
+### 4. 工业质检
+
+场景：生产线产生传感器数据。提前检测异常可以防止高成本的缺陷和停机。
+
+ONE-DATA-STUDIO 解决方案：
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  IoT        │    │   Data      │    │   Model     │    │   告警      │
+│  传感器     │───▶│   层        │───▶│   层        │───▶│   系统      │
+│             │    │             │    │             │    │             │
+│ • 温度      │    │ • 流式      │    │ • 异常      │    │ • 阈值      │
+│ • 压力      │    │ • 特征      │    │ • 检测      │    │ • 仪表盘    │
+│ • 振动      │    │ • 存储      │    │ • 实时      │    │ • 动作      │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+收益：
+
+- 亚秒级实时异常检测
+- 训练和推理统一特征存储
+- 从预测到源数据的全链路可追溯
+
+### 5. 自定义 AI 工作流自动化
+
+场景：复杂业务流程需要多种 AI 能力——文档提取、决策制定、动作执行。
+
+ONE-DATA-STUDIO 解决方案：
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      可视化工作流构建器                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐          │
+│  │ 触发器  │───▶│  OCR    │───▶│  LLM    │───▶│ 动作    │          │
+│  │ (邮件)  │    │ 提取    │    │ 决策    │    │ 执行    │          │
+│  └─────────┘    └─────────┘    └─────────┘    └─────────┘          │
+│                      │              │              │                 │
+│                      ▼              ▼              ▼                 │
+│               ┌──────────────────────────────────────┐              │
+│               │           执行引擎                    │              │
+│               │  • 并行执行                           │              │
+│               │  • 错误处理                           │              │
+│               │  • 状态管理                           │              │
+│               └──────────────────────────────────────┘              │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+收益：
+
+- 可视化构建器零代码创建工作流
+- 单个流程组合任意 AI 能力
+- 内置调度和监控
+
+---
+
+## 竞品对比
+
+### 对比独立平台
+
+| 方面 | ONE-DATA-STUDIO | 独立工具组合 |
+| ------ | ----------------- | -------------- |
+| Data + ML + LLM | 单一集成平台 | 3+ 个独立工具（Airflow + MLflow + LangChain） |
+| 数据到模型流水线 | 原生集成 | 手动数据导出/导入 |
+| 模型到应用流水线 | OpenAI 兼容 API | 自定义集成代码 |
+| 统一治理 | 单一审计轨迹 | 分散的日志 |
+| 学习曲线 | 学习一个平台 | 掌握多个工具 |
+| 部署 | 单个 Helm Chart | 多个部署 |
+| 成本 | 单一基础设施 | 多套基础设施 |
+
+### 对比云平台
+
+| 方面 | ONE-DATA-STUDIO | 云平台（Databricks、SageMaker、Vertex AI） |
+| ------ | ----------------- | ------------------------------------------- |
+| 部署 | 本地、任何云、混合 | 锁定特定云厂商 |
+| 数据隐私 | 数据留在本地 | 数据在厂商云中 |
+| 定价 | 开源（免费） | 按用量计费（规模化后昂贵） |
+| 定制化 | 完整源代码访问 | 有限定制 |
+| LLM 集成 | 内置 LLMOps 层 | 需要独立 LLM 工具 |
+| 厂商锁定 | 无 | 高 |
+
+### 对比其他开源平台
+
+| 功能 | ONE-DATA-STUDIO | LangChain | MLflow | Apache Airflow |
+| ------ | ----------------- | ----------- | -------- | ---------------- |
+| 数据集成 | ✅ 完整 | ❌ 无 | ❌ 无 | ✅ 基础 |
+| ETL 流水线 | ✅ 可视化 | ❌ 无 | ❌ 无 | ✅ 代码式 |
+| 特征存储 | ✅ 内置 | ❌ 无 | ❌ 无 | ❌ 无 |
+| 向量存储 | ✅ Milvus | ✅ 集成 | ❌ 无 | ❌ 无 |
+| 模型训练 | ✅ 分布式 | ❌ 无 | ✅ 仅追踪 | ❌ 无 |
+| 模型服务 | ✅ vLLM | ❌ 无 | ✅ 基础 | ❌ 无 |
+| RAG 流水线 | ✅ 完整 | ✅ 完整 | ❌ 无 | ❌ 无 |
+| Agent 框架 | ✅ 内置 | ✅ 主要功能 | ❌ 无 | ❌ 无 |
+| 可视化工作流 | ✅ ReactFlow | ❌ 无 | ❌ 无 | ❌ 代码式 |
+| Web UI | ✅ 完整 | ❌ 无 | ✅ 追踪 UI | ✅ DAG UI |
+| 多租户 | ✅ 完整 | ❌ 无 | ❌ 无 | ❌ 有限 |
+| 企业认证 | ✅ Keycloak | ❌ 无 | ❌ 无 | ❌ 有限 |
+
+### 何时选择 ONE-DATA-STUDIO
+
+✅ 最适合：
+
+- 需要完整数据到应用流水线的企业
+- 需要本地化部署的组织
+- 希望统一平台而非工具碎片化的团队
+- 同时有结构化数据和文档知识需求的公司
+- 需要完整审计轨迹和治理的项目
+
+❌ 考虑其他方案如果：
+
+- 只需要单一能力（如只需要 MLflow 做实验追踪）
+- 云优先组织且接受厂商锁定
+- 需要最小基础设施且偏好 SaaS 方案
+- 团队规模很小（< 5 人）且需求简单
+
+---
+
+## 技术规格
+
+### 代码统计
+
+| 组件 | 文件数 | 代码行数 |
+| ------ | -------- | ---------- |
+| Python 后端 | 289 | ~142,000 |
+| TypeScript 前端 | 232 | ~120,000 |
+| 测试代码 | 135+ | ~32,000 |
+| 部署配置 | 155+ | ~15,000 |
+| 总计 | 630+ | ~300,000 |
+
+### 技术栈
+
+前端：
+
+- React 18.3 + TypeScript 5.4
+- Ant Design 5.14 UI 组件
+- ReactFlow 11.10 工作流画布
+- Zustand 4.5 状态管理
+- React Query 5.24 服务端状态
+- Vite 5.1 构建工具
+
+后端：
+
+- Python 3.10+ 运行时
+- Flask 3.0（Data/Agent/Admin API）
+- FastAPI（Model/Proxy API）
+- SQLAlchemy 2.0 + Alembic 迁移
+- Celery 后台任务
+
+存储：
+
+- MySQL 8.0 关系数据
+- Redis 7.0 缓存和会话
+- MinIO S3 兼容对象存储
+- Milvus 2.3 向量嵌入
+- Elasticsearch 8.10 搜索
+
+基础设施：
+
+- Kubernetes 1.27+ 编排
+- Helm 3.x 包管理
+- Istio 服务网格
+- Keycloak 23.0 身份管理
+- Prometheus + Grafana 监控
+- Jaeger 分布式追踪
+
+### 安全特性
+
+| 类别 | 功能 |
+| ------ | ------ |
+| 认证 | JWT Token、Keycloak SSO、OIDC/SAML 支持 |
+| 授权 | RBAC、细粒度权限、多租户隔离 |
+| 网络 | TLS/HTTPS、HSTS 头、CORS 配置 |
+| 数据 | SQL 注入防护、输入净化、静态加密 |
+| 审计 | 全面日志、可搜索审计轨迹、合规支持 |
+
+### 性能指标
+
+| 指标 | 值 | 说明 |
+| ------ | ----- | ------ |
+| API 响应时间 | < 100ms (p95) | 元数据操作 |
+| RAG 查询延迟 | < 2s (p95) | 包含检索和生成 |
+| 向量搜索 | < 50ms | 1000万+ 向量 |
+| 并发用户 | 1000+ | 适当资源分配下 |
+| 模型推理 | 取决于模型 | vLLM 提供高吞吐 |
+
+---
 
 ## 项目结构
 
 ```
 one-data-studio/
-├── services/                 # 后端服务
-│   ├── data-api/             # 数据治理 API (Flask)
-│   ├── agent-api/            # 应用编排 API (Flask)
-│   ├── model-api/            # 模型服务 API (FastAPI)
-│   ├── openai-proxy/         # OpenAI 兼容代理 (FastAPI)
-│   ├── admin-api/            # 平台管理 API (Flask)
-│   ├── ocr-service/          # OCR 文档识别服务
-│   ├── behavior-service/     # 用户行为分析服务
-│   └── shared/               # 共享模块（认证、存储、工具）
-├── web/                      # 前端应用 (React + TypeScript)
+├── services/                     # 后端微服务
+│   ├── data-api/                 # 数据治理 API (Flask)
+│   │   ├── app/
+│   │   │   ├── routes/           # API 端点
+│   │   │   ├── services/         # 业务逻辑
+│   │   │   ├── models/           # 数据库模型
+│   │   │   └── schemas/          # 请求/响应 Schema
+│   │   └── requirements.txt
+│   ├── agent-api/                # LLMOps 编排 API (Flask)
+│   │   ├── app/
+│   │   │   ├── routes/           # 工作流、RAG、Agent 端点
+│   │   │   ├── services/         # 执行引擎、RAG 服务
+│   │   │   ├── core/             # LLM 客户端、嵌入
+│   │   │   └── tools/            # Agent 工具
+│   │   └── requirements.txt
+│   ├── model-api/                # MLOps 管理 API (FastAPI)
+│   │   ├── app/
+│   │   │   ├── routers/          # 模型、训练、服务端点
+│   │   │   ├── services/         # K8s 集成、任务管理
+│   │   │   └── schemas/          # Pydantic Schema
+│   │   └── requirements.txt
+│   ├── openai-proxy/             # OpenAI 兼容代理 (FastAPI)
+│   │   ├── app/
+│   │   │   ├── routers/          # 对话、补全、嵌入
+│   │   │   ├── services/         # 模型路由、限流
+│   │   │   └── middleware/       # Token 统计、成本追踪
+│   │   └── requirements.txt
+│   ├── admin-api/                # 平台管理 (Flask)
+│   ├── ocr-service/              # 文档识别 (FastAPI)
+│   ├── behavior-service/         # 用户分析 (Flask)
+│   └── shared/                   # 共享模块
+│       ├── auth/                 # JWT、权限
+│       ├── storage/              # MinIO、文件处理
+│       ├── cache/                # Redis 工具
+│       └── utils/                # 通用工具
+├── web/                          # 前端应用
 │   ├── src/
-│   │   ├── components/       # 可复用 UI 组件
-│   │   ├── pages/            # 页面组件
-│   │   ├── services/         # API 客户端
-│   │   ├── stores/           # Zustand 状态存储
-│   │   └── locales/          # i18n 翻译文件
-│   └── public/               # 静态资源
-├── deploy/                   # 部署配置
-│   ├── local/                # Docker Compose 文件
-│   ├── kubernetes/           # Kubernetes 清单文件
-│   ├── helm/                 # Helm Charts
-│   ├── dockerfiles/          # Docker 构建文件
-│   ├── argocd/               # ArgoCD 配置
-│   ├── monitoring/           # 监控栈配置
-│   └── scripts/              # 部署脚本
-├── scripts/                  # 开发和运维脚本
-│   └── dev/                  # 开发环境脚本
-├── tests/                    # 测试文件
-│   ├── unit/                 # 单元测试
-│   ├── integration/          # 集成测试
-│   └── e2e/                  # 端到端测试 (Playwright)
-├── docs/                     # 文档
-│   ├── 01-architecture/      # 架构文档
-│   ├── 02-integration/       # 集成指南
-│   ├── 06-development/       # 开发指南
-│   ├── 07-operations/        # 运维指南
-│   └── 08-user-guide/        # 用户文档
-└── examples/                 # 使用示例
-    ├── langchain/            # LangChain 集成示例
-    ├── python/               # Python SDK 示例
-    └── workflows/            # 工作流定义示例
+│   │   ├── components/           # 可复用 UI 组件
+│   │   │   ├── common/           # 按钮、输入框、弹窗
+│   │   │   ├── workflow/         # ReactFlow 节点和边
+│   │   │   └── charts/           # 数据可视化
+│   │   ├── pages/                # 页面组件
+│   │   │   ├── data/             # 数据平台页面
+│   │   │   ├── model/            # 模型平台页面
+│   │   │   ├── agent/            # Agent 平台页面
+│   │   │   └── admin/            # 管理页面
+│   │   ├── services/             # API 客户端
+│   │   ├── stores/               # Zustand 状态存储
+│   │   ├── hooks/                # 自定义 React Hooks
+│   │   ├── utils/                # 工具函数
+│   │   └── locales/              # i18n 翻译（en, zh）
+│   ├── public/                   # 静态资源
+│   └── package.json
+├── deploy/                       # 部署配置
+│   ├── local/                    # Docker Compose
+│   │   ├── docker-compose.yml    # 主 Compose 文件
+│   │   └── docker-compose.*.yml  # 服务覆盖
+│   ├── kubernetes/               # Kubernetes 清单
+│   │   ├── base/                 # Kustomize 基础
+│   │   └── overlays/             # dev, staging, production
+│   ├── helm/                     # Helm Charts
+│   │   └── charts/one-data/      # 主 Chart
+│   ├── dockerfiles/              # 各服务 Dockerfile
+│   ├── argocd/                   # ArgoCD 应用
+│   └── monitoring/               # Prometheus、Grafana 配置
+├── tests/                        # 测试套件
+│   ├── unit/                     # 按服务单元测试
+│   ├── integration/              # API 集成测试
+│   ├── e2e/                      # Playwright 端到端测试
+│   └── performance/              # 负载测试脚本
+├── docs/                         # 文档
+│   ├── 01-architecture/          # 架构文档
+│   ├── 02-integration/           # 集成指南
+│   ├── 06-development/           # 开发指南
+│   ├── 07-operations/            # 运维指南
+│   └── 08-user-guide/            # 用户文档
+└── examples/                     # 使用示例
+    ├── langchain/                # LangChain 集成
+    ├── python/                   # Python SDK 示例
+    └── workflows/                # 工作流定义
 ```
 
-## 应用场景
-
-### 企业知识中台
-
-统一管理企业文档知识，提供智能问答能力。将内部文档、政策和流程整合为可搜索的知识库，支持自然语言查询。
-
-### ChatBI（商业智能）
-
-用自然语言查询数据库，自动生成报表。连接数据仓库后，可以直接提问"显示上季度各地区的销售数据"——系统自动生成 SQL 并可视化结果。
-
-### 工业质检
-
-传感器数据实时分析，实现预测性维护。处理流式 IoT 数据，训练异常检测模型，部署到生产环境进行实时监控。
-
-### 自定义 AI 应用
-
-使用可视化工作流构建器创建复杂的 AI 应用。结合 RAG、Agent 和工具，构建客服机器人、文档处理器或研究助手。
+---
 
 ## 文档
 
-- [架构概览](docs/01-architecture/platform-overview.md)
-- [四层架构](docs/01-architecture/four-layer-stack.md)
-- [集成指南](docs/02-integration/integration-overview.md)
-- [API 规范](docs/02-integration/api-specifications.md)
-- [开发指南](docs/06-development/poc-playbook.md)
-- [运维指南](docs/07-operations/operations-guide.md)
-- [用户手册](docs/08-user-guide/getting-started.md)
+| 文档 | 描述 |
+| ------ | ------ |
+| [平台概览](docs/01-architecture/platform-overview.md) | 高层架构和概念 |
+| [四层架构](docs/01-architecture/four-layer-stack.md) | 详细层级描述 |
+| [集成指南](docs/02-integration/integration-overview.md) | 层间连接方式 |
+| [API 规范](docs/02-integration/api-specifications.md) | REST API 文档 |
+| [开发指南](docs/06-development/poc-playbook.md) | 本地开发设置 |
+| [运维指南](docs/07-operations/operations-guide.md) | 生产部署 |
+| [用户手册](docs/08-user-guide/getting-started.md) | 终端用户文档 |
+
+---
 
 ## 贡献指南
 
@@ -304,6 +635,7 @@ cd services/agent-api
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 python app.py
 
 # 前端开发
@@ -314,87 +646,81 @@ npm run dev
 
 ### 代码规范
 
-- **Python**：遵循 PEP 8，使用 `logging` 而非 `print()`
-- **TypeScript**：遵循 ESLint 规则，避免 `console.log`（仅在错误时使用 `console.error`）
-- **提交信息**：使用清晰的描述性提交说明
+| 语言 | 规范 |
+| ------ | ------ |
+| Python | PEP 8，使用 `logging`（非 `print`），类型注解 |
+| TypeScript | ESLint + Prettier，避免 `console.log` |
+| Git | 约定式提交，小步原子提交 |
 
 ### 测试
 
 ```bash
-# 运行所有 Python 测试
-pytest tests/
+# 运行 Python 测试
+pytest tests/ -v
 
-# 运行覆盖率测试
+# 带覆盖率运行
 pytest tests/ --cov=services/ --cov-report=html
 
 # 运行前端测试
 cd web && npm test
 
-# 运行前端测试（带 UI）
-cd web && npm run test:ui
+# 运行 E2E 测试
+cd tests/e2e && npx playwright test
 ```
 
-### 拉取请求流程
+### Pull Request 流程
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+1. Fork 仓库
+2. 创建特性分支：`git checkout -b feature/amazing-feature`
 3. 进行修改并添加测试
-4. 确保所有测试通过 (`pytest tests/ && cd web && npm test`)
-5. 提交更改 (`git commit -m 'Add amazing feature'`)
-6. 推送到分支 (`git push origin feature/amazing-feature`)
-7. 创建 Pull Request
+4. 确保测试通过：`pytest tests/ && cd web && npm test`
+5. 清晰的提交信息：`git commit -m 'feat: 添加 amazing 功能'`
+6. 推送并创建 Pull Request
 
-## 路线图
-
-- [ ] 增强向量搜索（混合检索）
-- [ ] Kafka 实时数据流集成
-- [ ] 多模型编排和路由
-- [ ] 高级 Agent 框架（工具学习）
-- [ ] 性能优化和基准测试
-- [ ] 增强安全特性（审计日志、加密）
-- [ ] 移动端响应式 UI 改进
-- [ ] 插件系统支持扩展
+---
 
 ## 开源许可
 
-本项目采用 Apache License 2.0 开源协议 - 详见 [LICENSE](LICENSE) 文件。
+本项目采用 Apache License 2.0 许可证 - 详见 [LICENSE](LICENSE) 文件。
 
 ```
-Copyright 2024-2025 ONE-DATA-STUDIO Contributors
+Copyright 2024-2026 ONE-DATA-STUDIO Contributors
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+根据 Apache 许可证 2.0 版本（"许可证"）授权；
+除非符合许可证，否则您不得使用此文件。
+您可以在以下网址获取许可证副本：
 
     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 ```
+
+---
 
 ## 致谢
 
-本项目建立在以下优秀开源项目的基础之上：
+基于以下优秀项目构建：
 
-- [OpenMetadata](https://open-metadata.org/) - 开源元数据平台（可选集成）
+- [OpenMetadata](https://open-metadata.org/) - 开源元数据平台
 - [Ray](https://github.com/ray-project/ray) - 分布式计算框架
 - [vLLM](https://github.com/vllm-project/vllm) - 高吞吐量 LLM 服务
 - [LangChain](https://github.com/langchain-ai/langchain) - LLM 应用框架
+- [Milvus](https://github.com/milvus-io/milvus) - 向量数据库
+- [ReactFlow](https://reactflow.dev/) - 节点图编辑器
+
+---
 
 ## 社区
 
-- **问题反馈**: [GitHub Issues](https://github.com/iannil/one-data-studio/issues)
-- **讨论交流**: [GitHub Discussions](https://github.com/iannil/one-data-studio/discussions)
+- 问题反馈：[GitHub Issues](https://github.com/iannil/one-data-studio/issues)
+- 讨论交流：[GitHub Discussions](https://github.com/iannil/one-data-studio/discussions)
 
 ---
 
 <div align="center">
 
-**由 ONE-DATA-STUDIO 社区用心构建**
+由 ONE-DATA-STUDIO 社区用心构建
 
-如果这个项目对您有帮助，欢迎给我们一个 Star！
+如果这个项目对您有帮助，欢迎给我们一个 ⭐！
+
+[返回顶部](#one-data-studio)
 
 </div>
