@@ -2031,6 +2031,54 @@ def get_kettle_status():
         }), 500
 
 
+# ==================== Hop Server 状态 API ====================
+
+@app.route("/api/v1/etl/hop-status", methods=["GET"])
+@require_jwt(optional=True)
+def get_hop_status():
+    """
+    获取 Hop Server 状态
+    返回 Hop 安装信息、已注册 Pipeline 和 Workflow 列表
+    """
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        status = service.get_hop_status()
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": status
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to get Hop status: {str(e)}"
+        }), 500
+
+
+@app.route("/api/v1/etl/engines", methods=["GET"])
+@require_jwt(optional=True)
+def get_etl_engines():
+    """
+    获取所有可用的 ETL 引擎及其状态
+    返回 Kettle 和 Hop 引擎的可用性和健康状态
+    """
+    try:
+        from services.kettle_orchestration_service import get_kettle_orchestration_service
+        service = get_kettle_orchestration_service()
+        engines = service.get_available_engines()
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": engines
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 50001,
+            "message": f"Failed to get ETL engines: {str(e)}"
+        }), 500
+
+
 @app.route("/api/v1/kettle/jobs/execute", methods=["POST"])
 @require_jwt()
 def execute_kettle_job():
@@ -3156,6 +3204,82 @@ def get_quality_rule_templates():
 
     except Exception as e:
         logger.error(f"获取规则模板失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ============================================
+# Great Expectations Integration APIs
+# ============================================
+
+@app.route("/api/v1/quality/enhanced/ge-status", methods=["GET"])
+@require_jwt(optional=True)
+def get_ge_status():
+    """
+    获取 Great Expectations 集成状态
+    """
+    try:
+        from integrations.great_expectations import GEValidationEngine
+        engine = GEValidationEngine()
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": engine.get_status()
+        })
+    except ImportError:
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "ge_installed": False,
+                "enabled": False,
+                "context_initialized": False,
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取 GE 状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/quality/enhanced/data-docs", methods=["POST"])
+@require_jwt()
+def generate_ge_data_docs():
+    """
+    生成 Great Expectations Data Docs（HTML 质量报告）
+    """
+    try:
+        from integrations.great_expectations import GEValidationEngine
+        engine = GEValidationEngine()
+
+        if not engine.available:
+            return jsonify({
+                "code": 40003,
+                "message": "Great Expectations is not enabled or not installed",
+            }), 400
+
+        docs_path = engine.generate_data_docs()
+
+        if docs_path:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "docs_path": docs_path,
+                    "status": "generated",
+                }
+            })
+        else:
+            return jsonify({
+                "code": 50001,
+                "message": "Failed to generate Data Docs",
+            }), 500
+
+    except ImportError:
+        return jsonify({
+            "code": 40003,
+            "message": "Great Expectations is not installed",
+        }), 400
+    except Exception as e:
+        logger.error(f"生成 GE Data Docs 失败: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 
@@ -7205,6 +7329,272 @@ def mask_table_data(table_id: str):
         })
     except Exception as e:
         logger.error(f"表数据脱敏失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== ShardingSphere 透明脱敏 API ====================
+
+@app.route("/api/v1/masking/shardingsphere/status", methods=["GET"])
+@require_jwt(optional=True)
+def get_shardingsphere_status():
+    """
+    获取 ShardingSphere Proxy 状态
+    返回连接状态和可用数据库列表
+    """
+    try:
+        from integrations.shardingsphere import ShardingSphereConfig, ShardingSphereClient
+        if ShardingSphereConfig is None:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "enabled": False,
+                    "message": "ShardingSphere integration not available"
+                }
+            })
+
+        config = ShardingSphereConfig.from_env()
+        if not config.enabled:
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "enabled": False,
+                    "message": "ShardingSphere is disabled"
+                }
+            })
+
+        client = ShardingSphereClient(config)
+        status = client.get_status()
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "enabled": True,
+                **status
+            }
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 ShardingSphere 状态失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/shardingsphere/generate-rules", methods=["POST"])
+@require_jwt()
+def generate_shardingsphere_rules():
+    """
+    从敏感扫描结果生成 ShardingSphere 脱敏规则
+
+    请求体:
+    {
+        "database": "db_name",
+        "table": "table_name",
+        "sensitivity_results": [
+            {"column_name": "phone", "sensitivity_type": "phone"},
+            {"column_name": "email", "sensitivity_type": "email"}
+        ],
+        "format": "sql" | "yaml" (默认 sql)
+    }
+    """
+    try:
+        from integrations.shardingsphere import MaskingRuleGenerator
+
+        data = request.json or {}
+        database = data.get("database")
+        table = data.get("table")
+        sensitivity_results = data.get("sensitivity_results", [])
+        output_format = data.get("format", "sql")
+
+        if not database or not table:
+            return jsonify({
+                "code": 40000,
+                "message": "database and table are required"
+            }), 400
+
+        if not sensitivity_results:
+            return jsonify({
+                "code": 40000,
+                "message": "sensitivity_results is required"
+            }), 400
+
+        # 生成规则配置
+        rules = MaskingRuleGenerator.from_sensitivity_results(sensitivity_results)
+
+        if output_format == "yaml":
+            rule_content = MaskingRuleGenerator.generate_mask_rule_yaml(database, table, rules)
+        else:
+            rule_content = MaskingRuleGenerator.generate_mask_rule_sql(database, table, rules)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "database": database,
+                "table": table,
+                "format": output_format,
+                "rules": rules,
+                "rule_content": rule_content,
+            }
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"生成 ShardingSphere 脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/shardingsphere/apply-rules", methods=["POST"])
+@require_jwt()
+def apply_shardingsphere_rules():
+    """
+    将脱敏规则应用到 ShardingSphere Proxy
+
+    请求体:
+    {
+        "rule_sql": "CREATE MASK RULE ..."
+    }
+    或
+    {
+        "database": "db_name",
+        "table": "table_name",
+        "sensitivity_results": [...]
+    }
+    """
+    try:
+        from integrations.shardingsphere import ShardingSphereConfig, ShardingSphereClient, MaskingRuleGenerator
+
+        if ShardingSphereConfig is None:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere integration not available"
+            }), 503
+
+        config = ShardingSphereConfig.from_env()
+        if not config.enabled:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere is disabled"
+            }), 503
+
+        data = request.json or {}
+
+        # 方式1: 直接提供 SQL
+        rule_sql = data.get("rule_sql")
+
+        # 方式2: 从敏感结果生成
+        if not rule_sql:
+            database = data.get("database")
+            table = data.get("table")
+            sensitivity_results = data.get("sensitivity_results", [])
+
+            if not database or not table or not sensitivity_results:
+                return jsonify({
+                    "code": 40000,
+                    "message": "rule_sql or (database, table, sensitivity_results) required"
+                }), 400
+
+            rules = MaskingRuleGenerator.from_sensitivity_results(sensitivity_results)
+            rule_sql = MaskingRuleGenerator.generate_mask_rule_sql(database, table, rules)
+
+        client = ShardingSphereClient(config)
+        success = client.apply_mask_rules(rule_sql)
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": "脱敏规则已应用",
+                "data": {
+                    "applied_sql": rule_sql
+                }
+            })
+        else:
+            return jsonify({
+                "code": 50002,
+                "message": "应用脱敏规则失败"
+            }), 500
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"应用 ShardingSphere 脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/shardingsphere/rules/<database>", methods=["GET"])
+@require_jwt()
+def list_shardingsphere_rules(database):
+    """
+    查看指定数据库的已生效脱敏规则
+    """
+    try:
+        from integrations.shardingsphere import ShardingSphereConfig, ShardingSphereClient
+
+        if ShardingSphereConfig is None:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere integration not available"
+            }), 503
+
+        config = ShardingSphereConfig.from_env()
+        if not config.enabled:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere is disabled"
+            }), 503
+
+        client = ShardingSphereClient(config)
+        rules = client.list_mask_rules(database)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "database": database,
+                "rules": rules
+            }
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"获取 ShardingSphere 脱敏规则失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/masking/shardingsphere/rules/<database>/<table>", methods=["DELETE"])
+@require_jwt()
+def delete_shardingsphere_rules(database, table):
+    """
+    移除指定表的脱敏规则
+    """
+    try:
+        from integrations.shardingsphere import ShardingSphereConfig, ShardingSphereClient
+
+        if ShardingSphereConfig is None:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere integration not available"
+            }), 503
+
+        config = ShardingSphereConfig.from_env()
+        if not config.enabled:
+            return jsonify({
+                "code": 50003,
+                "message": "ShardingSphere is disabled"
+            }), 503
+
+        client = ShardingSphereClient(config)
+        success = client.remove_mask_rules(database, table)
+
+        if success:
+            return jsonify({
+                "code": 0,
+                "message": f"脱敏规则已移除: {database}.{table}"
+            })
+        else:
+            return jsonify({
+                "code": 50002,
+                "message": "移除脱敏规则失败"
+            }), 500
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"移除 ShardingSphere 脱敏规则失败: {e}")
         return jsonify({"code": 50000, "message": str(e)}), 500
 
 

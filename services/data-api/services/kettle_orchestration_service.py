@@ -1,18 +1,23 @@
 """
-Kettle 自动化编排服务
-Phase 2: AI 规则驱动的完整 Kettle 转换自动生成与执行
+ETL 自动化编排服务
+Phase 2: AI 规则驱动的完整 ETL 转换自动生成与执行
+
+支持的引擎：
+- Kettle (Pentaho Data Integration)
+- Apache Hop (Kettle 的现代替代方案)
 
 功能：
-- 从元数据自动生成完整的 Kettle 转换流水线
-- 集成 AI 清洗建议 → Kettle 步骤自动注入
-- 集成 AI 脱敏规则 → Kettle 脱敏步骤自动注入
-- 集成 AI 填充规则 → Kettle 填充步骤自动注入
-- 端到端编排：元数据分析 → 规则推荐 → Kettle生成 → 执行 → 结果回写
+- 从元数据自动生成完整的 ETL 转换流水线
+- 集成 AI 清洗建议 → ETL 步骤自动注入
+- 集成 AI 脱敏规则 → ETL 脱敏步骤自动注入
+- 集成 AI 填充规则 → ETL 填充步骤自动注入
+- 端到端编排：元数据分析 → 规则推荐 → ETL 生成 → 执行 → 结果回写
 - 任务历史记录和执行跟踪
 - ETL 完成回调：自动编目、MinIO 上传、通知
 - 长时间运行任务的状态轮询
 - 数据质量报告生成和导出
-- 支持 Carte 远程执行和本地 CLI 执行
+- 支持 Carte/Hop Server 远程执行和本地 CLI 执行
+- 双引擎支持（Kettle + Hop）
 """
 
 import asyncio
@@ -32,6 +37,16 @@ logger = logging.getLogger(__name__)
 KETTLE_OUTPUT_DIR = os.getenv("KETTLE_OUTPUT_DIR", "/tmp/kettle_output")
 KETTLE_POLL_INTERVAL = int(os.getenv("KETTLE_POLL_INTERVAL", "5"))  # 轮询间隔秒数
 KETTLE_POLL_TIMEOUT = int(os.getenv("KETTLE_POLL_TIMEOUT", "3600"))  # 轮询超时秒数
+
+# ETL 引擎配置
+DEFAULT_ETL_ENGINE = os.getenv("ETL_ENGINE", "kettle")  # auto, kettle, hop
+
+
+class ETLEngine(str, Enum):
+    """ETL 执行引擎"""
+    AUTO = "auto"      # 自动选择（优先 Hop）
+    KETTLE = "kettle"  # Kettle/PDI 引擎
+    HOP = "hop"        # Apache Hop 引擎
 
 
 class OrchestrationStatus(str, Enum):
@@ -78,6 +93,8 @@ class OrchestrationRequest:
     auto_execute: bool = False       # 生成后自动执行
     dry_run: bool = True             # 试运行（不实际执行）
     async_execute: bool = False      # 异步执行（后台轮询）
+    # 引擎选项
+    engine_type: str = "auto"        # auto, kettle, hop
     # 回调选项
     auto_catalog: bool = True        # ETL 完成后自动编目
     export_to_minio: bool = False    # ETL 完成后上传到 MinIO
@@ -103,6 +120,7 @@ class OrchestrationRequest:
             "auto_execute": self.auto_execute,
             "async_execute": self.async_execute,
             "dry_run": self.dry_run,
+            "engine_type": self.engine_type,
             "auto_catalog": self.auto_catalog,
             "export_to_minio": self.export_to_minio,
             "notify_on_complete": self.notify_on_complete,
@@ -128,6 +146,8 @@ class OrchestrationResult:
     execution_success: Optional[bool] = None
     rows_processed: int = 0
     execution_duration_seconds: int = 0
+    # 引擎信息
+    engine_used: str = ""  # 实际使用的引擎
     # AI 推荐详情
     ai_recommendations: List[Dict[str, Any]] = field(default_factory=list)
     masking_config: Dict[str, Any] = field(default_factory=dict)
@@ -157,6 +177,7 @@ class OrchestrationResult:
             "execution_success": self.execution_success,
             "rows_processed": self.rows_processed,
             "execution_duration_seconds": self.execution_duration_seconds,
+            "engine_used": self.engine_used,
             "ai_recommendations_count": len(self.ai_recommendations),
             "masking_columns": list(self.masking_config.keys()),
             "duration_seconds": self.duration_seconds,
@@ -236,10 +257,12 @@ class DataQualityReport:
 
 class KettleOrchestrationService:
     """
-    Kettle 自动化编排服务
+    ETL 自动化编排服务
 
-    将元数据分析、AI 规则推荐、Kettle 配置生成和执行
+    将元数据分析、AI 规则推荐、ETL 配置生成和执行
     整合为一站式自动化流水线。
+
+    支持双引擎：Kettle (PDI) 和 Apache Hop
 
     流程：
     1. 分析源表元数据（列信息、数据类型、采样）
@@ -247,7 +270,7 @@ class KettleOrchestrationService:
     3. 调用 AI 敏感扫描 获取脱敏规则
     4. 调用 KettleConfigGenerator 生成基础转换
     5. 调用 KettleAIIntegrator 注入 AI 步骤
-    6. （可选）调用 KettleBridge 执行转换
+    6. （可选）调用 KettleBridge/HopBridge 执行转换
     7. 记录结果并返回
     """
 
@@ -255,6 +278,111 @@ class KettleOrchestrationService:
         self._tasks: Dict[str, OrchestrationResult] = {}
         self._quality_reports: Dict[str, DataQualityReport] = {}
         self._lock = threading.Lock()
+        self._kettle_bridge = None
+        self._hop_bridge = None
+        self._default_engine = DEFAULT_ETL_ENGINE
+
+    def _get_kettle_bridge(self):
+        """获取 Kettle Bridge (延迟初始化)"""
+        if self._kettle_bridge is None:
+            try:
+                from integrations.kettle import KettleBridge, KettleConfig
+                config = KettleConfig.from_env()
+                if config.enabled:
+                    self._kettle_bridge = KettleBridge(config)
+            except Exception as e:
+                logger.warning(f"Kettle Bridge 初始化失败: {e}")
+        return self._kettle_bridge
+
+    def _get_hop_bridge(self):
+        """获取 Hop Bridge (延迟初始化)"""
+        if self._hop_bridge is None:
+            try:
+                from integrations.hop import HopBridge, HopConfig
+                config = HopConfig.from_env()
+                if config.enabled:
+                    self._hop_bridge = HopBridge(config)
+            except Exception as e:
+                logger.warning(f"Hop Bridge 初始化失败: {e}")
+        return self._hop_bridge
+
+    def _select_engine(self, requested_engine: str) -> tuple:
+        """
+        选择 ETL 引擎
+
+        Args:
+            requested_engine: 请求的引擎类型 (auto, kettle, hop)
+
+        Returns:
+            (engine_name, bridge) 元组
+        """
+        engine = requested_engine.lower() if requested_engine else self._default_engine
+
+        if engine == "hop":
+            hop = self._get_hop_bridge()
+            if hop:
+                return ("hop", hop)
+            # Hop 不可用，回退到 Kettle
+            logger.warning("Hop 引擎不可用，回退到 Kettle")
+            kettle = self._get_kettle_bridge()
+            if kettle:
+                return ("kettle", kettle)
+            return (None, None)
+
+        elif engine == "kettle":
+            kettle = self._get_kettle_bridge()
+            if kettle:
+                return ("kettle", kettle)
+            return (None, None)
+
+        else:  # auto
+            # 优先使用 Hop
+            hop = self._get_hop_bridge()
+            if hop:
+                return ("hop", hop)
+            # Hop 不可用，使用 Kettle
+            kettle = self._get_kettle_bridge()
+            if kettle:
+                return ("kettle", kettle)
+            return (None, None)
+
+    def get_available_engines(self) -> Dict[str, Any]:
+        """获取可用的 ETL 引擎状态"""
+        engines = {
+            "default_engine": self._default_engine,
+            "kettle": {"enabled": False, "status": "unavailable"},
+            "hop": {"enabled": False, "status": "unavailable"},
+        }
+
+        # 检查 Kettle
+        try:
+            from integrations.kettle import KettleConfig
+            config = KettleConfig.from_env()
+            engines["kettle"]["enabled"] = config.enabled
+            if config.enabled:
+                bridge = self._get_kettle_bridge()
+                if bridge and bridge.health_check():
+                    engines["kettle"]["status"] = "healthy"
+                else:
+                    engines["kettle"]["status"] = "unhealthy"
+        except Exception as e:
+            engines["kettle"]["error"] = str(e)
+
+        # 检查 Hop
+        try:
+            from integrations.hop import HopConfig
+            config = HopConfig.from_env()
+            engines["hop"]["enabled"] = config.enabled
+            if config.enabled:
+                bridge = self._get_hop_bridge()
+                if bridge and bridge.health_check():
+                    engines["hop"]["status"] = "healthy"
+                else:
+                    engines["hop"]["status"] = "unhealthy"
+        except Exception as e:
+            engines["hop"]["error"] = str(e)
+
+        return engines
 
     def orchestrate(
         self,
@@ -903,80 +1031,169 @@ class KettleOrchestrationService:
             logger.error(f"导出质量报告到 MinIO 失败: {e}")
             return False
 
-    # ===== Carte 远程执行 =====
+    # ===== 远程执行 =====
 
     def execute_via_carte(
         self,
         trans_xml: str,
         trans_name: str,
         poll_timeout: int = 3600,
+        engine_type: str = "auto",
     ) -> Dict[str, Any]:
         """
-        通过 Carte 服务器执行转换
+        通过 Carte/Hop Server 远程执行转换
 
         Args:
             trans_xml: 转换 XML 内容
             trans_name: 转换名称
             poll_timeout: 轮询超时时间（秒）
+            engine_type: 引擎类型 (auto, kettle, hop)
 
         Returns:
             执行结果
         """
+        engine_name, bridge = self._select_engine(engine_type)
+
+        if not bridge:
+            return {
+                "success": False,
+                "error": "没有可用的 ETL 引擎",
+                "error_type": "no_engine_available",
+            }
+
         try:
-            from integrations.kettle.kettle_bridge import KettleBridge
-
-            bridge = KettleBridge()
-
             # 健康检查
             if not bridge.health_check():
                 return {
                     "success": False,
-                    "error": "Carte 服务器不可用",
-                    "error_type": "carte_unavailable",
+                    "error": f"{engine_name} 服务器不可用",
+                    "error_type": f"{engine_name}_unavailable",
                 }
 
-            # 提交转换
-            job_id = bridge.submit_transformation(trans_xml, trans_name)
-
-            # 轮询状态
-            import time
-            start_time = time.time()
-            last_result = None
-
-            while time.time() - start_time < poll_timeout:
-                result = bridge.get_transformation_status(job_id)
-
-                if result.is_finished:
-                    return {
-                        "success": result.is_success,
-                        "job_id": job_id,
-                        "rows_read": result.rows_read,
-                        "rows_written": result.rows_written,
-                        "rows_rejected": result.rows_rejected,
-                        "rows_error": result.errors,
-                        "duration_seconds": int(time.time() - start_time),
-                        "log_text": result.log_text,
-                        "step_statuses": result.step_statuses,
-                    }
-
-                last_result = result
-                time.sleep(KETTLE_POLL_INTERVAL)
-
-            # 超时
-            bridge.stop_transformation(job_id)
-            return {
-                "success": False,
-                "error": f"执行超时（{poll_timeout}秒）",
-                "error_type": "timeout",
-                "job_id": job_id,
-            }
+            # 根据引擎类型执行
+            if engine_name == "hop":
+                return self._execute_via_hop(bridge, trans_xml, trans_name, poll_timeout)
+            else:
+                return self._execute_via_kettle(bridge, trans_xml, trans_name, poll_timeout)
 
         except Exception as e:
-            logger.error(f"Carte 执行失败: {e}")
+            logger.error(f"{engine_name} 执行失败: {e}")
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": "execution_error",
+                "engine_used": engine_name,
+            }
+
+    def _execute_via_kettle(
+        self,
+        bridge,
+        trans_xml: str,
+        trans_name: str,
+        poll_timeout: int,
+    ) -> Dict[str, Any]:
+        """通过 Kettle Carte 执行转换"""
+        # 提交转换
+        job_id = bridge.submit_transformation(trans_xml, trans_name)
+
+        # 轮询状态
+        start_time = time.time()
+
+        while time.time() - start_time < poll_timeout:
+            result = bridge.get_transformation_status(job_id)
+
+            if result.is_finished:
+                return {
+                    "success": result.is_success,
+                    "job_id": job_id,
+                    "rows_read": result.rows_read,
+                    "rows_written": result.rows_written,
+                    "rows_rejected": result.rows_rejected,
+                    "rows_error": result.errors,
+                    "duration_seconds": int(time.time() - start_time),
+                    "log_text": result.log_text,
+                    "step_statuses": result.step_statuses,
+                    "engine_used": "kettle",
+                }
+
+            time.sleep(KETTLE_POLL_INTERVAL)
+
+        # 超时
+        bridge.stop_transformation(job_id)
+        return {
+            "success": False,
+            "error": f"执行超时（{poll_timeout}秒）",
+            "error_type": "timeout",
+            "job_id": job_id,
+            "engine_used": "kettle",
+        }
+
+    def _execute_via_hop(
+        self,
+        bridge,
+        pipeline_xml: str,
+        pipeline_name: str,
+        poll_timeout: int,
+    ) -> Dict[str, Any]:
+        """通过 Hop Server 执行 Pipeline"""
+        # 提交 Pipeline
+        job_id = bridge.submit_pipeline(pipeline_xml, pipeline_name)
+
+        # 轮询状态
+        start_time = time.time()
+
+        while time.time() - start_time < poll_timeout:
+            result = bridge.get_pipeline_status(job_id)
+
+            if result.is_finished:
+                return {
+                    "success": result.is_success,
+                    "job_id": job_id,
+                    "rows_read": result.rows_read,
+                    "rows_written": result.rows_written,
+                    "rows_rejected": result.rows_rejected,
+                    "rows_error": result.errors,
+                    "duration_seconds": int(time.time() - start_time),
+                    "log_text": result.log_text,
+                    "transform_statuses": result.transform_statuses,
+                    "engine_used": "hop",
+                }
+
+            time.sleep(KETTLE_POLL_INTERVAL)
+
+        # 超时
+        bridge.stop_pipeline(job_id)
+        return {
+            "success": False,
+            "error": f"执行超时（{poll_timeout}秒）",
+            "error_type": "timeout",
+            "job_id": job_id,
+            "engine_used": "hop",
+        }
+
+    def get_hop_status(self) -> Dict[str, Any]:
+        """获取 Hop Server 状态"""
+        hop = self._get_hop_bridge()
+        if not hop:
+            return {
+                "enabled": False,
+                "message": "Hop Bridge not available",
+            }
+
+        try:
+            status = hop.get_server_status()
+            pipelines = hop.list_pipelines()
+            workflows = hop.list_workflows()
+            return {
+                "enabled": True,
+                "server_status": status,
+                "pipelines": pipelines,
+                "workflows": workflows,
+            }
+        except Exception as e:
+            return {
+                "enabled": True,
+                "error": str(e),
             }
 
 

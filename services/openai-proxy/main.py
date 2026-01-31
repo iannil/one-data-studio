@@ -203,6 +203,19 @@ _vllm_embed_healthy = None
 _vllm_last_check = 0
 VLLM_HEALTH_CACHE_TTL = 30  # 健康检查缓存30秒
 
+# ==================== Ollama 集成 ====================
+
+# Ollama 服务端点配置
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
+OLLAMA_HEALTH_CHECK_TIMEOUT = int(os.getenv("OLLAMA_HEALTH_CHECK_TIMEOUT", "5"))
+
+# LLM 后端优先级: auto (vLLM→Ollama→OpenAI), vllm, ollama, openai
+LLM_BACKEND = os.getenv("LLM_BACKEND", "auto")
+
+# Ollama 健康状态缓存
+_ollama_healthy = None
+_ollama_last_check = 0
+
 
 def _check_vllm_health(url: str) -> bool:
     """检查 vLLM 服务健康状态"""
@@ -245,6 +258,64 @@ def is_vllm_chat_available() -> bool:
 def is_vllm_embed_available() -> bool:
     """检查 vLLM Embedding 服务是否可用"""
     return _check_vllm_health(VLLM_EMBED_URL)
+
+
+# ==================== Ollama 健康检查与客户端 ====================
+
+def _check_ollama_health() -> bool:
+    """检查 Ollama 服务健康状态"""
+    global _ollama_last_check, _ollama_healthy
+    try:
+        import time
+        current_time = time.time()
+
+        # 使用缓存避免频繁检查
+        if current_time - _ollama_last_check < VLLM_HEALTH_CACHE_TTL:
+            return _ollama_healthy if _ollama_healthy is not None else False
+
+        response = requests.get(
+            f"{OLLAMA_URL}/api/tags",
+            timeout=OLLAMA_HEALTH_CHECK_TIMEOUT
+        )
+        is_healthy = response.status_code == 200
+
+        # 更新缓存
+        _ollama_last_check = current_time
+        _ollama_healthy = is_healthy
+
+        return is_healthy
+    except Exception as e:
+        logger.debug(f"Ollama health check failed: {e}")
+        _ollama_healthy = False
+        return False
+
+
+def is_ollama_available() -> bool:
+    """检查 Ollama 服务是否可用"""
+    return _check_ollama_health()
+
+
+_ollama_client = None
+
+
+def get_ollama_client():
+    """获取 Ollama 客户端（兼容 OpenAI 的 /v1 端点）"""
+    global _ollama_client
+
+    if not OPENAI_AVAILABLE:
+        logger.warning("OpenAI library not available")
+        return None
+
+    if is_ollama_available():
+        if _ollama_client is None:
+            _ollama_client = AsyncOpenAI(
+                api_key="ollama",  # Ollama 不需要真实 API key
+                base_url=f"{OLLAMA_URL}/v1"
+            )
+            logger.info(f"Ollama client initialized: {OLLAMA_URL}/v1")
+        return _ollama_client
+
+    return None
 
 
 # OpenAI 客户端（外部API备用）
@@ -316,13 +387,33 @@ def get_openai_client():
 
 
 def get_chat_client():
-    """获取聊天客户端（优先vLLM，降级OpenAI）"""
-    # 优先使用vLLM
+    """获取聊天客户端（优先级: vLLM → Ollama → OpenAI, 可通过 LLM_BACKEND 强制指定）"""
+    # 强制指定后端
+    if LLM_BACKEND == "vllm":
+        client = get_vllm_chat_client()
+        if client:
+            return client, "vllm"
+        return None, None
+    elif LLM_BACKEND == "ollama":
+        client = get_ollama_client()
+        if client:
+            return client, "ollama"
+        return None, None
+    elif LLM_BACKEND == "openai":
+        client = get_openai_client()
+        if client:
+            return client, "openai"
+        return None, None
+
+    # auto 模式: vLLM → Ollama → OpenAI
     client = get_vllm_chat_client()
     if client:
         return client, "vllm"
 
-    # 降级到OpenAI
+    client = get_ollama_client()
+    if client:
+        return client, "ollama"
+
     client = get_openai_client()
     if client:
         return client, "openai"
@@ -370,6 +461,9 @@ def health():
     vllm_chat_ok = is_vllm_chat_available()
     vllm_embed_ok = is_vllm_embed_available()
 
+    # 检查Ollama服务
+    ollama_ok = is_ollama_available()
+
     # 检查OpenAI配置
     openai_client = get_openai_client()
     openai_configured = openai_client is not None and os.getenv('OPENAI_API_KEY')
@@ -377,6 +471,9 @@ def health():
     # 确定使用哪个服务
     if vllm_chat_ok:
         backend = "vllm"
+        backend_status = "ok"
+    elif ollama_ok:
+        backend = "ollama"
         backend_status = "ok"
     elif openai_configured:
         backend = "openai"
@@ -390,11 +487,16 @@ def health():
         "service": "openai-proxy",
         "version": "1.0.0",
         "backend": backend,
+        "llm_backend_mode": LLM_BACKEND,
         "vllm": {
             "chat_available": vllm_chat_ok,
             "chat_url": VLLM_CHAT_URL,
             "embed_available": vllm_embed_ok,
             "embed_url": VLLM_EMBED_URL
+        },
+        "ollama": {
+            "available": ollama_ok,
+            "url": OLLAMA_URL
         },
         "openai": {
             "configured": openai_configured,
@@ -451,6 +553,27 @@ def list_models():
         # 添加后端信息
         if isinstance(models_data, dict) and "data" in models_data:
             models_data["backend"] = backend
+
+        # 合并 Ollama 模型列表（如果当前后端不是 Ollama 且 Ollama 可用）
+        if backend != "ollama" and is_ollama_available():
+            try:
+                ollama_resp = requests.get(
+                    f"{OLLAMA_URL}/api/tags",
+                    timeout=OLLAMA_HEALTH_CHECK_TIMEOUT
+                )
+                if ollama_resp.status_code == 200:
+                    ollama_models = ollama_resp.json().get("models", [])
+                    for m in ollama_models:
+                        models_data.setdefault("data", []).append({
+                            "id": m.get("name", "unknown"),
+                            "object": "model",
+                            "created": int(datetime.fromisoformat(
+                                m["modified_at"].replace("Z", "+00:00")
+                            ).timestamp()) if m.get("modified_at") else 0,
+                            "owned_by": "ollama"
+                        })
+            except Exception as e:
+                logger.debug(f"Failed to fetch Ollama models: {e}")
 
         return jsonify(models_data)
 
@@ -703,9 +826,13 @@ def embeddings():
     else:
         inputs = input_text
 
-    # 获取 embedding 客户端（优先vLLM，降级OpenAI）
+    # 获取 embedding 客户端（优先vLLM → Ollama → OpenAI）
     client = get_vllm_embed_client()
     backend = "vllm" if client else None
+
+    if not client:
+        client = get_ollama_client()
+        backend = "ollama" if client else None
 
     if not client:
         client = get_openai_client()

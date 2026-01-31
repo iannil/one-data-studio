@@ -8,9 +8,12 @@
 - 视频标注
 - 多模态标注
 - 自动化标注（集成 AIHub 模型）
+
+支持 Label Studio 后端集成，自动降级到内存存储。
 """
 
 import logging
+import os
 import uuid
 import time
 import json
@@ -21,6 +24,15 @@ from typing import Any, Dict, List, Optional, Union
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Label Studio 客户端导入（可选依赖）
+try:
+    from .label_studio_client import LabelStudioClient, LabelStudioConfig
+    LABEL_STUDIO_AVAILABLE = True
+except ImportError:
+    LABEL_STUDIO_AVAILABLE = False
+    LabelStudioClient = None
+    LabelStudioConfig = None
 
 
 class LabelingTaskType(str, Enum):
@@ -288,16 +300,97 @@ class LabelingService:
         label_studio_token: Optional[str] = None,
     ):
         self.storage_base_path = storage_base_path
-        self.label_studio_url = label_studio_url
-        self.label_studio_token = label_studio_token
+        self.label_studio_url = label_studio_url or os.getenv("LABEL_STUDIO_URL", "")
+        self.label_studio_token = label_studio_token or os.getenv("LABEL_STUDIO_API_TOKEN", "")
 
-        # 存储（生产环境应使用数据库）
+        # Label Studio 客户端初始化
+        self._ls_client: Optional[Any] = None
+        self._ls_enabled = False
+        self._init_label_studio_client()
+
+        # ID 映射: 我们的 string ID → Label Studio 的 int ID
+        self._project_id_map: Dict[str, int] = {}
+        self._task_id_map: Dict[str, int] = {}
+
+        # 存储（内存 fallback）
         self._projects: Dict[str, LabelingProject] = {}
         self._tasks: Dict[str, LabelingTask] = {}
         self._annotations: Dict[str, Annotation] = {}
 
         # 自动标注模型客户端
         self._auto_labeling_clients: Dict[str, Any] = {}
+
+    def _init_label_studio_client(self) -> None:
+        """初始化 Label Studio 客户端"""
+        if not LABEL_STUDIO_AVAILABLE:
+            logger.warning("Label Studio client module not available, using in-memory storage")
+            return
+
+        if not self.label_studio_url or not self.label_studio_token:
+            logger.info("Label Studio not configured, using in-memory storage")
+            return
+
+        try:
+            config = LabelStudioConfig(
+                url=self.label_studio_url,
+                api_token=self.label_studio_token,
+                enabled=True,
+            )
+            self._ls_client = LabelStudioClient(config)
+
+            # 健康检查
+            if self._ls_client.health_check():
+                self._ls_enabled = True
+                logger.info(f"Label Studio client connected: {self.label_studio_url}")
+            else:
+                logger.warning("Label Studio health check failed, using in-memory storage")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Label Studio client: {e}, using in-memory storage")
+
+    def _sync_project_from_ls(self, ls_project: Dict[str, Any], our_project_id: str) -> LabelingProject:
+        """从 Label Studio 项目数据同步到本地对象"""
+        task_type = self._infer_task_type_from_config(ls_project.get("label_config", ""))
+
+        label_config = LabelConfig(
+            task_type=task_type,
+            xml_config=ls_project.get("label_config", ""),
+            labels=[],
+            description=ls_project.get("description", ""),
+        )
+
+        project = LabelingProject(
+            project_id=our_project_id,
+            name=ls_project.get("title", ""),
+            description=ls_project.get("description", ""),
+            owner_id=str(ls_project.get("created_by", {}).get("id", "system")),
+            task_type=task_type,
+            label_config=label_config,
+            status=ProjectStatus.ACTIVE,
+            total_tasks=ls_project.get("task_number", 0),
+            completed_tasks=ls_project.get("num_tasks_with_annotations", 0),
+            created_at=datetime.fromisoformat(ls_project["created_at"].replace("Z", "+00:00"))
+                if ls_project.get("created_at") else datetime.utcnow(),
+        )
+        return project
+
+    def _infer_task_type_from_config(self, xml_config: str) -> LabelingTaskType:
+        """从 Label Studio XML 配置推断任务类型"""
+        xml_lower = xml_config.lower()
+        if "<rectanglelabels" in xml_lower:
+            return LabelingTaskType.IMAGE_DETECTION
+        elif "<brushlabels" in xml_lower or "<polygonlabels" in xml_lower:
+            return LabelingTaskType.IMAGE_SEGMENTATION
+        elif "<image" in xml_lower and "<choices" in xml_lower:
+            return LabelingTaskType.IMAGE_CLASSIFICATION
+        elif "<labels" in xml_lower and "<text" in xml_lower:
+            return LabelingTaskType.TEXT_NER
+        elif "<text" in xml_lower and "<choices" in xml_lower:
+            return LabelingTaskType.TEXT_CLASSIFICATION
+        elif "<audio" in xml_lower:
+            if "<textarea" in xml_lower:
+                return LabelingTaskType.AUDIO_TRANSCRIPTION
+            return LabelingTaskType.AUDIO_CLASSIFICATION
+        return LabelingTaskType.IMAGE_CLASSIFICATION  # 默认
 
     def get_label_config_templates(
         self,
@@ -371,6 +464,21 @@ class LabelingService:
         # 如果提供了自定义标签，更新 XML 配置
         if labels and labels != label_config.labels:
             label_config = self._update_labels_in_config(label_config, labels)
+
+        # 尝试在 Label Studio 中创建项目
+        if self._ls_enabled and self._ls_client:
+            try:
+                ls_project = self._ls_client.create_project(
+                    title=name,
+                    description=description,
+                    label_config=label_config.xml_config,
+                )
+                ls_project_id = ls_project.get("id")
+                if ls_project_id:
+                    self._project_id_map[project_id] = ls_project_id
+                    logger.info(f"Created Label Studio project: {ls_project_id} → {project_id}")
+            except Exception as e:
+                logger.warning(f"Failed to create Label Studio project, using in-memory: {e}")
 
         project = LabelingProject(
             project_id=project_id,
@@ -453,7 +561,19 @@ class LabelingService:
             raise ValueError(f"项目不存在: {project_id}")
 
         tasks = []
-        for data in data_list:
+
+        # 尝试在 Label Studio 中创建任务
+        ls_tasks_created = []
+        if self._ls_enabled and self._ls_client and project_id in self._project_id_map:
+            try:
+                ls_project_id = self._project_id_map[project_id]
+                ls_tasks = self._ls_client.create_tasks(ls_project_id, data_list)
+                ls_tasks_created = ls_tasks
+                logger.info(f"Created {len(ls_tasks)} tasks in Label Studio project {ls_project_id}")
+            except Exception as e:
+                logger.warning(f"Failed to create tasks in Label Studio: {e}")
+
+        for i, data in enumerate(data_list):
             task_id = f"task-{uuid.uuid4().hex[:12]}"
 
             task = LabelingTask(
@@ -463,6 +583,10 @@ class LabelingService:
                 status=LabelingStatus.PENDING,
                 created_at=datetime.utcnow(),
             )
+
+            # 映射 Label Studio 任务 ID
+            if i < len(ls_tasks_created) and "id" in ls_tasks_created[i]:
+                self._task_id_map[task_id] = ls_tasks_created[i]["id"]
 
             # 如果启用自动标注
             if auto_label and project.auto_labeling_enabled:
@@ -545,6 +669,19 @@ class LabelingService:
 
         annotation_id = f"ann-{uuid.uuid4().hex[:12]}"
 
+        # 尝试在 Label Studio 中创建标注
+        if self._ls_enabled and self._ls_client and task_id in self._task_id_map:
+            try:
+                ls_task_id = self._task_id_map[task_id]
+                self._ls_client.create_annotation(
+                    task_id=ls_task_id,
+                    result=result,
+                    lead_time=lead_time,
+                )
+                logger.info(f"Created annotation in Label Studio for task {ls_task_id}")
+            except Exception as e:
+                logger.warning(f"Failed to create annotation in Label Studio: {e}")
+
         annotation = Annotation(
             annotation_id=annotation_id,
             task_id=task_id,
@@ -624,6 +761,23 @@ class LabelingService:
         project = self._projects.get(project_id)
         if not project:
             raise ValueError(f"项目不存在: {project_id}")
+
+        # 尝试从 Label Studio 导出
+        if self._ls_enabled and self._ls_client and project_id in self._project_id_map:
+            try:
+                ls_project_id = self._project_id_map[project_id]
+                export_type_map = {
+                    "json": "JSON",
+                    "coco": "COCO",
+                    "yolo": "YOLO",
+                    "pascal_voc": "VOC",
+                }
+                ls_format = export_type_map.get(format.lower(), "JSON")
+                result = self._ls_client.export_annotations(ls_project_id, export_type=ls_format)
+                logger.info(f"Exported annotations from Label Studio project {ls_project_id}")
+                return result if isinstance(result, dict) else {"tasks": result}
+            except Exception as e:
+                logger.warning(f"Failed to export from Label Studio, using in-memory data: {e}")
 
         tasks = [t for t in self._tasks.values() if t.project_id == project_id]
 
@@ -772,6 +926,30 @@ class LabelingService:
         status: Optional[ProjectStatus] = None,
     ) -> List[LabelingProject]:
         """列出项目"""
+        # 尝试从 Label Studio 同步项目
+        if self._ls_enabled and self._ls_client:
+            try:
+                ls_projects = self._ls_client.list_projects()
+                for ls_proj in ls_projects:
+                    ls_id = ls_proj.get("id")
+                    # 查找是否有映射
+                    our_id = None
+                    for k, v in self._project_id_map.items():
+                        if v == ls_id:
+                            our_id = k
+                            break
+                    if not our_id:
+                        # 新项目，创建映射
+                        our_id = f"proj-ls-{ls_id}"
+                        self._project_id_map[our_id] = ls_id
+
+                    if our_id not in self._projects:
+                        # 同步到本地
+                        project = self._sync_project_from_ls(ls_proj, our_id)
+                        self._projects[our_id] = project
+            except Exception as e:
+                logger.warning(f"Failed to sync projects from Label Studio: {e}")
+
         projects = list(self._projects.values())
 
         if owner_id:

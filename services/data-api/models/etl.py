@@ -32,6 +32,7 @@ class ETLEngineType(enum.Enum):
     """ETL 执行引擎类型"""
     BUILTIN = "builtin"  # 内置引擎
     KETTLE = "kettle"    # Kettle/PDI 引擎
+    HOP = "hop"          # Apache Hop 引擎
     SPARK = "spark"      # Spark 引擎
     FLINK = "flink"      # Flink 引擎
 
@@ -73,6 +74,11 @@ class ETLTask(Base):
     kettle_repository = Column(String(255))  # Kettle 仓库名称
     kettle_directory = Column(String(255))  # Kettle 目录
     kettle_params = Column(JSON)  # Kettle 参数
+
+    # Hop 引擎配置（仅当 engine_type='hop' 时使用）
+    hop_pipeline_path = Column(String(512))  # Hop Pipeline 文件路径 (.hpl)
+    hop_workflow_path = Column(String(512))  # Hop Workflow 文件路径 (.hwf)
+    hop_params = Column(JSON)  # Hop 参数
 
     # 执行信息
     last_run_at = Column(DateTime)
@@ -118,6 +124,9 @@ class ETLTask(Base):
             "kettle_repository": self.kettle_repository,
             "kettle_directory": self.kettle_directory,
             "kettle_params": self.kettle_params,
+            "hop_pipeline_path": self.hop_pipeline_path,
+            "hop_workflow_path": self.hop_workflow_path,
+            "hop_params": self.hop_params,
             "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None,
             "last_success_at": self.last_success_at.isoformat() if self.last_success_at else None,
             "next_run_at": self.next_run_at.isoformat() if self.next_run_at else None,

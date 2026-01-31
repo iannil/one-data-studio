@@ -194,6 +194,18 @@ class EnhancedQualityEngine:
             QualityRuleType.CONSISTENCY_CHECK: self._check_consistency,
         }
 
+        # Great Expectations 引擎（可选）
+        self._ge_engine = None
+        try:
+            from integrations.great_expectations import GEValidationEngine
+            self._ge_engine = GEValidationEngine()
+            if self._ge_engine.available:
+                logger.info("Great Expectations engine initialized")
+            else:
+                logger.info("Great Expectations engine disabled or not installed")
+        except ImportError:
+            logger.info("Great Expectations integration not available")
+
     def execute_rule(
         self,
         rule: QualityRuleDefinition,
@@ -203,6 +215,41 @@ class EnhancedQualityEngine:
         start_time = datetime.utcnow()
 
         try:
+            # 优先尝试 GE 引擎（当有 db_connection 且 GE 支持该规则时）
+            if self._ge_engine and self._ge_engine.available and db_connection and rule.target_column:
+                try:
+                    from integrations.great_expectations.expectation_mapper import is_ge_supported
+                    if is_ge_supported(rule.rule_type.value):
+                        ge_result = self._ge_engine.validate_rule(
+                            rule_type=rule.rule_type.value,
+                            target_table=rule.target_table,
+                            target_column=rule.target_column,
+                            config=rule.config,
+                            rule_expression=rule.rule_expression,
+                            db_connection=db_connection,
+                        )
+                        if ge_result is not None:
+                            execution_time = int(
+                                (datetime.utcnow() - start_time).total_seconds() * 1000
+                            )
+                            result = QualityCheckResult(
+                                rule_id=rule.rule_id,
+                                rule_name=rule.name,
+                                rule_type=rule.rule_type,
+                                passed=ge_result.get("success", False),
+                                score=ge_result.get("score", 0.0),
+                                total_rows=ge_result.get("total_rows", 0),
+                                passed_rows=ge_result.get("passed_rows", 0),
+                                failed_rows=ge_result.get("failed_rows", 0),
+                                execution_time_ms=execution_time,
+                                details=ge_result,
+                            )
+                            result.passed = result.score >= rule.threshold
+                            return result
+                except Exception as e:
+                    logger.warning(f"GE execution failed, falling back to builtin: {e}")
+
+            # 降级到内置 handler
             handler = self._rule_handlers.get(rule.rule_type)
             if not handler:
                 return QualityCheckResult(
@@ -215,6 +262,7 @@ class EnhancedQualityEngine:
                 )
 
             result = handler(rule, db_connection)
+            result.details["engine"] = "builtin"
 
             # 计算执行时间
             execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
