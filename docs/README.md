@@ -11,7 +11,9 @@
 | 文档类型 | 链接 | 说明 |
 |----------|------|------|
 | 项目 README | [英文](../README.md) / [中文](../README_ZH.md) | 项目概述 |
-| 快速开始 | [QUICKSTART](../QUICKSTART.md) | 30 分钟搭建 PoC 环境 |
+| 贡献指南 | [CONTRIB](CONTRIB.md) | 开发工作流程和脚本参考 |
+| 运维手册 | [RUNBOOK](RUNBOOK.md) | 部署、监控和故障处理 |
+| 环境变量 | [ENVIRONMENT](ENVIRONMENT.md) | 环境变量配置参考 |
 | 当前状态 | [current-status](03-progress/current-status.md) | 项目进度追踪 |
 | 路线图 | [roadmap](05-planning/roadmap.md) | 开发计划与里程碑 |
 | 功能清单 | [features](00-project/features.md) | 功能列表与完成度 |
@@ -173,6 +175,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-02-03 | 新增贡献指南 `CONTRIB.md`、运维手册 `RUNBOOK.md`、环境变量参考 `ENVIRONMENT.md` |
 | 2026-01-30 | 创建文档标准和模板目录；修复 sql_upper BUG；清理冗余文件（508MB） |
 | 2026-01-29 | 文档整理：移动 FEATURES.md 到 00-project/features.md，移动 SECURITY.md 到 07-operations/security-overview.md，删除重复文档 |
 | 2026-01-29 | 新增项目依赖全面评估报告 `01-architecture/dependency-assessment.md` |
