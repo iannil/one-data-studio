@@ -21,6 +21,9 @@ vi.mock('../services/auth', () => ({
 // Mock logger
 vi.mock('../services/logger', () => ({
   logError: vi.fn(),
+  logDebug: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
 }));
 
 // Test component that uses the hook

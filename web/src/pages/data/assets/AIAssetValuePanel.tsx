@@ -289,20 +289,24 @@ function AIAssetValuePanel({
                 <Card title="雷达图分析">
                   <div style={{ height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ flex: 1, height: 250 }}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-var-requires */}
                       {React.createElement(require('recharts').RadarChart, {
                         width: 280,
                         height: 250,
                         data: getRadarData(assessment.score_breakdown),
                       },
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
                       React.createElement(require('recharts').PolarAngleAxis, {
                         dataKey: 'name',
                         tick: { fill: '#888', fontSize: 12 },
                       }),
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
                       React.createElement(require('recharts').PolarRadiusAxis, {
                         angle: 90,
                         domain: [0, 100],
                         tick: { fill: '#888', fontSize: 12 },
                       }),
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
                       React.createElement(require('recharts').Radar, {
                         name: '价值评估',
                         dataKey: 'value',

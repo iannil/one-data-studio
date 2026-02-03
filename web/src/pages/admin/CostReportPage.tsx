@@ -19,6 +19,7 @@ import {
   Tabs,
   Typography,
   Progress,
+  message,
 } from 'antd';
 import {
   DollarOutlined,
@@ -334,8 +335,8 @@ function CostReportPage() {
   };
 
   const handleExport = () => {
-    // In a real implementation, this would trigger a download
-    console.log('Exporting cost report...');
+    // TODO: Implement export functionality
+    message.info('导出功能开发中');
   };
 
   const tabItems = [

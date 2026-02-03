@@ -71,7 +71,7 @@ function LineagePage() {
   // 影响分析
   const { data: impactData } = useQuery({
     queryKey: ['impactAnalysis', impactTable],
-    queryFn: () => data.getImpactAnalysis(impactTable),
+    queryFn: () => data.getImpactAnalysis('table', impactTable),
     enabled: !!impactTable && activeTab === 'impact',
   });
 
@@ -101,13 +101,15 @@ function LineagePage() {
         name: impactTable,
         full_name: impactTable,
       };
-      const downstreamNodes = impactData.data.affected_tables?.map((t) => ({
-        node_id: t.table,
-        name: t.table,
-        full_name: t.table,
-        node_type: 'table',
-        impact_level: t.distance,
-      })) || [];
+      const downstreamNodes = impactData.data?.impacted_nodes
+        ?.filter((n) => n.node_type === 'table')
+        .map((t) => ({
+          node_id: t.id || t.name,
+          name: t.name || t.label,
+          full_name: t.full_name || t.name,
+          node_type: 'table' as const,
+          impact_level: 3, // Default medium impact level (number as expected by API)
+        })) || [];
       return data.getAIImpactAnalysis(nodeInfo, {
         downstream_nodes: downstreamNodes,
         change_type: changeType,
@@ -242,7 +244,7 @@ function LineagePage() {
       title: '表名',
       dataIndex: 'table',
       key: 'table',
-      render: (table: string, record: any) => (
+      render: (table: string, record: { table: string }) => (
         <Button
           type="link"
           onClick={() => setSelectedTable(record.table)}
@@ -526,21 +528,22 @@ function LineagePage() {
                             size="small"
                           />
                         </Card>
-
-                        {impactData.data.affected_etl_tasks && impactData.data.affected_etl_tasks.length > 0 && (
-                          <Card title="受影响的 ETL 任务" type="inner" size="small" style={{ marginTop: 16 }}>
-                            <List
-                              size="small"
-                              dataSource={impactData.data.affected_etl_tasks}
-                              renderItem={(task) => (
-                                <List.Item>
-                                  <Tag>{task}</Tag>
-                                </List.Item>
-                              )}
-                            />
-                          </Card>
-                        )}
                       </Card>
+
+                      {/* 受影响的 ETL 任务 - 待后端实现 */}
+                      {/* impactData.data.affected_etl_tasks && impactData.data.affected_etl_tasks.length > 0 && (
+                        <Card title="受影响的 ETL 任务" type="inner" size="small" style={{ marginTop: 16 }}>
+                          <List
+                            size="small"
+                            dataSource={impactData.data.affected_etl_tasks}
+                            renderItem={(task: string) => (
+                              <List.Item>
+                                <Tag>{task}</Tag>
+                              </List.Item>
+                            )}
+                          />
+                        </Card>
+                      )} */}
 
                       {/* AI 影响分析结果 */}
                       {aiImpactMutation.isPending && (
@@ -654,7 +657,7 @@ function LineagePage() {
                   <Table
                     columns={searchColumns}
                     dataSource={searchData?.data?.results || []}
-                    rowKey={(record) => `${record.table}-${record.column || ''}`}
+                    rowKey={(record: { table: string; column?: string }) => `${record.table}-${record.column || ''}`}
                     loading={isSearching}
                     pagination={false}
                   />

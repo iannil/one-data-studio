@@ -181,7 +181,7 @@ class BehaviorTracker {
     text?: string;
     name?: string;
   } {
-    const info: any = {
+    const info: { type: string; id?: string; text?: string; name?: string } = {
       type: element.tagName.toLowerCase(),
     };
 
@@ -189,7 +189,7 @@ class BehaviorTracker {
       info.id = element.id;
     }
     if (element.getAttribute('name')) {
-      info.name = element.getAttribute('name');
+      info.name = element.getAttribute('name') || undefined;
     }
     if (element.textContent && element.textContent.trim().length < 50) {
       info.text = element.textContent.trim();

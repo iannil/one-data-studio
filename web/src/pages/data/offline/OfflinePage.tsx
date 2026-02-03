@@ -429,7 +429,7 @@ function OfflinePage() {
                         columns={[
                           { title: '节点名称', dataIndex: 'name', key: 'name' },
                           { title: '类型', dataIndex: 'type', key: 'type', render: (type: string) => <Tag>{type}</Tag> },
-                          { title: '位置', key: 'position', render: (_: unknown, node: any) => `(${node.position.x}, ${node.position.y})` },
+                          { title: '位置', key: 'position', render: (_: unknown, node: { position: { x: number; y: number } }) => `(${node.position.x}, ${node.position.y})` },
                         ]}
                         dataSource={selectedWorkflow.nodes}
                         rowKey="node_id"

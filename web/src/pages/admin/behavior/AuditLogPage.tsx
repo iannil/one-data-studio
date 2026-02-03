@@ -64,6 +64,7 @@ export const AuditLogPage: React.FC = () => {
       page: pagination.current,
       page_size: pagination.pageSize,
     }),
+    select: (data) => data.data.data,
   });
 
   const columns = [

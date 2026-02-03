@@ -28,7 +28,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import data from '@/services/data';
+import dataService from '@/services/data';
 import type { DataSource, CreateDataSourceRequest, DataSourceType } from '@/services/data';
 
 const { Option } = Select;
@@ -65,7 +65,7 @@ function DataSourcesPage() {
   const { data: sourcesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['datasources', page, pageSize, typeFilter, statusFilter],
     queryFn: () =>
-      data.getDataSources({
+      dataService.getDataSources({
         page,
         page_size: pageSize,
         type: typeFilter as DataSourceType || undefined,
@@ -75,7 +75,7 @@ function DataSourcesPage() {
 
   // 创建数据源
   const createMutation = useMutation({
-    mutationFn: data.createDataSource,
+    mutationFn: dataService.createDataSource,
     onSuccess: () => {
       message.success('数据源创建成功');
       setIsCreateModalOpen(false);
@@ -90,8 +90,8 @@ function DataSourcesPage() {
 
   // 更新数据源
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof data.updateDataSource>[1] }) =>
-      data.updateDataSource(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof dataService.updateDataSource>[1] }) =>
+      dataService.updateDataSource(id, data),
     onSuccess: () => {
       message.success('数据源更新成功');
       setIsEditModalOpen(false);
@@ -106,7 +106,7 @@ function DataSourcesPage() {
 
   // 删除数据源
   const deleteMutation = useMutation({
-    mutationFn: data.deleteDataSource,
+    mutationFn: dataService.deleteDataSource,
     onSuccess: () => {
       message.success('数据源删除成功');
       setIsDetailDrawerOpen(false);
@@ -124,7 +124,7 @@ function DataSourcesPage() {
       setTestingConnection(true);
       setTestResult(null);
 
-      const result = await data.testDataSource({
+      const result = await dataService.testDataSource({
         type: values.type,
         connection: {
           host: values.host,

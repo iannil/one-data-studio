@@ -54,7 +54,7 @@ function ResourcesPage() {
   const pools = poolsData?.data?.pools || [];
 
   // GPU 表格列
-  const gpuColumns: any[] = [
+  const gpuColumns: unknown[] = [
     {
       title: 'GPU ID',
       dataIndex: 'gpu_id',
@@ -144,7 +144,7 @@ function ResourcesPage() {
   ];
 
   // 资源池表格列
-  const poolColumns: any[] = [
+  const poolColumns: unknown[] = [
     {
       title: '资源池',
       dataIndex: 'pool_name',

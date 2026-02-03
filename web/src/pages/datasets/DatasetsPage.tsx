@@ -24,7 +24,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import data from '@/services/data';
+import dataService from '@/services/data';
 import type { Dataset, ColumnSchema } from '@/services/data';
 
 const { Search } = Input;
@@ -52,7 +52,7 @@ function DatasetsPage() {
   const { data: datasetsData, isLoading: isLoadingList } = useQuery({
     queryKey: ['datasets', page, pageSize, statusFilter],
     queryFn: () =>
-      data.getDatasets({
+      dataService.getDatasets({
         page,
         page_size: pageSize,
         status: statusFilter || undefined,
@@ -63,7 +63,7 @@ function DatasetsPage() {
   // 获取数据集详情
   const { data: datasetDetail } = useQuery({
     queryKey: ['dataset', id],
-    queryFn: () => data.getDataset(id!),
+    queryFn: () => dataService.getDataset(id!),
     enabled: !!id,
   });
 
@@ -77,7 +77,7 @@ function DatasetsPage() {
 
   // 创建数据集
   const createMutation = useMutation({
-    mutationFn: data.createDataset,
+    mutationFn: dataService.createDataset,
     onSuccess: () => {
       message.success('数据集创建成功');
       setIsCreateModalOpen(false);
@@ -92,7 +92,7 @@ function DatasetsPage() {
   // 更新数据集
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Dataset> }) =>
-      data.updateDataset(id, data),
+      dataService.updateDataset(id, data),
     onSuccess: () => {
       message.success('数据集更新成功');
       setIsEditModalOpen(false);
@@ -104,7 +104,7 @@ function DatasetsPage() {
 
   // 删除数据集
   const deleteMutation = useMutation({
-    mutationFn: data.deleteDataset,
+    mutationFn: dataService.deleteDataset,
     onSuccess: () => {
       message.success('数据集删除成功');
       setIsDetailDrawerOpen(false);

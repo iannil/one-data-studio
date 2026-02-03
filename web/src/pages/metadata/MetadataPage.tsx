@@ -743,7 +743,7 @@ function MetadataPage() {
         datasetId={`${selectedDatabase}.${selectedTable}`}
         tableName={selectedTable}
         databaseName={selectedDatabase}
-        columns={tableDetail?.data?.columns?.map((col: any) => ({
+        columns={tableDetail?.data?.columns?.map((col: { name: string; type: string; description?: string }) => ({
           name: col.name,
           type: col.type,
           description: col.description,

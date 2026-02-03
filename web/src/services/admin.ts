@@ -1223,6 +1223,14 @@ export interface UserProfile {
   last_activity?: string;
   profile_updated_at: string;
   created_at: string;
+  // Extended properties from behavior analysis
+  login_count?: number;
+  login_days?: number;
+  query_count?: number;
+  export_count?: number;
+  create_count?: number;
+  is_risk_user?: boolean;
+  last_login_at?: string;
 }
 
 export interface UserSegment {
@@ -1236,6 +1244,10 @@ export interface UserSegment {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Extended properties from behavior analysis
+  strategy?: string;
+  is_system?: boolean;
+  last_rebuilt_at?: string;
 }
 
 export interface UserTag {

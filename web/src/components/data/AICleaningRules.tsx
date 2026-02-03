@@ -51,7 +51,7 @@ const { TextArea } = Input;
 interface AICleaningRulesProps {
   tableName?: string;
   databaseName?: string;
-  onRulesCreated?: (rules: any[]) => void;
+  onRulesCreated?: (rules: unknown[]) => void;
 }
 
 interface RuleTemplate {
@@ -60,7 +60,7 @@ interface RuleTemplate {
   name: string;
   expression: string;
   severity: string;
-  config_template: any;
+  config_template: Record<string, unknown>;
 }
 
 export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
@@ -106,8 +106,8 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
       setSelectedRecs(new Set());
       message.success(`分析完成，发现 ${data.total_count} 个潜在问题`);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.message || '分析失败');
+    onError: (error: unknown) => {
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '分析失败'; message.error(errMsg);
     },
     onSettled: () => {
       setAnalyzing(false);
@@ -116,7 +116,7 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
 
   // 创建质量规则
   const createMutation = useMutation({
-    mutationFn: async (rules: any[]) => {
+    mutationFn: async (rules: Record<string, unknown>[]) => {
       const response = await apiClient.post('/api/v1/quality/rules', {
         rules: rules.map(r => ({
           ...r,
@@ -133,8 +133,8 @@ export const AICleaningRules: React.FC<AICleaningRulesProps> = ({
       queryClient.invalidateQueries({ queryKey: ['quality-rules'] });
       onRulesCreated?.(Array.from(selectedRecs).map(i => recommendations[i]));
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.message || '创建失败');
+    onError: (error: unknown) => {
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '创建失败'; message.error(errMsg);
     },
   });
 

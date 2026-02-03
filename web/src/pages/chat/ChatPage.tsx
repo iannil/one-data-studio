@@ -26,7 +26,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import model, { type ChatCompletionUsage } from '@/services/model';
+import { type ChatCompletionUsage, getModels, streamChatCompletion } from '@/services/model';
 import { logError } from '@/services/logger';
 import agentService, { type Conversation, type ConversationMessage, saveMessage, getConversationUsage } from '@/services/agent-service';
 import type { ChatMessage } from '@/services/model';
@@ -80,7 +80,8 @@ function ChatPage() {
   // 获取可用模型列表
   const { data: modelsData, isLoading: isLoadingModels } = useQuery({
     queryKey: ['models'],
-    queryFn: model.getModels,
+    queryFn: getModels,
+    select: (res) => res.data,
     refetchInterval: 60000, // 每分钟刷新一次
   });
 
@@ -335,7 +336,7 @@ function ChatPage() {
       let fullContent = '';
 
       // 使用流式 API
-      await model.streamChatCompletion(
+      await streamChatCompletion(
         {
           model,
           messages: [
@@ -624,7 +625,7 @@ function ChatPage() {
               loading={isLoadingModels}
               style={{ width: '100%' }}
             >
-              {modelsData?.data?.map((m) => (
+              {modelsData?.map((m) => (
                 <Option key={m.id} value={m.id}>
                   {m.id}
                 </Option>
@@ -671,7 +672,7 @@ function ChatPage() {
                   value={selectedTemplateId}
                   onChange={handleTemplateSelect}
                 >
-                  {(templatesData as any).data.templates.map((t: any) => (
+                  {(templatesData as any).data.templates.map((t: { template_id: string; name: string }) => (
                     <Option key={t.template_id} value={t.template_id}>
                       {t.name}
                     </Option>

@@ -169,50 +169,50 @@ const KettlePage: React.FC = () => {
   }, [selectedTargetDb, loadTargetTables]);
 
   // 手动配置生成
-  const handleManualGenerate = async (values: any) => {
+  const handleManualGenerate = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       const sourceConnection: KettleConnectionConfig = {
-        type: values.source_type,
-        host: values.source_host,
-        port: values.source_port,
-        database: values.source_database,
-        username: values.source_username,
-        password: values.source_password,
-        schema: values.source_schema,
+        type: values.source_type as string,
+        host: values.source_host as string,
+        port: values.source_port as number,
+        database: values.source_database as string,
+        username: values.source_username as string,
+        password: values.source_password as string,
+        schema: values.source_schema as string,
       };
 
       const targetConnection: KettleConnectionConfig = {
-        type: values.target_type,
-        host: values.target_host,
-        port: values.target_port,
-        database: values.target_database,
-        username: values.target_username,
-        password: values.target_password,
-        schema: values.target_schema,
+        type: values.target_type as string,
+        host: values.target_host as string,
+        port: values.target_port as number,
+        database: values.target_database as string,
+        username: values.target_username as string,
+        password: values.target_password as string,
+        schema: values.target_schema as string,
       };
 
       const response = await generateKettleTransformation({
         source: {
           connection: sourceConnection,
-          table: values.source_table,
-          schema: values.source_schema,
+          table: values.source_table as string,
+          schema: values.source_schema as string,
           columns: sourceColumns.filter(c => c.column_name),
         },
         target: {
           connection: targetConnection,
-          table: values.target_table,
-          schema: values.target_schema,
+          table: values.target_table as string,
+          schema: values.target_schema as string,
           columns: targetColumns.filter(c => c.column_name),
         },
         options: {
-          name: values.transformation_name,
-          write_mode: values.write_mode,
-          batch_size: values.batch_size,
-          commit_size: values.commit_size,
-          incremental_field: values.incremental_field,
-          filter_condition: values.filter_condition,
-          primary_keys: values.primary_keys?.split(',').map((k: string) => k.trim()),
+          name: values.transformation_name as string,
+          write_mode: values.write_mode as 'update' | 'insert' | 'upsert' | 'truncate_insert',
+          batch_size: values.batch_size as number,
+          commit_size: values.commit_size as number,
+          incremental_field: values.incremental_field as string | undefined,
+          filter_condition: values.filter_condition as string | undefined,
+          primary_keys: (values.primary_keys as string | undefined)?.split(',').map((k: string) => k.trim()),
         },
       });
 
@@ -231,13 +231,13 @@ const KettlePage: React.FC = () => {
   };
 
   // 从 ETL 任务生成
-  const handleETLTaskGenerate = async (values: any) => {
+  const handleETLTaskGenerate = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const response = await generateKettleFromETLTask(values.task_id, {
-        name: values.name,
-        write_mode: values.write_mode,
-        batch_size: values.batch_size,
+      const response = await generateKettleFromETLTask(values.task_id as string, {
+        name: values.name as string,
+        write_mode: values.write_mode as 'update' | 'insert' | 'upsert' | 'truncate_insert',
+        batch_size: values.batch_size as number,
       });
 
       if (response.code === 0) {
@@ -255,7 +255,7 @@ const KettlePage: React.FC = () => {
   };
 
   // 从元数据生成
-  const handleMetadataGenerate = async (values: any) => {
+  const handleMetadataGenerate = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       // 构建表标识符：database.table 格式
@@ -266,9 +266,9 @@ const KettlePage: React.FC = () => {
         source_table_id: sourceTableId,
         target_table_id: targetTableId,
         options: {
-          name: values.name,
-          write_mode: values.write_mode,
-          batch_size: values.batch_size,
+          name: values.name as string,
+          write_mode: values.write_mode as 'update' | 'insert' | 'upsert' | 'truncate_insert',
+          batch_size: values.batch_size as number,
         },
       });
 
@@ -287,12 +287,12 @@ const KettlePage: React.FC = () => {
   };
 
   // 生成作业配置
-  const handleJobGenerate = async (values: any) => {
+  const handleJobGenerate = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       const response = await generateKettleJob({
-        name: values.name,
-        description: values.description,
+        name: values.name as string,
+        description: values.description as string,
         transformations: transformationList.filter(t => t.trim()),
         sequential: values.sequential !== false,
       });

@@ -42,7 +42,7 @@ function PromptsPage() {
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
-  const [testResult, setTestResult] = useState<{ result: string; usage?: any } | null>(null);
+  const [testResult, setTestResult] = useState<{ result: string; usage?: { prompt_tokens: number; completion_tokens: number } } | null>(null);
 
   const [form] = Form.useForm();
   const [testForm] = Form.useForm();
@@ -582,7 +582,7 @@ function PromptsPage() {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   {testResult.usage && (
-                    <Tag>Token: {testResult.usage.total_tokens}</Tag>
+                    <Tag>Token: {testResult.usage.prompt_tokens + testResult.usage.completion_tokens}</Tag>
                   )}
                 </div>
                 <pre style={{ whiteSpace: 'pre-wrap', maxHeight: 300, overflow: 'auto' }}>

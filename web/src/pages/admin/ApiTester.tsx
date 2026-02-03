@@ -19,6 +19,7 @@ import {
   Alert,
   Empty,
 } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   PlayCircleOutlined,
   CheckCircleOutlined,
@@ -45,9 +46,10 @@ interface ApiEndpoint {
   parameters?: Array<{ name: string; type: string; in: string; description: string }>;
   query_params?: Array<{ name: string; type: string; description: string }>;
   body_params?: Array<{ name: string; type: string; description: string }>;
-  request_schema?: any;
+  request_schema?: Record<string, unknown>;
   requires_auth: boolean;
   call_count: number;
+  error_count: number;
   avg_duration_ms: number;
 }
 
@@ -55,7 +57,7 @@ interface ApiTestResult {
   status_code: number;
   status_text: string;
   headers: Record<string, string>;
-  body: any;
+  body: unknown;
   duration_ms: number;
   error?: string;
 }
@@ -101,7 +103,7 @@ function ApiTester() {
     PATCH: 'cyan',
   };
 
-  const columns = [
+  const columns: ColumnsType<ApiEndpoint> = [
     {
       title: '方法',
       dataIndex: 'method',
@@ -245,7 +247,7 @@ function ApiTester() {
         }
       >
         <Table
-          columns={columns}
+          columns={columns as any}
           dataSource={endpoints}
           rowKey="endpoint_id"
           loading={isLoading}

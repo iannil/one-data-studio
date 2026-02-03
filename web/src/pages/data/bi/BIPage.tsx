@@ -56,7 +56,7 @@ function BIPage() {
   const [aiQueryResult, setAiQueryResult] = useState<{
     sql: string;
     data?: { columns: string[]; rows: Record<string, unknown>[] };
-    chartRecommendation?: any;
+    chartRecommendation?: Record<string, unknown>;
   } | null>(null);
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
 
@@ -220,7 +220,7 @@ function BIPage() {
   };
 
   // 处理 AI 生成的查询
-  const handleAIQueryGenerated = async (sql: string, chartConfig?: any) => {
+  const handleAIQueryGenerated = async (sql: string, chartConfig?: unknown) => {
     if (!selectedDatabase) {
       message.warning('请先选择数据库');
       return;
@@ -238,7 +238,7 @@ function BIPage() {
           columns: response.data?.columns || [],
           rows: response.data?.rows || [],
         },
-        chartRecommendation: chartConfig,
+        chartRecommendation: chartConfig as Record<string, unknown> | undefined,
       });
 
       message.success(`查询成功，返回 ${response.data?.row_count || 0} 条记录`);
@@ -253,7 +253,7 @@ function BIPage() {
     try {
       const response = await data.getReportData(reportId);
       // 类型断言：API返回的data包含chart_data字段
-      return (response.data as { chart_data?: any })?.chart_data || null;
+      return (response.data as { chart_data?: unknown })?.chart_data || null;
     } catch (error) {
       console.warn('Failed to fetch chart data, using demo data:', error);
       return null;
@@ -374,7 +374,7 @@ function BIPage() {
                   <span>智能数据分析</span>
                   {aiQueryResult?.chartRecommendation && (
                     <Tag icon={<ThunderboltFilled />} color="blue">
-                      AI 推荐：{aiQueryResult.chartRecommendation.chart_name}
+                      AI 推荐：{(aiQueryResult.chartRecommendation as { chart_name: string }).chart_name}
                     </Tag>
                   )}
                 </Space>
@@ -393,7 +393,7 @@ function BIPage() {
                       onChange={setSelectedDatabase}
                       allowClear
                     >
-                      {databases.map((db: any) => (
+                      {databases.map((db: { name: string; description?: string }) => (
                         <Option key={db.name} value={db.name}>
                           {db.name}
                           {db.description && <span style={{ color: '#999', marginLeft: 8 }}> - {db.description}</span>}
@@ -417,7 +417,7 @@ function BIPage() {
                   <Col span={12}>
                     <SmartChart
                       data={aiQueryResult.data}
-                      chartRecommendation={aiQueryResult.chartRecommendation}
+                      chartRecommendation={aiQueryResult.chartRecommendation as { chart_type: string; chart_name: string; confidence: number; reason: string; config?: Record<string, unknown> } | undefined}
                       height={400}
                     />
                   </Col>

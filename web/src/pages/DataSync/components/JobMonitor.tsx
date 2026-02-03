@@ -39,6 +39,7 @@ const JobMonitor: React.FC<JobMonitorProps> = ({ className }) => {
   const { data: jobsData } = useQuery({
     queryKey: ['cdc', 'jobs'],
     queryFn: () => cdcApi.listJobs(),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -46,12 +47,13 @@ const JobMonitor: React.FC<JobMonitorProps> = ({ className }) => {
   const { data: metricsData, isLoading } = useQuery({
     queryKey: ['cdc', 'metrics', selectedJobId],
     queryFn: () => cdcApi.getJobMetrics(selectedJobId!),
+    select: (res) => res.data.data,
     refetchInterval: 2000,
     enabled: !!selectedJobId,
   });
 
-  const jobs = jobsData?.data?.jobs || [];
-  const metrics = metricsData?.data;
+  const jobs = jobsData?.jobs || [];
+  const metrics = metricsData;
 
   const runningJobs = jobs.filter((j) => j.status === 'running');
 

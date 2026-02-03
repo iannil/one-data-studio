@@ -38,6 +38,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   ReloadOutlined,
+  LoadingOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
@@ -73,7 +74,7 @@ interface KafkaMessage {
   partition: number;
   offset: number;
   key: string | null;
-  value: any;
+  value: unknown;
   timestamp: number;
   processed: boolean;
   error?: string;
@@ -260,7 +261,7 @@ const KafkaConsumerList: React.FC<{
       key: 'actions',
       width: 200,
       fixed: 'right' as const,
-      render: (_: any, record: KafkaConsumer) => (
+      render: (_: unknown, record: KafkaConsumer) => (
         <Space size="small">
           {record.status === 'idle' || record.status === 'stopped' ? (
             <Button
@@ -363,7 +364,7 @@ const CreateConsumerModal: React.FC<{
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ bootstrap_servers }),
+        body: JSON.stringify({ bootstrap_servers: bootstrapServers }),
       });
       const data = await res.json();
       setTestingConnection(false);

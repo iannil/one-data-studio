@@ -28,6 +28,7 @@ import {
   Tabs,
   Switch,
   InputNumber,
+  Tooltip,
   Descriptions,
 } from 'antd';
 import {
@@ -68,7 +69,7 @@ interface CDCTask {
   last_position: string;
   current_lag_ms: number;
   error_message?: string;
-  throughput_per_second: float;
+  throughput_per_second: number;
 }
 
 interface CDCEvent {
@@ -206,7 +207,7 @@ const CDCTaskList: React.FC<{
       title: '捕获事件',
       key: 'events',
       width: 150,
-      render: (_: any, record: CDCTask) => (
+      render: (_: unknown, record: CDCTask) => (
         <Space size={4}>
           <Tooltip title="INSERT">
             <Tag color="green">{record.insert_events}</Tag>
@@ -234,9 +235,9 @@ const CDCTaskList: React.FC<{
       width: 100,
       render: (lag: number) => {
         const lagSeconds = lag / 1000;
-        let color = 'success';
+        let color: 'success' | 'warning' | 'danger' | 'secondary' = 'success';
         if (lagSeconds > 60) color = 'warning';
-        if (lagSeconds > 300) color = 'error';
+        if (lagSeconds > 300) color = 'danger';
         return <Text type={color}>{lagSeconds.toFixed(1)}s</Text>;
       },
     },
@@ -251,7 +252,7 @@ const CDCTaskList: React.FC<{
       title: '操作',
       key: 'actions',
       width: 200,
-      render: (_: any, record: CDCTask) => (
+      render: (_: unknown, record: CDCTask) => (
         <Space size="small">
           {record.status === 'idle' || record.status === 'stopped' ? (
             <Button
@@ -321,7 +322,7 @@ const CreateCDCTaskModal: React.FC<{
   const [testingConnection, setTestingConnection] = useState(false);
 
   const testConnectionMutation = useMutation({
-    mutationFn: async (values: any) => {
+    mutationFn: async (values: Record<string, unknown>) => {
       setTestingConnection(true);
       const res = await fetch('/api/v1/cdc/test-connection', {
         method: 'POST',
@@ -345,7 +346,7 @@ const CreateCDCTaskModal: React.FC<{
   });
 
   const createMutation = useMutation({
-    mutationFn: async (values: any) => {
+    mutationFn: async (values: Record<string, unknown>) => {
       const res = await fetch('/api/v1/cdc/tasks', {
         method: 'POST',
         headers: {

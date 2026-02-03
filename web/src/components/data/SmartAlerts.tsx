@@ -88,7 +88,7 @@ import './SmartAlerts.css';
 
 // 通道配置接口
 interface AlertChannelConfig {
-  channel_type: AlertChannel;
+  channel_type: 'email' | 'sms' | 'webhook' | 'wechat' | 'dingtalk';
   name: string;
   enabled: boolean;
   config?: Record<string, unknown>;

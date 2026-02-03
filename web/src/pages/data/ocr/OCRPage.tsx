@@ -127,30 +127,31 @@ export const OCRPage: React.FC = () => {
   const { data: tasksData, isLoading } = useQuery({
     queryKey: ['ocr-tasks', statusFilter],
     queryFn: () => ocrApi.getTasks({ status: statusFilter }),
-    refetchInterval: (data) => {
-      // 有处理中的任务时，每3秒刷新一次
-      const hasProcessing = data?.tasks?.some(
-        (t: OCRTask) => t.status === 'processing' || t.status === 'pending'
-      );
-      return hasProcessing ? 3000 : false;
-    }
+    select: (res) => res.data,
+    refetchInterval: 3000, // 每3秒刷新一次
   });
 
   // 获取模板列表
   const { data: templatesData } = useQuery({
     queryKey: ['ocr-templates'],
-    queryFn: () => ocrApi.getTemplates({ is_active: true })
+    queryFn: () => ocrApi.getTemplates({ is_active: true }),
+    select: (res) => res.data,
   });
 
   // 获取增强任务结果
   const { data: enhancedResultData, isLoading: resultLoading } = useQuery({
     queryKey: ['ocr-enhanced-result', selectedTaskId],
     queryFn: () => ocrApi.getEnhancedTaskResult(selectedTaskId!),
+    select: (res) => res.data,
     enabled: !!selectedTaskId && resultModalVisible,
-    onSuccess: (data) => {
-      setEnhancedResult(data);
-    }
   });
+
+  // Sync enhanced result to state when data changes
+  useEffect(() => {
+    if (enhancedResultData) {
+      setEnhancedResult(enhancedResultData);
+    }
+  }, [enhancedResultData]);
 
   // 上传处理
   const uploadMutation = useMutation({
@@ -164,13 +165,14 @@ export const OCRPage: React.FC = () => {
       if (extractionType === 'auto') {
         try {
           const detectionResult = await ocrApi.detectDocumentType(file);
-          finalExtractionType = detectionResult.detected_type;
-          setAutoDetectedType(detectionResult.detected_type);
-          message.info(`自动识别文档类型: ${getDocumentTypeLabel(detectionResult.detected_type)}`);
+          const detectedData = detectionResult.data;
+          finalExtractionType = detectedData.detected_type;
+          setAutoDetectedType(detectedData.detected_type);
+          message.info(`自动识别文档类型: ${getDocumentTypeLabel(detectedData.detected_type)}`);
 
           // 如果有建议的模板，使用第一个
-          if (detectionResult.suggested_templates.length > 0 && !templateId) {
-            setTemplateId(detectionResult.suggested_templates[0]);
+          if (detectedData.suggested_templates?.length > 0 && !templateId) {
+            setTemplateId(detectedData.suggested_templates[0]);
           }
         } catch (error) {
           console.error('文档类型识别失败:', error);
@@ -191,8 +193,9 @@ export const OCRPage: React.FC = () => {
       setAutoDetectedType(null);
       queryClient.invalidateQueries({ queryKey: ['ocr-tasks'] });
     },
-    onError: (error: any) => {
-      message.error(`上传失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`上传失败: ${errMsg}`);
     }
   });
 
@@ -326,7 +329,7 @@ export const OCRPage: React.FC = () => {
       title: '识别结果',
       key: 'result',
       width: 150,
-      render: (_: any, record: OCRTask) => {
+      render: (_: unknown, record: OCRTask) => {
         if (record.status !== 'completed' || !record.result_summary) {
           return '-';
         }
@@ -356,7 +359,7 @@ export const OCRPage: React.FC = () => {
       key: 'action',
       width: 150,
       fixed: 'right' as const,
-      render: (_: any, record: OCRTask) => (
+      render: (_: unknown, record: OCRTask) => (
         <Space size="small">
           {record.status === 'completed' && (
             <Button
@@ -531,9 +534,9 @@ export const OCRPage: React.FC = () => {
                       onChange={setTemplateId}
                       allowClear
                     >
-                      {templatesData.map((template: any) => (
+                      {templatesData.map((template: { id: string; name: string; category?: string }) => (
                         <Option key={template.id} value={template.id}>
-                          {template.name} {template.category && <Tag size="small">{template.category}</Tag>}
+                          {template.name} {template.category && <Tag>{template.category}</Tag>}
                         </Option>
                       ))}
                     </Select>

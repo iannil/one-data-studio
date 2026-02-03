@@ -10,7 +10,7 @@
  * - 自动 Token 刷新
  */
 
-import { logError } from './logger';
+import { logError, logDebug } from './logger';
 
 // ============= 类型定义 =============
 
@@ -292,11 +292,10 @@ export function buildLogoutUrl(redirectUri?: string): string {
 export async function handleCallback(code: string, state: string): Promise<boolean> {
   // 验证状态
   const storedState = sessionStorage.getItem('oauth_state');
-  console.log('[Auth] Callback - state:', state, 'storedState:', storedState);
+  logDebug(`Callback - state: ${state}, storedState: ${storedState}`, 'Auth');
 
   if (state !== storedState) {
     logError(`Invalid state parameter: received=${state}, stored=${storedState}`, 'Auth');
-    console.error('[Auth] State mismatch!');
     return false;
   }
 
@@ -305,8 +304,8 @@ export async function handleCallback(code: string, state: string): Promise<boole
     const redirectUri = window.location.origin + '/callback';
     const tokenEndpoint = `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/token`;
 
-    console.log('[Auth] Token endpoint:', tokenEndpoint);
-    console.log('[Auth] Redirect URI:', redirectUri);
+    logDebug(`Token endpoint: ${tokenEndpoint}`, 'Auth');
+    logDebug(`Redirect URI: ${redirectUri}`, 'Auth');
 
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
@@ -321,16 +320,16 @@ export async function handleCallback(code: string, state: string): Promise<boole
       }),
     });
 
-    console.log('[Auth] Token response status:', response.status);
+    logDebug(`Token response status: ${response.status}`, 'Auth');
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Auth] Token exchange failed:', errorText);
+      logError(`Token exchange failed: ${errorText}`, 'Auth');
       throw new Error('Failed to exchange code for tokens');
     }
 
     const tokens: AuthTokens = await response.json();
-    console.log('[Auth] Tokens received, expires_in:', tokens.expires_in);
+    logDebug(`Tokens received, expires_in: ${tokens.expires_in}`, 'Auth');
     storeTokens(tokens);
 
     // 解析并存储用户信息

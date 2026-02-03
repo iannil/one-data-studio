@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Form, Input, message, Alert, Space, Typography, Divider } from 'antd';
 import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
 import { buildLoginUrl, mockLogin, getKeycloakConfig, isAuthenticated } from '../services/auth';
+import { logDebug } from '../services/logger';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -33,9 +34,9 @@ function LoginPage() {
   // 检查是否已登录
   useEffect(() => {
     const isAuth = isAuthenticated();
-    console.log('[LoginPage] Checking auth - isAuthenticated:', isAuth);
+    logDebug(`Checking auth - isAuthenticated: ${isAuth}`, 'LoginPage');
     if (isAuth) {
-      console.log('[LoginPage] Already authenticated, redirecting to:', redirect);
+      logDebug(`Already authenticated, redirecting to: ${redirect}`, 'LoginPage');
       navigate(redirect, { replace: true });
     }
   }, [navigate, redirect]);

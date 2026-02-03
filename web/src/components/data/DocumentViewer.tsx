@@ -90,7 +90,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [result]);
 
-  const handleFieldChange = (key: string, value: any) => {
+  const handleFieldChange = (key: string, value: unknown) => {
     setEditableData(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };

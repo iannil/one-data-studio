@@ -4,25 +4,47 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Text2SQLPage from './Text2SQLPage';
-import * as agentService from '@/services/agent-service';
-import * as data from '@/services/data';
+import { text2Sql } from '@/services/agent-service';
+import data from '@/services/data';
 
 // Mock 服务
 vi.mock('@/services/agent-service', () => ({
-  default: {},
   text2Sql: vi.fn(),
 }));
 
-vi.mock('@/services/data-service', () => ({
-  default: {
-    getDatabases: vi.fn(),
-    getTables: vi.fn(),
-    getTableColumns: vi.fn(),
-  },
-}));
-
-import { text2Sql } from '@/services/agent-service';
-
+vi.mock('@/services/data', () => {
+  const mockData = {
+    getDatabases: vi.fn(() => Promise.resolve({
+      data: {
+        databases: [
+          { name: 'sales_dw', tables_count: 10 },
+          { name: 'analytics', tables_count: 5 },
+        ],
+      },
+    })),
+    getTables: vi.fn(() => Promise.resolve({
+      data: {
+        tables: [
+          { name: 'orders', rows_count: 1000 },
+          { name: 'customers', rows_count: 500 },
+          { name: 'products', rows_count: 200 },
+        ],
+      },
+    })),
+    getTableColumns: vi.fn(() => Promise.resolve({
+      data: {
+        columns: [
+          { name: 'id', type: 'bigint' },
+          { name: 'customer_id', type: 'bigint' },
+          { name: 'amount', type: 'decimal' },
+        ],
+      },
+    })),
+  };
+  return {
+    default: mockData,
+  };
+});
 
 
 describe('Text2SQLPage', () => {
@@ -30,8 +52,7 @@ describe('Text2SQLPage', () => {
     vi.clearAllMocks();
 
     // 默认 mock 返回值
-    vi.mocked(data.default.getDatabases).mockResolvedValue({
-      code: 0,
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: {
         databases: [
           { name: 'sales_dw', tables_count: 10 },
@@ -40,13 +61,22 @@ describe('Text2SQLPage', () => {
       },
     });
 
-    vi.mocked(data.default.getTables).mockResolvedValue({
-      code: 0,
+    (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: {
         tables: [
           { name: 'orders', rows_count: 1000 },
           { name: 'customers', rows_count: 500 },
           { name: 'products', rows_count: 200 },
+        ],
+      },
+    });
+
+    (data.getTableColumns as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        columns: [
+          { name: 'id', type: 'bigint' },
+          { name: 'customer_id', type: 'bigint' },
+          { name: 'amount', type: 'decimal' },
         ],
       },
     });
@@ -178,7 +208,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(data.default.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: {
         databases: [
@@ -187,7 +217,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
       },
     });
 
-    vi.mocked(data.default.getTables).mockResolvedValue({
+    (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: {
         tables: [
@@ -197,7 +227,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
       },
     });
 
-    vi.mocked(data.default.getTableColumns).mockResolvedValue({
+    (data.getTableColumns as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: {
         columns: [
@@ -213,7 +243,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
     render(<Text2SQLPage />);
 
     await waitFor(() => {
-      expect(data.default.getDatabases).toHaveBeenCalled();
+      expect(data.getDatabases).toHaveBeenCalled();
     });
   });
 
@@ -221,7 +251,7 @@ describe('Text2SQLPage 数据库和表选择', () => {
     render(<Text2SQLPage />);
 
     await waitFor(() => {
-      expect(data.default.getDatabases).toHaveBeenCalled();
+      expect(data.getDatabases).toHaveBeenCalled();
     });
 
     // 选择数据库后应该加载表 - getTables 可能由 useQuery 自动触发
@@ -234,7 +264,7 @@ describe('Text2SQLPage SQL 预览', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(data.default.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: [] },
     });

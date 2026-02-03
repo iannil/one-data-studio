@@ -189,7 +189,7 @@ const NotificationsPage: React.FC = () => {
   }, [activeTab, pagination.current, pagination.pageSize]);
 
   // 创建/更新模板
-  const handleSaveTemplate = async (values: any) => {
+  const handleSaveTemplate = async (values: Record<string, unknown>) => {
     try {
       const url = editingTemplate
         ? `/api/v1/notification-templates/${editingTemplate.id}`
@@ -237,14 +237,14 @@ const NotificationsPage: React.FC = () => {
   };
 
   // 发送通知
-  const handleSendNotification = async (values: any) => {
+  const handleSendNotification = async (values: Record<string, unknown>) => {
     try {
       const response = await fetch('/api/v1/notifications/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...values,
-          recipients: values.recipients.split(',').map((r: string) => r.trim()),
+          recipients: (values.recipients as string).split(',').map((r: string) => r.trim()),
         }),
       });
       const data = await response.json();

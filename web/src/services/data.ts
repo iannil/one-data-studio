@@ -1780,7 +1780,7 @@ export interface CleaningRecommendation {
     severity?: string;
     pattern?: string;
     expression?: string;
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
   };
   priority: 'critical' | 'high' | 'medium' | 'low';
   estimated_improvement: number;
@@ -1789,7 +1789,7 @@ export interface CleaningRecommendation {
 export interface CleaningRecommendationResponse {
   recommendations: CleaningRecommendation[];
   total_count: number;
-  kettle_steps?: any[];
+  kettle_steps?: Record<string, unknown>[];
 }
 
 export interface RuleTemplate {
@@ -1798,7 +1798,7 @@ export interface RuleTemplate {
   name: string;
   expression: string;
   severity: string;
-  config_template: any;
+  config_template: Record<string, unknown>;
 }
 
 export interface RuleTemplatesResponse {
@@ -1877,7 +1877,7 @@ export interface MappingTablesResponse {
 
 export interface SQLGenerationResponse {
   select_sql: string;
-  mappings: any[];
+  mappings: Array<{ source: string; target: string; type: string }>;
   conversion_count: number;
   high_risk_count: number;
 }
@@ -3290,15 +3290,15 @@ export async function getMaskingRules(): Promise<ApiResponse<{
  * 对单个值进行脱敏
  */
 export async function maskSingleValue(params: {
-  value: any;
+  value: string | number | boolean | null;
   column_name?: string;
   sensitivity_type?: string;
   sensitivity_level?: string;
   strategy?: string;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }): Promise<ApiResponse<{
-  original: any;
-  masked: any;
+  original: string | number | boolean | null;
+  masked: string;
 }>> {
   return apiClient.post('/api/v1/masking/value', params);
 }
@@ -4027,6 +4027,43 @@ export async function rollbackMetadataVersion(
   });
 }
 
+/**
+ * 预览回滚操作
+ */
+export async function previewRollback(
+  tableId: string,
+  params: { target_version_id: string }
+): Promise<ApiResponse<{
+  actions: Array<{
+    action: string;
+    table?: string;
+    column?: string;
+    description: string;
+    risk: 'low' | 'medium' | 'high';
+  }>;
+  estimated_time: number;
+}>> {
+  return apiClient.post(`/api/v1/metadata/versions/${tableId}/preview-rollback`, params);
+}
+
+/**
+ * 执行回滚操作
+ */
+export async function executeRollback(
+  tableId: string,
+  params: {
+    target_version_id: string;
+    create_backup?: boolean;
+    execute_on_database?: boolean;
+  }
+): Promise<ApiResponse<{
+  success: boolean;
+  error_message?: string;
+  rolled_back_to: string;
+}>> {
+  return apiClient.post(`/api/v1/metadata/versions/${tableId}/execute-rollback`, params);
+}
+
 export default {
   // 数据集
   getDatasets,
@@ -4279,6 +4316,8 @@ export default {
   getMetadataVersionDetail,
   compareMetadataVersions,
   rollbackMetadataVersion,
+  previewRollback,
+  executeRollback,
 };
 
 // ============= 元数据图谱 API 类型定义 =============
@@ -4293,7 +4332,13 @@ export interface GraphNode {
   data_type?: string;
   description?: string;
   is_center?: boolean;
-  properties?: any;
+  properties?: Record<string, unknown>;
+  // Additional properties for impact analysis
+  node_type?: string;
+  name?: string;
+  full_name?: string;
+  node_id?: string;
+  impact_level?: number | 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface GraphEdge {
@@ -4303,7 +4348,7 @@ export interface GraphEdge {
   type: string;
   direction?: 'upstream' | 'downstream';
   relation_type?: string;
-  properties?: any;
+  properties?: Record<string, unknown>;
 }
 
 export interface MetadataGraphResponse {
@@ -4345,6 +4390,12 @@ export interface ImpactAnalysisResponse {
   impacted_edges: GraphEdge[];
   impact_count: number;
   risk_levels?: Record<string, number>;
+  // 待后端实现的功能
+  affected_tables?: string[];
+  impact_level?: 'low' | 'medium' | 'high' | 'critical';
+  upstream_count?: number;
+  downstream_count?: number;
+  affected_reports?: string[];
 }
 
 export interface GraphStatistics {
@@ -4399,9 +4450,9 @@ export const searchMetadataNodes = (query: string, params?: {
 /**
  * 获取影响分析
  */
-export const getImpactAnalysis = (nodeType: string, nodeId: string) => {
+export function getImpactAnalysis(nodeType: string, nodeId: string) {
   return apiClient.get<ImpactAnalysisResponse>(`/api/v1/metadata/graph/impact/${nodeType}/${nodeId}`);
-};
+}
 
 /**
  * 获取图谱统计信息
@@ -4424,81 +4475,81 @@ export const getNodeNeighbors = (nodeType: string, nodeId: string, params?: {
 /**
  * AI 自然语言搜索资产
  */
-export const aiSearchAssets = (query: string, params?: {
+export function aiSearchAssets(query: string, params?: {
   limit?: number;
   filters?: {
     asset_type?: string;
     category_id?: string;
     data_level?: string;
   };
-}) => {
+}) {
   return apiClient.post<ApiResponse<AIAssetSearchResponse>>('/api/v1/assets/ai/search', {
     query,
     limit: params?.limit || 20,
     filters: params?.filters,
   });
-};
+}
 
 /**
  * AI 语义搜索资产（基于向量相似度）
  */
-export const aiSemanticSearchAssets = (query: string, params?: {
+export function aiSemanticSearchAssets(query: string, params?: {
   limit?: number;
   filters?: {
     asset_type?: string;
     category_id?: string;
     data_level?: string;
   };
-}) => {
+}) {
   return apiClient.post<ApiResponse<AISemanticSearchResponse>>('/api/v1/assets/ai/semantic-search', {
     query,
     limit: params?.limit || 20,
     filters: params?.filters,
   });
-};
+}
 
 /**
  * AI 推荐相关资产
  */
-export const aiRecommendAssets = (assetId: string, params?: {
+export function aiRecommendAssets(assetId: string, params?: {
   limit?: number;
-}) => {
+}) {
   return apiClient.get<ApiResponse<AIRecommendResponse>>(`/api/v1/assets/ai/recommend/${assetId}`, {
     params: { limit: params?.limit || 10 },
   });
-};
+}
 
 /**
  * 获取热门资产
  */
-export const getTrendingAssets = (params?: {
+export function getTrendingAssets(params?: {
   days?: number;
   limit?: number;
-}) => {
+}) {
   return apiClient.get<ApiResponse<TrendingAssetsResponse>>('/api/v1/assets/ai/trending', {
     params: { days: params?.days || 7, limit: params?.limit || 10 },
   });
-};
+}
 
 /**
  * 搜索补全建议
  */
-export const getAssetAutocomplete = (prefix: string, params?: {
+export function getAssetAutocomplete(prefix: string, params?: {
   limit?: number;
-}) => {
+}) {
   return apiClient.get<ApiResponse<AutocompleteResponse>>('/api/v1/assets/ai/autocomplete', {
     params: { prefix, limit: params?.limit || 10 },
   });
-};
+}
 
 // ============= AI 清洗规则 API =============
 
 /**
  * AI 分析表的数据质量问题
  */
-export const analyzeTableQuality = (tableName: string, params?: {
+export function analyzeTableQuality(tableName: string, params?: {
   database_name?: string;
-}) => {
+}) {
   return apiClient.post<{ recommendations: CleaningRecommendation[]; total_count: number }>(
     '/api/v1/quality/analyze-table',
     {
@@ -4506,40 +4557,40 @@ export const analyzeTableQuality = (tableName: string, params?: {
       database_name: params?.database_name,
     }
   );
-};
+}
 
 /**
  * AI 推荐清洗规则（基于告警）
  */
-export const recommendCleaningRules = (params: {
+export function recommendCleaningRules(params: {
   table_id?: string;
-  quality_alerts?: any[];
+  quality_alerts?: Array<{ alert_id: string; table_name: string; column_name: string; issue_type: string }>;
   include_kettle_steps?: boolean;
-}) => {
+}) {
   return apiClient.post<CleaningRecommendationResponse>('/api/v1/quality/recommend-cleaning', params);
-};
+}
 
 /**
  * 为单个列推荐清洗规则
  */
-export const recommendColumnRules = (columnInfo: {
+export function recommendColumnRules(columnInfo: {
   name: string;
   type: string;
   nullable?: boolean;
-  sample_values?: any[];
-}) => {
+  sample_values?: unknown[];
+}) {
   return apiClient.post<{ recommendations: CleaningRecommendation[]; total_count: number }>(
     '/api/v1/quality/recommend-column-rules',
     { column_info: columnInfo }
   );
-};
+}
 
 /**
  * 获取清洗规则模板
  */
-export const getRuleTemplates = () => {
+export function getRuleTemplates() {
   return apiClient.get<RuleTemplatesResponse>('/api/v1/quality/rule-templates');
-};
+}
 
 // ============= AI 字段映射 API =============
 
@@ -4621,17 +4672,17 @@ export const detectAnomalies = (params: {
 /**
  * 获取预警规则列表
  */
-export const getAlertRules = (params?: {
+export function getAlertRules(params?: {
   rule_type?: string;
   enabled_only?: boolean;
-}) => {
+}) {
   return apiClient.get<AlertRulesResponse>('/api/v1/alerts/rules', { params });
-};
+}
 
 /**
  * 创建预警规则
  */
-export const createAlertRule = (rule: {
+export function createAlertRule(rule: {
   name: string;
   description?: string;
   rule_type: string;
@@ -4639,23 +4690,23 @@ export const createAlertRule = (rule: {
   severity: string;
   enabled?: boolean;
   channels?: string[];
-}) => {
+}) {
   return apiClient.post<AlertRule>('/api/v1/alerts/rules', rule);
-};
+}
 
 /**
  * 更新预警规则
  */
-export const updateAlertRule = (ruleId: string, updates: Partial<AlertRule>) => {
+export function updateAlertRule(ruleId: string, updates: Partial<AlertRule>) {
   return apiClient.put<AlertRule>(`/api/v1/alerts/rules/${ruleId}`, updates);
-};
+}
 
 /**
  * 删除预警规则
  */
-export const deleteAlertRule = (ruleId: string) => {
+export function deleteAlertRule(ruleId: string) {
   return apiClient.delete<{ deleted: boolean }>(`/api/v1/alerts/rules/${ruleId}`);
-};
+}
 
 /**
  * 获取预警通道列表

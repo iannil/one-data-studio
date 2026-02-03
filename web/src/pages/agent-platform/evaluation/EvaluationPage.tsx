@@ -297,7 +297,7 @@ function EvaluationPage() {
             title: metric.toUpperCase(),
             dataIndex: 'metrics',
             key: metric,
-            render: (val: any) => val?.[metric]?.toFixed(4) || '-',
+            render: (val: unknown) => val?.[metric]?.toFixed(4) || '-',
           });
         });
       }

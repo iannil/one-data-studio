@@ -19,6 +19,7 @@ import {
   Form,
   message,
   Tooltip,
+  TreeDataNode,
 } from 'antd';
 import {
   SearchOutlined,
@@ -149,18 +150,18 @@ function AssetsPage() {
   }) || [];
 
   // Build tree data
-  const buildTreeData = (assets: DataAsset[]): any[] => {
+  const buildTreeData = (assets: DataAsset[]): unknown[] => {
     const rootNodes = assets.filter((a) => !a.parent_id);
     return rootNodes.map((node) => buildNode(node, assets));
   };
 
-  const buildNode = (node: DataAsset, allAssets: DataAsset[]): any => {
+  const buildNode = (node: DataAsset, allAssets: DataAsset[]): { key: string; title: string; children: unknown[]; data?: DataAsset; icon?: React.ReactNode } => {
     const children = allAssets.filter((a) => a.parent_id === node.asset_id);
     return {
       title: node.name,
       key: node.asset_id,
       icon: getIconByType(node.type),
-      children: children.length > 0 ? children.map((c) => buildNode(c, allAssets)) : undefined,
+      children: children.length > 0 ? children.map((c) => buildNode(c, allAssets)) : [],
       data: node,
     };
   };
@@ -242,7 +243,7 @@ function AssetsPage() {
       title: '操作',
       key: 'action',
       width: 120,
-      render: (_: any, record: DataAsset) => (
+      render: (_: unknown, record: DataAsset) => (
         <Space size="small">
           <Button
             type="link"
@@ -310,9 +311,10 @@ function AssetsPage() {
     },
   ];
 
-  const handleSelectAsset = (_selectedKeys: React.Key[], info: any) => {
-    if (info.node.data) {
-      setSelectedAsset(info.node.data);
+  const handleSelectAsset = (_selectedKeys: React.Key[], info: { node: TreeDataNode }) => {
+    const nodeData = info.node as { data?: DataAsset };
+    if (nodeData.data) {
+      setSelectedAsset(nodeData.data);
       setIsProfileDrawerOpen(true);
     }
   };
@@ -426,7 +428,7 @@ function AssetsPage() {
                 children: (
                   <AssetAISearch
                     onResultSelect={(asset) => {
-                      setSelectedAsset(asset);
+                      setSelectedAsset(asset as unknown as DataAsset);
                       setIsProfileDrawerOpen(true);
                     }}
                   />

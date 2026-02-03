@@ -4,26 +4,57 @@ import userEvent from '@testing-library/user-event';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MetadataPage from './MetadataPage';
-import data from '@/services/data';
 
 // Mock 服务
-vi.mock('@/services/data-service', () => ({
-  default: {
+vi.mock('@/services/data', () => {
+  const mockData = {
     getDatabases: vi.fn(),
     getTables: vi.fn(),
     getTableDetail: vi.fn(),
     searchTables: vi.fn(),
-  },
-}));
+    executeQuery: vi.fn(),
+    validateSql: vi.fn(),
+    getDataAssets: vi.fn(),
+    getAssetInventories: vi.fn(),
+    createAssetInventory: vi.fn(),
+    getDataAsset: vi.fn(),
+  };
+  return {
+    default: mockData,
+  };
+});
+
+import data from '@/services/data';
 
 // Mock fetch for Text2SQL
-global.fetch = vi.fn();
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 // Mock navigator.clipboard
 const mockClipboard = {
   writeText: vi.fn().mockResolvedValue(undefined),
 };
 Object.assign(navigator, { clipboard: mockClipboard });
+
+// 辅助函数：设置 mock 返回值
+const setupMocks = () => {
+  (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
+    code: 0,
+    data: { databases: [] },
+  });
+  (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
+    code: 0,
+    data: { tables: [] },
+  });
+  (data.getTableDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
+    code: 0,
+    data: null,
+  });
+  (data.searchTables as ReturnType<typeof vi.fn>).mockResolvedValue({
+    code: 0,
+    data: { results: [] },
+  });
+};
 
 
 
@@ -65,19 +96,18 @@ const mockTableDetail = {
 describe('MetadataPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(data.getTables).mockResolvedValue({
+    (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(data.getTableDetail).mockResolvedValue({
+    (data.getTableDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });
@@ -127,19 +157,18 @@ describe('MetadataPage', () => {
 describe('MetadataPage 浏览功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(data.getTables).mockResolvedValue({
+    (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(data.getTableDetail).mockResolvedValue({
+    (data.getTableDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });
@@ -166,14 +195,13 @@ describe('MetadataPage 浏览功能', () => {
 describe('MetadataPage 搜索功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(data.searchTables).mockResolvedValue({
+    (data.searchTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: {
         results: [
@@ -220,14 +248,13 @@ describe('MetadataPage 搜索功能', () => {
 describe('MetadataPage Text-to-SQL 功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    (global.fetch as any).mockResolvedValue({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -303,14 +330,13 @@ describe('MetadataPage Text-to-SQL 功能', () => {
 describe('MetadataPage SQL 结果模态框', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    (global.fetch as any).mockResolvedValue({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -344,19 +370,18 @@ describe('MetadataPage SQL 结果模态框', () => {
 describe('MetadataPage 表详情', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
 
-    vi.mocked(data.getDatabases).mockResolvedValue({
+    (data.getDatabases as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { databases: mockDatabases },
     });
 
-    vi.mocked(data.getTables).mockResolvedValue({
+    (data.getTables as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: { tables: mockTables },
     });
 
-    vi.mocked(data.getTableDetail).mockResolvedValue({
+    (data.getTableDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       data: mockTableDetail,
     });

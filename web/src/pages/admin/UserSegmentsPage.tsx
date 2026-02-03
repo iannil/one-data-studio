@@ -275,7 +275,7 @@ function UserSegmentsPage() {
         }
       >
         <Table
-          columns={columns}
+          columns={columns as any}
           dataSource={segments}
           rowKey="segment_id"
           loading={isLoading}

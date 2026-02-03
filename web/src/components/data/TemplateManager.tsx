@@ -77,9 +77,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
   onSave
 }) => {
   const [loading, setLoading] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<OCRTemplate[]>([]);
   const [activeTab, setActiveTab] = useState('list');
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<OCRTemplate | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -91,8 +91,8 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const data = await ocrService.listTemplates();
-      setTemplates(data);
+      const response = await ocrService.listTemplates();
+      setTemplates(response.data || []);
     } catch (error) {
       message.error('加载模板失败');
     } finally {
@@ -103,12 +103,17 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
   const handleCreate = () => {
     setEditingTemplate({
       id: '',
+      tenant_id: '',
       name: '',
       description: '',
-      type: 'general',
+      template_type: 'general',
       category: 'business',
       is_active: true,
+      is_public: false,
+      version: 1,
       extraction_rules: { fields: [] },
+      usage_count: 0,
+      success_rate: 0,
       created_at: '',
       updated_at: ''
     });
@@ -116,7 +121,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     setActiveTab('editor');
   };
 
-  const handleEdit = (template: Template) => {
+  const handleEdit = (template: OCRTemplate) => {
     setEditingTemplate(template);
     form.setFieldsValue(template);
     setActiveTab('editor');
@@ -132,16 +137,16 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     }
   };
 
-  const handleDuplicate = async (template: Template) => {
-    const newTemplate = {
+  const handleDuplicate = async (template: OCRTemplate) => {
+    const newOCRTemplate = {
       ...template,
       id: '',
       name: `${template.name} (副本)`,
       created_at: '',
       updated_at: ''
     };
-    setEditingTemplate(newTemplate);
-    form.setFieldsValue(newTemplate);
+    setEditingTemplate(newOCRTemplate);
+    form.setFieldsValue(newOCRTemplate);
     setActiveTab('editor');
   };
 
@@ -179,13 +184,13 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     }
   };
 
-  const handleExportTemplate = (template: Template) => {
+  const handleExportOCRTemplate = (template: OCRTemplate) => {
     const dataStr = JSON.stringify(template, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `template_${template.type}_${template.id}.json`;
+    link.download = `template_${template.template_type}_${template.id}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -195,7 +200,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       title: '模板名称',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: Template) => (
+      render: (name: string, record: OCRTemplate) => (
         <Space>
           {record.is_public && <Tag color="blue">公共</Tag>}
           {name}
@@ -246,7 +251,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       title: '操作',
       key: 'actions',
       width: 200,
-      render: (_: any, record: Template) => (
+      render: (_: unknown, record: OCRTemplate) => (
         <Space size="small">
           <Tooltip title="编辑">
             <Button
@@ -269,7 +274,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               type="link"
               size="small"
               icon={<DownloadOutlined />}
-              onClick={() => handleExportTemplate(record)}
+              onClick={() => handleExportOCRTemplate(record)}
             />
           </Tooltip>
           <Popconfirm
@@ -290,7 +295,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     }
   ];
 
-  const renderTemplateList = () => (
+  const renderOCRTemplateList = () => (
     <div className="template-list">
       <div className="template-list-header">
         <Space>
@@ -325,7 +330,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     </div>
   );
 
-  const renderTemplateEditor = () => (
+  const renderOCRTemplateEditor = () => (
     <div className="template-editor">
       <Card
         title={editingTemplate?.id ? '编辑模板' : '新建模板'}
@@ -447,13 +452,13 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     >
       <Tabs activeKey={activeTab} onChange={setActiveTab}>
         <Tabs.TabPane tab="模板列表" key="list">
-          {renderTemplateList()}
+          {renderOCRTemplateList()}
         </Tabs.TabPane>
         <Tabs.TabPane
           tab={editingTemplate?.id ? '编辑模板' : '新建模板'}
           key="editor"
         >
-          {renderTemplateEditor()}
+          {renderOCRTemplateEditor()}
         </Tabs.TabPane>
       </Tabs>
     </Modal>

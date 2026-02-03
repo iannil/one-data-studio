@@ -54,6 +54,7 @@ const DataSyncPage: React.FC = () => {
   const { data: jobsData, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
     queryKey: ['cdc', 'jobs'],
     queryFn: () => cdcApi.listJobs(),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -61,11 +62,13 @@ const DataSyncPage: React.FC = () => {
   const { data: healthData, refetch: refetchHealth } = useQuery({
     queryKey: ['cdc', 'health'],
     queryFn: () => cdcApi.getHealth(),
+    select: (res) => res.data.data,
     refetchInterval: 30000,
   });
 
-  const jobs = jobsData?.data?.jobs || [];
-  const health = healthData?.data || {};
+  const jobs = jobsData?.jobs || [];
+  const defaultHealth = { status: 'unknown', service: 'unknown', url: '' };
+  const health = healthData || defaultHealth;
 
   // 启动任务
   const startMutation = useMutation({
@@ -74,8 +77,9 @@ const DataSyncPage: React.FC = () => {
       message.success('任务已启动');
       queryClient.invalidateQueries({ queryKey: ['cdc'] });
     },
-    onError: (error: any) => {
-      message.error(`启动失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`启动失败: ${errMsg}`);
     },
   });
 
@@ -86,8 +90,8 @@ const DataSyncPage: React.FC = () => {
       message.success('任务已停止');
       queryClient.invalidateQueries({ queryKey: ['cdc'] });
     },
-    onError: (error: any) => {
-      message.error(`停止失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误'; message.error(`停止失败: ${errMsg}`);
     },
   });
 
@@ -98,8 +102,8 @@ const DataSyncPage: React.FC = () => {
       message.success('任务已删除');
       queryClient.invalidateQueries({ queryKey: ['cdc'] });
     },
-    onError: (error: any) => {
-      message.error(`删除失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误'; message.error(`删除失败: ${errMsg}`);
     },
   });
 
@@ -205,7 +209,7 @@ const DataSyncPage: React.FC = () => {
       key: 'actions',
       width: 180,
       fixed: 'right' as const,
-      render: (_: any, record: CDCJob) => (
+      render: (_: unknown, record: CDCJob) => (
         <Space size="small">
           {record.status === 'running' ? (
             <Button
@@ -360,7 +364,9 @@ const DataSyncPage: React.FC = () => {
                 <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
                   <PlayCircleOutlined style={{ fontSize: 48, marginBottom: 16 }} />
                   <p>ETL 批处理任务管理</p>
-                  <p>请前往"数据治理 > ETL 任务"页面管理</p>
+                  <p>
+                    请前往"数据治理 {'>'} ETL 任务"页面管理
+                  </p>
                 </div>
               ),
             },

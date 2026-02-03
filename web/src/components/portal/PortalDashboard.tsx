@@ -563,7 +563,7 @@ const PortalDashboard: React.FC<PortalDashboardProps> = ({ userId, tenantId }) =
                 onChange={(e) => setSearchValue(e.target.value)}
                 onSearch={(value) => {
                   // 实际项目中跳转到搜索结果页
-                  console.log('搜索:', value);
+                  // TODO: Implement search navigation
                 }}
                 onBlur={() => {
                   if (!searchValue) setSearchVisible(false);

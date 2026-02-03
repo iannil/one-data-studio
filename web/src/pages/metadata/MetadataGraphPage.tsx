@@ -28,7 +28,8 @@ import {
   TableOutlined,
   ApartmentOutlined,
   NodeIndexOutlined,
-  WarningOutlined
+  WarningOutlined,
+  ClusterOutlined
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 
@@ -85,7 +86,7 @@ export const MetadataGraphPage: React.FC = () => {
     }
 
     try {
-      const response = await metadataApi.searchMetadataNodes(searchQuery);
+      const response = await metadataApi.searchMetadataNodes({ keyword: searchQuery });
       setSearchResults(response.data?.nodes || []);
     } catch (error) {
       message.error('搜索失败');
@@ -93,9 +94,7 @@ export const MetadataGraphPage: React.FC = () => {
   };
 
   // 处理节点点击
-  const handleNodeClick = (node: any) => {
-    console.log('Clicked node:', node);
-
+  const handleNodeClick = (node: { type: string; table_name?: string }) => {
     if (node.type === 'table') {
       setSelectedTable(node.table_name);
       setActiveTab('lineage');
@@ -174,15 +173,18 @@ export const MetadataGraphPage: React.FC = () => {
 
           {/* 搜索结果 */}
           {searchResults.length > 0 && (
-            <Alert
-              message={`找到 ${searchResults.length} 个匹配的节点`}
-              type="info"
-              showIcon
-              closable
-              onClose={() => setSearchResults([])}
-              style={{ marginTop: 12 }}
-            >
-              <Space wrap>
+            <>
+              <Alert
+                message={`找到 ${searchResults.length} 个匹配的节点`}
+                type="info"
+                showIcon
+                closable
+                onClose={() => setSearchResults([])}
+                style={{ marginTop: 12 }}
+              />
+
+              {/* 搜索结果列表 */}
+              <Space wrap style={{ marginTop: 12 }}>
                 {searchResults.slice(0, 10).map((node) => (
                   <Tag
                     key={node.id}
@@ -205,7 +207,7 @@ export const MetadataGraphPage: React.FC = () => {
                   <Tag>+{searchResults.length - 10} 更多</Tag>
                 )}
               </Space>
-            </Alert>
+            </>
           )}
         </Card>
 
@@ -301,7 +303,7 @@ export const MetadataGraphPage: React.FC = () => {
               <Statistic
                 title="数据库"
                 value={statsData?.databases || 0}
-                prefix={<AccountTreeOutlined />}
+                prefix={<ClusterOutlined />}
               />
             </Card>
           </Col>
@@ -357,11 +359,11 @@ export const MetadataGraphPage: React.FC = () => {
                   onChange={setSelectedTable}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.label || '').toLowerCase().includes(input.toLowerCase())
                   }
                   options={graphData?.nodes
-                    ?.filter((n: any) => n.type === 'table')
-                    .map((n: any) => ({
+                    ?.filter((n: { type?: string }) => n.type === 'table')
+                    .map((n: { type?: string; table_name?: string; label?: string; database_name?: string }) => ({
                       value: n.table_name,
                       label: n.label,
                       database: n.database_name,
@@ -403,7 +405,7 @@ export const MetadataGraphPage: React.FC = () => {
                     nodes={lineageData.nodes || []}
                     edges={lineageData.edges || []}
                     loading={lineageLoading}
-                    centerNode={lineageData.nodes?.find((n: any) => n.is_center)}
+                    centerNode={lineageData.nodes?.find((n: { is_center?: boolean }) => n.is_center)}
                     height={600}
                   />
                 </>
@@ -431,8 +433,8 @@ export const MetadataGraphPage: React.FC = () => {
                   onChange={setSelectedTable}
                   showSearch
                   options={graphData?.nodes
-                    ?.filter((n: any) => n.type === 'table')
-                    .map((n: any) => ({
+                    ?.filter((n: { type?: string }) => n.type === 'table')
+                    .map((n: { type?: string; table_name?: string; label?: string; database_name?: string }) => ({
                       value: n.table_name,
                       label: n.label,
                       database: n.database_name,

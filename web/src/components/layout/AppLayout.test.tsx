@@ -26,7 +26,7 @@ vi.mock('antd', async () => {
     Layout: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="layout">{children}</div>
     ),
-    Menu: ({ items, onClick }: { items: any[]; onClick: any }) => (
+    Menu: ({ items, onClick }: { items: unknown[]; onClick: any }) => (
       <div data-testid="menu">
         {items?.map((item: any, index: number) => (
           <div

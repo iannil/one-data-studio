@@ -31,7 +31,7 @@ interface Message {
 interface AIChatPanelProps {
   database?: string;
   tables?: string[];
-  onQueryGenerated?: (sql: string, chartConfig?: any) => void;
+  onQueryGenerated?: (sql: string, chartConfig?: { type: string; x: string; y: string } | null) => void;
   height?: number | string;
 }
 
@@ -75,7 +75,7 @@ export function AIChatPanel({
 
       // 回调通知父组件
       if (onQueryGenerated && data.sql) {
-        onQueryGenerated(data.sql, data.chartRecommendation);
+        onQueryGenerated(data.sql, data.chartRecommendation as { type: string; x: string; y: string } | undefined);
       }
     },
     onError: (error) => {

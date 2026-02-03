@@ -37,7 +37,7 @@ import {
   ReloadOutlined,
   BellOutlined,
   MailOutlined,
-  SmsOutlined,
+  MessageOutlined,
   ApiOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons';
@@ -91,7 +91,7 @@ const ChannelsTab: React.FC = () => {
       case 'email':
         return <MailOutlined />;
       case 'sms':
-        return <SmsOutlined />;
+        return <MessageOutlined />;
       case 'webhook':
         return <ApiOutlined />;
       case 'inapp':
@@ -152,7 +152,7 @@ const TemplateFormModal: React.FC<{
   visible: boolean;
   template?: NotificationTemplate;
   onCancel: () => void;
-  onOk: (values: any) => void;
+  onOk: (values: Record<string, unknown>) => void;
   loading?: boolean;
 }> = ({ visible, template, onCancel, onOk, loading }) => {
   const [form] = Form.useForm();
@@ -321,16 +321,17 @@ const TemplatesTab: React.FC = () => {
     deleteMutation.mutate(templateId);
   };
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
+    const variablesStr = values.variables as string | undefined;
     const data = {
       ...values,
-      variables: values.variables ? values.variables.split(',').map((v: string) => v.trim()) : [],
+      variables: variablesStr ? variablesStr.split(',').map((v: string) => v.trim()) : [],
     };
 
     if (editingTemplate) {
       updateMutation.mutate({ id: editingTemplate.template_id, data });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data as Parameters<typeof createMutation.mutate>[0]);
     }
   };
 
@@ -455,7 +456,7 @@ const RuleFormModal: React.FC<{
   rule?: NotificationRule;
   templates: NotificationTemplate[];
   onCancel: () => void;
-  onOk: (values: any) => void;
+  onOk: (values: Record<string, unknown>) => void;
   loading?: boolean;
 }> = ({ visible, rule, templates, onCancel, onOk, loading }) => {
   const [form] = Form.useForm();
@@ -660,16 +661,17 @@ const RulesTab: React.FC = () => {
     }
   };
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
+    const recipientsStr = values.recipients_str as string | undefined;
     const data = {
       ...values,
-      recipients: values.recipients_str.split(',').map((v: string) => v.trim()),
+      recipients: recipientsStr ? recipientsStr.split(',').map((v: string) => v.trim()) : [],
     };
 
     if (editingRule) {
       updateMutation.mutate({ id: editingRule.rule_id, data });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data as Parameters<typeof createMutation.mutate>[0]);
     }
   };
 

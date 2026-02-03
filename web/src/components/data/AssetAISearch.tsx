@@ -27,7 +27,7 @@ const { Search } = Input;
 const { TextArea } = Input;
 
 interface AssetAISearchProps {
-  onResultSelect?: (asset: any) => void;
+  onResultSelect?: (asset: Record<string, unknown>) => void;
   placeholder?: string;
   showTrending?: boolean;
 }
@@ -65,13 +65,13 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
     setIsSearching(true);
     try {
       const response = await data.aiSearchAssets(query, { limit: 20 });
-      const data = response.data?.data;
+      const searchResult = response.data?.data;
 
-      if (data) {
-        setSearchResults(data.results || []);
-        setSearchIntent(data.intent || null);
+      if (searchResult) {
+        setSearchResults(searchResult.results || []);
+        setSearchIntent(searchResult.intent || null);
 
-        if (data.results?.length === 0) {
+        if (searchResult.results?.length === 0) {
           message.info('未找到匹配的资产，请尝试其他关键词');
         }
       }
@@ -150,7 +150,7 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
 
   // 选择结果
   const handleResultClick = (result: AIAssetSearchResult) => {
-    onResultSelect?.(result.asset);
+    onResultSelect?.(result.asset as unknown as Record<string, unknown>);
   };
 
   // 渲染意图标签
@@ -374,10 +374,10 @@ export const AssetAISearch: React.FC<AssetAISearchProps> = ({
           {trendingData?.data?.data?.assets?.length > 0 ? (
             <List
               dataSource={trendingData.data.data.assets}
-              renderItem={(asset: any, index: number) => (
+              renderItem={(asset: { asset_id: string; name: string; type: string; view_count?: number; usage_count?: number; collect_count?: number }, index: number) => (
                 <List.Item
                   key={asset.asset_id}
-                  onClick={() => onResultSelect?.(asset)}
+                  onClick={() => onResultSelect?.(asset as Record<string, unknown>)}
                   style={{ cursor: 'pointer' }}
                 >
                   <List.Item.Meta

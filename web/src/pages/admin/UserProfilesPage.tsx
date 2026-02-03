@@ -121,7 +121,7 @@ function UserProfilesPage() {
   };
 
   const getSegmentName = (segmentId: string) => {
-    const seg = segments.find((s: any) => s.segment_id === segmentId);
+    const seg = segments.find((s: { segment_id: string; segment_name: string }) => s.segment_id === segmentId);
     return seg?.segment_name || segmentId;
   };
 
@@ -180,7 +180,7 @@ function UserProfilesPage() {
       dataIndex: 'segment_id',
       key: 'segment_id',
       render: (segmentId: string) => {
-        const seg = segments.find((s: any) => s.segment_id === segmentId);
+        const seg = segments.find((s: { segment_id: string; segment_name: string }) => s.segment_id === segmentId);
         return seg ? (
           <Tag color="blue">{seg.segment_name}</Tag>
         ) : null;
@@ -314,7 +314,7 @@ function UserProfilesPage() {
             onChange={setSegmentFilter}
             value={segmentFilter || undefined}
           >
-            {segments.map((seg: any) => (
+            {segments.map((seg: { segment_id: string; segment_name: string }) => (
               <Option key={seg.segment_id} value={seg.segment_id}>
                 {seg.segment_name}
               </Option>
@@ -323,7 +323,7 @@ function UserProfilesPage() {
         </Space>
 
         <Table
-          columns={columns}
+          columns={columns as any}
           dataSource={profilesData?.data?.profiles || []}
           rowKey="profile_id"
           loading={isLoading}

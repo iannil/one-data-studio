@@ -30,7 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import data from '@/services/data';
+import dataService from '@/services/data';
 import type {
   Metric,
   CreateMetricRequest,
@@ -86,7 +86,7 @@ function MetricsPage() {
   const { data: metricsData, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['metrics', page, pageSize, categoryFilter, statusFilter],
     queryFn: () =>
-      data.getMetrics({
+      dataService.getMetrics({
         page,
         page_size: pageSize,
         category: categoryFilter as MetricCategory || undefined,
@@ -97,14 +97,14 @@ function MetricsPage() {
   // 获取指标分类统计
   const { data: categoriesData } = useQuery({
     queryKey: ['metricCategories'],
-    queryFn: data.getMetricCategories,
+    queryFn: dataService.getMetricCategories,
   });
 
   // 获取指标趋势数据
   const { data: trendData, isLoading: isLoadingTrend } = useQuery({
     queryKey: ['metricTrend', selectedMetric?.metric_id],
     queryFn: () =>
-      data.getMetricTrend(selectedMetric!.metric_id, {
+      dataService.getMetricTrend(selectedMetric!.metric_id, {
         start_time: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
         end_time: dayjs().format('YYYY-MM-DD'),
       }),
@@ -114,13 +114,13 @@ function MetricsPage() {
   // 获取计算任务列表
   const { data: tasksData, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['metricCalculationTasks'],
-    queryFn: () => data.getMetricCalculationTasks({ page: 1, page_size: 50 }),
+    queryFn: () => dataService.getMetricCalculationTasks({ page: 1, page_size: 50 }),
     enabled: activeTab === 'tasks',
   });
 
   // 创建指标
   const createMutation = useMutation({
-    mutationFn: data.createMetric,
+    mutationFn: dataService.createMetric,
     onSuccess: () => {
       message.success('指标创建成功');
       setIsCreateModalOpen(false);
@@ -135,8 +135,8 @@ function MetricsPage() {
 
   // 更新指标
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof data.updateMetric>[1] }) =>
-      data.updateMetric(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof dataService.updateMetric>[1] }) =>
+      dataService.updateMetric(id, data),
     onSuccess: () => {
       message.success('指标更新成功');
       setIsEditModalOpen(false);
@@ -150,7 +150,7 @@ function MetricsPage() {
 
   // 删除指标
   const deleteMutation = useMutation({
-    mutationFn: data.deleteMetric,
+    mutationFn: dataService.deleteMetric,
     onSuccess: () => {
       message.success('指标删除成功');
       setIsDetailDrawerOpen(false);
@@ -164,7 +164,7 @@ function MetricsPage() {
 
   // 批量删除指标
   const batchDeleteMutation = useMutation({
-    mutationFn: data.batchDeleteMetrics,
+    mutationFn: dataService.batchDeleteMetrics,
     onSuccess: () => {
       message.success('批量删除成功');
       setSelectedRowKeys([]);
@@ -178,7 +178,7 @@ function MetricsPage() {
 
   // 启动计算任务
   const startTaskMutation = useMutation({
-    mutationFn: data.startMetricCalculationTask,
+    mutationFn: dataService.startMetricCalculationTask,
     onSuccess: () => {
       message.success('计算任务已启动');
       queryClient.invalidateQueries({ queryKey: ['metricCalculationTasks'] });
@@ -190,7 +190,7 @@ function MetricsPage() {
 
   // 停止计算任务
   const stopTaskMutation = useMutation({
-    mutationFn: data.stopMetricCalculationTask,
+    mutationFn: dataService.stopMetricCalculationTask,
     onSuccess: () => {
       message.success('计算任务已停止');
       queryClient.invalidateQueries({ queryKey: ['metricCalculationTasks'] });
@@ -781,7 +781,7 @@ function MetricsPage() {
                   icon={<PlayCircleOutlined />}
                   onClick={() => {
                     // 手动计算
-                    data.calculateMetric(selectedMetric.metric_id).then(() => {
+                    dataService.calculateMetric(selectedMetric.metric_id).then(() => {
                       message.success('计算已启动');
                     });
                   }}

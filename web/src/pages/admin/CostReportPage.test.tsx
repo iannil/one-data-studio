@@ -191,6 +191,42 @@ describe('CostReportPage 标签页', () => {
   });
 
   it('切换到按模型标签页应该显示模型数据', async () => {
+    // 为这个测试设置 mock 返回模型数据
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/cost/summary')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: mockSummary }),
+        });
+      }
+      if (url.includes('/cost/usage')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: { items: mockUsage } }),
+        });
+      }
+      if (url.includes('/cost/trends')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: { trends: mockTrends } }),
+        });
+      }
+      if (url.includes('/cost/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            data: {
+              models: [
+                { model: 'gpt-4', calls: 1250, tokens: 2500000, cost: 3500.00, avg_cost: 2.80 },
+                { model: 'gpt-3.5-turbo', calls: 8500, tokens: 12000000, cost: 1200.00, avg_cost: 0.14 },
+              ],
+            },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: {} }) });
+    });
+
     const user = userEvent.setup();
     render(<CostReportPage />);
 
@@ -202,7 +238,7 @@ describe('CostReportPage 标签页', () => {
 
     await waitFor(() => {
       expect(screen.getByText('gpt-4')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 });
 

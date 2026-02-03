@@ -54,6 +54,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
   const { data: tasksData, isLoading, refetch } = useQuery({
     queryKey: ['scheduler', 'tasks', filters],
     queryFn: () => schedulerApi.listTasks(filters),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -61,6 +62,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
   const { data: smartTasksData } = useQuery({
     queryKey: ['scheduler', 'smartTasks', filters],
     queryFn: () => schedulerApi.listSmartTasks(filters),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -72,8 +74,9 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
       message.success('任务已取消');
       queryClient.invalidateQueries({ queryKey: ['scheduler'] });
     },
-    onError: (error: any) => {
-      message.error(`取消失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`取消失败: ${errMsg}`);
     },
   });
 
@@ -86,8 +89,8 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
   // 取消任务
   const handleCancel = useCallback(
     (task: TaskInfo | SmartTask) => {
-      const taskId = 'task_id' in task ? task.task_id : task.task_id;
-      const engine = 'engine' in task ? task.engine : undefined;
+      const taskId = task.task_id;
+      const engine = 'engine' in task ? (task as TaskInfo).engine : undefined;
 
       Modal.confirm({
         title: '确认取消',
@@ -121,8 +124,8 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
 
   // 合并任务列表
   const allTasks = [
-    ...(tasksData?.data?.tasks || []),
-    ...(smartTasksData?.data?.tasks || []),
+    ...(tasksData?.tasks || []),
+    ...(smartTasksData?.tasks || []),
   ];
 
   const columns: ColumnsType<any> = [
@@ -169,7 +172,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
       title: '进度',
       key: 'progress',
       width: 120,
-      render: (_: any, record: any) => {
+      render: (_: unknown, record: { status?: string }) => {
         if (record.status === 'SUCCESS' || record.status === 'COMPLETED') {
           return <Progress percent={100} size="small" status="success" />;
         }
@@ -194,7 +197,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
       key: 'actions',
       width: 150,
       fixed: 'right',
-      render: (_: any, record: TaskInfo | SmartTask) => (
+      render: (_: unknown, record: TaskInfo | SmartTask) => (
         <Space size="small">
           <Button
             type="link"
@@ -310,7 +313,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
               <Form.Item label="创建时间">
                 <Input
                   value={
-                    selectedTask.created_at
+                    'created_at' in selectedTask && selectedTask.created_at
                       ? new Date(selectedTask.created_at).toLocaleString()
                       : '-'
                   }

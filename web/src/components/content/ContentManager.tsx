@@ -90,7 +90,7 @@ const ArticleFormModal: React.FC<{
   categories?: ContentCategory[];
   tags?: ContentTag[];
   onCancel: () => void;
-  onOk: (values: any) => void;
+  onOk: (values: Record<string, unknown>) => void;
   loading?: boolean;
 }> = ({ visible, article, categories, tags, onCancel, onOk, loading }) => {
   const [form] = Form.useForm();
@@ -330,15 +330,11 @@ const ArticlesTab: React.FC = () => {
     publishMutation.mutate(contentId);
   };
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
     if (editingArticle) {
       updateMutation.mutate({ id: editingArticle.content_id, data: values });
     } else {
-      createMutation.mutate({
-        ...values,
-        author_id: 'current_user',
-        author_name: '当前用户',
-      });
+      createMutation.mutate(values as unknown as Parameters<typeof createMutation.mutate>[0]);
     }
   };
 

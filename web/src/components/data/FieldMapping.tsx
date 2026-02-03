@@ -125,8 +125,8 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
         );
       }
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.message || '推荐失败');
+    onError: (error: unknown) => {
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '推荐失败'; message.error(errMsg);
     },
   });
 
@@ -142,8 +142,8 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       setSqlResult(data.data);
       setSqlModalVisible(true);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.message || 'SQL 生成失败');
+    onError: (error: unknown) => {
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'SQL 生成失败'; message.error(errMsg);
     },
   });
 
@@ -263,7 +263,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
     {
       title: '',
       width: 50,
-      render: (_: any, record: MappingItem) => (
+      render: (_: unknown, record: MappingItem) => (
         <Switch
           size="small"
           checked={selectedMappings.has(record.key)}
@@ -318,7 +318,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       title: '类型转换',
       key: 'data_type_conversion',
       width: 200,
-      render: (_: any, record: MappingItem) => (
+      render: (_: unknown, record: MappingItem) => (
         <Space size="small">
           {getConversionIcon(record.data_type_conversion.conversion)}
           <Tooltip
@@ -351,7 +351,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       title: '操作',
       key: 'actions',
       width: 100,
-      render: (_: any, record: MappingItem) => (
+      render: (_: unknown, record: MappingItem) => (
         <Space>
           {record.transformation && (
             <Tooltip title="查看转换表达式">

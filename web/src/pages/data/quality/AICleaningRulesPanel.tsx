@@ -32,7 +32,7 @@ interface AICleaningRulesPanelProps {
   tableName?: string;
   databaseName?: string;
   columns?: Array<{ name: string; type: string; description?: string }>;
-  onRuleApply?: (rule: any) => void;
+  onRuleApply?: (rule: Record<string, unknown>) => void;
   visible?: boolean;
   onClose?: () => void;
 }
@@ -104,7 +104,7 @@ function AICleaningRulesPanel({
 
   // 应用规则
   const applyRuleMutation = useMutation({
-    mutationFn: async (rule: any) => {
+    mutationFn: async (rule: Record<string, unknown>) => {
       // 调用创建质量规则 API
       const response = await fetch('/api/v1/quality/rules', {
         method: 'POST',
@@ -126,7 +126,7 @@ function AICleaningRulesPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['qualityRules'] });
       if (onRuleApply) {
-        onRuleApply(true);
+        onRuleApply({ applied: true });
       }
     },
   });
@@ -163,7 +163,7 @@ function AICleaningRulesPanel({
 
     for (const rule of selectedData) {
       try {
-        await applyRuleMutation.mutateAsync(rule);
+        await applyRuleMutation.mutateAsync(rule as unknown as Record<string, unknown>);
       } catch (error) {
         console.error('Failed to apply rule:', error);
       }
@@ -208,7 +208,7 @@ function AICleaningRulesPanel({
       dataIndex: 'select',
       key: 'select',
       width: 60,
-      render: (_: any, _record: CleaningRecommendation, index: number) => (
+      render: (_: unknown, _record: CleaningRecommendation, index: number) => (
         <input
           type="checkbox"
           checked={selectedRules.includes(`rule-${index}`)}
@@ -252,14 +252,14 @@ function AICleaningRulesPanel({
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: CleaningRecommendation) => (
+      render: (_: unknown, record: CleaningRecommendation) => (
         <Space size="small">
           <Tooltip title="应用此规则">
             <Button
               type="link"
               size="small"
               icon={<CheckCircleOutlined />}
-              onClick={() => applyRuleMutation.mutate(record)}
+              onClick={() => applyRuleMutation.mutate(record as unknown as Record<string, unknown>)}
             >
               应用
             </Button>
@@ -317,11 +317,11 @@ function AICleaningRulesPanel({
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: RuleTemplate) => (
+      render: (_: unknown, record: RuleTemplate) => (
         <Button
           type="link"
           size="small"
-          onClick={() => applyRuleMutation.mutate(record)}
+          onClick={() => applyRuleMutation.mutate(record as unknown as Record<string, unknown>)}
         >
           添加
         </Button>

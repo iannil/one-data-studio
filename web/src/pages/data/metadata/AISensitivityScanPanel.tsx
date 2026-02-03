@@ -37,7 +37,7 @@ interface SensitivityScanPanelProps {
   tableName?: string;
   databaseName?: string;
   columns?: Array<{ name: string; type: string; description?: string }>;
-  onMaskingApply?: (rule: any) => void;
+  onMaskingApply?: (rule: Record<string, unknown>) => void;
   visible?: boolean;
   onClose?: () => void;
 }

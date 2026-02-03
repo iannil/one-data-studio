@@ -91,6 +91,7 @@ export const BehaviorDashboard: React.FC = () => {
     queryKey: ['behavior-stats', days],
     queryFn: () => behaviorApi.getStatisticsOverview({ days }),
     refetchInterval: 60000, // 每分钟刷新
+    select: (data) => data.data.data,
   });
 
   // 获取异常列表
@@ -98,6 +99,7 @@ export const BehaviorDashboard: React.FC = () => {
     queryKey: ['behavior-anomalies', severityFilter, statusFilter],
     queryFn: () => behaviorApi.getAnomalies({ severity: severityFilter, status: statusFilter }),
     refetchInterval: 30000, // 每30秒刷新
+    select: (data) => data.data.data,
   });
 
   // 获取活跃用户
@@ -105,6 +107,7 @@ export const BehaviorDashboard: React.FC = () => {
     queryKey: ['behavior-active-users', days],
     queryFn: () => behaviorApi.getActiveUsers({ days }),
     refetchInterval: 60000,
+    select: (data) => data.data.data,
   });
 
   // 获取用户分群
@@ -112,6 +115,7 @@ export const BehaviorDashboard: React.FC = () => {
     queryKey: ['behavior-segments'],
     queryFn: () => behaviorApi.getSegments(),
     refetchInterval: 300000, // 5分钟刷新
+    select: (data) => data.data.data,
   });
 
   // 异常状态配置
@@ -209,7 +213,7 @@ export const BehaviorDashboard: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 120,
-      render: (_: any, record: Anomaly) => (
+      render: (_: unknown, record: Anomaly) => (
         <Space size="small">
           <Button
             type="link"
@@ -429,7 +433,7 @@ export const BehaviorDashboard: React.FC = () => {
 
             <TabPane tab="用户分群" key="segments">
               <Row gutter={16}>
-                {segmentsData?.segments?.map((segment: any) => (
+                {segmentsData?.map((segment: { tag: string; count: number }) => (
                   <Col span={6} key={segment.tag}>
                     <Card size="small">
                       <Statistic
@@ -462,7 +466,7 @@ export const BehaviorDashboard: React.FC = () => {
                   <div>
                     <h4>行为类型分布</h4>
                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                      {statsData.behavior_types.map((bt: any) => (
+                      {statsData.behavior_types.map((bt: { type: string; count: number }) => (
                         <div key={bt.type}>
                           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                             <span>{bt.type}</span>

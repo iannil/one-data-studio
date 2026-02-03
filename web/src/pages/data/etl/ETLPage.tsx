@@ -936,7 +936,6 @@ function ETLPage() {
         visible={isAIFieldMappingOpen}
         onClose={() => setIsAIFieldMappingOpen(false)}
         onMappingApply={(mappings) => {
-          console.log('Applied mappings:', mappings);
           // 这里可以处理映射应用逻辑
           message.success(`已应用 ${mappings.length} 个字段映射`);
         }}

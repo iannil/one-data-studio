@@ -35,7 +35,7 @@ interface FieldMappingPanelProps {
   targetFields?: Array<{ name: string; type: string; description?: string }>;
   sourceTable?: string;
   targetTable?: string;
-  onMappingApply?: (mappings: any[]) => void;
+  onMappingApply?: (mappings: unknown[]) => void;
   visible?: boolean;
   onClose?: () => void;
 }
@@ -119,7 +119,7 @@ function AIFieldMappingPanel({
   const applyMappingMutation = useMutation({
     mutationFn: async (mappings: FieldMapping[]) => {
       // 这里可以调用实际的 API 保存映射
-      console.log('Applying mappings:', mappings);
+      // TODO: Call API to save field mappings
       return { success: true };
     },
     onSuccess: () => {
@@ -259,7 +259,7 @@ function AIFieldMappingPanel({
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: FieldMapping) => (
+      render: (_: unknown, record: FieldMapping) => (
         <Button
           type="link"
           size="small"

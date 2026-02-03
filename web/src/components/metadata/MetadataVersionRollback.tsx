@@ -9,6 +9,7 @@ import {
   Button,
   Modal,
   Form,
+  Input,
   Select,
   Space,
   Typography,
@@ -47,7 +48,7 @@ import './MetadataVersionRollback.css';
 
 const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;
-const { TextArea } = Form;
+const { TextArea } = Input;
 
 interface RollbackAction {
   action: string;
@@ -189,7 +190,7 @@ const RollbackPreviewModal: React.FC<{
   tableId: string;
   versions: MetadataVersion[];
   onClose: () => void;
-  onConfirm: (targetVersionId: string, options: any) => void;
+  onConfirm: (targetVersionId: string, options: Record<string, unknown>) => void;
   loading: boolean;
 }> = ({ visible, tableId, versions, onClose, onConfirm, loading }) => {
   const [form] = Form.useForm();
@@ -200,7 +201,7 @@ const RollbackPreviewModal: React.FC<{
     queryKey: ['metadata', 'rollback', 'preview', tableId, targetVersionId],
     queryFn: async () => {
       const res = await data.previewRollback(tableId, { target_version_id: targetVersionId });
-      return res.data as RollbackPlan;
+      return res.data as unknown as RollbackPlan;
     },
     enabled: visible && !!targetVersionId,
   });
@@ -449,7 +450,7 @@ const RollbackPreviewModal: React.FC<{
             style={{ marginBottom: 16 }}
           />
 
-          <Descriptions size="small" bordered column={1}>
+          <Descriptions bordered>
             <Descriptions.Item label="目标版本">
               <Tag color="blue">v{versions.find(v => v.id === targetVersionId)?.version_number}</Tag>
             </Descriptions.Item>
@@ -483,12 +484,12 @@ const RollbackPreviewModal: React.FC<{
   );
 };
 
-const Descriptions = ({ children, ...props }: any) => {
+const Descriptions = ({ children, className, bordered }: { children?: React.ReactNode; className?: string; bordered?: boolean }) => {
   // 简化的 Descriptions 组件
-  return <div className="descriptions" {...props}>{children}</div>;
+  return <div className={`descriptions ${bordered ? 'bordered' : ''} ${className || ''}`}>{children}</div>;
 };
 
-const DescriptionsItem = ({ label, children }: any) => {
+Descriptions.Item = ({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
     <div className="descriptions-item">
       <div className="label">{label}</div>
@@ -575,13 +576,13 @@ const MetadataVersionRollback: React.FC<MetadataVersionRollbackProps> = ({
   });
 
   const rollbackMutation = useMutation({
-    mutationFn: async (params: { targetVersionId: string; options: any }) => {
+    mutationFn: async (params: { targetVersionId: string; options: { create_backup?: boolean; execute_on_database?: boolean } }) => {
       const res = await data.executeRollback(tableId, {
         target_version_id: params.targetVersionId,
         create_backup: params.options.create_backup !== false,
         execute_on_database: params.options.execute_on_database || false,
       });
-      return res.data as RollbackResult;
+      return res.data as unknown as RollbackResult;
     },
     onSuccess: (result) => {
       if (result.success) {
@@ -593,8 +594,8 @@ const MetadataVersionRollback: React.FC<MetadataVersionRollbackProps> = ({
         message.error(`回滚失败: ${result.error_message}`);
       }
     },
-    onError: (err: any) => {
-      message.error(`回滚失败: ${err.message}`);
+    onError: (err: unknown) => {
+      message.error(`回滚失败: ${err instanceof Error ? err.message : '未知错误'}`);
     },
   });
 
@@ -603,7 +604,7 @@ const MetadataVersionRollback: React.FC<MetadataVersionRollbackProps> = ({
     setModalVisible(true);
   };
 
-  const handleConfirmRollback = (targetVersionId: string, options: any) => {
+  const handleConfirmRollback = (targetVersionId: string, options: Record<string, unknown>) => {
     rollbackMutation.mutate({ targetVersionId, options });
   };
 

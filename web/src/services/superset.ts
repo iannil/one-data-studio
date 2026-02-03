@@ -2,7 +2,7 @@
  * Superset API 服务
  */
 
-import request from '@/utils/request';
+import { apiClient } from './api';
 
 export interface GuestTokenRequest {
   resources: Array<{
@@ -45,13 +45,13 @@ export const supersetApi = {
    * 健康检查
    */
   getHealth: () =>
-    request.get<{ status: string; url: string }>('/api/v1/superset/health'),
+    apiClient.get<{ status: string; url: string }>('/api/v1/superset/health'),
 
   /**
    * 创建 Guest Token
    */
   createGuestToken: (data: GuestTokenRequest) =>
-    request.post<{ data: GuestTokenResponse; code: number; msg: string }>(
+    apiClient.post<{ data: GuestTokenResponse; code: number; msg: string }>(
       '/api/v1/superset/guest-token',
       data
     ),
@@ -60,7 +60,7 @@ export const supersetApi = {
    * 列出仪表板
    */
   listDashboards: () =>
-    request.get<{ data: { dashboards: SupersetDashboard[]; total: number }; code: number; msg: string }>(
+    apiClient.get<{ data: { dashboards: SupersetDashboard[]; total: number }; code: number; msg: string }>(
       '/api/v1/superset/dashboards'
     ),
 
@@ -68,7 +68,7 @@ export const supersetApi = {
    * 列出图表
    */
   listCharts: (datasetId?: number) =>
-    request.get<{ data: { charts: SupersetChart[]; total: number }; code: number; msg: string }>(
+    apiClient.get<{ data: { charts: SupersetChart[]; total: number }; code: number; msg: string }>(
       '/api/v1/superset/charts',
       { params: { dataset_id: datasetId } }
     ),
@@ -80,7 +80,7 @@ export const supersetApi = {
     dashboard_id: string;
     chart_map: Record<string, number>;
   }) =>
-    request.post<{ data: { dashboard_id: number }; code: number; msg: string }>(
+    apiClient.post<{ data: { dashboard_id: number }; code: number; msg: string }>(
       '/api/v1/superset/dashboards/sync',
       data
     ),
@@ -99,7 +99,7 @@ export const supersetApi = {
     };
     dashboard_ids?: string[];
   }) =>
-    request.post<{
+    apiClient.post<{
       data: {
         synced: Array<{
           bi_dashboard_id: string;

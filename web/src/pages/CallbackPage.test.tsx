@@ -9,6 +9,23 @@ vi.mock('../services/auth', () => ({
   isAuthenticated: vi.fn(() => false),
 }));
 
+// Mock AuthContext
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    checkAuth: vi.fn().mockResolvedValue(true),
+    authenticated: true,
+    loading: false,
+    user: null,
+    token: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refresh: vi.fn().mockResolvedValue(true),
+    hasRole: vi.fn(() => false),
+    hasAnyRole: vi.fn(() => false),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock react-router-dom
 const mockNavigate = vi.fn();
 let mockSearchParams = new URLSearchParams();

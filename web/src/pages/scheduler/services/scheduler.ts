@@ -2,7 +2,7 @@
  * 调度器 API 服务
  */
 
-import request from '@/utils/request';
+import { apiClient } from '@/services/api';
 
 export interface SchedulerStats {
   celery: {
@@ -47,7 +47,7 @@ export interface TaskSubmitRequest {
   priority?: 'low' | 'normal' | 'high' | 'critical';
   engine?: 'auto' | 'celery' | 'dolphinscheduler' | 'smart';
   timeout?: number;
-  args?: any[];
+  args?: unknown[];
   kwargs?: Record<string, any>;
 }
 
@@ -65,7 +65,7 @@ export interface TaskInfo {
   name?: string;
   started_at?: string;
   completed_at?: string;
-  result?: any;
+  result?: unknown;
   error?: string;
 }
 
@@ -88,7 +88,7 @@ export interface SmartTask {
   task_type: string;
   priority: string;
   status: string;
-  dependencies: any[];
+  dependencies: unknown[];
   resource_requirement: {
     cpu_cores: number;
     memory_mb: number;
@@ -127,25 +127,25 @@ export const schedulerApi = {
    * 获取统计信息
    */
   getStats: () =>
-    request.get<{ data: SchedulerStats; code: number; msg: string }>('/api/v1/scheduler/stats'),
+    apiClient.get<{ data: SchedulerStats; code: number; msg: string }>('/api/v1/scheduler/stats'),
 
   /**
    * 健康检查
    */
   getHealth: () =>
-    request.get<{ status: string; components: Record<string, boolean> }>('/api/v1/scheduler/health'),
+    apiClient.get<{ status: string; components: Record<string, boolean> }>('/api/v1/scheduler/health'),
 
   /**
    * 提交任务
    */
   submitTask: (data: TaskSubmitRequest) =>
-    request.post<{ data: TaskSubmitResponse; code: number; msg: string }>('/api/v1/scheduler/tasks', data),
+    apiClient.post<{ data: TaskSubmitResponse; code: number; msg: string }>('/api/v1/scheduler/tasks', data),
 
   /**
    * 获取任务状态
    */
   getTaskStatus: (taskId: string, engine?: string) =>
-    request.get<{ data: TaskInfo; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}`, {
+    apiClient.get<{ data: TaskInfo; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}`, {
       params: { engine },
     }),
 
@@ -153,7 +153,7 @@ export const schedulerApi = {
    * 列出任务
    */
   listTasks: (params?: { status?: string; engine?: string; limit?: number }) =>
-    request.get<{ data: { tasks: TaskInfo[]; total: number }; code: number; msg: string }>('/api/v1/scheduler/tasks', {
+    apiClient.get<{ data: { tasks: TaskInfo[]; total: number }; code: number; msg: string }>('/api/v1/scheduler/tasks', {
       params,
     }),
 
@@ -161,7 +161,7 @@ export const schedulerApi = {
    * 取消任务
    */
   cancelTask: (taskId: string, engine?: string) =>
-    request.post<{ data: { cancelled: boolean }; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}/cancel`, null, {
+    apiClient.post<{ data: { cancelled: boolean }; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}/cancel`, null, {
       params: { engine },
     }),
 
@@ -169,7 +169,7 @@ export const schedulerApi = {
    * 重试任务
    */
   retryTask: (taskId: string, engine?: string) =>
-    request.post<{ data: { new_task_id: string }; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}/retry`, null, {
+    apiClient.post<{ data: { new_task_id: string }; code: number; msg: string }>(`/api/v1/scheduler/tasks/${taskId}/retry`, null, {
       params: { engine },
     }),
 
@@ -182,13 +182,13 @@ export const schedulerApi = {
     tasks: WorkflowTask[];
     engine?: string;
   }) =>
-    request.post<{ data: { workflow_id: string }; code: number; msg: string }>('/api/v1/scheduler/workflows', data),
+    apiClient.post<{ data: { workflow_id: string }; code: number; msg: string }>('/api/v1/scheduler/workflows', data),
 
   /**
    * 运行工作流
    */
   runWorkflow: (workflowId: string, params?: Record<string, any>) =>
-    request.post<{ data: { instance_id: string }; code: number; msg: string }>(
+    apiClient.post<{ data: { instance_id: string }; code: number; msg: string }>(
       `/api/v1/scheduler/workflows/${workflowId}/run`,
       { params }
     ),
@@ -202,7 +202,7 @@ export const schedulerApi = {
     type?: string;
     limit?: number;
   }) =>
-    request.get<{ data: { tasks: SmartTask[]; total: number }; code: number; msg: string }>('/api/v1/scheduler/smart/tasks', {
+    apiClient.get<{ data: { tasks: SmartTask[]; total: number }; code: number; msg: string }>('/api/v1/scheduler/smart/tasks', {
       params,
     }),
 
@@ -210,7 +210,7 @@ export const schedulerApi = {
    * 优化调度
    */
   optimizeSchedule: () =>
-    request.post<{
+    apiClient.post<{
       data: {
         optimized_order: string[];
         total_tasks: number;
@@ -224,7 +224,7 @@ export const schedulerApi = {
    * 预测资源需求
    */
   predictResourceDemand: (windowMinutes: number = 60) =>
-    request.get<{ data: ResourcePrediction; code: number; msg: string }>('/api/v1/scheduler/smart/resource-demand', {
+    apiClient.get<{ data: ResourcePrediction; code: number; msg: string }>('/api/v1/scheduler/smart/resource-demand', {
       params: { window_minutes: windowMinutes },
     }),
 
@@ -232,13 +232,13 @@ export const schedulerApi = {
    * 列出 DS 项目
    */
   listDSProjects: () =>
-    request.get<{ data: any[]; code: number; msg: string }>('/api/v1/scheduler/ds/projects'),
+    apiClient.get<{ data: unknown[]; code: number; msg: string }>('/api/v1/scheduler/ds/projects'),
 
   /**
    * 列出 DS 流程实例
    */
   listDSProcessInstances: (params: { projectId: string; page?: number; size?: number }) =>
-    request.get<{ data: any[]; code: number; msg: string }>('/api/v1/scheduler/ds/process-instances', { params }),
+    apiClient.get<{ data: unknown[]; code: number; msg: string }>('/api/v1/scheduler/ds/process-instances', { params }),
 
   /**
    * 创建定时任务
@@ -249,7 +249,7 @@ export const schedulerApi = {
     task: TaskSubmitRequest;
     description?: string;
   }) =>
-    request.post<{ data: { cron_id: string }; code: number; msg: string }>('/api/v1/scheduler/cron', data),
+    apiClient.post<{ data: { cron_id: string }; code: number; msg: string }>('/api/v1/scheduler/cron', data),
 };
 
 export default schedulerApi;

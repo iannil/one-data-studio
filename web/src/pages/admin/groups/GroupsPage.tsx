@@ -57,7 +57,7 @@ const fetchUsers = async () => {
   return data.data?.users || [];
 };
 
-const createGroup = async (groupData: any) => {
+const createGroup = async (groupData: Record<string, unknown>) => {
   const response = await fetch('/api/v1/groups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ const createGroup = async (groupData: any) => {
   return data.data;
 };
 
-const updateGroup = async (groupId: string, groupData: any) => {
+const updateGroup = async (groupId: string, groupData: Record<string, unknown>) => {
   const response = await fetch(`/api/v1/groups/${groupId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -163,7 +163,7 @@ function GroupsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ groupId, data }: { groupId: string; data: any }) => updateGroup(groupId, data),
+    mutationFn: ({ groupId, data }: { groupId: string; data: Record<string, unknown> }) => updateGroup(groupId, data),
     onSuccess: () => {
       message.success('用户组更新成功');
       setIsEditModalOpen(false);

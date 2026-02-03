@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Result, Spin } from 'antd';
 import { handleCallback } from '../services/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { logDebug } from '../services/logger';
 
 function CallbackPage() {
   const navigate = useNavigate();
@@ -59,7 +60,7 @@ function CallbackPage() {
           redirectPath = '/';
         }
 
-        console.log('[Callback] Redirecting to:', redirectPath);
+        logDebug(`Redirecting to: ${redirectPath}`, 'Callback');
 
         // 延迟跳转以便展示成功状态
         setTimeout(() => {

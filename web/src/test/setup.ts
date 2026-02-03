@@ -188,3 +188,34 @@ vi.mock('@/services/api', () => ({
   ApiResponse: {},
 }));
 
+// Mock logger - needs both alias and relative path mocks
+vi.mock('@/services/logger', () => ({
+  logDebug: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  getLogBuffer: vi.fn(() => []),
+  clearLogBuffer: vi.fn(),
+  default: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock('../../services/logger', () => ({
+  logDebug: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  getLogBuffer: vi.fn(() => []),
+  clearLogBuffer: vi.fn(),
+  default: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+

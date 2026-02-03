@@ -690,7 +690,7 @@ function PipelinesPage() {
             columns={[
               { title: '名称', dataIndex: 'name', key: 'name' },
               { title: '分类', dataIndex: 'category', key: 'category' },
-              { title: '节点数', dataIndex: 'nodes', key: 'nodes', render: (_, r: any) => r.nodes.length },
+              { title: '节点数', dataIndex: 'nodes', key: 'nodes', render: (_: unknown, r: { nodes?: unknown[] }) => r.nodes?.length || 0 },
               { title: '描述', dataIndex: 'description', key: 'description', render: (desc?: string) => desc || '-' },
             ]}
             dataSource={templatesData?.data?.templates || []}

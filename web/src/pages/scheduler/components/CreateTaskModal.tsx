@@ -43,8 +43,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       form.resetFields();
       onSuccess();
     },
-    onError: (error: any) => {
-      message.error(`提交失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`提交失败: ${errMsg}`);
     },
   });
 

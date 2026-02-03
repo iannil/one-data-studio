@@ -603,7 +603,7 @@ const ResourcesTab: React.FC = () => {
           <Select
             defaultValue="60"
             style={{ width: 120 }}
-            onChange={(value) => setWindowMinutes(value)}
+            onChange={(value) => setWindowMinutes(Number(value))}
           >
             <Option value="30">30分钟</Option>
             <Option value="60">60分钟</Option>

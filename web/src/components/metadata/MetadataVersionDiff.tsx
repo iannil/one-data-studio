@@ -27,6 +27,7 @@ import {
   Divider,
   Descriptions,
   Empty,
+  Statistic,
 } from 'antd';
 import {
   PlusOutlined,
@@ -189,10 +190,8 @@ const ComparisonResult: React.FC<{
 
   const { data: sqlData, isLoading: sqlLoading } = useQuery({
     queryKey: ['metadata', 'sql', fromSnapshot.snapshot_id, toSnapshot.snapshot_id],
-    queryFn: async () => {
-      const res = await getMigrationSQL(fromSnapshot.snapshot_id, toSnapshot.snapshot_id);
-      return res.data;
-    },
+    queryFn: () => getMigrationSQL(fromSnapshot.snapshot_id, toSnapshot.snapshot_id),
+    select: (data) => data.data,
     enabled: sqlModalVisible,
   });
 
@@ -346,10 +345,8 @@ const SnapshotsTab: React.FC<{ database?: string }> = ({ database }) => {
 
   const { data: snapshotsData, isLoading } = useQuery({
     queryKey: ['metadata', 'snapshots', database],
-    queryFn: async () => {
-      const res = await getMetadataSnapshots({ database });
-      return res.data;
-    },
+    queryFn: () => getMetadataSnapshots({ database }),
+    select: (data) => data.data,
   });
 
   const deleteMutation = useMutation({
@@ -488,11 +485,9 @@ const ComparisonModal: React.FC<{
 }> = ({ visible, fromId, toId, snapshots, onClose }) => {
   const { data: comparisonResult, isLoading } = useQuery({
     queryKey: ['metadata', 'compare', fromId, toId],
-    queryFn: async () => {
-      const res = await compareMetadataSnapshots(fromId, toId);
-      return res.data;
-    },
-    enabled: visible && fromId && toId,
+    queryFn: () => compareMetadataSnapshots(fromId, toId),
+    select: (data: unknown) => (data as { data?: { data?: MetadataComparisonResult } })?.data?.data || ({} as MetadataComparisonResult),
+    enabled: visible && !!fromId && !!toId,
   });
 
   const fromSnapshot = snapshots.find(s => s.snapshot_id === fromId);
@@ -529,10 +524,8 @@ const ComparisonModal: React.FC<{
 const HistoryTab: React.FC<{ database?: string }> = ({ database }) => {
   const { data: historyData, isLoading } = useQuery({
     queryKey: ['metadata', 'history', database],
-    queryFn: async () => {
-      const res = await getMetadataVersionHistory({ database });
-      return res.data;
-    },
+    queryFn: () => getMetadataVersionHistory({ database }),
+    select: (data) => data.data,
   });
 
   return (

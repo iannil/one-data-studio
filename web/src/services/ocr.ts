@@ -67,14 +67,14 @@ export interface EnhancedOCRResult {
     errors: Array<{
       rule: string;
       description: string;
-      expected: any;
-      actual: any;
+      expected: unknown;
+      actual: unknown;
     }>;
     warnings: Array<{
       rule: string;
       description: string;
-      expected: any;
-      actual: any;
+      expected: unknown;
+      actual: unknown;
     }>;
   };
   layout_info: {

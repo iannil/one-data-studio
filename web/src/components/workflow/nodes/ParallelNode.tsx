@@ -10,7 +10,7 @@ interface ParallelNodeData {
   branches: Array<{
     id: string;
     name: string;
-    nodes?: any[];
+    nodes?: unknown[];
     workflowId?: string;
   }>;
   strategy: 'all' | 'any' | 'majority';

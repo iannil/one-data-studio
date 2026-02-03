@@ -25,7 +25,7 @@ vi.mock('antd', async () => {
     ...actual,
     Menu: ({ items, onClick, selectedKeys, theme, mode, inlineCollapsed }: any) => (
       <nav data-testid="menu" data-theme={theme} data-collapsed={inlineCollapsed}>
-        {items?.map((item: any) => (
+        {items?.map((item: unknown) => (
           <div
             key={item.key}
             data-testid={`menu-item-${item.key.replace('/', '-')}`}

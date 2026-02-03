@@ -7,7 +7,7 @@ import DatasetsPage from './DatasetsPage';
 import data from '@/services/data';
 
 // Mock 服务
-vi.mock('@/services/data-service', () => ({
+vi.mock('@/services/data', () => ({
   default: {
     getDatasets: vi.fn(),
     getDataset: vi.fn(),
@@ -15,6 +15,11 @@ vi.mock('@/services/data-service', () => ({
     updateDataset: vi.fn(),
     deleteDataset: vi.fn(),
   },
+  getDatasets: vi.fn(),
+  getDataset: vi.fn(),
+  createDataset: vi.fn(),
+  updateDataset: vi.fn(),
+  deleteDataset: vi.fn(),
 }));
 
 // Mock react-router-dom

@@ -33,7 +33,7 @@ import WorkflowEditor from './components/WorkflowEditor';
 import TaskList from './components/TaskList';
 import SchedulerMonitor from './components/SchedulerMonitor';
 import CreateTaskModal from './components/CreateTaskModal';
-import { schedulerApi } from './services/scheduler';
+import { schedulerApi, type SchedulerStats } from './services/scheduler';
 
 /**
  * 调度器管理页面
@@ -47,6 +47,7 @@ const SchedulerPage: React.FC = () => {
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['scheduler', 'stats'],
     queryFn: () => schedulerApi.getStats(),
+    select: (res) => res.data.data,
     refetchInterval: 10000, // 10秒刷新
   });
 
@@ -54,11 +55,24 @@ const SchedulerPage: React.FC = () => {
   const { data: healthData, refetch: refetchHealth } = useQuery({
     queryKey: ['scheduler', 'health'],
     queryFn: () => schedulerApi.getHealth(),
+    select: (res) => res.data,
     refetchInterval: 30000, // 30秒刷新
   });
 
-  const stats = statsData?.data || {};
-  const health = healthData || {};
+  const defaultStats: SchedulerStats = {
+    celery: { workers: [], total_tasks: 0 },
+    smart_scheduler: {
+      total_tasks: 0,
+      status_counts: {},
+      queue_length: 0,
+      available_resources: { cpu_cores: 0, memory_mb: 0, gpu_count: 0 },
+      total_resources: { cpu_cores: 0, memory_mb: 0, gpu_count: 0 },
+    },
+    dolphinscheduler: { enabled: false, url: '' },
+  };
+  const stats = statsData || defaultStats;
+  const defaultHealth = { status: 'unknown', components: {} as Record<string, boolean> };
+  const health = healthData || defaultHealth;
 
   // 刷新所有数据
   const handleRefresh = useCallback(() => {
@@ -70,15 +84,15 @@ const SchedulerPage: React.FC = () => {
 
   // 获取资源使用率
   const getResourceUsage = () => {
-    const resources = stats?.smart_scheduler?.available_resources || {};
-    const total = stats?.smart_scheduler?.total_resources || {};
+    const resources = stats.smart_scheduler?.available_resources;
+    const total = stats.smart_scheduler?.total_resources;
 
-    if (!total.cpu_cores) return { cpu: 0, memory: 0, gpu: 0 };
+    if (!total?.cpu_cores) return { cpu: 0, memory: 0, gpu: 0 };
 
     return {
-      cpu: Math.round((1 - resources.cpu_cores / total.cpu_cores) * 100),
-      memory: Math.round((1 - resources.memory_mb / total.memory_mb) * 100),
-      gpu: Math.round((1 - resources.gpu_count / total.gpu_count) * 100),
+      cpu: Math.round((1 - (resources?.cpu_cores || 0) / total.cpu_cores) * 100),
+      memory: Math.round((1 - (resources?.memory_mb || 0) / total.memory_mb) * 100),
+      gpu: Math.round((1 - (resources?.gpu_count || 0) / total.gpu_count) * 100),
     };
   };
 

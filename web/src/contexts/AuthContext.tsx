@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { message } from 'antd';
-import { logError } from '../services/logger';
+import { logError, logDebug } from '../services/logger';
 import {
   isAuthenticated,
   getAccessToken,
@@ -63,26 +63,26 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
     const accessToken = getAccessToken();
     const userInfo = getUserInfo();
 
-    // 详细日志
-    console.log('[AuthContext] checkAuth called');
-    console.log('[AuthContext] - isAuthenticated():', isAuth);
-    console.log('[AuthContext] - getAccessToken():', accessToken ? 'exists' : 'null');
-    console.log('[AuthContext] - getUserInfo():', userInfo ? 'exists' : 'null');
+    // 使用日志记录器而非 console.log
+    logDebug('checkAuth called', 'AuthContext');
+    logDebug(`isAuthenticated(): ${isAuth}`, 'AuthContext');
+    logDebug(`getAccessToken(): ${accessToken ? 'exists' : 'null'}`, 'AuthContext');
+    logDebug(`getUserInfo(): ${userInfo ? 'exists' : 'null'}`, 'AuthContext');
 
     // 检查 sessionStorage 中的值
     const tokenExpiresAt = sessionStorage.getItem('token_expires_at');
     const storedToken = sessionStorage.getItem('access_token');
-    console.log('[AuthContext] - sessionStorage token_expires_at:', tokenExpiresAt);
-    console.log('[AuthContext] - sessionStorage access_token:', storedToken ? 'exists' : 'null');
+    logDebug(`sessionStorage token_expires_at: ${tokenExpiresAt}`, 'AuthContext');
+    logDebug(`sessionStorage access_token: ${storedToken ? 'exists' : 'null'}`, 'AuthContext');
     if (tokenExpiresAt) {
       const now = Date.now();
       const expires = parseInt(tokenExpiresAt, 10);
-      console.log('[AuthContext] - Time check: now=' + now + ', expires=' + expires + ', diff=' + (expires - now));
+      logDebug(`Time check: now=${now}, expires=${expires}, diff=${expires - now}`, 'AuthContext');
     }
 
     if (isAuth && accessToken) {
       // Token 未过期
-      console.log('[AuthContext] Token valid, setting authenticated=true');
+      logDebug('Token valid, setting authenticated=true', 'AuthContext');
       setAuthenticated(true);
       setToken(accessToken);
       setUser(userInfo);
@@ -100,7 +100,7 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
     }
 
     // Token 不存在或已过期
-    console.log('[AuthContext] Token invalid or missing, setting authenticated=false');
+    logDebug('Token invalid or missing, setting authenticated=false', 'AuthContext');
     setAuthenticated(false);
     setToken(null);
     setUser(null);
@@ -178,7 +178,7 @@ export function AuthProvider({ children, autoRefresh = true, refreshInterval = 3
 
           // 提前 30 秒刷新
           if (expiresAt - now < 30 * 1000) {
-            console.log('[AuthContext] Token expiring soon, refreshing...');
+            logDebug('Token expiring soon, refreshing...', 'AuthContext');
             await refresh();
           }
         } catch (e) {
@@ -234,7 +234,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { authenticated, loading, user } = useAuth();
 
-  console.log('[ProtectedRoute] Check - loading:', loading, 'authenticated:', authenticated, 'path:', window.location.pathname);
+  logDebug(`Check - loading: ${loading}, authenticated: ${authenticated}, path: ${window.location.pathname}`, 'ProtectedRoute');
 
   // 加载中
   if (loading) {
@@ -243,7 +243,7 @@ export function ProtectedRoute({
 
   // 需要认证但未认证
   if (requireAuth && !authenticated) {
-    console.log('[ProtectedRoute] Not authenticated, redirecting to login');
+    logDebug('Not authenticated, redirecting to login', 'ProtectedRoute');
     // 重定向到登录页
     const currentPath = window.location.pathname;
     const loginUrl = new URL('/login', window.location.origin);

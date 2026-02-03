@@ -51,15 +51,18 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ className }) => {
 
   // 运行工作流
   const runWorkflowMutation = useMutation({
-    mutationFn: ({ workflowId, params }: { workflowId: string; params?: Record<string, any> }) =>
+    mutationFn: ({ workflowId, params }: { workflowId: string; params?: Record<string, unknown> }) =>
       schedulerApi.runWorkflow(workflowId, params),
-    onSuccess: (data) => {
-      message.success(`工作流已启动，实例 ID: ${data.data.instance_id}`);
+    onSuccess: (response: unknown) => {
+      const responseData = (response as { data?: { data?: { instance_id?: string }; instance_id?: string } })?.data;
+      const instanceId = responseData?.data?.instance_id || responseData?.instance_id;
+      message.success(`工作流已启动，实例 ID: ${instanceId}`);
       setRunModalVisible(false);
       runForm.resetFields();
     },
-    onError: (error: any) => {
-      message.error(`启动失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`启动失败: ${errMsg}`);
     },
   });
 
@@ -67,14 +70,17 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ className }) => {
   const createWorkflowMutation = useMutation({
     mutationFn: (data: { name: string; description?: string; tasks: WorkflowTask[] }) =>
       schedulerApi.createWorkflow(data),
-    onSuccess: (data) => {
-      message.success(`工作流创建成功: ${data.data.workflow_id}`);
+    onSuccess: (response: unknown) => {
+      const responseData = (response as { data?: { data?: { workflow_id?: string }; workflow_id?: string } })?.data;
+      const workflowId = responseData?.data?.workflow_id || responseData?.workflow_id;
+      message.success(`工作流创建成功: ${workflowId}`);
       // 可以直接运行
       setRunModalVisible(true);
-      runForm.setFieldsValue({ workflow_id: data.data.workflow_id });
+      runForm.setFieldsValue({ workflow_id: workflowId });
     },
-    onError: (error: any) => {
-      message.error(`创建失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`创建失败: ${errMsg}`);
     },
   });
 
@@ -203,7 +209,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ className }) => {
       title: '操作',
       key: 'actions',
       width: 150,
-      render: (_: any, record: WorkflowTask) => (
+      render: (_: unknown, record: WorkflowTask) => (
         <Space>
           <Button
             type="link"

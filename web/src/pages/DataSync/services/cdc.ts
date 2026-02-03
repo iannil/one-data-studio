@@ -2,7 +2,7 @@
  * CDC API 服务
  */
 
-import request from '@/utils/request';
+import { apiClient } from '@/services/api';
 
 export interface CDCJob {
   job_id: string;
@@ -64,7 +64,7 @@ export interface CreateCDCJobRequest {
   description?: string;
   source: CDCSourceConfig;
   sink: CDCTargetConfig;
-  transforms?: any[];
+  transforms?: unknown[];
   parallelism?: number;
 }
 
@@ -73,19 +73,19 @@ export const cdcApi = {
    * 健康检查
    */
   getHealth: () =>
-    request.get<{ data: { status: string; service: string; url: string } }>('/api/v1/cdc/health'),
+    apiClient.get<{ data: { status: string; service: string; url: string } }>('/api/v1/cdc/health'),
 
   /**
    * 创建 CDC 任务
    */
   createJob: (data: CreateCDCJobRequest) =>
-    request.post<{ data: { job_id: string }; code: number; msg: string }>('/api/v1/cdc/jobs', data),
+    apiClient.post<{ data: { job_id: string }; code: number; msg: string }>('/api/v1/cdc/jobs', data),
 
   /**
    * 列出 CDC 任务
    */
   listJobs: (params?: { status?: string }) =>
-    request.get<{ data: { jobs: CDCJob[]; total: number }; code: number; msg: string }>('/api/v1/cdc/jobs', {
+    apiClient.get<{ data: { jobs: CDCJob[]; total: number }; code: number; msg: string }>('/api/v1/cdc/jobs', {
       params,
     }),
 
@@ -93,7 +93,7 @@ export const cdcApi = {
    * 获取任务详情
    */
   getJob: (jobId: string) =>
-    request.get<{ data: { config: any; metrics: CDCMetrics }; code: number; msg: string }>(
+    apiClient.get<{ data: { config: Record<string, unknown>; metrics: CDCMetrics }; code: number; msg: string }>(
       `/api/v1/cdc/jobs/${jobId}`
     ),
 
@@ -101,7 +101,7 @@ export const cdcApi = {
    * 启动任务
    */
   startJob: (jobId: string) =>
-    request.post<{ data: { job_id: string; status: string }; code: number; msg: string }>(
+    apiClient.post<{ data: { job_id: string; status: string }; code: number; msg: string }>(
       `/api/v1/cdc/jobs/${jobId}/start`
     ),
 
@@ -109,7 +109,7 @@ export const cdcApi = {
    * 停止任务
    */
   stopJob: (jobId: string) =>
-    request.post<{ data: { job_id: string; status: string }; code: number; msg: string }>(
+    apiClient.post<{ data: { job_id: string; status: string }; code: number; msg: string }>(
       `/api/v1/cdc/jobs/${jobId}/stop`
     ),
 
@@ -117,13 +117,13 @@ export const cdcApi = {
    * 删除任务
    */
   deleteJob: (jobId: string) =>
-    request.delete<{ data: { job_id: string }; code: number; msg: string }>(`/api/v1/cdc/jobs/${jobId}`),
+    apiClient.delete<{ data: { job_id: string }; code: number; msg: string }>(`/api/v1/cdc/jobs/${jobId}`),
 
   /**
    * 获取任务指标
    */
   getJobMetrics: (jobId: string) =>
-    request.get<{ data: CDCMetrics; code: number; msg: string }>(`/api/v1/cdc/jobs/${jobId}/metrics`),
+    apiClient.get<{ data: CDCMetrics; code: number; msg: string }>(`/api/v1/cdc/jobs/${jobId}/metrics`),
 
   /**
    * 使用 MySQL-MinIO 模板创建任务
@@ -141,7 +141,7 @@ export const cdcApi = {
     minio_access_key: string;
     minio_secret_key: string;
   }) =>
-    request.post<{ data: { job_id: string }; code: number; msg: string }>(
+    apiClient.post<{ data: { job_id: string }; code: number; msg: string }>(
       '/api/v1/cdc/templates/mysql-minio',
       data
     ),
@@ -162,7 +162,7 @@ export const cdcApi = {
     ch_user: string;
     ch_password: string;
   }) =>
-    request.post<{ data: { job_id: string }; code: number; msg: string }>(
+    apiClient.post<{ data: { job_id: string }; code: number; msg: string }>(
       '/api/v1/cdc/templates/mysql-clickhouse',
       data
     ),

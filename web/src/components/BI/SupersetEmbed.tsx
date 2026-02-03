@@ -72,12 +72,13 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
       }],
       rls,
     }),
+    select: (data) => data.data.data,
     enabled: !propToken,
     staleTime: 3600000, // 1 hour
     retry: false,
   });
 
-  const token = propToken || tokenData?.data?.token;
+  const token = propToken || tokenData?.token;
 
   // 构建嵌入 URL
   const buildEmbedUrl = () => {

@@ -19,8 +19,8 @@ export interface BehaviorAnomaly {
   investigated_by?: string;
   investigated_at?: string;
   investigation_notes?: string;
-  actions_taken?: any[];
-  behavior_data?: any;
+  actions_taken?: Array<{ action: string; performed_by: string; performed_at: string }>;
+  behavior_data?: Record<string, unknown>;
 }
 
 export interface UserProfile {
@@ -122,7 +122,7 @@ export const behaviorApi = {
     behavior_type: string;
     action?: string;
     page_url?: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   }) => {
     return apiClient.post(`${BEHAVIOR_BASE_URL}/behaviors/track`, data);
   },
@@ -141,7 +141,7 @@ export const behaviorApi = {
   /**
    * 刷新用户画像
    */
-  refreshUserProfile: (userId: string, userInfo?: any) => {
+  refreshUserProfile: (userId: string, userInfo?: Record<string, unknown>) => {
     return apiClient.post(`${BEHAVIOR_BASE_URL}/profiles/user/${userId}/refresh`, {
       user_info: userInfo,
     });
@@ -291,8 +291,8 @@ export const behaviorApi = {
     tenant_id?: string;
     description?: string;
     rule_type: string;
-    conditions: any;
-    actions: any;
+    conditions: Record<string, unknown>;
+    actions: Record<string, unknown>;
   }) => {
     return apiClient.post(`${BEHAVIOR_BASE_URL}/audit/rules`, data);
   },

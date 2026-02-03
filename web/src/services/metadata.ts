@@ -40,14 +40,14 @@ export interface MetadataGraphData {
     id: string;
     label: string;
     type: string;
-    data: any;
+    data: unknown;
   }>;
   edges: Array<{
     id: string;
     source: string;
     target: string;
     label?: string;
-    data: any;
+    data: unknown;
   }>;
 }
 
@@ -135,6 +135,41 @@ export const metadataApi = {
    */
   searchOpenMetadata: async (params: { q: string; limit?: number; offset?: number }) => {
     return api.get('/data/openmetadata/search', { params });
+  },
+
+  /**
+   * 获取元数据图谱 (带节点类型过滤)
+   */
+  getMetadataGraph: async (params?: { node_types?: string; center_table_id?: string; depth?: number }) => {
+    return api.get('/data/metadata/graph', { params });
+  },
+
+  /**
+   * 获取图谱统计信息
+   */
+  getGraphStatistics: async () => {
+    return api.get('/data/metadata/graph/statistics');
+  },
+
+  /**
+   * 获取表的血缘图谱
+   */
+  getTableLineageGraph: async (tableId: string) => {
+    return api.get(`/data/metadata/tables/${tableId}/lineage/graph`);
+  },
+
+  /**
+   * 获取列关系图
+   */
+  getColumnRelationGraph: async (tableId: string) => {
+    return api.get(`/data/metadata/tables/${tableId}/columns/relations`);
+  },
+
+  /**
+   * 搜索元数据节点
+   */
+  searchMetadataNodes: async (params: { keyword: string; node_types?: string; limit?: number }) => {
+    return api.get('/data/metadata/graph/search', { params });
   },
 };
 

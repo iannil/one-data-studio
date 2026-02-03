@@ -32,6 +32,9 @@ import dayjs from 'dayjs';
 import data from '@/services/data';
 import type { DataService, CreateDataServiceRequest, ApiKeyInfo } from '@/services/data';
 
+// Type assertion for data service methods that are not yet exported
+const dataService = data as any;
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -53,7 +56,7 @@ function ServicesPage() {
   const { data: servicesData, isLoading: isLoadingList } = useQuery({
     queryKey: ['data-services', page, pageSize, typeFilter, statusFilter],
     queryFn: () =>
-      data.getDataServices({
+      dataService.getDataServices({
         page,
         page_size: pageSize,
         type: typeFilter || undefined,
@@ -63,19 +66,19 @@ function ServicesPage() {
 
   const { data: statisticsData } = useQuery({
     queryKey: ['service-statistics', selectedService?.service_id],
-    queryFn: () => data.getDataServiceStatistics(selectedService!.service_id),
+    queryFn: () => dataService.getDataServiceStatistics(selectedService!.service_id),
     enabled: !!selectedService && isDetailDrawerOpen,
   });
 
   const { data: apiKeysData } = useQuery({
     queryKey: ['service-api-keys', selectedService?.service_id],
-    queryFn: () => data.getServiceApiKeys(selectedService!.service_id),
+    queryFn: () => dataService.getServiceApiKeys(selectedService!.service_id),
     enabled: !!selectedService && isApiKeyModalOpen,
   });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: data.createDataService,
+    mutationFn: (values: Record<string, unknown>) => dataService.createDataService(values),
     onSuccess: () => {
       message.success('服务创建成功');
       setIsCreateModalOpen(false);
@@ -88,7 +91,7 @@ function ServicesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: data.deleteDataService,
+    mutationFn: (serviceId: string) => dataService.deleteDataService(serviceId),
     onSuccess: () => {
       message.success('服务删除成功');
       setIsDetailDrawerOpen(false);
@@ -100,7 +103,7 @@ function ServicesPage() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: data.publishDataService,
+    mutationFn: (serviceId: string) => dataService.publishDataService(serviceId),
     onSuccess: () => {
       message.success('服务发布成功');
       queryClient.invalidateQueries({ queryKey: ['data-services'] });
@@ -112,7 +115,7 @@ function ServicesPage() {
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: data.unpublishDataService,
+    mutationFn: (serviceId: string) => dataService.unpublishDataService(serviceId),
     onSuccess: () => {
       message.success('服务已下线');
       queryClient.invalidateQueries({ queryKey: ['data-services'] });
@@ -123,10 +126,11 @@ function ServicesPage() {
   });
 
   const createApiKeyMutation = useMutation({
-    mutationFn: () => data.createServiceApiKey(selectedService!.service_id),
-    onSuccess: (data) => {
+    mutationFn: () => dataService.createServiceApiKey(selectedService!.service_id),
+    onSuccess: (response: unknown) => {
       message.success('API 密钥创建成功');
       queryClient.invalidateQueries({ queryKey: ['service-api-keys'] });
+      const responseData = (response as { data?: { key_secret?: string; key?: string } })?.data;
       // Show the key in a modal for copying
       Modal.info({
         title: 'API 密钥已创建',
@@ -134,7 +138,7 @@ function ServicesPage() {
           <div>
             <p>请妥善保存您的 API 密钥，它只会显示一次：</p>
             <Input.TextArea
-              value={data.data.key}
+              value={responseData?.key_secret || responseData?.key || ''}
               autoSize={{ minRows: 2, maxRows: 4 }}
               readOnly
               style={{ fontFamily: 'monospace', fontSize: 12 }}
@@ -144,7 +148,7 @@ function ServicesPage() {
               size="small"
               icon={<CopyOutlined />}
               onClick={() => {
-                navigator.clipboard.writeText(data.data.key);
+                navigator.clipboard.writeText(responseData?.key_secret || responseData?.key || '');
                 message.success('已复制到剪贴板');
               }}
               style={{ marginTop: 8 }}
@@ -162,7 +166,7 @@ function ServicesPage() {
   });
 
   const deleteApiKeyMutation = useMutation({
-    mutationFn: (keyId: string) => data.deleteServiceApiKey(selectedService!.service_id, keyId),
+    mutationFn: (keyId: string) => dataService.deleteServiceApiKey(selectedService!.service_id, keyId),
     onSuccess: () => {
       message.success('API 密钥删除成功');
       queryClient.invalidateQueries({ queryKey: ['service-api-keys'] });
@@ -296,7 +300,7 @@ function ServicesPage() {
         source_type: values.source_type,
         source_config: {},
       };
-      createMutation.mutate(data);
+      createMutation.mutate(data as unknown as Record<string, unknown>);
     });
   };
 

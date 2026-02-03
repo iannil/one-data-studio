@@ -20,10 +20,8 @@ vi.mock('@/services/agent-service', () => ({
 }));
 
 vi.mock('@/services/model', () => ({
-  default: {
-    getModels: vi.fn(),
-    streamChatCompletion: vi.fn(),
-  },
+  getModels: vi.fn(),
+  streamChatCompletion: vi.fn(),
 }));
 
 
@@ -47,7 +45,7 @@ describe('ChatPage', () => {
       },
     });
 
-    vi.mocked(model.default.getModels).mockResolvedValue({
+    vi.mocked(model.getModels).mockResolvedValue({
       code: 0,
       data: [
         { id: 'gpt-4o-mini', name: 'GPT-4O Mini' },
@@ -235,7 +233,7 @@ describe('ChatPage 消息发送', () => {
       data: { conversation_id: 'new-conv-001' },
     });
 
-    vi.mocked(model.default.getModels).mockResolvedValue({
+    vi.mocked(model.getModels).mockResolvedValue({
       code: 0,
       data: [{ id: 'gpt-4o-mini' }],
     });
@@ -280,7 +278,7 @@ describe('ChatPage 会话管理', () => {
       },
     });
 
-    vi.mocked(model.default.getModels).mockResolvedValue({
+    vi.mocked(model.getModels).mockResolvedValue({
       code: 0,
       data: [{ id: 'gpt-4o-mini' }],
     });

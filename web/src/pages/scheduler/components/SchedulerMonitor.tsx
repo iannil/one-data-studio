@@ -18,6 +18,7 @@ import {
   Tooltip,
   Tabs,
   List,
+  Select,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -27,7 +28,7 @@ import {
   ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { schedulerApi, ResourcePrediction, SmartTask } from '../services/scheduler';
+import { schedulerApi, SchedulerStats, ResourcePrediction, SmartTask } from '../services/scheduler';
 
 interface SchedulerMonitorProps {
   className?: string;
@@ -43,6 +44,7 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
   const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['scheduler', 'stats'],
     queryFn: () => schedulerApi.getStats(),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -50,6 +52,7 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
   const { data: healthData, refetch: refetchHealth } = useQuery({
     queryKey: ['scheduler', 'health'],
     queryFn: () => schedulerApi.getHealth(),
+    select: (res) => res.data,
     refetchInterval: 10000,
   });
 
@@ -57,6 +60,7 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
   const { data: smartTasksData } = useQuery({
     queryKey: ['scheduler', 'smartTasks'],
     queryFn: () => schedulerApi.listSmartTasks({ limit: 100 }),
+    select: (res) => res.data.data,
     refetchInterval: 5000,
   });
 
@@ -64,6 +68,7 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
   const { data: optimizeData, refetch: refetchOptimize } = useQuery({
     queryKey: ['scheduler', 'optimize'],
     queryFn: () => schedulerApi.optimizeSchedule(),
+    select: (res) => res.data.data,
     refetchInterval: 30000,
   });
 
@@ -71,13 +76,34 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
   const { data: predictionData, refetch: refetchPrediction } = useQuery({
     queryKey: ['scheduler', 'prediction', resourceWindow],
     queryFn: () => schedulerApi.predictResourceDemand(resourceWindow),
+    select: (res) => res.data.data,
     refetchInterval: 30000,
   });
 
-  const stats = statsData?.data || {};
-  const health = healthData || {};
-  const smartTasks = smartTasksData?.data?.tasks || [];
-  const prediction = predictionData?.data || null;
+  const defaultStats: SchedulerStats = {
+    celery: { workers: [], total_tasks: 0 },
+    smart_scheduler: {
+      total_tasks: 0,
+      status_counts: {},
+      queue_length: 0,
+      available_resources: { cpu_cores: 0, memory_mb: 0, gpu_count: 0 },
+      total_resources: { cpu_cores: 0, memory_mb: 0, gpu_count: 0 },
+    },
+    dolphinscheduler: { enabled: false, url: '' },
+  };
+  const stats = statsData || defaultStats;
+  const defaultHealth = { status: 'unknown', components: {} as Record<string, boolean> };
+  const health = healthData || defaultHealth;
+  const smartTasks = smartTasksData?.tasks || [];
+
+  const defaultPrediction: ResourcePrediction = {
+    window_minutes: 60,
+    predicted_tasks: 0,
+    resource_demand: { cpu_cores: 0, memory_mb: 0, gpu_count: 0 },
+    resource_utilization: { cpu_percent: 0, memory_percent: 0, gpu_percent: 0 },
+    recommendations: [],
+  };
+  const prediction = predictionData || defaultPrediction;
 
   const handleRefresh = () => {
     refetchStats();
@@ -88,33 +114,41 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
 
   // 获取资源使用数据
   const getResourceData = () => {
-    const total = stats?.smart_scheduler?.total_resources || {};
-    const available = stats?.smart_scheduler?.available_resources || {};
-    const statusCounts = stats?.smart_scheduler?.status_counts || {};
+    const ss = stats.smart_scheduler;
+    const total = ss?.total_resources;
+    const available = ss?.available_resources;
+    const statusCounts = ss?.status_counts || {};
+
+    const totalCpu = total?.cpu_cores || 0;
+    const totalMem = total?.memory_mb || 0;
+    const totalGpu = total?.gpu_count || 0;
+    const availCpu = available?.cpu_cores || 0;
+    const availMem = available?.memory_mb || 0;
+    const availGpu = available?.gpu_count || 0;
 
     return {
       total: {
-        cpu: total.cpu_cores || 0,
-        memory: Math.round((total.memory_mb || 0) / 1024), // GB
-        gpu: total.gpu_count || 0,
+        cpu: totalCpu,
+        memory: Math.round(totalMem / 1024), // GB
+        gpu: totalGpu,
       },
       available: {
-        cpu: available.cpu_cores || 0,
-        memory: Math.round((available.memory_mb || 0) / 1024),
-        gpu: available.gpu_count || 0,
+        cpu: availCpu,
+        memory: Math.round(availMem / 1024),
+        gpu: availGpu,
       },
       used: {
-        cpu: (total.cpu_cores || 0) - (available.cpu_cores || 0),
-        memory: Math.round(((total.memory_mb || 0) - (available.memory_mb || 0)) / 1024),
-        gpu: (total.gpu_count || 0) - (available.gpu_count || 0),
+        cpu: totalCpu - availCpu,
+        memory: Math.round((totalMem - availMem) / 1024),
+        gpu: totalGpu - availGpu,
       },
       usagePercent: {
-        cpu: total.cpu_cores ? Math.round(((total.cpu_cores - available.cpu_cores) / total.cpu_cores) * 100) : 0,
-        memory: total.memory_mb ? Math.round(((total.memory_mb - available.memory_mb) / total.memory_mb) * 100) : 0,
-        gpu: total.gpu_count ? Math.round(((total.gpu_count - available.gpu_count) / total.gpu_count) * 100) : 0,
+        cpu: totalCpu ? Math.round(((totalCpu - availCpu) / totalCpu) * 100) : 0,
+        memory: totalMem ? Math.round(((totalMem - availMem) / totalMem) * 100) : 0,
+        gpu: totalGpu ? Math.round(((totalGpu - availGpu) / totalGpu) * 100) : 0,
       },
       tasks: {
-        total: stats?.smart_scheduler?.total_tasks || 0,
+        total: ss?.total_tasks || 0,
         pending: statusCounts.pending || 0,
         running: statusCounts.running || 0,
         completed: statusCounts.completed || 0,
@@ -196,7 +230,7 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
       title: '资源需求',
       key: 'resource',
       width: 150,
-      render: (_: any, record: SmartTask) => (
+      render: (_: unknown, record: SmartTask) => (
         <Space size={4}>
           <span>CPU: {record.resource_requirement.cpu_cores}</span>
           <span>MEM: {Math.round(record.resource_requirement.memory_mb / 1024)}GB</span>
@@ -366,13 +400,13 @@ const SchedulerMonitor: React.FC<SchedulerMonitorProps> = ({ className }) => {
       label: '优化建议',
       children: (
         <div>
-          {optimizeData?.data && (
+          {optimizeData && (
             <Card size="small" style={{ marginBottom: 16 }}>
               <p>优化后的执行顺序：</p>
               <List
                 size="small"
                 bordered
-                dataSource={optimizeData.data.optimized_order || []}
+                dataSource={optimizeData.optimized_order || []}
                 renderItem={(item: string, index: number) => (
                   <List.Item>
                     <span style={{ marginRight: 16, fontWeight: 'bold' }}>#{index + 1}</span>

@@ -100,7 +100,7 @@ interface MetricAlertRule {
   metric_name?: string;
   metric_type?: string;
   condition_type: string;
-  condition_config?: any;
+  condition_config?: Record<string, unknown>;
   severity: string;
   alert_title_template?: string;
   alert_message_template?: string;
@@ -252,10 +252,10 @@ const AlertsPage: React.FC = () => {
   }, [activeTab, pagination.current, pagination.pageSize]);
 
   // 创建/更新规则
-  const handleSaveRule = async (values: any) => {
+  const handleSaveRule = async (values: Record<string, unknown>) => {
     try {
       // 构建条件配置
-      let conditionConfig: any = {};
+      let conditionConfig: Record<string, unknown> = {};
       if (values.condition_type === 'threshold') {
         conditionConfig = {
           operator: values.operator,
@@ -287,7 +287,7 @@ const AlertsPage: React.FC = () => {
         alert_title_template: values.alert_title_template,
         alert_message_template: values.alert_message_template,
         notification_channels: values.notification_channels,
-        notification_targets: values.notification_targets?.split(',').map((s: string) => s.trim()).filter(Boolean),
+        notification_targets: (values.notification_targets as string | undefined)?.split(',').map((s: string) => s.trim()).filter(Boolean),
         cooldown_minutes: values.cooldown_minutes,
         is_enabled: values.is_enabled,
       };
@@ -340,7 +340,7 @@ const AlertsPage: React.FC = () => {
   };
 
   // 测试规则
-  const handleTestRule = async (values: any) => {
+  const handleTestRule = async (values: Record<string, unknown>) => {
     if (!testingRule) return;
 
     try {
@@ -493,23 +493,23 @@ const AlertsPage: React.FC = () => {
             onClick={() => {
               setEditingRule(record);
               setConditionType(record.condition_type);
-              const formValues: any = {
+              const formValues: Record<string, unknown> = {
                 ...record,
-                notification_targets: record.notification_targets?.join(', '),
+                notification_targets: record.notification_targets?.join(', ') || '',
               };
               // 解析条件配置
               const config = record.condition_config || {};
               if (record.condition_type === 'threshold') {
-                formValues.operator = config.operator;
-                formValues.threshold_value = config.value;
+                formValues.operator = (config as { operator?: string }).operator;
+                formValues.threshold_value = (config as { value?: number }).value;
               } else if (record.condition_type === 'change_rate') {
-                formValues.period = config.period;
-                formValues.change_operator = config.operator;
-                formValues.change_threshold = config.value;
+                formValues.period = (config as { period?: number }).period;
+                formValues.change_operator = (config as { operator?: string }).operator;
+                formValues.change_threshold = (config as { value?: number }).value;
               } else if (record.condition_type === 'anomaly') {
-                formValues.algorithm = config.algorithm;
-                formValues.sensitivity = config.sensitivity;
-                formValues.window = config.window;
+                formValues.algorithm = (config as { algorithm?: string }).algorithm;
+                formValues.sensitivity = (config as { sensitivity?: string }).sensitivity;
+                formValues.window = (config as { window?: number }).window;
               }
               ruleForm.setFieldsValue(formValues);
               setRuleModalVisible(true);

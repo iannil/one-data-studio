@@ -56,7 +56,7 @@ const fetchUsers = async (params: {
   return data.data;
 };
 
-const createUser = async (userData: any) => {
+const createUser = async (userData: Record<string, unknown>) => {
   const response = await fetch('/api/v1/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,7 +67,7 @@ const createUser = async (userData: any) => {
   return data.data;
 };
 
-const updateUser = async (userId: string, userData: any) => {
+const updateUser = async (userId: string, userData: Record<string, unknown>) => {
   const response = await fetch(`/api/v1/users/${userId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -163,7 +163,7 @@ function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: any }) => updateUser(userId, data),
+    mutationFn: ({ userId, data }: { userId: string; data: Record<string, unknown> }) => updateUser(userId, data),
     onSuccess: () => {
       message.success('用户更新成功');
       setIsEditModalOpen(false);

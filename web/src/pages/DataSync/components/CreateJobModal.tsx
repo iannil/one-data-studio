@@ -42,8 +42,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ visible, onClose, onSuc
       setCurrentStep(0);
       onSuccess();
     },
-    onError: (error: any) => {
-      message.error(`创建失败: ${error.message || '未知错误'}`);
+    onError: (error: unknown) => {
+      const errMsg = (error as { message?: string })?.message || '未知错误';
+      message.error(`创建失败: ${errMsg}`);
     },
   });
 

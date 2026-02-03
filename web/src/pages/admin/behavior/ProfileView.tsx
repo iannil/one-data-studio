@@ -90,17 +90,20 @@ export const ProfileView: React.FC = () => {
     queryKey: ['behavior-profile', selectedUserId],
     queryFn: () => behaviorApi.getUserProfile(selectedUserId, true),
     enabled: !!selectedUserId,
+    select: (data) => data.data.data,
   });
 
   const { data: activityData } = useQuery({
     queryKey: ['behavior-activity', selectedUserId],
     queryFn: () => behaviorApi.getUserActivity(selectedUserId, 30),
     enabled: !!selectedUserId,
+    select: (data) => data.data.data,
   });
 
   const { data: similarUsers } = useQuery({
     queryKey: ['behavior-similar', selectedUserId],
     queryFn: () => behaviorApi.getSimilarUsers(selectedUserId),
+    select: (data) => data.data.data,
     enabled: !!selectedUserId,
   });
 
@@ -266,7 +269,7 @@ export const ProfileView: React.FC = () => {
                         <List
                           size="small"
                           dataSource={profileData.common_actions?.slice(0, 5)}
-                          renderItem={(item: any) => (
+                          renderItem={(item: { action: string; count: number; type?: string }) => (
                             <List.Item>
                               <Space style={{ justifyContent: 'space-between', width: '100%' }}>
                                 <span>{item.action}</span>
@@ -282,7 +285,7 @@ export const ProfileView: React.FC = () => {
                       <div style={{ marginTop: 16 }}>
                         <h4>活跃时段偏好</h4>
                         <Space direction="vertical" style={{ width: '100%' }}>
-                          {profileData.preferred_time_ranges.map((timeRange: any) => (
+                          {profileData.preferred_time_ranges.map((timeRange: { range: string; count: number; percentage: number }) => (
                             <div key={timeRange.range}>
                               <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                                 <span>{timeRange.range}</span>
@@ -305,7 +308,7 @@ export const ProfileView: React.FC = () => {
                         <h4>每日活动量</h4>
                         <Timeline
                           mode="left"
-                          items={activityData?.activity_trend?.slice(-10).map((item: any) => ({
+                          items={activityData?.activity_trend?.slice(-10).map((item: { date: string; count: number }) => ({
                             label: item.date,
                             children: `${item.count} 次行为`,
                           }))}
@@ -316,7 +319,7 @@ export const ProfileView: React.FC = () => {
                         <List
                           size="small"
                           dataSource={activityData?.most_visited_pages?.slice(0, 5)}
-                          renderItem={(item: any) => (
+                          renderItem={(item: { url: string; count: number }) => (
                             <List.Item>
                               <Space style={{ justifyContent: 'space-between', width: '100%' }}>
                                 <span style={{ fontSize: 12 }}>{item.url}</span>
@@ -336,7 +339,7 @@ export const ProfileView: React.FC = () => {
                     <List
                       grid={{ gutter: 16, column: 4 }}
                       dataSource={similarUsers?.similar_users?.slice(0, 8)}
-                      renderItem={(item: any) => (
+                      renderItem={(item: { username?: string; user_id: string; similarity_score: number }) => (
                         <List.Item>
                           <Card size="small">
                             <Space direction="vertical" style={{ width: '100%' }}>
