@@ -45,7 +45,7 @@ test-results/
 playwright-report/
 htmlcov/
 .tox/
-reports/
+/reports/   # Only ignore root-level reports (test coverage), not docs/reports/
 *.xml
 coverage.xml
 

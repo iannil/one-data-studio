@@ -14,7 +14,9 @@
 | 贡献指南 | [CONTRIB](CONTRIB.md) | 开发工作流程和脚本参考 |
 | 运维手册 | [RUNBOOK](RUNBOOK.md) | 部署、监控和故障处理 |
 | 环境变量 | [ENVIRONMENT](ENVIRONMENT.md) | 环境变量配置参考 |
-| 当前状态 | [current-status](03-progress/current-status.md) | 项目进度追踪 |
+| 项目状态 | [PROJECT_STATUS](PROJECT_STATUS.md) | 项目完成度与状态总览 |
+| 代码结构 | [CODE_STRUCTURE](CODE_STRUCTURE.md) | LLM 友好的代码结构说明 |
+| 技术债务 | [TECH_DEBT](TECH_DEBT.md) | 技术债务追踪和偿还计划 |
 | 路线图 | [roadmap](05-planning/roadmap.md) | 开发计划与里程碑 |
 | 功能清单 | [features](00-project/features.md) | 功能列表与完成度 |
 | 安全概览 | [security-overview](07-operations/security-overview.md) | 安全策略与配置 |
@@ -28,19 +30,27 @@ docs/
 ├── 00-project/          # 项目概览
 ├── 01-architecture/     # 架构设计
 ├── 02-integration/      # 集成方案
-├── 03-progress/         # 进度追踪
+├── 03-progress/         # ~~进度追踪~~ (已废弃，内容已迁移)
 ├── 04-testing/          # 测试文档
 ├── 05-planning/         # 规划文档
 ├── 06-development/      # 开发指南
 ├── 07-operations/       # 运维指南
 ├── 08-user-guide/       # 用户手册
 ├── 09-requirements/     # 需求文档
-├── progress/            # 进行中的修改（未完成）
-├── reports/             # 验收报告与项目进展报告
-│   └── completed/       # 已完成修改的文档
-├── standards/           # 文档标准和规范
+├── progress/            # 进行中的工作
+├── reports/             # 验收报告
+│   └── completed/       # 已完成的工作
+├── standards/           # 文档标准
 ├── templates/           # 文档模板
-└── 99-archived/         # 归档文档
+├── 99-archived/         # 归档文档
+├── CHANGELOG.md         # 变更日志
+├── CONTRIB.md           # 贡献指南
+├── ENVIRONMENT.md       # 环境变量参考
+├── PROJECT_STATUS.md    # 项目状态总览
+├── CODE_STRUCTURE.md    # 代码结构说明
+├── README.md            # 本文件
+├── RUNBOOK.md           # 运维手册
+└── TECH_DEBT.md         # 技术债务清单
 ```
 
 ---
@@ -84,12 +94,15 @@ docs/
 
 ---
 
-## 03 - 进度追踪
+## 03 - 进度追踪（已废弃）
 
-| 文档 | 说明 |
-|------|------|
-| [当前状态](03-progress/current-status.md) | 项目进度、里程碑、待办事项 |
-| [技术债务清单](03-progress/tech-debt.md) | 技术债务追踪和偿还计划 |
+> **说明**: 本目录内容已迁移。请参考以下新位置：
+
+| 旧位置 | 新位置 |
+|--------|--------|
+| `03-progress/current-status.md` | `PROJECT_STATUS.md` |
+| `03-progress/tech-debt.md` | `TECH_DEBT.md` |
+| `03-progress/phase*.md` | `reports/completed/` |
 
 ---
 
@@ -163,11 +176,23 @@ docs/
 
 | 目录 | 说明 |
 |------|------|
-| [进行中的修改](progress/README.md) | 未完成的修改文档存放位置 |
+| [进行中的工作](progress/README.md) | 未完成的修改文档存放位置 |
 | [验收报告](reports/README.md) | 验收报告与项目进展报告 |
 | [已完成修改](reports/completed/README.md) | 已完成并验收通过的修改文档 |
 | [文档标准](standards/README.md) | 文档命名和结构规范 |
 | [文档模板](templates/README.md) | 进度更新和完成报告模板 |
+
+## 根级文档
+
+| 文档 | 说明 |
+|------|------|
+| [PROJECT_STATUS](PROJECT_STATUS.md) | 项目完成度与状态总览 |
+| [CODE_STRUCTURE](CODE_STRUCTURE.md) | LLM 友好的代码结构说明 |
+| [TECH_DEBT](TECH_DEBT.md) | 技术债务追踪和偿还计划 |
+| [CHANGELOG](CHANGELOG.md) | 变更日志 |
+| [CONTRIB](CONTRIB.md) | 贡献指南 |
+| [ENVIRONMENT](ENVIRONMENT.md) | 环境变量配置参考 |
+| [RUNBOOK](RUNBOOK.md) | 运维手册 |
 
 ---
 
@@ -175,6 +200,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-02-04 | 文档结构重组：创建 `reports/` 和 `reports/completed/` 目录；移动已完成文档；创建 `PROJECT_STATUS.md` 和 `CODE_STRUCTURE.md`；移动 `TECH_DEBT.md` 到根目录 |
 | 2026-02-04 | 更新贡献指南、运维手册、环境变量参考文档（同步 package.json、.env.example、Makefile） |
 | 2026-01-30 | 创建文档标准和模板目录；修复 sql_upper BUG；清理冗余文件（508MB） |
 | 2026-01-29 | 文档整理：移动 FEATURES.md 到 00-project/features.md，移动 SECURITY.md 到 07-operations/security-overview.md，删除重复文档 |
