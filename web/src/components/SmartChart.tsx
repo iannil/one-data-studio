@@ -610,7 +610,7 @@ export function SmartChart({
           />
         </Space>
       }
-      bodyStyle={{ padding: 0 }}
+      styles={{ body: { padding: 0 } }}
     >
       {renderChart()}
     </Card>

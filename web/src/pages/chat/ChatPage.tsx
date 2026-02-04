@@ -115,11 +115,19 @@ function ChatPage() {
 
         // 如果没有选中的会话且有会话列表，自动选择第一个
         if (!currentConversationId && sessionList.length > 0) {
-          await selectSession(sessionList[0].conversation_id);
+          // 不等待 selectSession 完成，让它在后台加载
+          selectSession(sessionList[0].conversation_id).catch((err) => {
+            logError('Failed to auto-select first session', 'ChatPage', err);
+          });
         }
+      } else {
+        // 如果没有会话，保持空状态
+        setSessions([]);
       }
     } catch (error) {
       logError('Failed to load sessions', 'ChatPage', error);
+      message.error('加载会话列表失败');
+      setSessions([]);
     } finally {
       setIsLoadingSessions(false);
     }
@@ -143,10 +151,16 @@ function ChatPage() {
 
         // 加载 Token 使用统计
         loadTokenUsage(conversationId);
+      } else {
+        // API 返回错误，清空消息
+        setMessages([]);
+        logError('Conversation API returned error', 'ChatPage', new Error(`code: ${response.code}, message: ${response.message}`));
       }
     } catch (error) {
       logError('Failed to load conversation', 'ChatPage', error);
       message.error('加载会话失败');
+      // 出错时清空消息，避免显示错误数据
+      setMessages([]);
     }
   };
 
@@ -294,6 +308,10 @@ function ChatPage() {
     let conversationId = currentConversationId;
     if (!conversationId) {
       conversationId = await createNewConversation(input);
+      if (!conversationId) {
+        message.error('创建会话失败，请重试');
+        return;
+      }
     }
 
     const userMessage: Message = {

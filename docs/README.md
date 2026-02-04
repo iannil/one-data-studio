@@ -175,7 +175,7 @@ docs/
 
 | 日期 | 更新内容 |
 |------|----------|
-| 2026-02-03 | 新增贡献指南 `CONTRIB.md`、运维手册 `RUNBOOK.md`、环境变量参考 `ENVIRONMENT.md` |
+| 2026-02-04 | 更新贡献指南、运维手册、环境变量参考文档（同步 package.json、.env.example、Makefile） |
 | 2026-01-30 | 创建文档标准和模板目录；修复 sql_upper BUG；清理冗余文件（508MB） |
 | 2026-01-29 | 文档整理：移动 FEATURES.md 到 00-project/features.md，移动 SECURITY.md 到 07-operations/security-overview.md，删除重复文档 |
 | 2026-01-29 | 新增项目依赖全面评估报告 `01-architecture/dependency-assessment.md` |

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, Select, Spin, Tag, Space, Button } from 'antd';
 import {
   ReloadOutlined,
@@ -43,7 +43,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
   const [dragging, setDragging] = useState(false);
 
   // 计算节点布局
-  const calculateLayout = (g: LineageGraphType, canvasWidth: number, canvasHeight: number) => {
+  const calculateLayout = useCallback((g: LineageGraphType, canvasWidth: number, canvasHeight: number) => {
     const nodes = [...g.nodes];
     const nodePositions = new Map<string, { x: number; y: number }>();
 
@@ -130,7 +130,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
     }
 
     return nodePositions;
-  };
+  }, [layout]);
 
   useEffect(() => {
     if (!graph || !canvasRef.current) return;
@@ -244,7 +244,7 @@ function LineageGraph({ graph, loading, onNodeClick, onRefresh, height = 500 }: 
       ctx.textAlign = 'center';
       ctx.fillText(node.name, x, y + size + 14);
     });
-  }, [graph, scale, offset, hoveredNode, layout]);
+  }, [graph, scale, offset, hoveredNode, calculateLayout]);
 
   // 鼠标位置检测
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {

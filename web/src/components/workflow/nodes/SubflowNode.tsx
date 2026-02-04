@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Card, Typography, Space, Select, Switch, InputNumber, Tooltip } from 'antd';
+import { Card, Typography, Space, Select, Switch, InputNumber, Tooltip, Input } from 'antd';
 import { SubnodeOutlined, LinkOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -35,7 +35,7 @@ const SubflowNode: React.FC<NodeProps<SubflowNodeData>> = ({ data, selected }) =
         border: selected ? '2px solid #13c2c2' : '1px solid #d9d9d9',
         borderRadius: 8,
       }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#13c2c2' }} />
 
@@ -74,14 +74,16 @@ const SubflowNode: React.FC<NodeProps<SubflowNodeData>> = ({ data, selected }) =
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text type="secondary" style={{ fontSize: 12 }}>超时</Text>
-          <InputNumber
-            size="small"
-            min={1}
-            max={3600}
-            value={data.timeout || 600}
-            addonAfter="秒"
-            style={{ width: 100 }}
-          />
+          <Space.Compact size="small">
+            <InputNumber
+              size="small"
+              min={1}
+              max={3600}
+              value={data.timeout || 600}
+              style={{ width: 70 }}
+            />
+            <Input size="small" readOnly value="秒" style={{ width: 30 }} />
+          </Space.Compact>
         </div>
       </Space>
 

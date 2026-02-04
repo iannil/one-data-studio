@@ -42,7 +42,7 @@ interface BehaviorEvent {
   referrer?: string;
   module?: string;
   duration?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class BehaviorTracker {
@@ -359,7 +359,7 @@ class BehaviorTracker {
    */
   trackCustomEvent(
     eventType: string,
-    properties: Record<string, any> = {}
+    properties: Record<string, unknown> = {}
   ): void {
     this.track('api_call' as BehaviorType, {
       action: eventType,

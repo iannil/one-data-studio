@@ -353,13 +353,13 @@ function NotebooksPage() {
             <Input placeholder="默认工作空间" />
           </Form.Item>
           <Form.Item label="CPU 配置" name="cpu" rules={[{ required: true }]} initialValue={2}>
-            <InputNumber min={1} max={32} style={{ width: '100%' }} addonAfter="核" />
+            <Input min={1} max={32} type="number" style={{ width: '100%' }} addonAfter="核" />
           </Form.Item>
           <Form.Item label="内存配置" name="memory" rules={[{ required: true }]} initialValue={8}>
-            <InputNumber min={1} max={128} style={{ width: '100%' }} addonAfter="Gi" />
+            <Input min={1} max={128} type="number" style={{ width: '100%' }} addonAfter="Gi" />
           </Form.Item>
           <Form.Item label="GPU 配置" name="gpu">
-            <InputNumber min={0} max={8} style={{ width: '100%' }} addonAfter="卡" />
+            <Input min={0} max={8} type="number" style={{ width: '100%' }} addonAfter="卡" />
           </Form.Item>
         </Form>
       </Modal>

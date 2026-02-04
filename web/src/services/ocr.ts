@@ -26,7 +26,7 @@ export interface OCRTask {
 
 export interface OCRResult {
   task_id: string;
-  structured_data: Record<string, any>;
+  structured_data: Record<string, unknown>;
   raw_text?: string;
   tables: Array<{
     id: string;
@@ -46,7 +46,7 @@ export interface OCRResult {
 
 export interface EnhancedOCRResult {
   task_id: string;
-  structured_data: Record<string, any>;
+  structured_data: Record<string, unknown>;
   raw_text?: string;
   tables: Array<{
     id: string;
@@ -106,7 +106,7 @@ export interface ExtractionTemplate {
   description?: string;
   template_type: string;
   category?: string;
-  extraction_rules: Record<string, any>;
+  extraction_rules: Record<string, unknown>;
   is_active: boolean;
   is_public: boolean;
   version: number;
@@ -208,7 +208,7 @@ export const ocrApi = {
    * 验证和校正OCR结果
    */
   verifyTask: (taskId: string, data: {
-    corrections: Record<string, any>;
+    corrections: Record<string, unknown>;
     verified_by: string;
   }) => {
     return apiClient.post(`${OCR_BASE_URL}/tasks/${taskId}/verify`, data);
@@ -231,9 +231,9 @@ export const ocrApi = {
     description?: string;
     template_type: string;
     category?: string;
-    extraction_rules: Record<string, any>;
+    extraction_rules: Record<string, unknown>;
     ai_prompt_template?: string;
-    post_processing?: Record<string, any>;
+    post_processing?: Record<string, unknown>;
   }) => {
     return apiClient.post<ExtractionTemplate>(`${OCR_BASE_URL}/templates`, data);
   },
@@ -344,20 +344,20 @@ export const ocrApi = {
   /**
    * 使用模板预览提取结果
    */
-  previewWithTemplate: (file: File, templateConfig: Record<string, any>) => {
+  previewWithTemplate: (file: File, templateConfig: Record<string, unknown>) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('request', JSON.stringify({ template_config: templateConfig }));
 
     return apiClient.post<{
-      extracted_fields: Record<string, any>;
+      extracted_fields: Record<string, unknown>;
       detected_tables: Array<{
         index: number;
         headers: string[];
         rows: string[][];
         row_count: number;
       }>;
-      validation_result: Record<string, any>;
+      validation_result: Record<string, unknown>;
       confidence_score: number;
     }>(
       `${OCR_BASE_URL}/templates/preview`,

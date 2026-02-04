@@ -205,16 +205,18 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       title={title || '图片预览'}
       width={isFullscreen ? '100vw' : '80vw'}
       style={isFullscreen ? { top: 0, paddingBottom: 0, margin: 0 } : { top: 20 }}
-      bodyStyle={{
-        height: isFullscreen ? 'calc(100vh - 55px)' : 'auto',
-        maxHeight: isFullscreen ? undefined : '80vh',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        backgroundColor: '#f0f0f0',
+      styles={{
+        content: {
+          height: isFullscreen ? 'calc(100vh - 55px)' : 'auto',
+          maxHeight: isFullscreen ? undefined : '80vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          backgroundColor: '#f0f0f0',
+        }
       }}
       closeIcon={<CloseOutlined />}
       centered={!isFullscreen}

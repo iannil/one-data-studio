@@ -3,7 +3,7 @@
  * 用于在 One Data Studio 中嵌入 Superset 仪表板
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Spin, message, Alert } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { supersetApi } from '@/services/superset';
@@ -81,7 +81,7 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
   const token = propToken || tokenData?.token;
 
   // 构建嵌入 URL
-  const buildEmbedUrl = () => {
+  const buildEmbedUrl = useCallback(() => {
     const supersetUrl = import.meta.env.VITE_SUPERSET_URL || 'http://localhost:8088';
 
     // 基础路径
@@ -115,7 +115,7 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
     }
 
     return `${supersetUrl}${embedPath}`;
-  };
+  }, [dashboardId, showHeader, showFilters, showDownload, params]);
 
   // 处理 iframe 加载完成
   const handleIframeLoad = () => {
@@ -166,7 +166,7 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
     if (token && iframeRef.current) {
       iframeRef.current.src = buildEmbedUrl();
     }
-  }, [token, dashboardId, JSON.stringify(params)]);
+  }, [token, buildEmbedUrl]);
 
   if (error) {
     return (

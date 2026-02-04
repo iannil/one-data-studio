@@ -112,7 +112,7 @@ const QuickLinkCard: React.FC<{ link: QuickLink }> = ({ link }) => {
       rel={link.new_window ? 'noopener noreferrer' : undefined}
     >
       <Badge count={link.badge_count} offset={[-4, 4]}>
-        <Card hoverable className="quick-link-inner" bodyStyle={{ padding: '16px' }}>
+        <Card hoverable className="quick-link-inner" styles={{ body: { padding: '16px' } }}>
           <div className="quick-link-icon">{link.icon}</div>
           <div className="quick-link-info">
             <div className="quick-link-title">{link.title}</div>

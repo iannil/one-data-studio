@@ -487,6 +487,10 @@ services:
       # Model configuration
       CHAT_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
       EMBEDDING_MODEL: ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-768}
+      # Vector service configuration
+      VECTOR_ENABLED: ${VECTOR_ENABLED:-true}
+      VECTOR_FALLBACK_ENABLED: ${VECTOR_FALLBACK_ENABLED:-true}
       EMBEDDING_MOCK_ENABLED: ${EMBEDDING_MOCK_ENABLED:-false}
       PORT: 8000
       # Development mode: disable authentication

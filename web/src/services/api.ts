@@ -3,7 +3,7 @@ import { message } from 'antd';
 import { getCsrfToken, getAccessToken } from './auth';
 
 // API 响应基础类型
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;

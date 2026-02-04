@@ -46,7 +46,7 @@
 |------|--------|----------|----------|
 | Python 后端 | 274 | 142,887 | `services/data-api/`, `services/agent-api/`, `services/openai-proxy/`, `services/shared/`, `services/admin-api/`, `services/model-api/`, `services/ocr-service/`, `services/behavior-service/` |
 | TypeScript 前端 | 216 (194 TSX + 22 TS) | 120,334 | `web/src/pages/`, `web/src/components/`, `web/src/services/` |
-| 测试代码 | 85 | 32,500+ | `tests/unit/`, `tests/integration/`, `tests/e2e/`, `tests/performance/` |
+| 测试代码 | 143 | 32,500+ | `tests/unit/`, `tests/integration/`, `tests/e2e/`, `tests/performance/` |
 | 部署配置 | 155 | - | `deploy/`, `k8s/`, `helm/` |
 
 ### 服务完成度矩阵
@@ -200,7 +200,7 @@
 | 运维脚本 | ✅ 完成 | `scripts/disaster-recovery.sh`, `rotate-secrets.sh` |
 | 测试脚本 | ✅ 完成 | `deploy/scripts/test-all.sh`, `test-e2e.sh` |
 
-### 代码清理 (2025-01-24 完成)
+### 代码清理 (2026-02-03 更新)
 
 | 清理项 | 状态 | 说明 |
 |--------|------|------|
@@ -213,6 +213,9 @@
 | 脚本文件整合 | ✅ 完成 | 按功能分类，部署脚本到 `/deploy/scripts/`，运维脚本到 `/scripts/` |
 | 端口配置修复 | ✅ 完成 | 统一 Dockerfile EXPOSE 80，nginx.conf listen 80 |
 | 空目录清理 | ✅ 完成 | 删除 `/tests/performance/results/` 和 `/helm/` 空目录 |
+| 测试报告清理 | ✅ 完成 | 清理 `tests/e2e/playwright-report/` (53MB) |
+| Python 缓存清理 | ✅ 完成 | 清理 4 个 `__pycache__` 目录 |
+| 测试空目录清理 | ✅ 完成 | 删除 `tests/unit/document_processing` 和 `tests/data/documents` |
 
 ---
 
@@ -253,10 +256,10 @@
 
 ### 前端
 
-1. **聊天历史记录**
-   - 问题：历史会话列表为空（硬编码为空数组）
-   - 影响：用户无法查看历史对话
-   - 位置：`web/src/pages/chat/ChatPage.tsx:161`
+1. **聊天历史记录** ✅ 已修复 (2026-02-04)
+   - 问题：历史会话列表加载失败时缺少错误处理
+   - 修复：添加了更好的错误处理和日志记录
+   - 位置：`web/src/pages/chat/ChatPage.tsx:105-151`
 
 2. **工作流编辑器**
    - 问题：编辑器仅有基础 UI，缺少实际编辑逻辑
@@ -264,15 +267,15 @@
 
 ### 后端
 
-1. **向量检索**
+1. **向量检索** ✅ 已改进 (2026-02-04)
    - 问题：使用模拟数据，未连接真实向量数据库
-   - 影响：RAG 功能无法正常工作
-   - 位置：`services/agent-api/engine/nodes.py:97`
+   - 改进：添加了 `VECTOR_ENABLED` 和 `VECTOR_FALLBACK_ENABLED` 环境变量控制
+   - 位置：`services/agent-api/engine/nodes.py:20-31, 108-233`
 
-2. **向量删除**
-   - 问题：仅删除数据库记录，未删除向量索引
-   - 影响：向量数据库中存在孤立数据
-   - 位置：`services/agent-api/app.py:966`
+2. **向量删除** ✅ 已修复 (2026-02-04)
+   - 问题：向量删除缺少参数验证和转义
+   - 修复：添加了参数验证、SQL 注入防护、批量删除优化
+   - 位置：`services/agent-api/agent_services/vector_store.py:520-626`
 
 ### 部署
 
@@ -473,14 +476,16 @@
 
 ---
 
-## 测试覆盖统计（2026-01-28 更新）
+## 测试覆盖统计（2026-02-03 更新）
 
 | 测试类型 | 文件数 | 覆盖场景 |
 |----------|--------|----------|
-| 单元测试 | 48 | 数据源验证、健康检查、脱敏规则、限流、填充策略 |
-| 集成测试 | 20 | 资产管理、审计日志、ETL、智能查询、知识库、元数据扫描、模型部署/训练、敏感性扫描、表融合、用户管理 |
-| 端到端测试 | 15 | 5 种用户角色生命周期测试（系统管理员、数据管理员、数据工程师、算法工程师、业务用户） |
-| 性能测试 | 2 | 大规模扫描性能测试 |
+| 单元测试 | 48+ | 数据源验证、健康检查、脱敏规则、限流、填充策略、AI 工程师模块 |
+| 集成测试 | 20+ | 资产管理、审计日志、ETL、智能查询、知识库、元数据扫描、模型部署/训练、敏感性扫描、表融合、用户管理 |
+| 端到端测试 | 15+ | 5 种用户角色生命周期测试（系统管理员、数据管理员、数据工程师、算法工程师、业务用户） |
+| 性能测试 | 2+ | 大规模扫描性能测试 |
+
+> **说明**: 测试文件总数 143 个（包含测试辅助文件、 mocks、benchmark 等）
 
 ---
 
@@ -488,6 +493,9 @@
 
 | 日期 | 更新内容 | 更新人 |
 |------|----------|--------|
+| 2026-02-04 | 创建分阶段测试计划：环境模板 (.env.example)、测试脚本 (test-phased.sh)、6 个阶段的集成测试文件 (test_phase1-6)、测试指南文档 (phased-testing-guide.md) | Claude |
+| 2026-02-04 | 创建硬件要求评估文档（docs/07-operations/hardware-requirements.md）；根据 docker-compose.yml 分析所有服务资源需求；更新 ENVIRONMENT.md 添加硬件要求章节 | Claude |
+| 2026-02-03 | 文档整理和代码清理：清理 playwright-report (53MB)、删除空目录、清理 __pycache__；更新测试统计；创建进度文档 | Claude |
 | 2026-01-30 | 修复 base_tools.py 中 sql_upper 未定义 BUG；创建文档标准和模板目录；生成项目进展报告 | Claude |
 | 2026-01-29 | 文档整理：删除冗余文档、重组文档位置、更新文档索引 | Claude |
 | 2026-01-28 | 添加测试覆盖统计、冗余代码清单，更新文件数量 | Claude |

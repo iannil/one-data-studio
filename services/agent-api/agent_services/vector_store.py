@@ -529,20 +529,117 @@ class VectorStore:
             bool: 删除是否成功
         """
         try:
-            if not utility.has_collection(collection_name):
-                logger.warning(f"Collection {collection_name} does not exist")
+            # 参数验证
+            if not doc_id or not isinstance(doc_id, str):
+                logger.error(f"Invalid doc_id: {doc_id} (must be non-empty string)")
                 return False
 
+            if not collection_name or not isinstance(collection_name, str):
+                logger.error(f"Invalid collection_name: {collection_name}")
+                return False
+
+            # 转义 doc_id 中的特殊字符，防止 Milvus 表达式注入
+            escaped_doc_id = doc_id.replace('"', '\\"')
+
+            # 检查集合是否存在
+            if not utility.has_collection(collection_name):
+                logger.warning(f"Collection {collection_name} does not exist, nothing to delete")
+                return False
+
+            # 确保连接有效
+            self._ensure_connection()
+
             collection = Collection(collection_name)
-            # 使用 metadata 过滤删除所有属于该文档的向量
+
+            # 先加载集合，确保删除操作能正确执行
+            try:
+                collection.load()
+            except Exception as e:
+                logger.debug(f"Collection load warning (may already be loaded): {e}")
+
+            # 使用 doc_id 字段过滤删除所有属于该文档的向量
             # Milvus 的表达式语法：doc_id == "xxx"
-            collection.delete(expr=f'doc_id == "{doc_id}"')
-            # 刷新以确保删除生效
+            delete_expr = f'doc_id == "{escaped_doc_id}"'
+            collection.delete(expr=delete_expr)
+
+            # 刷新以确保删除立即生效
             collection.flush()
+
+            # 记录删除操作
+            logger.info(f"Deleted vectors by doc_id: collection={collection_name}, doc_id={doc_id}")
+
             return True
         except Exception as e:
             logger.error(f"删除向量失败: collection={collection_name}, doc_id={doc_id}, error={e}")
             return False
+
+    def delete_by_doc_ids(self, collection_name: str, doc_ids: List[str]) -> Dict[str, Any]:
+        """
+        批量按文档ID删除对应的向量数据
+
+        Args:
+            collection_name: 集合名称
+            doc_ids: 文档ID列表
+
+        Returns:
+            Dict: 包含删除结果的字典
+                - success: 成功删除的文档数量
+                - failed: 删除失败的文档数量
+                - failed_ids: 失败的文档ID列表
+        """
+        result = {
+            "success": 0,
+            "failed": 0,
+            "failed_ids": []
+        }
+
+        if not doc_ids:
+            return result
+
+        # 去重
+        unique_doc_ids = list(set(doc_ids))
+
+        try:
+            # 检查集合是否存在
+            if not utility.has_collection(collection_name):
+                logger.warning(f"Collection {collection_name} does not exist")
+                result["failed"] = len(unique_doc_ids)
+                result["failed_ids"] = unique_doc_ids
+                return result
+
+            # 确保连接有效
+            self._ensure_connection()
+
+            collection = Collection(collection_name)
+
+            # 先加载集合
+            try:
+                collection.load()
+            except Exception as e:
+                logger.debug(f"Collection load warning: {e}")
+
+            # 构建批量删除表达式：doc_id in ["id1", "id2", ...]
+            # 转义每个 doc_id
+            escaped_ids = [f'"{id.replace("\\", "\\\\").replace('"', "\\\"")}"' for id in unique_doc_ids]
+            delete_expr = f'doc_id in [{", ".join(escaped_ids)}]'
+
+            collection.delete(expr=delete_expr)
+            collection.flush()
+
+            result["success"] = len(unique_doc_ids)
+            logger.info(f"Batch deleted vectors: collection={collection_name}, count={result['success']}")
+
+        except Exception as e:
+            logger.error(f"批量删除向量失败: collection={collection_name}, error={e}")
+            # 如果批量删除失败，尝试逐个删除
+            for doc_id in unique_doc_ids:
+                if self.delete_by_doc_id(collection_name, doc_id):
+                    result["success"] += 1
+                else:
+                    result["failed"] += 1
+                    result["failed_ids"].append(doc_id)
+
+        return result
 
     def batch_insert(self, collection_name: str, texts: List[str],
                      embeddings: List[List[float]], metadata: List[Dict] = None,

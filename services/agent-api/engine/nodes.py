@@ -17,13 +17,30 @@ logger = logging.getLogger(__name__)
 # 配置
 MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
 
+# 向量服务配置
+# 控制是否启用向量检索功能，设置为 false 时强制使用降级模式
+VECTOR_ENABLED = os.getenv("VECTOR_ENABLED", "true").lower() in ("true", "1", "yes")
+# 即使向量服务不可用，也允许继续执行（使用降级数据）
+VECTOR_FALLBACK_ENABLED = os.getenv("VECTOR_FALLBACK_ENABLED", "true").lower() in ("true", "1", "yes")
+
 # 导入向量检索服务
-try:
-    from ..services.vector_store import VectorStore
-    from ..services.embedding import EmbeddingService
-    VECTOR_AVAILABLE = True
-except ImportError:
-    VECTOR_AVAILABLE = False
+VECTOR_AVAILABLE = False
+VectorStore = None
+EmbeddingService = None
+
+if VECTOR_ENABLED:
+    try:
+        from ..services.vector_store import VectorStore as _VectorStore
+        from ..services.embedding import EmbeddingService as _EmbeddingService
+        VectorStore = _VectorStore
+        EmbeddingService = _EmbeddingService
+        VECTOR_AVAILABLE = True
+        logger.info("向量检索模块已加载")
+    except ImportError as e:
+        VECTOR_AVAILABLE = False
+        logger.warning(f"向量检索模块导入失败: {e}。如需使用向量检索，请安装 pymilvus: pip install pymilvus")
+else:
+    logger.info("向量检索功能已通过 VECTOR_ENABLED=false 禁用")
 
 # 导入 Agent 相关模块
 try:
@@ -97,6 +114,7 @@ class RetrieverNode(BaseNode):
     - query_from: 查询文本来源 (默认: input)
     - score_threshold: 相似度阈值 (可选，过滤低相关结果)
     - alert_on_fallback: 是否在降级时发送告警 (默认: True)
+    - allow_fallback: 是否允许降级到模拟数据 (默认: 遵循 VECTOR_FALLBACK_ENABLED)
     """
 
     # 降级告警计数器（用于避免告警风暴）
@@ -113,6 +131,8 @@ class RetrieverNode(BaseNode):
         self.query_key = config.get("query_from", "input")
         self.score_threshold = config.get("score_threshold", 0.0)
         self.alert_on_fallback = config.get("alert_on_fallback", True)
+        # 允许节点级别配置是否启用降级
+        self.allow_fallback = config.get("allow_fallback", VECTOR_FALLBACK_ENABLED)
 
         # 初始化向量检索服务（使用类级别共享实例）
         self.vector_store = None
@@ -130,23 +150,30 @@ class RetrieverNode(BaseNode):
         cls._services_initialized = True
 
         if not VECTOR_AVAILABLE:
-            logger.warning(
-                "向量检索模块未安装。检索请求将使用降级数据响应。"
-                "要启用向量检索，请安装 pymilvus 并配置 MILVUS_HOST 环境变量。"
-            )
+            if VECTOR_FALLBACK_ENABLED:
+                logger.warning(
+                    "向量检索模块未安装，降级模式已启用。"
+                    "检索请求将使用降级数据响应。"
+                    "要启用向量检索，请安装 pymilvus: pip install pymilvus"
+                )
+            else:
+                logger.error(
+                    "向量检索模块未安装，且降级模式已禁用。"
+                    "检索请求将会失败。请安装 pymilvus: pip install pymilvus"
+                )
             return
 
         try:
             cls._shared_vector_store = VectorStore()
             logger.info("向量存储服务初始化成功")
         except Exception as e:
-            logger.warning(f"向量存储服务初始化失败: {e}。检索请求将使用降级数据响应。")
+            logger.warning(f"向量存储服务初始化失败: {e}")
 
         try:
             cls._shared_embedding_service = EmbeddingService()
             logger.info("Embedding 服务初始化成功")
         except Exception as e:
-            logger.warning(f"Embedding 服务初始化失败: {e}。检索请求将使用降级数据响应。")
+            logger.warning(f"Embedding 服务初始化失败: {e}")
 
     @classmethod
     def check_services_health(cls) -> Dict[str, Any]:
@@ -172,41 +199,68 @@ class RetrieverNode(BaseNode):
         # 获取查询文本
         query = self._get_query(context)
 
-        # 如果向量服务不可用，返回模拟数据
+        # 检查向量服务是否可用
         if not self.vector_store or not self.embedding_service:
-            self._emit_fallback_alert(
-                reason="vector_service_unavailable",
-                query=query,
-                error="Vector service not initialized"
-            )
-            return {
-                self.node_id: {
-                    "query": query,
-                    "documents": self._mock_results(query),
-                    "fallback": True,
-                    "fallback_reason": "vector_service_unavailable",
-                    "message": "Vector service not available"
+            error_msg = "Vector service not initialized"
+            if VECTOR_AVAILABLE:
+                error_msg = "Vector service initialization failed"
+
+            if self.allow_fallback:
+                self._emit_fallback_alert(
+                    reason="vector_service_unavailable",
+                    query=query,
+                    error=error_msg
+                )
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": self._mock_results(query),
+                        "fallback": True,
+                        "fallback_reason": "vector_service_unavailable",
+                        "message": "Vector service not available, using fallback data"
+                    }
                 }
-            }
+            else:
+                # 不允许降级，返回错误
+                logger.error(f"RetrieverNode 执行失败: {error_msg} (fallback disabled)")
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": [],
+                        "error": error_msg,
+                        "fallback_disabled": True
+                    }
+                }
 
         # 生成查询向量
         try:
             query_embedding = await self.embedding_service.embed_text(query)
         except Exception as e:
-            self._emit_fallback_alert(
-                reason="embedding_generation_failed",
-                query=query,
-                error=str(e)
-            )
-            return {
-                self.node_id: {
-                    "query": query,
-                    "documents": self._mock_results(query),
-                    "fallback": True,
-                    "fallback_reason": "embedding_generation_failed",
-                    "error": str(e)
+            logger.error(f"Embedding generation failed: {e}")
+            if self.allow_fallback:
+                self._emit_fallback_alert(
+                    reason="embedding_generation_failed",
+                    query=query,
+                    error=str(e)
+                )
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": self._mock_results(query),
+                        "fallback": True,
+                        "fallback_reason": "embedding_generation_failed",
+                        "error": str(e)
+                    }
                 }
-            }
+            else:
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": [],
+                        "error": f"Embedding generation failed: {str(e)}",
+                        "fallback_disabled": True
+                    }
+                }
 
         # 向量检索
         try:
@@ -227,25 +281,37 @@ class RetrieverNode(BaseNode):
                 self.node_id: {
                     "query": query,
                     "documents": results,
-                    "count": len(results)
+                    "count": len(results),
+                    "fallback": False
                 }
             }
 
         except Exception as e:
-            self._emit_fallback_alert(
-                reason="vector_search_failed",
-                query=query,
-                error=str(e)
-            )
-            return {
-                self.node_id: {
-                    "query": query,
-                    "documents": self._mock_results(query),
-                    "fallback": True,
-                    "fallback_reason": "vector_search_failed",
-                    "error": str(e)
+            logger.error(f"Vector search failed: {e}")
+            if self.allow_fallback:
+                self._emit_fallback_alert(
+                    reason="vector_search_failed",
+                    query=query,
+                    error=str(e)
+                )
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": self._mock_results(query),
+                        "fallback": True,
+                        "fallback_reason": "vector_search_failed",
+                        "error": str(e)
+                    }
                 }
-            }
+            else:
+                return {
+                    self.node_id: {
+                        "query": query,
+                        "documents": [],
+                        "error": f"Vector search failed: {str(e)}",
+                        "fallback_disabled": True
+                    }
+                }
 
     def _emit_fallback_alert(self, reason: str, query: str, error: str):
         """
@@ -332,18 +398,31 @@ class RetrieverNode(BaseNode):
 
         注意：此方法仅在向量服务不可用时作为降级方案使用。
         返回的数据是通用的占位内容，不代表真实检索结果。
+
+        警告：在生产环境中，应配置正确的向量服务以避免使用降级数据。
         """
-        logger.info(f"使用降级数据响应检索请求: query_length={len(query)}")
+        logger.warning(
+            f"使用降级数据响应检索请求 (非生产模式): query_length={len(query)}, "
+            f"top_k={self.top_k}。请配置 Milvus 和 Embedding 服务以启用真实向量检索。"
+        )
         return [
             {
                 "text": f"关于 '{query}' 的检索结果 1：ONE-DATA-STUDIO 是一个企业级 AI 平台。",
                 "score": 0.95,
-                "is_fallback": True
+                "is_fallback": True,
+                "warning": "这是降级数据，不是真实的检索结果"
             },
             {
                 "text": f"关于 '{query}' 的检索结果 2：平台包含数据治理、模型训练、应用编排三大模块。",
                 "score": 0.87,
-                "is_fallback": True
+                "is_fallback": True,
+                "warning": "这是降级数据，不是真实的检索结果"
+            },
+            {
+                "text": f"关于 '{query}' 的检索结果 3：请配置向量服务（Milvus + Embedding）以获取真实检索结果。",
+                "score": 0.75,
+                "is_fallback": True,
+                "warning": "这是降级数据，不是真实的检索结果"
             }
         ][:self.top_k]
 

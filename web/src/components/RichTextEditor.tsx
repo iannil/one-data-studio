@@ -156,7 +156,7 @@ export function RichTextEditor({
   return (
     <Card
       className="rich-text-editor"
-      bodyStyle={{ padding: 0 }}
+      styles={{ body: { padding: 0 } }}
       style={{ width: '100%' }}
     >
       {/* 工具栏 */}
@@ -360,7 +360,7 @@ export function MarkdownEditor({
   return (
     <Card
       className="markdown-editor"
-      bodyStyle={{ padding: 0 }}
+      styles={{ body: { padding: 0 } }}
       style={{ width: '100%' }}
     >
       {/* Markdown 工具栏 */}

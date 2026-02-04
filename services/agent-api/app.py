@@ -1880,11 +1880,14 @@ def delete_document(doc_id):
 
         # 从向量数据库删除向量
         vector_store = VectorStore()
-        delete_success = vector_store.delete_by_doc_id(doc.collection_name, doc_id)
+        collection_name = doc.collection_name or "default"
+        delete_success = vector_store.delete_by_doc_id(collection_name, doc_id)
 
         if not delete_success:
             # 记录警告但继续删除数据库记录
-            logger.warning(f"警告: 向量删除失败，但继续删除数据库记录: doc_id={doc_id}")
+            logger.warning(f"向量删除失败，但继续删除数据库记录: doc_id={doc_id}, collection={collection_name}")
+        else:
+            logger.info(f"文档向量删除成功: doc_id={doc_id}, collection={collection_name}")
 
         # 删除数据库记录
         db.delete(doc)
@@ -1895,13 +1898,14 @@ def delete_document(doc_id):
             "message": "Document deleted successfully",
             "data": {
                 "doc_id": doc_id,
+                "collection": collection_name,
                 "vectors_deleted": delete_success
             }
         })
 
     except Exception as e:
         db.rollback()
-        logger.error(f"删除文档失败: {e}")
+        logger.error(f"删除文档失败: doc_id={doc_id}, error={e}")
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
@@ -1922,30 +1926,45 @@ def batch_delete_documents():
 
     db = get_db_session()
     try:
+        # 先获取所有文档及其 collection_name
+        docs = db.query(IndexedDocument).filter(
+            IndexedDocument.doc_id.in_(doc_ids)
+        ).all()
+
+        found_doc_ids = {doc.doc_id: doc for doc in docs}
+        failed_ids = [doc_id for doc_id in doc_ids if doc_id not in found_doc_ids]
+
+        # 按 collection_name 分组，以便批量删除向量
+        collection_groups = {}
+        for doc in docs:
+            collection_name = doc.collection_name or "default"
+            if collection_name not in collection_groups:
+                collection_groups[collection_name] = []
+            collection_groups[collection_name].append(doc.doc_id)
+
+        # 批量删除向量
         vector_store = VectorStore()
-        deleted_count = 0
-        failed_ids = []
+        vector_delete_results = {
+            "success": 0,
+            "failed": 0,
+            "failed_collections": []
+        }
 
-        for doc_id in doc_ids:
+        for collection_name, doc_ids_in_collection in collection_groups.items():
             try:
-                doc = db.query(IndexedDocument).filter(
-                    IndexedDocument.doc_id == doc_id
-                ).first()
-
-                if not doc:
-                    failed_ids.append(doc_id)
-                    continue
-
-                # 从向量数据库删除向量
-                vector_store.delete_by_doc_id(doc.collection_name, doc_id)
-
-                # 删除数据库记录
-                db.delete(doc)
-                deleted_count += 1
-
+                result = vector_store.delete_by_doc_ids(collection_name, doc_ids_in_collection)
+                vector_delete_results["success"] += result.get("success", 0)
+                vector_delete_results["failed"] += result.get("failed", 0)
+                if result.get("failed_ids"):
+                    vector_delete_results["failed_collections"].extend(result["failed_ids"])
             except Exception as e:
-                logger.error(f"删除文档失败 {doc_id}: {e}")
-                failed_ids.append(doc_id)
+                logger.error(f"批量删除向量失败 collection={collection_name}: {e}")
+                vector_delete_results["failed"] += len(doc_ids_in_collection)
+                vector_delete_results["failed_collections"].extend(doc_ids_in_collection)
+
+        # 删除数据库记录
+        for doc in docs:
+            db.delete(doc)
 
         db.commit()
 
@@ -1953,7 +1972,9 @@ def batch_delete_documents():
             "code": 0,
             "message": "Batch delete completed",
             "data": {
-                "deleted_count": deleted_count,
+                "deleted_count": len(docs),
+                "vector_deleted_success": vector_delete_results["success"],
+                "vector_delete_failed": vector_delete_results["failed"],
                 "failed_count": len(failed_ids),
                 "failed_ids": failed_ids
             }
@@ -1961,6 +1982,7 @@ def batch_delete_documents():
 
     except Exception as e:
         db.rollback()
+        logger.error(f"批量删除文档失败: {e}")
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()

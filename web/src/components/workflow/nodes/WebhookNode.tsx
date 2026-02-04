@@ -51,7 +51,7 @@ const WebhookNode: React.FC<NodeProps<WebhookNodeData>> = ({ data, selected }) =
         border: selected ? '2px solid #52c41a' : '1px solid #d9d9d9',
         borderRadius: 8,
       }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#52c41a' }} />
 

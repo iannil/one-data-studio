@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Card, Typography, Space, InputNumber, Switch, Tooltip } from 'antd';
+import { Card, Typography, Space, InputNumber, Switch, Tooltip, Input } from 'antd';
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -34,7 +34,7 @@ const RetryNode: React.FC<NodeProps<RetryNodeData>> = ({ data, selected }) => {
         border: selected ? '2px solid #eb2f96' : '1px solid #d9d9d9',
         borderRadius: 8,
       }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#eb2f96' }} />
 
@@ -56,14 +56,16 @@ const RetryNode: React.FC<NodeProps<RetryNodeData>> = ({ data, selected }) => {
           <Tooltip title="第一次重试前的等待时间">
             <Text type="secondary" style={{ fontSize: 12 }}>初始延迟</Text>
           </Tooltip>
-          <InputNumber
-            size="small"
-            min={0.1}
-            step={0.5}
-            value={data.initialDelay || 1}
-            addonAfter="秒"
-            style={{ width: 100 }}
-          />
+          <Space.Compact size="small">
+            <InputNumber
+              size="small"
+              min={0.1}
+              step={0.5}
+              value={data.initialDelay || 1}
+              style={{ width: 70 }}
+            />
+            <Input size="small" readOnly value="秒" style={{ width: 30 }} />
+          </Space.Compact>
         </div>
 
         {/* 指数退避 */}

@@ -39,7 +39,7 @@ const CacheNode: React.FC<NodeProps<CacheNodeData>> = ({ data, selected }) => {
         border: selected ? '2px solid #fa8c16' : '1px solid #d9d9d9',
         borderRadius: 8,
       }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#fa8c16' }} />
 

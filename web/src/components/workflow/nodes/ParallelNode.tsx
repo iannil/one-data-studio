@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Card, Typography, Space, Tag, InputNumber, Select } from 'antd';
+import { Card, Typography, Space, Tag, InputNumber, Input, Select } from 'antd';
 import { BranchesOutlined, PlusOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -40,7 +40,7 @@ const ParallelNode: React.FC<NodeProps<ParallelNodeData>> = ({ data, selected })
         border: selected ? '2px solid #722ed1' : '1px solid #d9d9d9',
         borderRadius: 8,
       }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#722ed1' }} />
 
@@ -85,14 +85,16 @@ const ParallelNode: React.FC<NodeProps<ParallelNodeData>> = ({ data, selected })
         {/* 超时设置 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text type="secondary" style={{ fontSize: 12 }}>超时</Text>
-          <InputNumber
-            size="small"
-            min={1}
-            max={3600}
-            value={data.timeout || 300}
-            addonAfter="秒"
-            style={{ width: 120 }}
-          />
+          <Space.Compact size="small">
+            <InputNumber
+              size="small"
+              min={1}
+              max={3600}
+              value={data.timeout || 300}
+              style={{ width: 90 }}
+            />
+            <Input size="small" readOnly value="秒" style={{ width: 30 }} />
+          </Space.Compact>
         </div>
       </Space>
 

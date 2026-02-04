@@ -3204,7 +3204,7 @@ export interface MaskingRule {
   sensitivity_level: string;
   column_pattern?: string;
   data_type?: string;
-  options: Record<string, any>;
+  options: Record<string, unknown>;
   enabled: boolean;
   priority: number;
 }
@@ -3220,7 +3220,7 @@ export interface MaskingConfig {
   strategy: string | null;
   sensitivity_type?: string;
   sensitivity_level?: string;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
   no_masking?: boolean;
 }
 
@@ -3236,12 +3236,12 @@ export interface ColumnMeta {
  * 获取数据脱敏预览
  */
 export async function getMaskingPreview(
-  sampleData: Record<string, any>[],
+  sampleData: Record<string, unknown>[],
   columnMetadata?: Record<string, { sensitivity_type?: string; sensitivity_level?: string; data_type?: string }>,
   maxRows?: number
 ): Promise<ApiResponse<{
-  original: Record<string, any>[];
-  masked: Record<string, any>[];
+  original: Record<string, unknown>[];
+  masked: Record<string, unknown>[];
   config: Record<string, MaskingConfig>;
 }>> {
   return apiClient.post('/api/v1/masking/preview', {
@@ -3255,10 +3255,10 @@ export async function getMaskingPreview(
  * 执行数据脱敏
  */
 export async function executeMasking(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   columnMetadata?: Record<string, { sensitivity_type?: string; sensitivity_level?: string; data_type?: string }>
 ): Promise<ApiResponse<{
-  masked_data: Record<string, any>[];
+  masked_data: Record<string, unknown>[];
   record_count: number;
 }>> {
   return apiClient.post('/api/v1/masking/execute', {
@@ -3308,11 +3308,11 @@ export async function maskSingleValue(params: {
  */
 export async function maskTableData(
   tableId: string,
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
 ): Promise<ApiResponse<{
   table_id: string;
   table_name: string;
-  masked_data: Record<string, any>[];
+  masked_data: Record<string, unknown>[];
   record_count: number;
   columns_with_masking: string[];
 }>> {
@@ -3365,7 +3365,7 @@ export interface DocumentExtractionData {
     format: string;
     size?: { width: number; height: number };
   }>;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   char_count: number;
   errors: string[];
 }
@@ -3398,7 +3398,7 @@ export interface OCRServiceStatus {
  */
 export interface StructuredExtractionResult {
   data_type: string;
-  structured_data: Record<string, any>;
+  structured_data: Record<string, unknown>;
   raw_text: string;
   full_text_length: number;
   table_count: number;

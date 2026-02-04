@@ -247,7 +247,7 @@ export function AIChatPanel({
         </Button>
       }
       style={{ height }}
-      bodyStyle={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 60px)' }}
+      styles={{ body: { display: 'flex', flexDirection: 'column', height: 'calc(100% - 60px)' } }}
     >
       {/* 消息区域 */}
       <div
