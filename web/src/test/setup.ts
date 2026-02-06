@@ -3,7 +3,7 @@
  * 在所有测试运行前执行
  */
 
-import { expect, afterEach, vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -42,7 +42,7 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
   unobserve() {}
-} as any;
+} as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -50,7 +50,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any;
+} as unknown as typeof ResizeObserver;
 
 // Mock Element.scrollIntoView (JSDOM doesn't implement this)
 Element.prototype.scrollIntoView = vi.fn();
@@ -65,7 +65,7 @@ global.WebSocket = class WebSocket {
   static CLOSING = 2;
   static CLOSED = 3;
 
-  constructor(url: string, protocols?: string | string[]) {
+  constructor(url: string, _protocols?: string | string[]) {
     this.url = url;
     setTimeout(() => {
       if (this.onopen) {
@@ -81,12 +81,12 @@ global.WebSocket = class WebSocket {
   onerror: ((event: Event) => void) | null = null;
   onclose: ((event: CloseEvent) => void) | null = null;
 
-  send(data: string | ArrayBuffer | Blob) {}
-  close(code?: number, reason?: string) {}
+  send(_data: string | ArrayBuffer | Blob) {}
+  close(_code?: number, _reason?: string) {}
 
-  addEventListener(type: string, listener: EventListener) {}
-  removeEventListener(type: string, listener: EventListener) {}
-} as any;
+  addEventListener(_type: string, _listener: EventListener) {}
+  removeEventListener(_type: string, _listener: EventListener) {}
+} as unknown as typeof WebSocket;
 
 // Mock React Router
 vi.mock('react-router-dom', async () => {

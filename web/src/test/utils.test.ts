@@ -3,7 +3,7 @@
  * Sprint 6: 单元测试框架
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('Utility Functions', () => {
   describe('String Utilities', () => {
@@ -86,7 +86,7 @@ describe('Utility Functions', () => {
       expect(cloned).not.toBe(original);
 
       // 修改克隆对象不应影响原始对象
-      (cloned as any).b.c = 999;
+      (cloned as { b: { c: number } }).b.c = 999;
       expect(original.b.c).toBe(2);
     });
 

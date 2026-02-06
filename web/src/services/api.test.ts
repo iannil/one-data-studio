@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiClient, ApiResponse, request } from './api';
+import { apiClient, ApiResponse } from './api';
 
 // Mock axios
 vi.mock('axios', () => ({

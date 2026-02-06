@@ -3,7 +3,6 @@
  */
 
 import { apiClient } from './api';
-import type { ApiResponse } from './api';
 
 export interface OCRTask {
   id: string;
