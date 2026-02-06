@@ -20,8 +20,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # 配置
-MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
-DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+MODEL_API_URL = os.getenv("MODEL_API_URL", "http://model-api:8002")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8001")
 
 # SSL verification for HTTP requests
 # In production, this should always be True. Only disable for local development with self-signed certs.

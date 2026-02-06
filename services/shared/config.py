@@ -481,9 +481,9 @@ class JWTConfig:
 @dataclass
 class ServiceConfig:
     """服务间调用配置"""
-    data_api_url: str = field(default_factory=lambda: os.getenv('DATA_API_URL', 'http://data-api:8080'))
-    agent_api_url: str = field(default_factory=lambda: os.getenv('AGENT_API_URL', 'http://agent-api:8081'))
-    model_api_url: str = field(default_factory=lambda: os.getenv('MODEL_API_URL', 'http://vllm-serving:8000'))
+    data_api_url: str = field(default_factory=lambda: os.getenv('DATA_API_URL', 'http://data-api:8001'))
+    agent_api_url: str = field(default_factory=lambda: os.getenv('AGENT_API_URL', 'http://agent-api:8000'))
+    model_api_url: str = field(default_factory=lambda: os.getenv('MODEL_API_URL', 'http://model-api:8002'))
     openai_proxy_url: str = field(default_factory=lambda: os.getenv('OPENAI_PROXY_URL', 'http://openai-proxy:8000'))
 
 

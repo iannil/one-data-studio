@@ -19,27 +19,46 @@ type AuthFixtures = {
 
 /**
  * 设置认证状态到页面
+ * 需要匹配 AuthContext 的认证检查逻辑
  */
 async function setupAuthToPage(page: Page, roles: string[] = ['user']): Promise<void> {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64').replace(/=+$/, '');
   const payload = Buffer.from(JSON.stringify({
     sub: 'test-user',
-    username: 'test-user',
+    preferred_username: 'test-user',
     email: 'test@example.com',
     roles: roles,
     exp: Math.floor(Date.now() / 1000) + 3600 * 24,
+    resource_access: {
+      'web-frontend': {
+        roles: roles,
+      },
+    },
   })).toString('base64').replace(/=+$/, '');
   const mockToken = `${header}.${payload}.signature`;
 
-  await page.addInitScript(({ token, roles }) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user_info', JSON.stringify({
-      user_id: 'test-user',
-      username: 'test-user',
+  const expiresAt = Date.now() + 3600 * 24 * 1000;
+
+  await page.addInitScript(({ token, expiresAt, roles }) => {
+    // 设置 sessionStorage (AuthContext 需要)
+    sessionStorage.setItem('access_token', token);
+    sessionStorage.setItem('token_expires_at', expiresAt.toString());
+    sessionStorage.setItem('user_info', JSON.stringify({
+      sub: 'test-user',
+      preferred_username: 'test-user',
       email: 'test@example.com',
       roles: roles,
     }));
-  }, { token: mockToken, roles });
+
+    // 也设置 localStorage 以防万一
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('user_info', JSON.stringify({
+      sub: 'test-user',
+      preferred_username: 'test-user',
+      email: 'test@example.com',
+      roles: roles,
+    }));
+  }, { token: mockToken, expiresAt, roles });
 }
 
 /**

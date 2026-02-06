@@ -54,7 +54,7 @@ class UserProfile(Base):
 
     # 元数据
     profile_version = Column(Integer, default=1, comment="画像版本")
-    metadata = Column(JSON, comment="额外元数据")
+    meta_data = Column(JSON, comment="额外元数据")
 
     # 时间信息
     created_at = Column(DateTime, default=datetime.now, comment="创建时间")

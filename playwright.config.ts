@@ -66,6 +66,26 @@ export default defineConfig({
       testMatch: /.+-deep\.spec\.ts/,
     },
 
+    // ==================== DataOps 验证测试 ====================
+    {
+      name: 'data-ops-validation',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      testMatch: /data-ops-validation\.spec\.ts/,
+    },
+
+    // ==================== DataOps 真实 API 验证测试 ====================
+    {
+      name: 'data-ops-live',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 非 headless 模式通过环境变量控制
+        headless: process.env.HEADLESS !== 'false',
+      },
+      testMatch: /data-ops-live-validation\.spec\.ts/,
+    },
+
     // ==================== 用户生命周期测试 ====================
     {
       name: 'user-lifecycle',

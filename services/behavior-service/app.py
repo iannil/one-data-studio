@@ -11,13 +11,13 @@ from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, Column, String, Integer, Text, DateTime, Float, JSON, Boolean, Index
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session
 from sqlalchemy.dialects.mysql import BIGINT
 import redis
 import os
 import uuid
 
+from models.base import engine, SessionLocal, get_db
 from api.behaviors import router as behaviors_router
 from api.profiles import router as profiles_router
 from api.audit import router as audit_router
@@ -33,26 +33,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 数据库配置
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://root:password@localhost:3306/behavior_service"
-)
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=20, max_overflow=40)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 # Redis配置
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-
-
-def get_db():
-    """获取数据库会话"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @asynccontextmanager

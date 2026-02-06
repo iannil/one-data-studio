@@ -620,7 +620,7 @@ class VectorStore:
 
             # 构建批量删除表达式：doc_id in ["id1", "id2", ...]
             # 转义每个 doc_id
-            escaped_ids = [f'"{id.replace("\\", "\\\\").replace('"', "\\\"")}"' for id in unique_doc_ids]
+            escaped_ids = [f'"{doc_id.replace(chr(92), chr(92)*2).replace(chr(34), chr(92)+chr(34))}"' for doc_id in unique_doc_ids]
             delete_expr = f'doc_id in [{", ".join(escaped_ids)}]'
 
             collection.delete(expr=delete_expr)

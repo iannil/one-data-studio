@@ -192,6 +192,7 @@ class QualityAlert(Base):
 
     # 状态
     status = Column(String(32), default="open")  # open, acknowledged, resolved
+    is_enabled = Column(Boolean, default=True)  # 是否启用告警
     acknowledged_by = Column(String(64))
     acknowledged_at = Column(DateTime)
     resolved_by = Column(String(64))
@@ -216,6 +217,7 @@ class QualityAlert(Base):
             "actual_value": self.actual_value,
             "score": self.score,
             "status": self.status,
+            "is_enabled": self.is_enabled,
             "acknowledged_by": self.acknowledged_by,
             "acknowledged_at": self.acknowledged_at.isoformat() if self.acknowledged_at else None,
             "resolved_by": self.resolved_by,

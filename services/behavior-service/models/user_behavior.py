@@ -43,7 +43,7 @@ class UserBehavior(Base):
     load_time = Column(Float, comment="页面加载时间(毫秒)")
 
     # 额外数据
-    metadata = Column(JSON, comment="额外元数据")
+    meta_data = Column(JSON, comment="额外元数据")
 
     # 时间信息
     occurred_at = Column(DateTime, nullable=False, index=True, comment="行为发生时间")
@@ -77,7 +77,7 @@ class UserBehavior(Base):
             "os": self.os,
             "duration": self.duration,
             "load_time": self.load_time,
-            "metadata": self.metadata,
+            "meta_data": self.meta_data,
             "occurred_at": self.occurred_at.isoformat() if self.occurred_at else None,
         }
 

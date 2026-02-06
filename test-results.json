@@ -1,0 +1,876 @@
+{
+  "config": {
+    "configFile": "/Users/iannil/Code/zproducts/one-data-studio/playwright.config.ts",
+    "rootDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium-fast",
+        "name": "chromium-fast",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/core-pages\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium-acceptance",
+        "name": "chromium-acceptance",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.+-deep\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "data-ops-validation",
+        "name": "data-ops-validation",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/data-ops-validation\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "data-ops-live",
+        "name": "data-ops-live",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/data-ops-live-validation\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "user-lifecycle",
+        "name": "user-lifecycle",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/user-lifecycle",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox-acceptance",
+        "name": "firefox-acceptance",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/core-pages\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit-acceptance",
+        "name": "webkit-acceptance",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/core-pages\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/mobile\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "mobile-safari",
+        "name": "mobile-safari",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/mobile\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "data-ops-live-validation.spec.ts",
+      "file": "data-ops-live-validation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "DataOps Live - 数据管理模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 231,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Data Sources - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-ecdf904a9243d09b57e0",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "Features - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-3f4e18a3e8452327436b",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "Data Standards - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-d19bfedda1e70dea6f47",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "Data Assets - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-9d112450617837b12db6",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "Data Services - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-5705f39bf2a9fa938dae",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "BI Reports - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-24747e821644f80aaf37",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            },
+            {
+              "title": "Metrics - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-57e91234c84ace6ee952",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 235,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 数据开发模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 260,
+          "column": 6,
+          "specs": [
+            {
+              "title": "ETL Jobs - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-75872b4c4bda4c443cd1",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Kettle Engine - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-baba2c8aeee81a626fea",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Kettle Generator - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-987345f278110f1fce25",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "OCR - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-8552432132a884f11b7a",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Data Quality - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-fdce9260217c0811021b",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Data Lineage - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-e710b7aabc1e40a86484",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Offline Development - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-4b1e88b3010af5150292",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Streaming - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-0957d32ae69a81939586",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            },
+            {
+              "title": "Streaming IDE - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-8511999560c5dc83454a",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 264,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 运维中心模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 287,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Scheduling - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-cc0214dec9fbd5eb247e",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "Smart Scheduling - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-60108d1eccb597dc4d9c",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "Execution Records - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-1fac0de1509af57b5061",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "Resource Monitor - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-e30188a0a32f2939646a",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "Operation Logs - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-37b52a41de4c0d8a84b0",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "Alert Rules - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-eb1e690491d88334c612",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 291,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 元数据管理模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 314,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Metadata Management - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-636e14e8eb761de99fcf",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 318,
+              "column": 9
+            },
+            {
+              "title": "Version Diff - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-399a79559ea85723aa4c",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 318,
+              "column": 9
+            },
+            {
+              "title": "Metadata Graph - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-d9eb88182eeec46bddc6",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 318,
+              "column": 9
+            },
+            {
+              "title": "Metadata Search - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-1ac8bb42be5ad044d814",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 318,
+              "column": 9
+            },
+            {
+              "title": "Impact Analysis - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-073552a075651ea6feeb",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 318,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 分析工具模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 341,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Notebooks - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-1fd76a035282937c96ff",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 345,
+              "column": 9
+            },
+            {
+              "title": "SQL Lab - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-c7ef0ab14491d1472db7",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 345,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 数据集模块",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 368,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Datasets - 真实 API 验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-1ecb7e53ecb5c78ed2e0",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 372,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "DataOps Live - 综合验证",
+          "file": "data-ops-live-validation.spec.ts",
+          "line": 395,
+          "column": 6,
+          "specs": [
+            {
+              "title": "应验证所有 DataOps 页面（真实 API）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-live",
+                  "projectName": "data-ops-live",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6518352794dc15eba012-dfe9424720f6d0ca4ed0",
+              "file": "data-ops-live-validation.spec.ts",
+              "line": 396,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-06T16:41:39.349Z",
+    "duration": 126.96399999999994,
+    "expected": 0,
+    "skipped": 31,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -136,7 +136,7 @@ services:
       - one-data-network
 
   openmetadata:
-    image: openmetadata/server:1.3.1
+    image: openmetadata/server:1.4.0
     container_name: one-data-openmetadata
     environment:
       # Database configuration (reuse existing MySQL)
@@ -187,7 +187,7 @@ services:
   # Webspoon provides web-based Pentaho Data Integration (Kettle)
   # with Carte server for remote transformation execution
   kettle:
-    image: hiromuhota/webspoon:0.9.0.27
+    image: hiromuhota/webspoon:0.9.0.22
     container_name: one-data-kettle
     environment:
       # Carte server configuration for remote execution
@@ -200,7 +200,7 @@ services:
       JAVA_OPTS: "-Xms512m -Xmx2g"
       # Database JDBC drivers will be auto-loaded from /jdbc-drivers volume
     ports:
-      - "8088:8080"   # Webspoon UI
+      - "8089:8080"   # Webspoon UI
       - "8181:8181"   # Carte API
     volumes:
       - kettle_data:/home/tomcat/.kettle
@@ -275,6 +275,24 @@ services:
   # ============================================
   # Authentication
   # ============================================
+  # Keycloak 初始化服务 - 创建 realm 和客户端
+  keycloak-init:
+    image: curlimages/curl:latest
+    container_name: one-data-keycloak-init
+    volumes:
+      - ./config/keycloak/setup-realm.sh:/setup-realm.sh:ro
+    command: ["/bin/sh", "/setup-realm.sh"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - one-data-network
+    restart: "no"
+
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
     container_name: one-data-keycloak
@@ -285,6 +303,10 @@ services:
       KC_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-onedata}
       KC_DB_USERNAME: ${MYSQL_USER:-onedata}
       KC_DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      # hostname 配置
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_PORT: "8080"
+      KC_HTTP_ENABLED: "true"
     command: start-dev
     ports:
       - "8080:8080"
@@ -784,7 +806,7 @@ services:
       - one-data-network
 
   dolphinscheduler-postgresql:
-    image: postgresql:15.4-alpine
+    image: postgres:15.4-alpine
     container_name: one-data-dolphinscheduler-postgresql
     environment:
       POSTGRES_USER: ${DOLPHINSCHEDULER_DB_USER:-dolphinscheduler}
@@ -822,13 +844,13 @@ services:
       # Master configuration
       MASTER_EXEC_THREADS: 100
       MASTER_EXEC_TASK_NUM: 20
-      MASTER_HEARTBEAT_INTERVAL: 10
+      MASTER_HEARTBEAT_INTERVAL: PT10S
       MASTER_TASK_COMMIT_RETRYTIMES: 5
       MASTER_MAX_CPULOAD_AVG: 10
       MASTER_RESERVED_MEMORY: 0.3
       # Worker configuration
       WORKER_EXEC_THREADS: 100
-      WORKER_HEARTBEAT_INTERVAL: 10
+      WORKER_HEARTBEAT_INTERVAL: PT10S
       WORKER_MAX_CPULOAD_AVG: 10
       WORKER_RESERVED_MEMORY: 0.3
       WORKER_TASK_PERSISTENT_WAITING_TIMEOUT_MINUTES: 1
@@ -924,36 +946,37 @@ services:
     networks:
       - one-data-network
     command: >
-      sh -c "
+      bash -c "
       superset db upgrade &&
-      superset fab create-admin --username admin --firstname Admin --lastname User --email admin@onedata.local --password ${SUPERSET_ADMIN_PASSWORD:-admin123} &&
+      superset fab create-admin --username admin --firstname Admin --lastname User --email admin@onedata.local --password $${SUPERSET_ADMIN_PASSWORD:-admin123} &&
       superset init &&
-      gunicorn --bind 0.0.0.0:8088 --access-logfile - --error-logfile - --workers 4 --worker-class gthread --threads 20 --timeout 120 superset.app:create_app()
+      gunicorn --bind 0.0.0.0:8088 --access-logfile - --error-logfile - --workers 4 --worker-class gthread --threads 20 --timeout 120 'superset.app:create_app()'
       "
 
   # ============================================
   # Data Integration (Apache SeaTunnel)
   # ============================================
   seatunnel-zookeeper:
-    image: bitnami/zookeeper:3.8.0
+    image: zookeeper:3.8.0
     container_name: one-data-seatunnel-zk
     environment:
+      ZOO_TICK_TIME: 2000
       ALLOW_ANONYMOUS_LOGIN: "yes"
-      ZOO_MY_ID: 2
-      ZOO_SERVERS: server.1=zookeeper:2888:3888:2181 server.2=0.0.0.0:2888:3888:2181
     ports:
       - "2182:2181"
     volumes:
-      - seatunnel_zk_data:/bitnami/zookeeper
+      - seatunnel_zk_data:/data
+      - seatunnel_zk_datalog:/datalog
     networks:
       - one-data-network
 
   seatunnel:
-    image: apache/seatunnel:2.3.3-release
+    image: apache/seatunnel:2.3.12
     container_name: one-data-seatunnel
     environment:
       JAVA_OPTS: "-Xms2g -Xmx2g -Dseatunnel.defaults.jdbc.driver=com.mysql.cj.jdbc.Driver"
       HOSTNAME: "seatunnel"
+    command: ["/opt/seatunnel/bin/seatunnel.sh", "--config", "/seatunnel/config/seatunnel.conf", "--check", "true"]
     ports:
       - "5801:5801"  # Web UI
     volumes:
@@ -961,8 +984,6 @@ services:
       - seatunnel_data:/seatunnel/data
       - seatunnel_logs:/seatunnel/logs
       - seatunnel_shared:/seatunnel/shared
-    depends_on:
-      - seatunnel-zookeeper
     networks:
       - one-data-network
 
@@ -995,6 +1016,7 @@ volumes:
   superset_logs:
   # SeaTunnel volumes
   seatunnel_zk_data:
+  seatunnel_zk_datalog:
   seatunnel_data:
   seatunnel_logs:
   seatunnel_shared:

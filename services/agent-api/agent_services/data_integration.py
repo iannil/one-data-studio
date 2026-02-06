@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 logger = logging.getLogger(__name__)
 
 # 配置
-DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8001")
 DATA_API_KEY = os.getenv("DATA_API_KEY", "")
 DATA_TIMEOUT = int(os.getenv("DATA_TIMEOUT", "30"))
 

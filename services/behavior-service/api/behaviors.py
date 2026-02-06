@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app import get_db
+from models.base import get_db
 from models.user_behavior import UserBehavior, UserSession
 from services.behavior_collector import BehaviorCollector
 

@@ -147,7 +147,7 @@ app.config['JSON_AS_ASCII'] = False
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB (for file uploads)
 
 # 配置
-DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8001")
 MODEL_API_URL = os.getenv("MODEL_API_URL", "http://vllm-serving:8000")
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://keycloak.one-data-system.svc.cluster.local:80")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
@@ -733,50 +733,6 @@ def chat():
         return jsonify({"code": 50001, "message": str(e)}), 500
     finally:
         db.close()
-
-
-@app.route("/api/v1/datasets", methods=["GET"])
-@require_jwt(optional=True)
-def list_datasets():
-    """列出数据集（代理到 Data API）"""
-    try:
-        # 转发请求到 Data API
-        headers = {}
-        if hasattr(g, 'payload') and g.payload:
-            # 转发认证 token
-            token = request.headers.get("Authorization")
-            if token:
-                headers["Authorization"] = token
-
-        response = requests.get(
-            f"{DATA_API_URL}/api/v1/datasets",
-            headers=headers,
-            timeout=10
-        )
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
-        return jsonify({"code": 50003, "message": str(e)}), 503
-
-
-@app.route("/api/v1/datasets/<dataset_id>", methods=["GET"])
-@require_jwt(optional=True)
-def get_dataset(dataset_id):
-    """获取数据集详情（代理到 Data API）"""
-    try:
-        headers = {}
-        if hasattr(g, 'payload') and g.payload:
-            token = request.headers.get("Authorization")
-            if token:
-                headers["Authorization"] = token
-
-        response = requests.get(
-            f"{DATA_API_URL}/api/v1/datasets/{dataset_id}",
-            headers=headers,
-            timeout=10
-        )
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
-        return jsonify({"code": 50003, "message": str(e)}), 503
 
 
 @app.route("/api/v1/workflows", methods=["GET"])

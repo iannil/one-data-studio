@@ -19,7 +19,8 @@ export interface ApiCall {
 }
 
 /**
- * 设置认证状态 - 在页面加载前设置 localStorage
+ * 设置认证状态 - 在页面加载前设置 sessionStorage
+ * 需要匹配 AuthContext 的认证检查逻辑
  */
 export async function setupAuth(page: Page, options?: { roles?: string[] }) {
   const roles = options?.roles || ['admin', 'user'];
@@ -28,23 +29,42 @@ export async function setupAuth(page: Page, options?: { roles?: string[] }) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64').replace(/=+$/, '');
   const payload = Buffer.from(JSON.stringify({
     sub: 'test-user',
-    username: 'test-user',
+    preferred_username: 'test-user',
     email: 'test@example.com',
     roles: roles,
     exp: Math.floor(Date.now() / 1000) + 3600 * 24,
+    resource_access: {
+      'web-frontend': {
+        roles: roles,
+      },
+    },
   })).toString('base64').replace(/=+$/, '');
   const mockToken = `${header}.${payload}.signature`;
 
-  // 使用 addInitScript 在页面加载前设置 localStorage
-  await page.addInitScript(({ token, roles }) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user_info', JSON.stringify({
-      user_id: 'test-user',
-      username: 'test-user',
+  // 计算过期时间（24小时后）
+  const expiresAt = Date.now() + 3600 * 24 * 1000;
+
+  // 使用 addInitScript 在页面加载前设置 sessionStorage
+  await page.addInitScript(({ token, expiresAt, roles }) => {
+    // 设置 sessionStorage (AuthContext 需要)
+    sessionStorage.setItem('access_token', token);
+    sessionStorage.setItem('token_expires_at', expiresAt.toString());
+    sessionStorage.setItem('user_info', JSON.stringify({
+      sub: 'test-user',
+      preferred_username: 'test-user',
       email: 'test@example.com',
       roles: roles,
     }));
-  }, { token: mockToken, roles });
+
+    // 也设置 localStorage 以防万一
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('user_info', JSON.stringify({
+      sub: 'test-user',
+      preferred_username: 'test-user',
+      email: 'test@example.com',
+      roles: roles,
+    }));
+  }, { token: mockToken, expiresAt, roles });
 }
 
 /**

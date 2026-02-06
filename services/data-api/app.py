@@ -185,7 +185,7 @@ if PROMETHEUS_ENABLED:
             metrics = None
 
 # 配置
-DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8080")
+DATA_API_URL = os.getenv("DATA_API_URL", "http://data-api:8001")
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://keycloak.one-data-system.svc.cluster.local:80")
 AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
 
