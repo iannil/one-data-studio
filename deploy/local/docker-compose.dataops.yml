@@ -1,0 +1,353 @@
+# ONE-DATA-STUDIO DataOps Stage Services
+#
+# This file contains DataOps stage services with port prefix 81xx
+# Services include: OpenMetadata, Kettle, DolphinScheduler, Superset, data-api
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dataops.yml --profile dataops up -d
+
+version: '3.8'
+
+# Extend base services and override ports for DataOps stage
+services:
+
+  # ============================================
+  # DataOps: Vector Database (Milvus)
+  # ============================================
+  milvus:
+    container_name: one-data-milvus-dataops
+    ports:
+      - "19530:19530"  # Shared with other stages
+      - "9091:9091"
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - milvus_data_dataops:/var/lib/milvus
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  etcd:
+    container_name: one-data-etcd-dataops
+    volumes:
+      - etcd_data_dataops:/etcd
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  # ============================================
+  # DataOps: Metadata Governance (OpenMetadata)
+  # ============================================
+  elasticsearch:
+    container_name: one-data-elasticsearch-dataops
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data_dataops:/usr/share/elasticsearch/data
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  openmetadata:
+    container_name: one-data-openmetadata-dataops
+    environment:
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_SCHEME: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-onedata}
+      DB_USER_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      OM_DATABASE: openmetadata_db
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_SCHEME: http
+      SERVER_HOST: openmetadata
+      SERVER_PORT: 8585
+      AUTHENTICATION_PROVIDER: basic
+      AUTHENTICATION_PUBLIC_KEYS: "[http://localhost:8585/api/v1/system/config/jwks]"
+      AUTHENTICATION_AUTHORITY: "http://localhost:8585"
+      AUTHENTICATION_CLIENT_ID: "open-metadata"
+      AUTHORIZER_CLASS_NAME: "org.openmetadata.service.security.DefaultAuthorizer"
+      AUTHORIZER_REQUEST_FILTER: "org.openmetadata.service.security.JwtFilter"
+      AUTHORIZER_ADMIN_PRINCIPALS: "[admin]"
+      AUTHORIZER_PRINCIPAL_DOMAIN: "open-metadata.org"
+      PIPELINE_SERVICE_CLIENT_ENABLED: false
+    ports:
+      - "8585:8585"
+    volumes:
+      - openmetadata_data_dataops:/app/openmetadata/data
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  # ============================================
+  # DataOps: ETL Engine (Kettle/Webspoon)
+  # ============================================
+  kettle:
+    container_name: one-data-kettle-dataops
+    environment:
+      KETTLE_CARTE_ENABLED: "true"
+      KETTLE_CARTE_PORT: 8181
+      KETTLE_CARTE_USER: ${KETTLE_CARTE_USER:-cluster}
+      KETTLE_CARTE_PASSWORD: ${KETTLE_CARTE_PASSWORD:?KETTLE_CARTE_PASSWORD must be set}
+      JAVA_OPTS: "-Xms512m -Xmx2g"
+    ports:
+      - "8180:8080"   # Webspoon UI
+      - "8181:8181"   # Carte API
+    volumes:
+      - kettle_data_dataops:/home/tomcat/.kettle
+      - kettle_jdbc_dataops:/jdbc-drivers
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  # ============================================
+  # DataOps: Authentication (Keycloak)
+  # ============================================
+  keycloak:
+    container_name: one-data-keycloak-dataops
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-onedata}
+      KC_DB_USERNAME: ${MYSQL_USER:-onedata}
+      KC_DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+    command: start-dev
+    ports:
+      - "8180:8080"
+    volumes:
+      - keycloak_data_dataops:/opt/keycloak/data
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  # ============================================
+  # DataOps: Workflow Scheduling (DolphinScheduler)
+  # ============================================
+  zookeeper:
+    container_name: one-data-zookeeper-dataops
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
+      ZOO_TICK_TIME: 2000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data_dataops:/data
+      - zookeeper_datalog_dataops:/datalog
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  dolphinscheduler-postgresql:
+    container_name: one-data-dolphinscheduler-pg-dataops
+    environment:
+      POSTGRES_USER: ${DOLPHINSCHEDULER_DB_USER:-dolphinscheduler}
+      POSTGRES_PASSWORD: ${DOLPHINSCHEDULER_DB_PASSWORD:?DOLPHINSCHEDULER_DB_PASSWORD must be set}
+      POSTGRES_DB: dolphinscheduler
+    ports:
+      - "5433:5432"
+    volumes:
+      - dolphinscheduler_pg_data_dataops:/var/lib/postgresql/data
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  dolphinscheduler-api:
+    container_name: one-data-dolphinscheduler-dataops
+    environment:
+      DATABASE: postgresql
+      DATABASE_DRIVER: org.postgresql.Driver
+      DATABASE_HOST: dolphinscheduler-postgresql
+      DATABASE_PORT: 5432
+      DATABASE_DB: dolphinscheduler
+      DATABASE_USER: ${DOLPHINSCHEDULER_DB_USER:-dolphinscheduler}
+      DATABASE_PASSWORD: ${DOLPHINSCHEDULER_DB_PASSWORD:?DOLPHINSCHEDULER_DB_PASSWORD must be set}
+      ZOOKEEPER_QUORUM: zookeeper:2181
+      REGISTRY_TYPE: zookeeper
+      REGISTRY_ZOOKEEPER_CONNECT_STRING: zookeeper:2181
+      API_SERVER_PORT: 12345
+      MASTER_EXEC_THREADS: 100
+      MASTER_EXEC_TASK_NUM: 20
+      MASTER_HEARTBEAT_INTERVAL: 10
+      MASTER_TASK_COMMIT_RETRYTIMES: 5
+      MASTER_MAX_CPULOAD_AVG: 10
+      MASTER_RESERVED_MEMORY: 0.3
+      WORKER_EXEC_THREADS: 100
+      WORKER_HEARTBEAT_INTERVAL: 10
+      WORKER_MAX_CPULOAD_AVG: 10
+      WORKER_RESERVED_MEMORY: 0.3
+      WORKER_TASK_PERSISTENT_WAITING_TIMEOUT_MINUTES: 1
+      ALERT_PORT: 50052
+    ports:
+      - "8123:12345"  # API Server (DataOps port)
+      - "8133:25333"  # Master
+      - "8134:25334"  # Worker
+      - "8152:50052"  # Alert
+    volumes:
+      - dolphinscheduler_logs_dataops:/opt/dolphinscheduler/logs
+      - dolphinscheduler_shared_dataops:/opt/dolphinscheduler/shared
+      - dolphinscheduler_resources_dataops:/opt/dolphinscheduler/resources
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  # ============================================
+  # DataOps: BI Analytics (Superset)
+  # ============================================
+  superset-cache:
+    container_name: one-data-superset-cache-dataops
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    ports:
+      - "6380:6379"
+    volumes:
+      - superset_cache_data_dataops:/data
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+  superset:
+    container_name: one-data-superset-dataops
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:?SUPERSET_SECRET_KEY must be set}
+      SUPERSET_LOAD_EXAMPLES: "no"
+      DATABASE_DIALECT: mysql
+      DATABASE_HOST: mysql
+      DATABASE_PORT: 3306
+      DATABASE_DB: superset_db
+      DATABASE_USER: ${MYSQL_USER:-onedata}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      REDIS_HOST: superset-cache
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      REDIS_CELERY_DB: 0
+      REDIS_CACHE_DB: 1
+      SUPERSET_WEBSERVER_PORT: 8088
+      SUPERSET_WEBSERVER_TIMEOUT: 120
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@superset-cache:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@superset-cache:6379/1
+      FEATURE_FLAGS: "ENABLE_PROXY_FIX=true"
+      SUPERSET_LOG_LEVEL: INFO
+    ports:
+      - "8188:8088"
+    volumes:
+      - superset_home_dataops:/app/superset_home
+      - superset_logs_dataops:/var/log/superset
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+    command: >
+      sh -c "
+      superset db upgrade &&
+      superset fab create-admin --username admin --firstname Admin --lastname User --email admin@onedata.local --password ${SUPERSET_ADMIN_PASSWORD:-admin123} &&
+      superset init &&
+      gunicorn --bind 0.0.0.0:8088 --access-logfile - --error-logfile - --workers 4 --worker-class gthread --threads 20 --timeout 120 superset.app:create_app()
+      "
+
+  # ============================================
+  # DataOps: Data Governance API
+  # ============================================
+  data-api:
+    build:
+      context: ../../
+      dockerfile: deploy/dockerfiles/data-api/Dockerfile
+    container_name: one-data-data-api-dataops
+    volumes:
+      - ge_data_dataops:/data/ge
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-onedata}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      PORT: 8001
+      AUTH_MODE: "false"
+      OPENMETADATA_HOST: openmetadata
+      OPENMETADATA_PORT: 8585
+      OPENMETADATA_ENABLED: ${OPENMETADATA_ENABLED:-true}
+      VLLM_CHAT_URL: ${VLLM_CHAT_URL:-http://vllm-chat:8000}
+      VLLM_CHAT_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      AI_FEATURES_ENABLED: ${AI_FEATURES_ENABLED:-true}
+      KETTLE_CARTE_URL: ${KETTLE_CARTE_URL:-http://kettle:8181}
+      KETTLE_CARTE_USER: ${KETTLE_CARTE_USER:-cluster}
+      KETTLE_CARTE_PASSWORD: ${KETTLE_CARTE_PASSWORD:?KETTLE_CARTE_PASSWORD must be set}
+      KETTLE_ENABLED: ${KETTLE_ENABLED:-true}
+      GE_ENABLED: ${GE_ENABLED:-false}
+      GE_CONTEXT_ROOT_DIR: /data/ge
+      HOP_SERVER_URL: ${HOP_SERVER_URL:-http://hop-server:8182}
+      HOP_SERVER_USER: ${HOP_SERVER_USER:-cluster}
+      HOP_SERVER_PASSWORD: ${HOP_SERVER_PASSWORD:-cluster}
+      HOP_ENABLED: ${HOP_ENABLED:-false}
+      ETL_ENGINE: ${ETL_ENGINE:-auto}
+      SHARDINGSPHERE_PROXY_URL: ${SHARDINGSPHERE_PROXY_URL:-shardingsphere-proxy:3307}
+      SHARDINGSPHERE_ADMIN_URL: ${SHARDINGSPHERE_ADMIN_URL:-http://shardingsphere-proxy:33071}
+      SHARDINGSPHERE_USER: ${SHARDINGSPHERE_USER:-root}
+      SHARDINGSPHERE_PASSWORD: ${SHARDINGSPHERE_PASSWORD:-root}
+      SHARDINGSPHERE_ENABLED: ${SHARDINGSPHERE_ENABLED:-false}
+    ports:
+      - "8101:8001"
+    networks:
+      - one-data-network
+    profiles:
+      - dataops
+
+volumes:
+  # DataOps specific volumes
+  milvus_data_dataops:
+    driver: local
+  etcd_data_dataops:
+    driver: local
+  elasticsearch_data_dataops:
+    driver: local
+  openmetadata_data_dataops:
+    driver: local
+  kettle_data_dataops:
+    driver: local
+  kettle_jdbc_dataops:
+    driver: local
+  keycloak_data_dataops:
+    driver: local
+  zookeeper_data_dataops:
+    driver: local
+  zookeeper_datalog_dataops:
+    driver: local
+  dolphinscheduler_pg_data_dataops:
+    driver: local
+  dolphinscheduler_logs_dataops:
+    driver: local
+  dolphinscheduler_shared_dataops:
+    driver: local
+  dolphinscheduler_resources_dataops:
+    driver: local
+  superset_cache_data_dataops:
+    driver: local
+  superset_home_dataops:
+    driver: local
+  superset_logs_dataops:
+    driver: local
+  ge_data_dataops:
+    driver: local
+
+networks:
+  one-data-network:
+    external: false

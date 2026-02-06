@@ -1,0 +1,232 @@
+# ONE-DATA-STUDIO MLOps Stage Services
+#
+# This file contains MLOps stage services with port prefix 82xx
+# Services include: model-api, label-studio, vllm-chat, vllm-embed, ollama, ocr-service, behavior-service
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.mlops.yml --profile mlops up -d
+
+version: '3.8'
+
+services:
+
+  # ============================================
+  # MLOps: Model Management API
+  # ============================================
+  model-api:
+    build:
+      context: ../../
+      dockerfile: deploy/dockerfiles/model-api/Dockerfile
+    container_name: one-data-model-api-mlops
+    volumes:
+      - ../../services/model-api:/app
+    environment:
+      MODEL_DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      HF_TOKEN: ${HF_TOKEN:-}
+      AUTH_MODE: "false"
+      LABEL_STUDIO_URL: ${LABEL_STUDIO_URL:-http://label-studio:8080}
+      LABEL_STUDIO_API_TOKEN: ${LABEL_STUDIO_API_TOKEN:-}
+      PORT: 8002
+    ports:
+      - "8202:8002"
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  # ============================================
+  # MLOps: Data Labeling (Label Studio)
+  # ============================================
+  label-studio-postgresql:
+    image: postgres:15.4-alpine
+    container_name: one-data-label-studio-pg-mlops
+    environment:
+      POSTGRES_USER: ${LABEL_STUDIO_DB_USER:-labelstudio}
+      POSTGRES_PASSWORD: ${LABEL_STUDIO_DB_PASSWORD:-labelstudio}
+      POSTGRES_DB: labelstudio
+    ports:
+      - "5434:5432"
+    volumes:
+      - label_studio_pg_data_mlops:/var/lib/postgresql/data
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  label-studio:
+    image: heartexlabs/label-studio:1.11.0
+    container_name: one-data-label-studio-mlops
+    environment:
+      DJANGO_DB: default
+      POSTGRE_NAME: labelstudio
+      POSTGRE_USER: ${LABEL_STUDIO_DB_USER:-labelstudio}
+      POSTGRE_PASSWORD: ${LABEL_STUDIO_DB_PASSWORD:-labelstudio}
+      POSTGRE_HOST: label-studio-postgresql
+      POSTGRE_PORT: 5432
+      LABEL_STUDIO_HOST: ${LABEL_STUDIO_HOST:-http://localhost:8209}
+      LABEL_STUDIO_USER_TOKEN: ${LABEL_STUDIO_API_TOKEN:-}
+    ports:
+      - "8209:8080"
+    volumes:
+      - label_studio_data_mlops:/label-studio/data
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  # ============================================
+  # MLOps: AI/LLM Services (vLLM)
+  # ============================================
+  # vLLM Chat Service - for LLM inference
+  vllm-chat:
+    image: vllm/vllm-openai:latest
+    container_name: one-data-vllm-chat-mlops
+    # GPU configuration - uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    environment:
+      VLLM_MODEL: ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      VLLM_HOST: 0.0.0.0
+      VLLM_PORT: 8000
+      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.8}
+      VLLM_TRUST_REMOTE_CODE: "true"
+      HF_TOKEN: ${HF_TOKEN:-}
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model ${VLLM_CHAT_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      --host 0.0.0.0
+      --port 8000
+      --trust-remote-code
+      --max-model-len 4096
+    ports:
+      - "8210:8000"
+    volumes:
+      - vllm_cache_mlops:/root/.cache/huggingface
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+    # Note: AI profile required for GPU resources
+
+  # vLLM Embedding Service - for text vectorization
+  vllm-embed:
+    image: vllm/vllm-openai:latest
+    container_name: one-data-vllm-embed-mlops
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    environment:
+      VLLM_MODEL: ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
+      VLLM_HOST: 0.0.0.0
+      VLLM_PORT: 8000
+      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
+      VLLM_TRUST_REMOTE_CODE: "true"
+      HF_TOKEN: ${HF_TOKEN:-}
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model ${VLLM_EMBED_MODEL:-BAAI/bge-base-zh-v1.5}
+      --host 0.0.0.0
+      --port 8000
+      --trust-remote-code
+      --max-model-len 512
+    ports:
+      - "8211:8000"
+    volumes:
+      - vllm_cache_mlops:/root/.cache/huggingface
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  # Ollama - Local LLM service (alternative to vLLM, no GPU required)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: one-data-ollama-mlops
+    ports:
+      - "8134:11434"
+    volumes:
+      - ollama_data_mlops:/root/.ollama
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  # ============================================
+  # MLOps: OCR Services
+  # ============================================
+  ocr-service:
+    build:
+      context: ../../services/ocr-service
+      dockerfile: Dockerfile
+    container_name: one-data-ocr-service-mlops
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-http://openai-proxy:8000}
+      OCR_ENGINE: ${OCR_ENGINE:-paddleocr}
+      MAX_FILE_SIZE: ${OCR_MAX_FILE_SIZE:-52428800}
+      TEMP_DIR: /tmp/ocr
+      AUTH_MODE: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8207:8007"
+    volumes:
+      - ocr_uploads_mlops:/tmp/ocr
+      - ocr_models_mlops:/root/.paddleocr
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+  # ============================================
+  # MLOps: Behavior Analysis Service
+  # ============================================
+  behavior-service:
+    build:
+      context: ../../services/behavior-service
+      dockerfile: Dockerfile
+    container_name: one-data-behavior-service-mlops
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-onedata}:${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}@mysql:3306/${MYSQL_DATABASE:-onedata}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/1
+      AUTH_MODE: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8208:8008"
+    networks:
+      - one-data-network
+    profiles:
+      - mlops
+
+volumes:
+  # MLOps specific volumes
+  label_studio_pg_data_mlops:
+    driver: local
+  label_studio_data_mlops:
+    driver: local
+  vllm_cache_mlops:
+    driver: local
+  ollama_data_mlops:
+    driver: local
+  ocr_uploads_mlops:
+    driver: local
+  ocr_models_mlops:
+    driver: local
+
+networks:
+  one-data-network:
+    external: false
