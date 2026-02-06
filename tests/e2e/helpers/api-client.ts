@@ -5,6 +5,7 @@
  */
 
 import { APIRequestContext, APIResponse } from '@playwright/test';
+import { logger } from './logger';
 
 // API 基础 URL
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -90,7 +91,7 @@ function logRequest(log: RequestLog): void {
 
   // 控制台输出（仅开发模式）
   if (process.env.DEBUG_API === 'true') {
-    console.log(`[API] ${log.method} ${log.url} => ${log.status} (${log.duration}ms)`);
+    logger.debug(`[API] ${log.method} ${log.url} => ${log.status} (${log.duration}ms)`);
   }
 }
 
