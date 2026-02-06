@@ -3,7 +3,7 @@
  * 实时显示调度器状态和资源使用情况
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -15,7 +15,6 @@ import {
   Alert,
   Button,
   Space,
-  Tooltip,
   Tabs,
   List,
   Select,
@@ -23,7 +22,6 @@ import {
 import {
   ReloadOutlined,
   CheckCircleOutlined,
-  WarningOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';

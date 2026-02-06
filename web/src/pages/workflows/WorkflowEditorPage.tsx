@@ -160,6 +160,7 @@ function WorkflowEditorPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleUndo, handleRedo]);
 
   // 加载工作流定义
@@ -185,6 +186,7 @@ function WorkflowEditorPage() {
       setNodes(defaultNodes);
       initHistory(defaultNodes, []);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId, initHistory]);
 
   // 加载工作流
@@ -269,7 +271,7 @@ function WorkflowEditorPage() {
           description: workflowDescription,
           type: 'custom',
           definition,
-        } as any);
+        } as import('@/services/agent-service').CreateWorkflowRequest);
         if (response.code === 0) {
           message.success('工作流更新成功');
           setHasChanges(false);
@@ -317,7 +319,7 @@ function WorkflowEditorPage() {
   }, [nodes, pushHistory]);
 
   // 添加节点
-  const handleAddNode = useCallback((nodeType: string, config: Record<string, any>) => {
+  const handleAddNode = useCallback((nodeType: string, config: Record<string, unknown>) => {
     const newNode: Node = {
       id: `${nodeType}-${Date.now()}`,
       type: nodeType,
@@ -334,7 +336,7 @@ function WorkflowEditorPage() {
   }, [nodes, edges, pushHistory]);
 
   // 更新节点配置
-  const handleNodeUpdate = useCallback((nodeId: string, config: Record<string, any>) => {
+  const handleNodeUpdate = useCallback((nodeId: string, config: Record<string, unknown>) => {
     setNodes((nds) =>
       nds.map((node) =>
         node.id === nodeId

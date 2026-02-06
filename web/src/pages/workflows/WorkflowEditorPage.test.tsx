@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
+import { render, screen, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowEditorPage from './WorkflowEditorPage';
 import * as agentService from '../../services/agent-service';
 
@@ -26,7 +25,12 @@ vi.mock('react-router-dom', async () => {
 
 // Mock workflow 组件
 vi.mock('../../components/workflow/FlowCanvas', () => ({
-  default: ({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect }: any) => (
+  default: ({ nodes, edges, onNodesChange: _onNodesChange, onEdgesChange: _onEdgesChange, onNodeSelect: _onNodeSelect }: {
+    nodes?: unknown[]; edges?: unknown[];
+    onNodesChange?: (...args: unknown[]) => void;
+    onEdgesChange?: (...args: unknown[]) => void;
+    onNodeSelect?: (...args: unknown[]) => void;
+  }) => (
     <div data-testid="flow-canvas">
       <span>节点数: {nodes?.length || 0}</span>
       <span>边数: {edges?.length || 0}</span>
@@ -35,7 +39,7 @@ vi.mock('../../components/workflow/FlowCanvas', () => ({
 }));
 
 vi.mock('../../components/workflow/NodePalette', () => ({
-  default: ({ onNodeAdd }: any) => (
+  default: ({ onNodeAdd }: { onNodeAdd?: (...args: unknown[]) => void }) => (
     <div data-testid="node-palette">
       <button onClick={() => onNodeAdd('llm', {})}>添加 LLM 节点</button>
     </div>
@@ -48,7 +52,11 @@ vi.mock('../../components/workflow/NodePalette', () => ({
 }));
 
 vi.mock('../../components/workflow/NodeConfigPanel', () => ({
-  default: ({ node, onNodeUpdate, onClose }: any) => (
+  default: ({ node, onNodeUpdate: _onNodeUpdate, onClose: _onClose }: {
+    node?: { id: string };
+    onNodeUpdate?: (...args: unknown[]) => void;
+    onClose?: (...args: unknown[]) => void;
+  }) => (
     <div data-testid="node-config-panel">
       {node ? <span>配置节点: {node.id}</span> : <span>无选中节点</span>}
     </div>
@@ -56,7 +64,7 @@ vi.mock('../../components/workflow/NodeConfigPanel', () => ({
 }));
 
 vi.mock('@/components/common/ErrorBoundary', () => ({
-  ErrorBoundary: ({ children }: any) => <>{children}</>,
+  ErrorBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 

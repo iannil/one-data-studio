@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
+import { render, screen, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 import WorkflowsPage from './WorkflowsPage';
 import * as agentService from '@/services/agent-service';

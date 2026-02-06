@@ -15,15 +15,12 @@ import {
   Modal,
   Form,
   message,
-  Tooltip,
   Progress,
 } from 'antd';
 import {
   ReloadOutlined,
   StopOutlined,
   EyeOutlined,
-  SearchOutlined,
-  FilterOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
@@ -128,7 +125,7 @@ const TaskList: React.FC<TaskListProps> = ({ className }) => {
     ...(smartTasksData?.tasks || []),
   ];
 
-  const columns: ColumnsType<any> = [
+  const columns: ColumnsType<TaskInfo | SmartTask> = [
     {
       title: '任务 ID',
       dataIndex: 'task_id',

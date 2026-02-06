@@ -83,14 +83,16 @@ describe('PageWrapper Component', () => {
   });
 
   it('should apply custom style', () => {
-    render(
+    const { container } = render(
       <PageWrapper style={{ backgroundColor: 'red' }}>
         <p>Content</p>
       </PageWrapper>
     );
 
-    const card = screen.getByTestId('card');
-    expect(card).toHaveStyle({ borderRadius: '8px' });
+    // Style is applied to the outer div, not the card
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.style.backgroundColor).toBe('red');
   });
 
   it('should render card without border', () => {

@@ -45,7 +45,8 @@ describe('ImageLazy Component', () => {
 
     // Loading indicator should be present before image loads
     const img = document.querySelector('img');
-    expect(img).toHaveStyle({ opacity: '0' });
+    expect(img).toBeInTheDocument();
+    expect((img as HTMLImageElement).style.opacity).toBe('0');
   });
 
   it('should handle image load event', async () => {
@@ -106,7 +107,9 @@ describe('ImageLazy Component', () => {
     );
 
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveStyle({ width: '200px', height: '150px' });
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.style.width).toBe('200px');
+    expect(wrapper.style.height).toBe('150px');
   });
 
   it('should apply custom objectFit', () => {
@@ -119,7 +122,8 @@ describe('ImageLazy Component', () => {
     );
 
     const img = document.querySelector('img');
-    expect(img).toHaveStyle({ objectFit: 'contain' });
+    expect(img).toBeInTheDocument();
+    expect((img as HTMLImageElement).style.objectFit).toBe('contain');
   });
 
   it('should apply custom className', () => {

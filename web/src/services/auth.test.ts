@@ -348,7 +348,6 @@ describe('Auth Service', () => {
   describe('Mock Login (Development)', () => {
     it('should mock login successfully in dev mode', async () => {
       // Mock import.meta.env.DEV
-      const originalEnv = import.meta.env;
       vi.stubGlobal('import.meta', { env: { DEV: true } });
 
       const result = await mockLogin('testuser', 'password');

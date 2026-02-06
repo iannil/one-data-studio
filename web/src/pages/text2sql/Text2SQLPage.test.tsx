@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
+import { render, screen, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Text2SQLPage from './Text2SQLPage';
 import { text2Sql } from '@/services/agent-service';
 import data from '@/services/data';

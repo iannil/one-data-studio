@@ -187,21 +187,24 @@ describe('WorkflowLogViewer Component', () => {
     const { container } = render(<WorkflowLogViewer logs={mockLogs} height={600} />);
 
     const logContainer = container.querySelector('[style*="height"]');
-    expect(logContainer).toHaveStyle({ height: '600px' });
+    expect(logContainer).toBeInTheDocument();
+    expect((logContainer as HTMLElement).style.height).toBe('600px');
   });
 
   it('should accept string height', () => {
     const { container } = render(<WorkflowLogViewer logs={mockLogs} height="50vh" />);
 
     const logContainer = container.querySelector('[style*="height"]');
-    expect(logContainer).toHaveStyle({ height: '50vh' });
+    expect(logContainer).toBeInTheDocument();
+    expect((logContainer as HTMLElement).style.height).toBe('50vh');
   });
 
   it('should use default height when not specified', () => {
     const { container } = render(<WorkflowLogViewer logs={mockLogs} />);
 
     const logContainer = container.querySelector('[style*="height"]');
-    expect(logContainer).toHaveStyle({ height: '400px' });
+    expect(logContainer).toBeInTheDocument();
+    expect((logContainer as HTMLElement).style.height).toBe('400px');
   });
 
   it('should format timestamps correctly', () => {

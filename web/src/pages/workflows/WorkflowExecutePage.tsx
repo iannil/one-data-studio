@@ -90,7 +90,7 @@ function WorkflowExecutePage() {
     enabled: !!workflowId,
     refetchInterval: (query) => {
       // 如果有运行中的执行，每2秒轮询一次
-      const queryData = query.state.data as any;
+      const queryData = query.state.data as { data?: { executions?: Array<{ status: string }> } } | undefined;
       const hasRunning = queryData?.data?.executions?.some(
         (e: WorkflowExecution) => e.status === 'running' || e.status === 'pending' || e.status === 'waiting_human'
       );
@@ -105,7 +105,7 @@ function WorkflowExecutePage() {
     enabled: !!executionId && activeTab === 'logs',
     refetchInterval: (query) => {
       // 如果执行仍在运行，每2秒轮询日志
-      const queryData = query.state.data as any;
+      const queryData = query.state.data as { data?: { executions?: Array<{ id: string; status: string }> } } | undefined;
       const currentExecution = queryData?.data?.executions?.find(
         (e: WorkflowExecution) => e.id === executionId
       );
@@ -889,7 +889,7 @@ function WorkflowExecutePage() {
 
             {currentHumanTask.form_schema && (
               <Card size="small" title="表单填写" style={{ marginBottom: 16 }}>
-                {renderFormSchema(currentHumanTask.form_schema as any)}
+                {renderFormSchema(currentHumanTask.form_schema as FormSchema | string)}
               </Card>
             )}
 

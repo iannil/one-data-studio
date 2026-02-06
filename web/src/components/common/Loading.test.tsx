@@ -39,12 +39,16 @@ describe('Loading Component', () => {
   it('should render fullscreen layout', () => {
     const { container } = render(<Loading fullScreen />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveStyle({ height: '100vh' });
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.style.height).toBe('100vh');
   });
 
   it('should render centered', () => {
     const { container } = render(<Loading />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveStyle({ display: 'flex', alignItems: 'center', justifyContent: 'center' });
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper.style.display).toBe('flex');
+    expect(wrapper.style.alignItems).toBe('center');
+    expect(wrapper.style.justifyContent).toBe('center');
   });
 });

@@ -13,7 +13,6 @@ import {
   Form,
   Input,
   Select,
-  Drawer,
   Tag,
   message,
   Popconfirm,
@@ -25,10 +24,9 @@ import {
   PlayCircleOutlined,
   EditOutlined,
   DeleteOutlined,
-  SaveOutlined,
   NodeIndexOutlined,
 } from '@ant-design/icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { schedulerApi, WorkflowTask } from '../services/scheduler';
 
 const { Option } = Select;

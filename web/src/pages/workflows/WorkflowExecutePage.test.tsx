@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@/test/testUtils';
+import { render, screen, waitFor } from '@/test/testUtils';
 import userEvent from '@testing-library/user-event';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkflowExecutePage from './WorkflowExecutePage';
 import agentService from '@/services/agent-service';
 
@@ -29,7 +28,7 @@ vi.mock('react-router-dom', async () => {
 
 // Mock WorkflowLogViewer
 vi.mock('@/components/WorkflowLogViewer', () => ({
-  default: ({ logs }: any) => (
+  default: ({ logs }: { logs?: unknown[] }) => (
     <div data-testid="log-viewer">日志数: {logs?.length || 0}</div>
   ),
 }));

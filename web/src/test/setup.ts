@@ -44,6 +44,25 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 } as unknown as typeof IntersectionObserver;
 
+// Mock getComputedStyle for rc-table scrollbar size measurement
+Object.defineProperty(window, 'getComputedStyle', {
+  value: (_elt: Element) => {
+    const styles = {
+      display: 'block',
+      width: '100%',
+      height: '100%',
+      overflow: 'visible',
+      scrollbarWidth: '0',
+      getPropertyValue: (prop: string) => {
+        if (prop === 'scrollbar-width') return '0';
+        return '';
+      },
+    } as CSSStyleDeclaration;
+    return styles;
+  },
+  writable: true,
+});
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   constructor() {}

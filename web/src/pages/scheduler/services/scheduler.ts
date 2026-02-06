@@ -42,13 +42,13 @@ export interface TaskSubmitRequest {
   http_method?: string;
   http_headers?: Record<string, string>;
   http_body?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   dependencies?: string[];
   priority?: 'low' | 'normal' | 'high' | 'critical';
   engine?: 'auto' | 'celery' | 'dolphinscheduler' | 'smart';
   timeout?: number;
   args?: unknown[];
-  kwargs?: Record<string, any>;
+  kwargs?: Record<string, unknown>;
 }
 
 export interface TaskSubmitResponse {
@@ -76,7 +76,7 @@ export interface WorkflowTask {
   script?: string;
   script_content?: string;
   sql_query?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   dependencies?: string[];
   priority?: string;
 }
@@ -187,7 +187,7 @@ export const schedulerApi = {
   /**
    * 运行工作流
    */
-  runWorkflow: (workflowId: string, params?: Record<string, any>) =>
+  runWorkflow: (workflowId: string, params?: Record<string, unknown>) =>
     apiClient.post<{ data: { instance_id: string }; code: number; msg: string }>(
       `/api/v1/scheduler/workflows/${workflowId}/run`,
       { params }

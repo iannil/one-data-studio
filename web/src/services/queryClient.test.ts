@@ -33,8 +33,11 @@ import {
 } from './queryClient';
 import { message } from 'antd';
 
-const mockMessageError = message.error as ReturnType<typeof vi.fn>;
-const mockMessageSuccess = message.success as ReturnType<typeof vi.fn>;
+// Mock message functions for potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _mockMessageError = message.error as ReturnType<typeof vi.fn>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _mockMessageSuccess = message.success as ReturnType<typeof vi.fn>;
 
 describe('Query Client Configuration', () => {
   beforeEach(() => {
