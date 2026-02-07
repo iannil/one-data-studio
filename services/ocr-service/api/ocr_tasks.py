@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app import get_db
+from database import get_db
 from models.ocr_task import OCRTask, TaskStatus, DocumentType, ExtractionType
 from models.ocr_result import OCRResult, TableData
 from services.document_parser import DocumentParser

@@ -10,7 +10,10 @@ from sqlalchemy import and_, or_, func
 
 from models.metadata import MetadataDatabase, MetadataTable, MetadataColumn
 from models.lineage import LineageNode, LineageEdge
-import services.lineage_analyzer as lineage_module
+try:
+    import services.lineage_analyzer as lineage_module
+except ImportError:
+    import src.lineage_analyzer as lineage_module
 
 logger = logging.getLogger(__name__)
 

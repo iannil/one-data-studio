@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app import get_db
+from database import get_db
 from models.extraction_rule import ExtractionTemplate
 from models.ocr_task import ExtractionType
 

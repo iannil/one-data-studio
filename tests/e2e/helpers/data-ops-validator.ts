@@ -156,7 +156,8 @@ export class PageValidator {
         this.consoleLogs.push({
           level: type,
           message: msg.text() || '',
-          stack: msg.stackTrace(),
+          // stackTrace may not be available in all Playwright versions
+          stack: (typeof msg.stackTrace === 'function') ? msg.stackTrace() : undefined,
           timestamp: Date.now(),
         });
       }

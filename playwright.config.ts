@@ -54,7 +54,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: /core-pages\.spec\.ts/,
+      testMatch: /core-pages\.spec\.ts$/,
     },
 
     // ==================== 深度验收测试 ====================
@@ -63,7 +63,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: /.+-deep\.spec\.ts/,
+      testMatch: /.+-deep\.spec\.ts$/,
     },
 
     // ==================== DataOps 验证测试 ====================
@@ -72,7 +72,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: /data-ops-validation\.spec\.ts/,
+      testMatch: /data-ops(-validation)?\.spec\.ts$/,
     },
 
     // ==================== DataOps 真实 API 验证测试 ====================
@@ -83,7 +83,16 @@ export default defineConfig({
         // 非 headless 模式通过环境变量控制
         headless: process.env.HEADLESS !== 'false',
       },
-      testMatch: /data-ops-live-validation\.spec\.ts/,
+      testMatch: /data-ops-live(-validation)?\.spec\.ts$/,
+    },
+
+    // ==================== DataOps 完整测试 ====================
+    {
+      name: 'data-ops-full',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      testDir: './tests/e2e/data-ops',
     },
 
     // ==================== 用户生命周期测试 ====================
@@ -127,6 +136,36 @@ export default defineConfig({
         ...devices['iPhone 12'],
       },
       testMatch: /mobile\.spec\.ts/,
+    },
+
+    // ==================== 全面功能交互式验证测试 ====================
+    {
+      name: 'interactive-full-validation',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 非 headless 模式通过环境变量控制
+        headless: process.env.HEADLESS !== 'false',
+      },
+      testMatch: /interactive-full-validation\.spec\.ts$/,
+      retries: 0,
+      timeout: 300 * 1000, // 5 分钟超时
+      // 降低并发避免资源竞争
+      workers: process.env.CI ? 1 : 2,
+    },
+
+    // ==================== OCR 验证测试 ====================
+    {
+      name: '@ocr-validation',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 非 headless 模式通过环境变量控制
+        headless: process.env.HEADLESS !== 'false',
+      },
+      testMatch: /ocr-validation\.spec\.ts$/,
+      retries: 0,
+      timeout: 120 * 1000, // 2 分钟单个测试超时
+      // OCR 测试需要串行执行，避免资源竞争
+      workers: 1,
     },
   ],
 

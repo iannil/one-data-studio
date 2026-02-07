@@ -374,7 +374,7 @@ class TestFrontendE2E:
         try:
             page.goto(f"{frontend_url}/login")
             # 验证登录页面元素
-            expect(page).to_have_url(/login/)
+            expect(page).to_have_url(r".*/login/.*")
         except Exception as e:
             pytest.skip(f"E2E test failed: {e}")
 
@@ -386,7 +386,7 @@ class TestFrontendE2E:
         try:
             page.goto(f"{frontend_url}/data")
             # 验证数据源页面加载
-            expect(page).to_have_title(/data|数据/)
+            expect(page).to_have_title(r".*(data|数据).*")
         except Exception as e:
             pytest.skip(f"E2E test failed: {e}")
 
@@ -398,7 +398,7 @@ class TestFrontendE2E:
         try:
             page.goto(f"{frontend_url}/workflow")
             # 验证工作流编辑器加载
-            expect(page).to_have_title(/workflow|工作流/)
+            expect(page).to_have_title(r".*(workflow|工作流).*")
         except Exception as e:
             pytest.skip(f"E2E test failed: {e}")
 
@@ -410,7 +410,7 @@ class TestFrontendE2E:
         try:
             page.goto(f"{frontend_url}/chat")
             # 验证聊天界面加载
-            expect(page).to_have_title(/chat|聊天/)
+            expect(page).to_have_title(r".*(chat|聊天).*")
         except Exception as e:
             pytest.skip(f"E2E test failed: {e}")
 

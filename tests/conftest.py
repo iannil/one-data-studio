@@ -293,13 +293,30 @@ def db_connection(test_config):
 
 @pytest.fixture
 def db_session(db_connection):
-    """数据库会话 Fixture（每个测试自动回滚）"""
+    """数据库会话 Fixture（每个测试自动回滚，除非设置了 PRESERVE_TEST_DATA）"""
     cursor = db_connection.cursor()
     db_connection.begin()  # 开始事务
 
     yield cursor
 
-    db_connection.rollback()  # 测试后回滚
+    # 根据环境变量决定是否保留数据
+    if os.getenv('PRESERVE_TEST_DATA', 'false').lower() == 'true':
+        db_connection.commit()  # 保留测试数据
+    else:
+        db_connection.rollback()  # 测试后回滚
+    cursor.close()
+
+
+@pytest.fixture(scope="session")
+def db_session_persistent(db_connection):
+    """持久化数据库会话（用于真实数据测试，不回滚）"""
+    cursor = db_connection.cursor()
+    db_connection.begin()
+
+    yield cursor
+
+    # 总是提交，保留测试数据
+    db_connection.commit()
     cursor.close()
 
 

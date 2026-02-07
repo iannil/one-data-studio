@@ -17,24 +17,24 @@ export type UserRole = 'admin' | 'developer' | 'user' | 'viewer';
 // 测试用户凭证
 const TEST_USERS: Record<UserRole, { username: string; password: string; email: string }> = {
   admin: {
-    username: process.env.TEST_ADMIN_USERNAME || 'testadmin',
-    password: process.env.TEST_ADMIN_PASSWORD || 'Admin1234!',
-    email: process.env.TEST_ADMIN_EMAIL || 'testadmin@example.com',
+    username: process.env.TEST_ADMIN_USERNAME || 'admin',
+    password: process.env.TEST_ADMIN_PASSWORD || 'admin123',
+    email: process.env.TEST_ADMIN_EMAIL || 'admin@onedata.local',
   },
   developer: {
-    username: process.env.TEST_DEVELOPER_USERNAME || 'testdev',
-    password: process.env.TEST_DEVELOPER_PASSWORD || 'Dev1234!',
-    email: process.env.TEST_DEVELOPER_EMAIL || 'testdev@example.com',
+    username: process.env.TEST_DEVELOPER_USERNAME || 'admin',
+    password: process.env.TEST_DEVELOPER_PASSWORD || 'admin123',
+    email: process.env.TEST_DEVELOPER_EMAIL || 'admin@onedata.local',
   },
   user: {
-    username: process.env.TEST_USER_USERNAME || 'testuser',
-    password: process.env.TEST_USER_PASSWORD || 'Test1234!',
-    email: process.env.TEST_USER_EMAIL || 'testuser@example.com',
+    username: process.env.TEST_USER_USERNAME || 'admin',
+    password: process.env.TEST_USER_PASSWORD || 'admin123',
+    email: process.env.TEST_USER_EMAIL || 'admin@onedata.local',
   },
   viewer: {
-    username: process.env.TEST_VIEWER_USERNAME || 'testviewer',
-    password: process.env.TEST_VIEWER_PASSWORD || 'Viewer1234!',
-    email: process.env.TEST_VIEWER_EMAIL || 'testviewer@example.com',
+    username: process.env.TEST_VIEWER_USERNAME || 'admin',
+    password: process.env.TEST_VIEWER_PASSWORD || 'admin123',
+    email: process.env.TEST_VIEWER_EMAIL || 'admin@onedata.local',
   },
 };
 
@@ -351,3 +351,202 @@ export const test = base.extend<RealAuthFixtures>({
 export { expect } from '@playwright/test';
 export type { AuthSession, UserRole };
 export { TEST_USERS };
+
+// ==================== 便捷认证函数 ====================
+
+/**
+ * 设置认证的辅助函数（用于非 Fixture 场景）
+ * 支持直接通过 API 或页面登录
+ */
+export async function setupAuth(
+  page: Page,
+  request: APIRequestContext,
+  options: {
+    username?: string;
+    password?: string;
+    role?: UserRole;
+  } = {}
+): Promise<void> {
+  const { username, password, role = 'admin' } = options;
+  const user = TEST_USERS[role] || TEST_USERS.admin;
+
+  const creds = {
+    username: username || user.username,
+    password: password || user.password,
+  };
+
+  // 使用直接密码授权获取 token（推荐方式）
+  try {
+    const tokenData = await getAuthTokenDirect(creds.username, creds.password);
+    if (tokenData && tokenData.access_token) {
+      const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
+      // 导航到应用首页
+      await page.goto(BASE_URL);
+
+      // 设置 sessionStorage 数据（应用使用 sessionStorage 而不是 localStorage）
+      await page.evaluate((data) => {
+        const expiresAt = Date.now() + (data.expires_in * 1000);
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('token_expires_at', expiresAt.toString());
+
+        // 如果有 refresh_token，也存储
+        if (data.refresh_token) {
+          sessionStorage.setItem('refresh_token', data.refresh_token);
+        }
+
+        // 存储 user_info（从 token 解析）
+        try {
+          // 解析 JWT 获取用户信息
+          const parts = data.access_token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            const userInfo = {
+              sub: payload.sub,
+              preferred_username: payload.preferred_username || payload.username || creds.username,
+              email: payload.email,
+              name: payload.name,
+              given_name: payload.given_name,
+              family_name: payload.family_name,
+              roles: payload.realm_access?.roles || payload.roles || ['admin'],
+            };
+            sessionStorage.setItem('user_info', JSON.stringify(userInfo));
+          }
+        } catch (e) {
+          // 如果解析失败，存储基本信息
+          sessionStorage.setItem('user_info', JSON.stringify({
+            sub: 'test',
+            preferred_username: creds.username,
+            email: creds.email || 'test@test.local',
+            roles: ['admin'],
+          }));
+        }
+      }, {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_in: tokenData.expires_in || 300,
+        username: creds.username,
+        email: user.email,
+      });
+
+      // 刷新页面以应用认证状态
+      await page.reload();
+
+      // 等待页面加载完成
+      await page.waitForLoadState('domcontentloaded').catch(() => {});
+      await page.waitForTimeout(1000);
+
+      return;
+    }
+  } catch (error) {
+    console.warn('Direct token fetch failed, trying browser login:', error);
+  }
+
+  // 备用方案：尝试浏览器登录流程
+  try {
+    const session = await performKeycloakLogin(page, role);
+    await setupAuthInPage(page, session);
+  } catch (error) {
+    console.warn('Keycloak login failed, trying simple form login:', error);
+    await simpleFormLogin(page, creds.username, creds.password);
+  }
+}
+
+/**
+ * 直接通过 API 获取 token（使用密码授权）
+ */
+async function getAuthTokenDirect(username: string, password: string): Promise<any> {
+  const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://localhost:8080';
+  const REALM = process.env.KEYCLOAK_REALM || 'one-data-studio';
+  const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || 'web-frontend';
+
+  const url = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        client_id: CLIENT_ID,
+        username: username,
+        password: password,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Token fetch failed:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Token fetch error:', error);
+    return null;
+  }
+}
+
+/**
+ * 简单表单登录（备用方案）
+ */
+async function simpleFormLogin(page: Page, username: string, password: string): Promise<void> {
+  const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
+  // 导航到登录页面
+  await page.goto(`${BASE_URL}/login`);
+  await page.waitForLoadState('networkidle');
+
+  // 尝试填写表单
+  const usernameInput = page.locator('input[name="username"], input[placeholder*="用户名"], input[placeholder*="用户"], #username').first();
+  const passwordInput = page.locator('input[name="password"], input[type="password"], #password').first();
+
+  if (await usernameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await usernameInput.fill(username);
+  }
+
+  if (await passwordInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await passwordInput.fill(password);
+  }
+
+  // 点击登录按钮
+  const loginButton = page.locator('button:has-text("登录"), button:has-text("登 录"), button[type="submit"], #kc-login').first();
+  if (await loginButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await loginButton.click();
+    await page.waitForTimeout(1000);
+  }
+}
+
+/**
+ * 检查是否已登录
+ */
+export async function isLoggedIn(page: Page): Promise<boolean> {
+  try {
+    const token = await page.evaluate(() => {
+      return localStorage.getItem('access_token') || localStorage.getItem('token');
+    });
+
+    if (!token) return false;
+
+    // 检查是否在登录页面
+    const currentUrl = page.url();
+    return !currentUrl.includes('/login');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 清除认证状态
+ */
+export async function clearAuth(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('id_token');
+    localStorage.removeItem('user_info');
+  });
+}

@@ -11,20 +11,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, Column, String, Integer, Text, DateTime, Float, JSON, Boolean
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
 import redis
 import os
 
+from database import engine, SessionLocal
 from services.ocr_engine import OCREngine
-from services.document_parser import DocumentParser
-from services.table_extractor import TableExtractor
-from services.ai_extractor import AIExtractor
-from services.validator import DataValidator
 from services.metrics import metrics, get_metrics_summary
-from api.ocr_tasks import router as ocr_tasks_router
-from api.templates import router as templates_router
 
 # 配置日志
 logging.basicConfig(
@@ -33,26 +25,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 数据库配置
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://root:password@localhost:3306/ocr_service"
-)
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 # Redis配置
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-
-
-def get_db():
-    """获取数据库会话"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @asynccontextmanager
@@ -97,9 +72,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
-app.include_router(ocr_tasks_router, prefix="/api/v1/ocr", tags=["OCR任务"])
-app.include_router(templates_router, prefix="/api/v1/ocr", tags=["提取模板"])
+# 注册路由（在模块加载时注册，避免循环依赖）
+# 注意：不能在模块顶层导入，因为可能导致循环依赖
+def register_routes():
+    """注册API路由"""
+    from api.ocr_tasks import router as ocr_tasks_router
+    from api.templates import router as templates_router
+    app.include_router(ocr_tasks_router, prefix="/api/v1/ocr", tags=["OCR任务"])
+    app.include_router(templates_router, prefix="/api/v1/ocr", tags=["提取模板"])
+
+# 立即注册路由
+register_routes()
+
+# 移除旧的 startup 事件中的路由注册
+# @app.on_event("startup")
+# async def register_routers():
+#     from api.ocr_tasks import router as ocr_tasks_router
+#     from api.templates import router as templates_router
+#     app.include_router(ocr_tasks_router, prefix="/api/v1/ocr", tags=["OCR任务"])
+#     app.include_router(templates_router, prefix="/api/v1/ocr", tags=["提取模板"])
 
 
 @app.get("/")

@@ -98,7 +98,8 @@ function AIFieldMappingPanel({
         source_columns: sourceFields,
         target_columns: targetFields,
       }),
-    });
+    enabled: sourceFields.length > 0 && targetFields.length > 0,
+  });
 
   // 丰富 API 返回的映射数据，补充类型信息
   const enrichedMappings = useMemo((): FieldMapping[] => {

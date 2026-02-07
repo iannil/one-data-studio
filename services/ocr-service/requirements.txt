@@ -17,7 +17,7 @@ redis==5.0.1
 openai==1.10.0
 
 # PDF处理
-pymupdf==1.23.8
+pymupdf>=1.20.0,<1.21.0
 pdf2image==1.16.3
 pdfplumber==0.10.3
 PyPDF2==3.0.1
@@ -35,7 +35,7 @@ openpyxl==3.1.2
 # OCR引擎 (选择安装)
 # PaddleOCR (推荐，支持中文)
 paddleocr==2.7.0.3
-paddlepaddle==2.6.0
+paddlepaddle==2.6.2
 
 # NLP信息提取 (PaddleNLP UIE)
 paddlenlp>=2.6.0

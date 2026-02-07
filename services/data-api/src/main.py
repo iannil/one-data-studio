@@ -8149,6 +8149,210 @@ def start_sensitivity_scan_v2():
     return start_sensitivity_scan()
 
 
+# ==================== 元数据快照 API ====================
+
+@app.route("/api/v1/metadata/snapshots", methods=["GET"])
+@require_jwt()
+def get_metadata_snapshots():
+    """
+    获取元数据快照列表
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        database = request.args.get("database")
+        limit = int(request.args.get("limit", 50))
+
+        snapshots = service.list_snapshots(database=database, limit=limit)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "snapshots": [s.to_dict() for s in snapshots],
+                "total": len(snapshots)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"获取快照列表失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots/<snapshot_id>", methods=["GET"])
+@require_jwt()
+def get_metadata_snapshot(snapshot_id: str):
+    """
+    获取元数据快照详情
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        snapshot = service.get_snapshot(snapshot_id)
+        if not snapshot:
+            return jsonify({"code": 40401, "message": "快照不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": snapshot.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"获取快照详情失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots", methods=["POST"])
+@require_jwt()
+def create_metadata_snapshot():
+    """
+    创建元数据快照
+    """
+    data = request.json
+
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        # 简化处理，实际应该从数据库读取当前元数据
+        snapshot = service.create_snapshot(
+            version=data.get("version"),
+            database=data.get("database", "default"),
+            tables={},  # 实际应从数据库读取
+            created_by=data.get("created_by", "user"),
+            description=data.get("description", ""),
+            tags=data.get("tags", []),
+        )
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"snapshot_id": snapshot.snapshot_id}
+        })
+
+    except Exception as e:
+        logger.error(f"创建快照失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+@app.route("/api/v1/metadata/snapshots/<snapshot_id>", methods=["DELETE"])
+@require_jwt()
+def delete_metadata_snapshot(snapshot_id: str):
+    """
+    删除元数据快照
+    """
+    try:
+        from services.metadata_version_service import get_metadata_version_service
+
+        service = get_metadata_version_service()
+
+        success = service.delete_snapshot(snapshot_id)
+        if not success:
+            return jsonify({"code": 40401, "message": "快照不存在"}), 404
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {"deleted": True}
+        })
+
+    except Exception as e:
+        logger.error(f"删除快照失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
+# ==================== ETL AI 推荐 API ====================
+
+@app.route("/api/v1/etl/ai/transformation-suggest", methods=["POST"])
+@require_jwt()
+def etl_ai_transformation_suggest():
+    """
+    转换逻辑推荐
+
+    基于源字段和目标字段差异推荐转换逻辑
+    """
+    try:
+        data = request.json
+        if data is None:
+            return jsonify({"code": 40000, "message": "请求体不能为空，请发送 JSON 格式数据"}), 400
+
+        source_columns = data.get("source_columns", [])
+        target_columns = data.get("target_columns", [])
+
+        if not source_columns or not target_columns:
+            return jsonify({"code": 40001, "message": "source_columns 和 target_columns 不能为空"}), 400
+
+        from services.ai_service import get_ai_service
+        ai_service = get_ai_service()
+
+        # 构建转换建议
+        transformations = []
+
+        # 为每个目标字段找对应的源字段并推荐转换
+        target_map = {c.get("name"): c for c in target_columns}
+
+        for source_col in source_columns:
+            source_name = source_col.get("name")
+            source_type = source_col.get("type", "varchar")
+
+            # 查找可能的目标字段
+            possible_targets = [t for t in target_columns if t.get("name") == source_name]
+
+            for target_col in possible_targets:
+                target_type = target_col.get("type", "varchar")
+                target_name = target_col.get("name")
+
+                transformation = {
+                    "source_field": source_name,
+                    "target_field": target_name,
+                    "source_type": source_type,
+                    "target_type": target_type,
+                    "needs_conversion": source_type != target_type,
+                }
+
+                # 根据类型差异推荐转换
+                if source_type != target_type:
+                    if "int" in source_type.lower() and "varchar" in target_type.lower():
+                        transformation["sql"] = f"CAST({source_name} AS VARCHAR)"
+                        transformation["description"] = "数值转字符串"
+                    elif "varchar" in source_type.lower() and "int" in target_type.lower():
+                        transformation["sql"] = f"CAST(NULLIF({source_name}, '') AS INTEGER)"
+                        transformation["description"] = "字符串转数值"
+                    elif "date" in source_type.lower() and "varchar" in target_type.lower():
+                        transformation["sql"] = f"TO_CHAR({source_name}, 'YYYY-MM-DD')"
+                        transformation["description"] = "日期转字符串"
+                    elif "varchar" in source_type.lower() and "date" in target_type.lower():
+                        transformation["sql"] = f"TO_DATE({source_name}, 'YYYY-MM-DD')"
+                        transformation["description"] = "字符串转日期"
+                    else:
+                        transformation["sql"] = f"{source_name}"
+                        transformation["description"] = "直接映射"
+                else:
+                    transformation["sql"] = f"{source_name}"
+                    transformation["description"] = "直接映射"
+
+                transformations.append(transformation)
+
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "transformations": transformations,
+                "total_count": len(transformations),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"ETL 转换推荐失败: {e}")
+        return jsonify({"code": 50000, "message": str(e)}), 500
+
+
 # 启动应用
 if __name__ == "__main__":
     initialize_app()

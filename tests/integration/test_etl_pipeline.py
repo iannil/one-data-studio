@@ -1263,7 +1263,7 @@ class TestKettleXMLGeneration:
 
     def test_generate_basic_kettle_xml(self):
         """生成基础 Kettle 转换 XML"""
-        from src.kettle_generator import (
+        from kettle_generator import (
             KettleConfigGenerator,
             TransformationConfig,
             SourceConfig,
@@ -1329,7 +1329,7 @@ class TestKettleXMLGeneration:
 
     def test_generate_xml_with_cleaning_rules(self):
         """生成带清洗规则的 Kettle XML - 包含 IfFieldValueIsNull 步骤"""
-        from src.kettle_generator import (
+        from kettle_generator import (
             KettleConfigGenerator,
             TransformationConfig,
             SourceConfig,
@@ -1440,7 +1440,7 @@ class TestKettleXMLGeneration:
 
     def test_xml_contains_step_connections(self):
         """生成的 XML 包含步骤间的连接（hop）"""
-        from src.kettle_generator import (
+        from kettle_generator import (
             KettleConfigGenerator,
             TransformationConfig,
             SourceConfig,

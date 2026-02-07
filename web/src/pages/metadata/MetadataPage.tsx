@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card,
   Tree,
@@ -29,16 +30,20 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DataNode } from 'antd/es/tree';
 import data from '@/services/data';
-import type { AIAnnotation, SensitivityReport } from '@/services/data';
+import type { AIAnnotation, SensitivityReport, DataSource } from '@/services/data';
 import AISensitivityScanPanel from '@/pages/data/metadata/AISensitivityScanPanel';
 
 const { Search } = Input;
 const { TextArea } = Input;
 
 function MetadataPage() {
+  const [searchParams] = useSearchParams();
+  const sourceParam = searchParams.get('source');
+
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [searchText, setSearchText] = useState('');
+  const [filteredDatabases, setFilteredDatabases] = useState<string[]>([]);
 
   const [sqlModalOpen, setSqlModalOpen] = useState(false);
   const [generatedSql, setGeneratedSql] = useState('');
@@ -59,6 +64,30 @@ function MetadataPage() {
     queryKey: ['databases'],
     queryFn: data.getDatabases,
   });
+
+  // 获取数据源列表（用于 source 参数过滤）
+  const { data: datasourcesData } = useQuery({
+    queryKey: ['datasources'],
+    queryFn: data.getDataSources,
+    enabled: !!sourceParam, // 只在有 source 参数时才查询
+  });
+
+  // 根据 source 参数过滤数据库
+  useEffect(() => {
+    if (sourceParam && datasourcesData?.data?.sources) {
+      const source = datasourcesData.data.sources.find((s: DataSource) => s.source_id === sourceParam);
+      if (source?.connection?.database) {
+        setFilteredDatabases([source.connection.database]);
+        // 自动选中该数据库
+        setSelectedDatabase(source.connection.database);
+      } else {
+        // 如果没有找到关联数据库，显示所有
+        setFilteredDatabases([]);
+      }
+    } else {
+      setFilteredDatabases([]);
+    }
+  }, [sourceParam, datasourcesData]);
 
   // 获取表列表
   const { data: tablesData } = useQuery({
@@ -178,17 +207,27 @@ function MetadataPage() {
   const buildTreeData = (): DataNode[] => {
     if (!databasesData?.data?.databases) return [];
 
-    return databasesData.data.databases.map((db) => ({
-      title: (
-        <span>
-          <DatabaseOutlined style={{ marginRight: 8 }} />
-          {db.name}
-        </span>
-      ),
-      key: `db-${db.name}`,
-      selectable: false,
-      children:
-        tablesData?.data?.tables.map((table) => ({
+    // 根据 source 参数过滤数据库
+    const databases = filteredDatabases.length > 0
+      ? databasesData.data.databases.filter((db) => filteredDatabases.includes(db.name))
+      : databasesData.data.databases;
+
+    return databases.map((db) => {
+      // 对于当前选中的数据库，显示其表
+      const tables = selectedDatabase === db.name && tablesData?.data?.tables
+        ? tablesData.data.tables
+        : [];
+
+      return {
+        title: (
+          <span>
+            <DatabaseOutlined style={{ marginRight: 8 }} />
+            {db.name}
+          </span>
+        ),
+        key: `db-${db.name}`,
+        selectable: false,
+        children: tables.map((table) => ({
           title: (
             <span>
               <TableOutlined style={{ marginRight: 8 }} />
@@ -197,8 +236,9 @@ function MetadataPage() {
           ),
           key: `${db.name}.${table.name}`,
           isLeaf: true,
-        })) || [],
-    }));
+        })),
+      };
+    });
   };
 
   const handleTreeSelect = (selectedKeys: React.Key[]) => {
@@ -589,9 +629,29 @@ function MetadataPage() {
     },
   ];
 
+  // 获取当前数据源名称
+  const getCurrentSourceName = () => {
+    if (sourceParam && datasourcesData?.data?.sources) {
+      const source = datasourcesData.data.sources.find((s: DataSource) => s.source_id === sourceParam);
+      return source?.name || sourceParam;
+    }
+    return null;
+  };
+
   return (
     <div style={{ padding: '24px' }}>
-      <Card title="元数据浏览">
+      <Card
+        title={
+          <span>
+            元数据浏览
+            {filteredDatabases.length > 0 && (
+              <Tag color="blue" style={{ marginLeft: 12 }}>
+                数据源: {getCurrentSourceName()}
+              </Tag>
+            )}
+          </span>
+        }
+      >
         <Tabs items={tabItems} />
       </Card>
 
