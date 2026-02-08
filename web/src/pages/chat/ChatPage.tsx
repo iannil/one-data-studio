@@ -434,7 +434,7 @@ function ChatPage() {
         <Card
           title="会话列表"
           style={{ width: 280, marginRight: 16, display: 'flex', flexDirection: 'column' }}
-          bodyStyle={{ flex: 1, overflow: 'auto', padding: 0 }}
+          styles={{ body: { flex: 1, overflow: 'auto', padding: 0 }}
           extra={
             <Button
               type="text"
@@ -512,7 +512,7 @@ function ChatPage() {
       <Card
         title="AI 聊天"
         style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-        bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0 }}
+        styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 }}
       >
         {/* 消息列表 */}
         <div
@@ -632,7 +632,7 @@ function ChatPage() {
       <Card
         title="设置"
         style={{ width: 320, marginLeft: 16 }}
-        bodyStyle={{ paddingTop: 16 }}
+        styles={{ body: { paddingTop: 16 }}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div>

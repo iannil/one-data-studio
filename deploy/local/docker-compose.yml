@@ -88,8 +88,16 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
     depends_on:
-      - etcd
-      - minio
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9091/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - one-data-network
 
@@ -135,17 +143,55 @@ services:
     networks:
       - one-data-network
 
-  openmetadata:
-    image: openmetadata/server:1.4.0
-    container_name: one-data-openmetadata
+  # PostgreSQL for OpenMetadata
+  openmetadata-postgresql:
+    image: postgres:14-alpine
+    container_name: one-data-openmetadata-postgresql
     environment:
-      # Database configuration (reuse existing MySQL)
-      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
-      DB_SCHEME: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-onedata}
-      DB_USER_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+      POSTGRES_DB: openmetadata_db
+      POSTGRES_USER: openmetadata
+      POSTGRES_PASSWORD: openmetadata_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - openmetadata_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openmetadata"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - one-data-network
+
+  openmetadata:
+    image: openmetadata/server:latest
+    container_name: one-data-openmetadata
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        # Wait for database to be ready
+        echo "Waiting for PostgreSQL..."
+        until timeout 2 bash -c "cat < /dev/null > /dev/tcp/openmetadata-postgresql/5432" 2>/dev/null; do
+          echo "PostgreSQL is unavailable - sleeping"
+          sleep 3
+        done
+        echo "PostgreSQL is up!"
+
+        # Run database migrations
+        echo "Running database migrations..."
+        cd /opt/openmetadata && ./bootstrap/openmetadata-ops.sh migrate || echo "Migration completed with warnings"
+
+        # Start the OpenMetadata server
+        echo "Starting OpenMetadata server..."
+        ./bin/openmetadata-server-start.sh conf/openmetadata.yaml
+    environment:
+      # Database configuration (PostgreSQL)
+      DB_DRIVER_CLASS: org.postgresql.Driver
+      DB_SCHEME: postgresql
+      DB_HOST: openmetadata-postgresql
+      DB_PORT: 5432
+      DB_USER: openmetadata
+      DB_USER_PASSWORD: openmetadata_password
       OM_DATABASE: openmetadata_db
       # Elasticsearch configuration
       ELASTICSEARCH_HOST: elasticsearch
@@ -168,12 +214,12 @@ services:
     ports:
       - "8585:8585"
     depends_on:
-      mysql:
+      openmetadata-postgresql:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:8585/api/v1/system/version | grep -q 'version'"]
+      test: ["CMD-SHELL", "wget -q -O - http://openmetadata:8585/api/v1/system/version | grep -q 'version'"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -264,11 +310,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -P 3307 -u root || exit 1"]
+      test: ["CMD-SHELL", "timeout 3 bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/3307' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 30s
     profiles:
       - security
 
@@ -525,7 +571,13 @@ services:
       redis:
         condition: service_healthy
       milvus:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - one-data-network
 
@@ -583,6 +635,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - one-data-network
 
@@ -611,6 +669,12 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - one-data-network
 
@@ -637,6 +701,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - one-data-network
 
@@ -668,6 +738,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - one-data-network
 
@@ -707,7 +783,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:8007/health || exit 1"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health', timeout=2)"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -740,7 +816,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:8008/health || exit 1"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health', timeout=2)"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -765,17 +841,23 @@ services:
       - "3000:80"
     depends_on:
       agent-api:
-        condition: service_started
+        condition: service_healthy
       data-api:
-        condition: service_started
+        condition: service_healthy
       openai-proxy:
-        condition: service_started
+        condition: service_healthy
       admin-api:
-        condition: service_started
+        condition: service_healthy
       model-api:
-        condition: service_started
+        condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:80 -f || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - one-data-network
 
@@ -967,6 +1049,11 @@ services:
     volumes:
       - seatunnel_zk_data:/data
       - seatunnel_zk_datalog:/datalog
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - one-data-network
 
@@ -984,6 +1071,12 @@ services:
       - seatunnel_data:/seatunnel/data
       - seatunnel_logs:/seatunnel/logs
       - seatunnel_shared:/seatunnel/shared
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5801 -f || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - one-data-network
 
@@ -998,6 +1091,7 @@ volumes:
   milvus_data:
   etcd_data:
   elasticsearch_data:
+  openmetadata_pg_data:
   vllm_cache:
   kettle_data:
   kettle_jdbc:

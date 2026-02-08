@@ -1,0 +1,73 @@
+# =============================================================================
+# ONE-DATA-STUDIO UI E2E 测试数据库环境
+# =============================================================================
+#
+# 功能：为 Playwright E2E 测试提供独立的 MySQL 和 PostgreSQL 数据库
+# 端口分配：MySQL 3316, PostgreSQL 5442
+#
+# 使用方法：
+#   docker-compose -f deploy/local/docker-compose.ui-test.yml up -d
+#   docker-compose -f deploy/local/docker-compose.ui-test.yml down
+#
+# 注意：测试数据将保留在 Docker volumes 中，供手动验证使用
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # MySQL 测试数据库 (端口 3316)
+  # =============================================================================
+  mysql-test:
+    image: mysql:8.0
+    container_name: test-mysql
+    ports:
+      - "3316:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: testroot123
+      MYSQL_DATABASE: test_ecommerce
+    volumes:
+      - test_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestroot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - test-network
+
+  # =============================================================================
+  # PostgreSQL 测试数据库 (端口 5442)
+  # =============================================================================
+  postgres-test:
+    image: postgres:15.4-alpine
+    container_name: test-postgres
+    ports:
+      - "5442:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpg123
+      POSTGRES_DB: test_ecommerce_pg
+      POSTGRES_MULTIPLE_DATABASES: test_user_mgmt_pg,test_logs_pg
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - test-network
+
+volumes:
+  test_mysql_data:
+    driver: local
+  test_postgres_data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge

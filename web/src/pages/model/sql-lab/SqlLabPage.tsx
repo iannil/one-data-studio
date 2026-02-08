@@ -422,7 +422,7 @@ function SqlLabPage() {
           <Card
             title="数据表"
             size="small"
-            bodyStyle={{ padding: 8, height: 'calc(100% - 40px)', overflow: 'auto' }}
+            styles={{ body: { padding: 8, height: 'calc(100% - 40px)', overflow: 'auto' }}
             style={{ height: '100%' }}
           >
             {selectedTables.map((table) => (

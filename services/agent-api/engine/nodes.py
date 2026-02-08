@@ -30,8 +30,8 @@ EmbeddingService = None
 
 if VECTOR_ENABLED:
     try:
-        from ..services.vector_store import VectorStore as _VectorStore
-        from ..services.embedding import EmbeddingService as _EmbeddingService
+        from ..agent_services.vector_store import VectorStore as _VectorStore
+        from ..agent_services.embedding import EmbeddingService as _EmbeddingService
         VectorStore = _VectorStore
         EmbeddingService = _EmbeddingService
         VECTOR_AVAILABLE = True

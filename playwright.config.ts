@@ -167,13 +167,80 @@ export default defineConfig({
       // OCR 测试需要串行执行，避免资源竞争
       workers: 1,
     },
+
+    // ==================== 数据治理 UI E2E 测试 ====================
+    {
+      name: 'data-governance-ui',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 非 headless 模式通过环境变量控制
+        headless: process.env.HEADLESS !== 'false',
+      },
+      testMatch: /data-governance-ui\.spec\.ts$/,
+      retries: 0,
+      timeout: 300 * 1000, // 5 分钟测试超时
+      // UI E2E 测试串行执行，避免资源竞争
+      workers: 1,
+    },
+
+    // ==================== Manual Test 数据治理完整测试 ====================
+    // 使用独立端口 (MySQL 3316, PostgreSQL 5442)
+    // 测试数据永久保留，供手动验证
+    {
+      name: 'manual-test',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于观察测试过程
+        headless: process.env.HEADLESS === 'true',
+      },
+      testMatch: /manual-test-workflow\.spec\.ts$/,
+      retries: 0,
+      timeout: 600 * 1000, // 10 分钟测试超时
+      // 串行执行，避免资源竞争
+      workers: 1,
+    },
+
+    // ==================== Persistent Test 持久化完整测试 ====================
+    // 使用独立端口 (MySQL 3325, PostgreSQL 5450)
+    // 测试数据永久保留，供手动验证
+    {
+      name: 'persistent-test',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于观察测试过程
+        headless: process.env.HEADLESS === 'true',
+      },
+      testMatch: /persistent-full-workflow\.spec\.ts$/,
+      retries: 0,
+      timeout: 600 * 1000, // 10 分钟测试超时
+      // 串行执行，避免资源竞争
+      workers: 1,
+    },
+
+    // ==================== Full Platform Test 全平台综合测试 ====================
+    // 覆盖所有 30+ 功能模块
+    // 使用真实 API（禁止 mock）
+    // 测试数据持久化，生成验证指南
+    {
+      name: 'full-platform',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于观察测试过程
+        headless: process.env.HEADLESS === 'true',
+      },
+      testMatch: /full-platform-test\.spec\.ts$/,
+      retries: 0,
+      timeout: 1800 * 1000, // 30 分钟测试超时
+      // 串行执行，确保资源状态一致
+      workers: 1,
+    },
   ],
 
   // Web 服务器配置
   webServer: process.env.CI ? undefined : {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
+    command: 'cd web && npm run dev',
+    port: 3001,
+    reuseExistingServer: !process.env.FRESH,
     timeout: 120 * 1000,
   },
 });

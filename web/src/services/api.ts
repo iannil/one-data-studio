@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
-import { message } from 'antd';
+import { showError as showErrorMsg } from './message';
 import { getCsrfToken, getAccessToken } from './auth';
 
 // API 响应基础类型
@@ -85,7 +85,7 @@ function handleApiError(error: AxiosError<ApiError>): void {
 
     switch (status) {
       case 401:
-        message.error('未授权，请重新登录');
+        showErrorMsg('未授权，请重新登录');
         // Clear session storage data
         sessionStorage.removeItem('token_expires_at');
         sessionStorage.removeItem('user_info');
@@ -93,28 +93,28 @@ function handleApiError(error: AxiosError<ApiError>): void {
         sessionStorage.removeItem('refresh_token');
         break;
       case 403:
-        message.error('无权限访问该资源');
+        showErrorMsg('无权限访问该资源');
         break;
       case 404:
-        message.error('请求的资源不存在');
+        // 404 错误不显示提示，由页面处理
         break;
       case 429:
-        message.error('请求过于频繁，请稍后再试');
+        showErrorMsg('请求过于频繁，请稍后再试');
         break;
       case 500:
       case 502:
       case 503:
-        message.error('服务暂时不可用，请稍后再试');
+        showErrorMsg('服务暂时不可用，请稍后再试');
         break;
       default:
-        message.error(errorMessage);
+        showErrorMsg(errorMessage);
     }
   } else if (request) {
     // 请求已发送但没有收到响应
-    message.error('网络连接失败，请检查网络设置');
+    showErrorMsg('网络连接失败，请检查网络设置');
   } else {
     // 请求配置出错
-    message.error('请求配置错误');
+    showErrorMsg('请求配置错误');
   }
 }
 

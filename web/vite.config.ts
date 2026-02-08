@@ -13,6 +13,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // 兼容旧的 /api/ 导入路径（某些组件可能使用了错误的路径）
+      '/api': path.resolve(__dirname, './src/services'),
     },
   },
   // 依赖优化配置
@@ -33,6 +35,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    // HMR 配置
+    hmr: {
+      host: 'localhost',
+      port: 3000,
+      protocol: 'ws',
+    },
     proxy: {
       // Data API
       '/api/v1/datasets': {
@@ -48,6 +56,22 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api/v1/query': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+      '/api/v1/features': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+      '/api/v1/feature-groups': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+      '/api/v1/standards': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+      '/api/v1/assets': {
         target: 'http://localhost:8001',
         changeOrigin: true,
       },
@@ -68,11 +92,32 @@ export default defineConfig({
         target: 'http://localhost:8003',
         changeOrigin: true,
       },
-      // Admin API (user/group/role/audit/stats management)
+      // Agent API (stats/overview, workflows, agents, portal)
       '/api/v1/stats': {
-        target: 'http://localhost:8003',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/api/v1/portal': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api/v1/workflows': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api/v1/agents': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api/v1/chats': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api/v1/prompts': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      // Admin API (user/group/role/audit management)
       '/api/v1/users': {
         target: 'http://localhost:8003',
         changeOrigin: true,

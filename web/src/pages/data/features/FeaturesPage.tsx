@@ -286,7 +286,7 @@ function FeaturesPage() {
           />
           <Popconfirm
             title="确定要删除这个特征吗？"
-            onConfirm={() => deleteFeatureMutation.mutate(record.feature_id)}
+            onConfirm={() => deleteFeatureMutation.mutate(record.id)}
             okText="确定"
             cancelText="取消"
           >
@@ -521,7 +521,7 @@ function FeaturesPage() {
                   <Table
                     columns={featureColumns}
                     dataSource={featuresData?.data?.features || []}
-                    rowKey="feature_id"
+                    rowKey="id"
                     loading={isLoadingFeatures}
                     pagination={{
                       current: page,
@@ -565,7 +565,7 @@ function FeaturesPage() {
                           size="small"
                           columns={featureColumns.filter((col) => col.key !== 'actions')}
                           dataSource={record.features || []}
-                          rowKey="feature_id"
+                          rowKey="id"
                           pagination={false}
                         />
                       ),

@@ -323,7 +323,7 @@ function AgentsPage() {
             </Button>
           }
           style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         >
           <Space style={{ marginBottom: '16px' }} wrap>
             <div>
@@ -488,7 +488,7 @@ function AgentsPage() {
             </Space>
           }
           style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}
+          styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}
         >
           <Input
             placeholder="搜索工具..."

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme, Spin } from 'antd';
+import { ConfigProvider, theme, Spin, App as AntdApp } from 'antd';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider, ProtectedRoute } from './contexts/AuthContext';
 import { queryClient } from './services/queryClient';
+import { initMessageApi } from './services/message';
 import AppLayout from './components/layout/AppLayout';
 import HomePage from './pages/HomePage';
 
@@ -99,8 +100,9 @@ const MetadataVersionDiffPage = lazy(() => import('./pages/metadata/VersionDiffP
 function LazyWrapper({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" tip="Loading..." />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+        <Spin size="large" />
+        <div style={{ color: '#666' }}>Loading...</div>
       </div>
     }>
       {children}
@@ -242,16 +244,30 @@ function App() {
           },
         }}
       >
-        <AuthProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </AuthProvider>
+        <AntdApp>
+          <MessageInitializer />
+          <AuthProvider>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <AppRoutes />
+            </BrowserRouter>
+          </AuthProvider>
+        </AntdApp>
       </ConfigProvider>
       {/* 开发环境显示 React Query Devtools */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} position="bottom" />}
     </QueryClientProvider>
   );
+}
+
+// 初始化 message API 的组件
+function MessageInitializer() {
+  const { message } = AntdApp.useApp();
+
+  useEffect(() => {
+    initMessageApi(message);
+  }, [message]);
+
+  return null;
 }
 
 export default App;

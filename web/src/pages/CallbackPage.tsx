@@ -8,7 +8,7 @@
  * - 重定向到原页面
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Result, Spin } from 'antd';
 import { handleCallback } from '../services/auth';
@@ -21,8 +21,15 @@ function CallbackPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const { checkAuth } = useAuth();
+  const processingRef = useRef(false);
 
   useEffect(() => {
+    // 防止 React Strict Mode 双重调用
+    if (processingRef.current) {
+      return;
+    }
+    processingRef.current = true;
+
     const processCallback = async () => {
       const code = searchParams.get('code');
       const state = searchParams.get('state');

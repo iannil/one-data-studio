@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   Button,
@@ -55,11 +55,56 @@ function DataSourcesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [isTestPasswordModalOpen, setIsTestPasswordModalOpen] = useState(false);
   const [selectedDataSource, setSelectedDataSource] = useState<DataSource | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
+  const [loadingEditSource, setLoadingEditSource] = useState<string | null>(null);
+  const [testPasswordForm] = Form.useForm();
 
-  const [form] = Form.useForm();
+  // 创建表单和编辑表单使用不同的实例
+  const [createForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  // 用于存储编辑数据
+  const [editFormData, setEditFormData] = useState<DataSource | null>(null);
+
+  // 当 editFormData 更新时，设置表单值
+  useEffect(() => {
+    if (editFormData) {
+      const formValues = {
+        name: editFormData.name,
+        description: editFormData.description,
+        type: editFormData.type,
+        host: editFormData.connection?.host || '',
+        port: editFormData.connection?.port || 3306,
+        username: editFormData.connection?.username || '',
+        password: '',
+        database: editFormData.connection?.database || '',
+        schema: editFormData.connection?.schema || '',
+        tags: editFormData.tags || [],
+      };
+      console.log('=== useEffect: editFormData updated, setting form values ===');
+      console.log('formValues:', formValues);
+      // 使用 setTimeout 确保在 Modal 完全打开后再设置值
+      setTimeout(() => {
+        console.log('=== Calling setFieldsValue ===');
+        editForm.setFieldsValue(formValues);
+        // 验证设置是否成功
+        setTimeout(() => {
+          const currentValues = editForm.getFieldsValue();
+          console.log('=== Current form values ===', currentValues);
+        }, 50);
+      }, 100);
+    }
+  }, [editFormData, isEditModalOpen, editForm]);
+
+  // 模态框关闭时清空编辑数据
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    setEditFormData(null);
+    editForm.resetFields();
+    setTestResult(null);
+  };
 
   // 获取数据源列表
   const { data: sourcesData, isLoading: isLoadingList } = useQuery({
@@ -76,12 +121,30 @@ function DataSourcesPage() {
   // 创建数据源
   const createMutation = useMutation({
     mutationFn: dataService.createDataSource,
-    onSuccess: () => {
+    onSuccess: async (response, variables) => {
       message.success('数据源创建成功');
       setIsCreateModalOpen(false);
-      form.resetFields();
+
+      // 创建后自动测试连接以更新状态
+      const sourceId = response.data?.source_id || response.data?.source_id;
+      if (sourceId && variables.connection.password) {
+        try {
+          // 使用新的 testSavedDataSource 方法，后端会自动更新状态
+          const testResult = await dataService.testSavedDataSource(sourceId, variables.connection.password);
+
+          if (testResult.data.success) {
+            message.success('连接测试成功，数据源状态已更新');
+          } else {
+            message.warning(`数据源已创建，但连接测试失败: ${testResult.data.message}`);
+          }
+        } catch (error) {
+          console.warn('自动连接测试失败:', error);
+        }
+      }
+
+      createForm.resetFields();
       setTestResult(null);
-      queryClient.invalidateQueries({ queryKey: ['datasources'] });
+      await queryClient.invalidateQueries({ queryKey: ['datasources'] });
     },
     onError: () => {
       message.error('数据源创建失败');
@@ -92,12 +155,32 @@ function DataSourcesPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof dataService.updateDataSource>[1] }) =>
       dataService.updateDataSource(id, data),
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       message.success('数据源更新成功');
       setIsEditModalOpen(false);
-      form.resetFields();
+      setEditFormData(null);
+
+      // 如果提供了密码，更新后自动测试连接
+      if (variables.data.connection?.password && selectedDataSource) {
+        try {
+          // 使用新的 testSavedDataSource 方法，后端会自动更新状态
+          const testResult = await dataService.testSavedDataSource(
+            variables.id,
+            variables.data.connection.password
+          );
+
+          if (testResult.data.success) {
+            message.success('连接测试成功，数据源状态已更新');
+          } else {
+            message.warning(`数据源已更新，但连接测试失败: ${testResult.data.message}`);
+          }
+        } catch (error) {
+          console.warn('自动连接测试失败:', error);
+        }
+      }
+
       setTestResult(null);
-      queryClient.invalidateQueries({ queryKey: ['datasources'] });
+      await queryClient.invalidateQueries({ queryKey: ['datasources'] });
     },
     onError: () => {
       message.error('数据源更新失败');
@@ -120,7 +203,9 @@ function DataSourcesPage() {
   // 测试连接
   const handleTestConnection = async () => {
     try {
-      const values = await form.validateFields();
+      // 根据哪个模态框打开来选择表单
+      const activeForm = isEditModalOpen ? editForm : createForm;
+      const values = await activeForm.validateFields();
       setTestingConnection(true);
       setTestResult(null);
 
@@ -149,6 +234,46 @@ function DataSourcesPage() {
       }
     } catch (error) {
       setTestResult({ success: false, message: '连接测试失败，请检查配置' });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // 测试已保存数据源的连接 - 打开密码输入模态框
+  const handleTestSavedConnection = (record: DataSource) => {
+    setSelectedDataSource(record);
+    testPasswordForm.setFieldsValue({ password: '' });
+    setIsTestPasswordModalOpen(true);
+  };
+
+  // 执行已保存数据源的连接测试
+  const handleExecuteTestConnection = async () => {
+    if (!selectedDataSource) return;
+
+    try {
+      const password = testPasswordForm.getFieldValue('password');
+      if (!password) {
+        message.warning('请输入密码');
+        return;
+      }
+
+      setTestingConnection(true);
+
+      // 使用新的 testSavedDataSource 方法，后端会自动更新状态
+      const result = await dataService.testSavedDataSource(selectedDataSource.source_id, password);
+
+      if (result.data.success) {
+        message.success('连接测试成功，状态已更新');
+      } else {
+        message.error(`连接测试失败: ${result.data.message}`);
+      }
+
+      // 刷新列表以获取最新状态
+      await queryClient.invalidateQueries({ queryKey: ['datasources'] });
+      setIsTestPasswordModalOpen(false);
+      testPasswordForm.resetFields();
+    } catch (error) {
+      message.error('连接测试失败，请检查配置');
     } finally {
       setTestingConnection(false);
     }
@@ -251,9 +376,17 @@ function DataSourcesPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 150,
+      width: 200,
       render: (_: unknown, record: DataSource) => (
-        <Space>
+        <Space size="small">
+          <Button
+            type="text"
+            icon={<ApiOutlined />}
+            size="small"
+            onClick={() => handleTestSavedConnection(record)}
+          >
+            测试
+          </Button>
           <Button
             type="text"
             icon={<EyeOutlined />}
@@ -265,13 +398,27 @@ function DataSourcesPage() {
           <Button
             type="text"
             icon={<EditOutlined />}
-            onClick={() => {
-              setSelectedDataSource(record);
-              form.setFieldsValue({
-                ...record,
-                password: '', // 不显示密码
-              });
-              setIsEditModalOpen(true);
+            loading={loadingEditSource === record.source_id}
+            onClick={async () => {
+              try {
+                setLoadingEditSource(record.source_id);
+                // 获取完整的数据源详情（包含连接信息）
+                const detail = await dataService.getDataSource(record.source_id);
+                const fullData = detail.data;
+                setSelectedDataSource(fullData);
+
+                // 先设置编辑数据，然后在下一个事件循环中打开模态框
+                setEditFormData(fullData);
+                // 使用 requestAnimationFrame 确保在下一个事件循环中打开模态框
+                requestAnimationFrame(() => {
+                  setIsEditModalOpen(true);
+                });
+              } catch (error) {
+                console.error('获取数据源详情失败:', error);
+                message.error('获取数据源详情失败');
+              } finally {
+                setLoadingEditSource(null);
+              }
             }}
           />
           <Popconfirm
@@ -288,7 +435,7 @@ function DataSourcesPage() {
   ];
 
   const handleCreate = () => {
-    form.validateFields().then((values) => {
+    createForm.validateFields().then((values) => {
       const data: CreateDataSourceRequest = {
         name: values.name,
         description: values.description,
@@ -308,7 +455,7 @@ function DataSourcesPage() {
   };
 
   const handleUpdate = () => {
-    form.validateFields().then((values) => {
+    editForm.validateFields().then((values) => {
       updateMutation.mutate({
         id: selectedDataSource!.source_id,
         data: {
@@ -328,7 +475,7 @@ function DataSourcesPage() {
     });
   };
 
-  const renderConnectionForm = (isEdit = false) => (
+  const renderConnectionForm = (isEdit = false, formInstance: any = createForm) => (
     <>
       <Form.Item
         label="数据源名称"
@@ -351,7 +498,7 @@ function DataSourcesPage() {
           onChange={(value) => {
             const config = dataSourceTypes.find((t) => t.value === value);
             if (config) {
-              form.setFieldsValue({ port: config.defaultPort });
+              formInstance.setFieldsValue({ port: config.defaultPort });
             }
           }}
         >
@@ -362,13 +509,13 @@ function DataSourcesPage() {
           ))}
         </Select>
       </Form.Item>
-      <Form.Item label="主机地址" name="host" rules={[{ required: true, message: '请输入主机地址' }]}>
-        <Input placeholder="例如: localhost 或 192.168.1.100" />
+      <Form.Item label="主机地址" name="host">
+        <Input placeholder="请输入主机地址" />
       </Form.Item>
-      <Form.Item label="端口" name="port" rules={[{ required: true, message: '请输入端口' }]}>
-        <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+      <Form.Item label="端口" name="port">
+        <Input placeholder="请输入端口" />
       </Form.Item>
-      <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+      <Form.Item label="用户名" name="username">
         <Input placeholder="请输入用户名" />
       </Form.Item>
       <Form.Item label={isEdit ? '新密码（留空不修改）' : '密码'} name="password" rules={!isEdit ? [{ required: true, message: '请输入密码' }] : []}>
@@ -449,7 +596,7 @@ function DataSourcesPage() {
         onOk={handleCreate}
         onCancel={() => {
           setIsCreateModalOpen(false);
-          form.resetFields();
+          createForm.resetFields();
           setTestResult(null);
         }}
         confirmLoading={createMutation.isPending}
@@ -482,7 +629,7 @@ function DataSourcesPage() {
             onClose={() => setTestResult(null)}
           />
         )}
-        <Form form={form} layout="vertical">
+        <Form form={createForm} layout="vertical">
           {renderConnectionForm(false)}
         </Form>
       </Modal>
@@ -492,11 +639,7 @@ function DataSourcesPage() {
         title="编辑数据源"
         open={isEditModalOpen}
         onOk={handleUpdate}
-        onCancel={() => {
-          setIsEditModalOpen(false);
-          form.resetFields();
-          setTestResult(null);
-        }}
+        onCancel={handleEditModalClose}
         confirmLoading={updateMutation.isPending}
         width={600}
         footer={[
@@ -508,7 +651,7 @@ function DataSourcesPage() {
           >
             测试连接
           </Button>,
-          <Button key="cancel" onClick={() => setIsEditModalOpen(false)}>
+          <Button key="cancel" onClick={handleEditModalClose}>
             取消
           </Button>,
           <Button key="submit" type="primary" loading={updateMutation.isPending} onClick={handleUpdate}>
@@ -526,8 +669,74 @@ function DataSourcesPage() {
             onClose={() => setTestResult(null)}
           />
         )}
-        <Form form={form} layout="vertical">
-          {renderConnectionForm(true)}
+        <Form
+          form={editForm}
+          layout="vertical"
+          name="editForm"
+          initialValues={editFormData ? {
+            name: editFormData.name,
+            description: editFormData.description,
+            type: editFormData.type,
+            host: editFormData.connection?.host || '',
+            port: editFormData.connection?.port || 3306,
+            username: editFormData.connection?.username || '',
+            password: '',
+            database: editFormData.connection?.database || '',
+            schema: editFormData.connection?.schema || '',
+            tags: editFormData.tags || [],
+          } : {}}
+        >
+          <Form.Item
+            label="数据源名称"
+            name="name"
+            rules={[{ required: true, message: '请输入数据源名称' }]}
+          >
+            <Input placeholder="请输入数据源名称" />
+          </Form.Item>
+          <Form.Item label="描述" name="description">
+            <TextArea rows={2} placeholder="请输入描述" />
+          </Form.Item>
+          <Form.Item
+            label="数据库类型"
+            name="type"
+            rules={[{ required: true, message: '请选择数据库类型' }]}
+          >
+            <Select
+              placeholder="请选择数据库类型"
+              disabled
+            >
+              {dataSourceTypes.map((type) => (
+                <Option key={type.value} value={type.value}>
+                  {type.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="主机地址"
+            name="host"
+            rules={[{ required: true, message: '请输入主机地址' }]}
+          >
+            <Input placeholder="请输入主机地址" />
+          </Form.Item>
+          <Form.Item label="端口" name="port" rules={[{ required: true, message: '请输入端口' }]}>
+            <Input placeholder="请输入端口" />
+          </Form.Item>
+          <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Input placeholder="请输入用户名" />
+          </Form.Item>
+          <Form.Item label="新密码（留空不修改）" name="password">
+            <Input.Password placeholder="留空不修改密码" />
+          </Form.Item>
+          <Form.Item label="数据库" name="database">
+            <Input placeholder="请输入数据库名称" />
+          </Form.Item>
+          <Form.Item label="Schema" name="schema">
+            <Input placeholder="请输入 Schema（可选）" />
+          </Form.Item>
+          <Form.Item label="标签" name="tags">
+            <Select mode="tags" placeholder="输入标签后按回车" />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -641,6 +850,33 @@ function DataSourcesPage() {
           </div>
         )}
       </Drawer>
+
+      {/* 测试连接密码输入模态框 */}
+      <Modal
+        title="测试连接"
+        open={isTestPasswordModalOpen}
+        onOk={handleExecuteTestConnection}
+        onCancel={() => {
+          setIsTestPasswordModalOpen(false);
+          testPasswordForm.resetFields();
+        }}
+        confirmLoading={testingConnection}
+        okText="测试连接"
+        cancelText="取消"
+      >
+        <p style={{ marginBottom: 16 }}>
+          测试连接到 <strong>{selectedDataSource?.name}</strong> ({selectedDataSource?.connection.host}:{selectedDataSource?.connection.port})
+        </p>
+        <Form form={testPasswordForm} layout="vertical">
+          <Form.Item
+            label="密码"
+            name="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+          >
+            <Input.Password placeholder="请输入密码以测试连接" onPressEnter={handleExecuteTestConnection} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

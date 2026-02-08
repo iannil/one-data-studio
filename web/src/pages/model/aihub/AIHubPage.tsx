@@ -231,8 +231,9 @@ function AIHubPage() {
       <Row gutter={[16, 16]}>
         {isLoadingList ? (
           <Col span={24}>
-            <div style={{ textAlign: 'center', padding: 40 }}>
-              <Spin size="large" tip="加载中..." />
+            <div style={{ textAlign: 'center', padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <Spin size="large" />
+              <div style={{ color: '#666' }}>加载中...</div>
             </div>
           </Col>
         ) : models.length === 0 ? (
@@ -251,7 +252,7 @@ function AIHubPage() {
                   setIsDetailDrawerOpen(true);
                 }}
                 style={{ height: '100%' }}
-                bodyStyle={{ padding: 16 }}
+                styles={{ body: { padding: 16 }}
               >
                 <div style={{ marginBottom: 12 }}>
                   <Space direction="vertical" size={4}>

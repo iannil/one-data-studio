@@ -336,12 +336,129 @@ const ComparisonResult: React.FC<{
 };
 
 /**
+ * 创建快照表单
+ */
+const CreateSnapshotForm: React.FC<{
+  visible: boolean;
+  database?: string;
+  onCancel: () => void;
+  onSuccess: () => void;
+}> = ({ visible, database, onCancel, onSuccess }) => {
+  const [form] = Form.useForm();
+  const { data: databasesData } = useQuery({
+    queryKey: ['metadata', 'databases'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/metadata/databases');
+      return res.json();
+    },
+    select: (data) => data?.data?.databases || [],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (values: { version: string; description?: string; database?: string }) =>
+      createMetadataSnapshot({
+        version: values.version,
+        description: values.description,
+        database: values.database || database,
+        created_by: 'admin',
+      }),
+    onSuccess: () => {
+      message.success('快照创建成功');
+      form.resetFields();
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      message.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      await createMutation.mutateAsync(values);
+    } catch (error) {
+      // Form validation failed
+    }
+  };
+
+  return (
+    <Modal
+      title="创建元数据快照"
+      open={visible}
+      onCancel={() => {
+        form.resetFields();
+        onCancel();
+      }}
+      onOk={handleSubmit}
+      confirmLoading={createMutation.isPending}
+      okText="创建"
+      cancelText="取消"
+      width={500}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ database, version: '', description: '' }}
+      >
+        <Form.Item
+          label="版本号"
+          name="version"
+          rules={[
+            { required: true, message: '请输入版本号' },
+            { pattern: /^[a-zA-Z0-9._-]+$/, message: '版本号只能包含字母、数字、点、下划线和连字符' },
+          ]}
+        >
+          <Input placeholder="例如: v1.0.0 或 2024-02-08-initial" />
+        </Form.Item>
+
+        <Form.Item
+          label="数据库"
+          name="database"
+          rules={[{ required: !database, message: '请选择数据库' }]}
+          extra={database ? `已指定数据库: ${database}` : '留空则快照所有数据库'}
+        >
+          <Select
+            placeholder="选择数据库（可选）"
+            allowClear
+            options={databasesData?.map((db: { name: string }) => ({
+              label: db.name,
+              value: db.name,
+            }))}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="描述"
+          name="description"
+          rules={[{ max: 500, message: '描述不能超过500字符' }]}
+        >
+          <TextArea
+            rows={3}
+            placeholder="描述此版本的变更内容，例如：新增用户表、修改订单表结构等"
+            maxLength={500}
+            showCount
+          />
+        </Form.Item>
+
+        <Alert
+          message="快照说明"
+          description="快照将保存当前数据库的表结构信息，用于后续版本对比和迁移 SQL 生成。"
+          type="info"
+          showIcon
+        />
+      </Form>
+    </Modal>
+  );
+};
+
+/**
  * 快照列表标签页
  */
 const SnapshotsTab: React.FC<{ database?: string }> = ({ database }) => {
   const queryClient = useQueryClient();
   const [compareModalVisible, setCompareModalVisible] = useState(false);
   const [selectedSnapshots, setSelectedSnapshots] = useState<string[]>([]);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
 
   const { data: snapshotsData, isLoading } = useQuery({
     queryKey: ['metadata', 'snapshots', database],
@@ -356,6 +473,12 @@ const SnapshotsTab: React.FC<{ database?: string }> = ({ database }) => {
       queryClient.invalidateQueries({ queryKey: ['metadata', 'snapshots'] });
     },
   });
+
+  const handleCreateSuccess = () => {
+    setCreateModalVisible(false);
+    queryClient.invalidateQueries({ queryKey: ['metadata', 'snapshots'] });
+    queryClient.invalidateQueries({ queryKey: ['metadata', 'history'] });
+  };
 
   const handleCompare = () => {
     if (selectedSnapshots.length === 2) {
@@ -439,14 +562,22 @@ const SnapshotsTab: React.FC<{ database?: string }> = ({ database }) => {
       <Card
         title="元数据快照"
         extra={
-          <Button
-            type="primary"
-            icon={<SwapOutlined />}
-            disabled={selectedSnapshots.length !== 2}
-            onClick={handleCompare}
-          >
-            对比选中快照
-          </Button>
+          <Space>
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => setCreateModalVisible(true)}
+            >
+              创建快照
+            </Button>
+            <Button
+              type="primary"
+              icon={<SwapOutlined />}
+              disabled={selectedSnapshots.length !== 2}
+              onClick={handleCompare}
+            >
+              对比选中快照
+            </Button>
+          </Space>
         }
       >
         <Table
@@ -458,6 +589,13 @@ const SnapshotsTab: React.FC<{ database?: string }> = ({ database }) => {
           rowSelection={undefined}
         />
       </Card>
+
+      <CreateSnapshotForm
+        visible={createModalVisible}
+        database={database}
+        onCancel={() => setCreateModalVisible(false)}
+        onSuccess={handleCreateSuccess}
+      />
 
       <ComparisonModal
         visible={compareModalVisible}

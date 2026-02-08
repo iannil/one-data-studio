@@ -1,0 +1,88 @@
+# =============================================================================
+# ONE-DATA-STUDIO Persistent Test 环境配置
+# =============================================================================
+#
+# 功能：持久化端到端测试环境，数据保留供手动验证
+# 端口分配：
+#   - MySQL Persistent: 3325 (独立端口，避免冲突)
+#   - PostgreSQL Persistent: 5450 (独立端口，避免冲突)
+#
+# 使用方法：
+#   # 启动环境
+#   docker-compose -f docker-compose.persistent-test.yml up -d
+#
+#   # 查看日志
+#   docker-compose -f docker-compose.persistent-test.yml logs -f
+#
+#   # 停止服务（保留数据）
+#   docker-compose -f docker-compose.persistent-test.yml stop
+#
+#   # 清理环境（删除数据）
+#   docker-compose -f docker-compose.persistent-test.yml down -v
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Persistent Test 数据库 - MySQL (端口 3325)
+  # ============================================
+  mysql-persistent-test:
+    image: mysql:8.0
+    container_name: persistent-test-mysql
+    ports:
+      - "3325:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: persistent123
+      MYSQL_DATABASE: persistent_ecommerce
+    volumes:
+      - persistent_test_mysql_data:/var/lib/mysql
+      - ../../scripts/test_data/init_persistent_mysql.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppersistent123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - persistent-test-network
+    restart: unless-stopped
+
+  # ============================================
+  # Persistent Test 数据库 - PostgreSQL (端口 5450)
+  # ============================================
+  postgres-persistent-test:
+    image: postgres:15.4-alpine
+    container_name: persistent-test-postgres
+    ports:
+      - "5450:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: persistentpg123
+      POSTGRES_DB: persistent_ecommerce_pg
+    volumes:
+      - persistent_test_postgres_data:/var/lib/postgresql/data
+      - ../../scripts/test_data/init_persistent_postgres.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - persistent-test-network
+    restart: unless-stopped
+
+volumes:
+  persistent_test_mysql_data:
+    driver: local
+    name: persistent_test_mysql_data
+  persistent_test_postgres_data:
+    driver: local
+    name: persistent_test_postgres_data
+
+networks:
+  persistent-test-network:
+    name: persistent-test-network
+    driver: bridge

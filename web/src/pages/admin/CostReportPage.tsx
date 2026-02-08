@@ -133,7 +133,7 @@ const StatCard: React.FC<{
   const isPositiveTrend = trend && trend.startsWith('+');
 
   return (
-    <Card hoverable bodyStyle={{ padding: 20 }}>
+    <Card hoverable styles={{ body: { padding: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <Text type="secondary" style={{ fontSize: 12 }}>{title}</Text>
@@ -347,7 +347,7 @@ function CostReportPage() {
         <Row gutter={[24, 24]}>
           {/* Daily Trend Chart */}
           <Col xs={24} lg={16}>
-            <Card title="日成本趋势" bodyStyle={{ padding: 24 }}>
+            <Card title="日成本趋势" styles={{ body: { padding: 24 }}>
               {trends.length > 0 ? (
                 <SimpleBarChart data={trends} />
               ) : (
@@ -360,7 +360,7 @@ function CostReportPage() {
 
           {/* Cost Distribution */}
           <Col xs={24} lg={8}>
-            <Card title="成本分布" bodyStyle={{ padding: 24 }}>
+            <Card title="成本分布" styles={{ body: { padding: 24 }}>
               {summary ? (
                 <CostDistribution summary={summary} />
               ) : (
@@ -488,7 +488,7 @@ function CostReportPage() {
       )}
 
       {/* Tabs */}
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 }}>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

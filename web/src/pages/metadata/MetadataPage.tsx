@@ -408,7 +408,7 @@ function MetadataPage() {
           <Card
             title="数据库"
             style={{ width: 300, marginRight: 16 }}
-            bodyStyle={{ padding: '8px', overflow: 'auto', height: 440 }}
+            styles={{ body: { padding: '8px', overflow: 'auto', height: 440 } }}
           >
             <Tree
               treeData={buildTreeData()}

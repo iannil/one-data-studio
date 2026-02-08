@@ -10,18 +10,14 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 1
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "chromium-fast",
         "name": "chromium-fast",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -35,9 +31,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "chromium-acceptance",
         "name": "chromium-acceptance",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -51,9 +45,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "data-ops-validation",
         "name": "data-ops-validation",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -67,9 +59,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "data-ops-live",
         "name": "data-ops-live",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -83,9 +73,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "data-ops-full",
         "name": "data-ops-full",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/data-ops",
@@ -99,9 +87,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "user-lifecycle",
         "name": "user-lifecycle",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/user-lifecycle",
@@ -115,9 +101,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "firefox-acceptance",
         "name": "firefox-acceptance",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -131,9 +115,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "webkit-acceptance",
         "name": "webkit-acceptance",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -147,9 +129,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "mobile-chrome",
         "name": "mobile-chrome",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -163,9 +143,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "mobile-safari",
         "name": "mobile-safari",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -179,9 +157,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "interactive-full-validation",
         "name": "interactive-full-validation",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -195,9 +171,7 @@
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "@ocr-validation",
         "name": "@ocr-validation",
         "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
@@ -206,6 +180,62 @@
           "/ocr-validation\\.spec\\.ts$/"
         ],
         "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "data-governance-ui",
+        "name": "data-governance-ui",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/data-governance-ui\\.spec\\.ts$/"
+        ],
+        "timeout": 300000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "manual-test",
+        "name": "manual-test",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/manual-test-workflow\\.spec\\.ts$/"
+        ],
+        "timeout": 600000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "persistent-test",
+        "name": "persistent-test",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/persistent-full-workflow\\.spec\\.ts$/"
+        ],
+        "timeout": 600000
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "full-platform",
+        "name": "full-platform",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/full-platform-test\\.spec\\.ts$/"
+        ],
+        "timeout": 1800000
       }
     ],
     "quiet": false,
@@ -239,2517 +269,737 @@
     "version": "1.58.1",
     "workers": 4,
     "webServer": {
-      "command": "npm run dev",
-      "url": "http://localhost:3000",
+      "command": "cd web && npm run dev",
+      "port": 3001,
       "reuseExistingServer": true,
       "timeout": 120000
     }
   },
   "suites": [
     {
-      "title": "ocr-validation.spec.ts",
-      "file": "ocr-validation.spec.ts",
+      "title": "data-ops/cdc.spec.ts",
+      "file": "data-ops/cdc.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "OCR 验证测试",
-          "file": "ocr-validation.spec.ts",
-          "line": 126,
+          "title": "CDC Data Sync",
+          "file": "data-ops/cdc.spec.ts",
+          "line": 15,
           "column": 6,
           "specs": [
             {
-              "title": "OCR 服务健康检查",
+              "title": "DE-CDC-E-001: Create CDC sync task",
               "ok": true,
-              "tags": [
-                "ocr-validation"
-              ],
+              "tags": [],
               "tests": [
                 {
-                  "timeout": 120000,
+                  "timeout": 60000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "@ocr-validation",
-                  "projectName": "@ocr-validation",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1076,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "OCR 服务检查已跳过（配置模式）\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-02-07T16:07:34.549Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "a9b04c2d307bab384b2f-23fae57d890e39575b5b",
-              "file": "ocr-validation.spec.ts",
-              "line": 136,
+              "id": "fcdec79d8ac99b9980cf-a9263a5a3bd7cfae742c",
+              "file": "data-ops/cdc.spec.ts",
+              "line": 29,
+              "column": 7
+            },
+            {
+              "title": "DE-CDC-E-002: Monitor CDC sync status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fcdec79d8ac99b9980cf-5ba0471409a58cdc6ae7",
+              "file": "data-ops/cdc.spec.ts",
+              "line": 89,
+              "column": 7
+            },
+            {
+              "title": "DE-CDC-E-003: Handle CDC sync error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fcdec79d8ac99b9980cf-aeee3e6deca63680f871",
+              "file": "data-ops/cdc.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "DE-CDC-E-004: Pause and resume CDC task",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fcdec79d8ac99b9980cf-8c7a3b1dc1f245dc1e05",
+              "file": "data-ops/cdc.spec.ts",
+              "line": 174,
               "column": 7
             }
-          ],
+          ]
+        }
+      ]
+    },
+    {
+      "title": "data-ops/full-workflow.spec.ts",
+      "file": "data-ops/full-workflow.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "DataOps 全流程测试",
+          "file": "data-ops/full-workflow.spec.ts",
+          "line": 76,
+          "column": 6,
+          "specs": [],
           "suites": [
             {
-              "title": "DataOps 数据治理模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 165,
+              "title": "阶段1: 数据接入",
+              "file": "data-ops/full-workflow.spec.ts",
+              "line": 89,
               "column": 8,
               "specs": [
                 {
-                  "title": "数据源管理",
+                  "title": "1.1 应该访问数据源管理页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:35.916Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-a60a5c768f637157e0f2",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-812e16e492f746c48b35",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 90,
+                  "column": 9
                 },
                 {
-                  "title": "ETL流程",
+                  "title": "1.2 应该打开新建数据源对话框",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2991,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:38.918Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-ffc05432c078c56b5228",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-9b1f14d0d9c6174f9ef0",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 106,
+                  "column": 9
                 },
                 {
-                  "title": "Kettle引擎",
+                  "title": "1.3 应该填写数据源配置信息",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2995,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:41.917Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-24e70b84f4a99e59fe3c",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-6951e6ce54e7f22a99e8",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 134,
+                  "column": 9
                 },
                 {
-                  "title": "Kettle配置生成",
+                  "title": "1.4 应该测试数据源连接",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:44.918Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-7b613bbf29954fd5f399",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-630da987a97d5eaf4811",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 188,
+                  "column": 9
                 },
                 {
-                  "title": "数据质量",
+                  "title": "1.5 应该创建数据源",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3004,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:47.925Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-b98f069b9b7d4e205af8",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "数据血缘",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2970,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:50.938Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-a21cb781b2fc2482927b",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "特征存储",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2981,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:53.913Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-5ae636769542f4f9052b",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "数据标准",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3014,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:56.899Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-8e00728728d8281f9284",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "数据资产",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2992,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:07:59.918Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-a9e63cc8b82dee165eef",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "数据服务",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3013,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:02.915Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-3b3f76d674bc70909a3d",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "BI报表",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2975,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:05.936Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-ba76a3123159f0aea756",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "系统监控",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2992,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:08.916Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-2ed95451ac8bc800f983",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "实时开发",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3020,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:11.913Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-eed1dc48cb28ac8cc20b",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "实时IDE",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2990,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:14.939Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-4c66e93cef54a726a65c",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "离线开发",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3012,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:17.935Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-37502cb6489401134627",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "指标体系",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2995,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:20.952Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-d732244f50934fdd0f84",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "智能预警",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3002,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:23.955Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-a711ffcd60cc7c22ceab",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
-                },
-                {
-                  "title": "文档OCR",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2978,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:26.962Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-5d2c9bd608807a986b16",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 169,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-d9c0f97febaa327dd3b2",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 236,
+                  "column": 9
                 }
               ]
             },
             {
-              "title": "MLOps 模型管理模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 178,
+              "title": "阶段2: 数据处理",
+              "file": "data-ops/full-workflow.spec.ts",
+              "line": 277,
               "column": 8,
               "specs": [
                 {
-                  "title": "Notebook开发",
+                  "title": "2.1 应该访问 ETL 管理页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2995,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:29.948Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-395b1c222f1852b40428",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-e42d5ec7513184a2b791",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 278,
+                  "column": 9
                 },
                 {
-                  "title": "实验管理",
+                  "title": "2.2 应该创建 ETL 任务",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2981,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:32.949Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-220774ec59b079ad71a9",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-1b10e93afa0fd02bfdb9",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 292,
+                  "column": 9
                 },
                 {
-                  "title": "模型管理",
+                  "title": "2.3 应该配置字段映射",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3027,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:35.936Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-b294a3190eabf4b72f82",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "模型训练",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2958,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:38.968Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-d6ab7ca021dfacf6fdeb",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "模型服务",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3000,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:41.931Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-ad0df664b75a54b2a0cd",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "资源管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2971,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:44.937Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-a30632ddd465eaefffc1",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "模型监控",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:47.913Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-126c72a79514926d02da",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "AI Hub",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2979,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:50.914Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-bca70cf50da5af62f5c4",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "模型流水线",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2979,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:53.897Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-84a00ed99835f987413f",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "LLM微调",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2961,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:56.881Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-bff41971b482f6926715",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
-                },
-                {
-                  "title": "SQL Lab",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2991,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:08:59.847Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-40fb90f65e0a1a2e63e7",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 182,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-779ffd348f375af1e3eb",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 319,
+                  "column": 9
                 }
               ]
             },
             {
-              "title": "LLMOps Agent 平台模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 191,
+              "title": "阶段3: 数据治理",
+              "file": "data-ops/full-workflow.spec.ts",
+              "line": 340,
               "column": 8,
               "specs": [
                 {
-                  "title": "Prompt管理",
+                  "title": "3.1 应该访问元数据管理页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:02.846Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-930d8bdf38f8cb81fbf2",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 195,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-b46c1adbcf495b73e30b",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 341,
+                  "column": 9
                 },
                 {
-                  "title": "知识库管理",
+                  "title": "3.2 应该浏览数据库和表结构",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:05.847Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-a9f923af0dc248079f58",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 195,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-5ce389a842a9c034f0d7",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 355,
+                  "column": 9
                 },
                 {
-                  "title": "Agent应用",
+                  "title": "3.3 应该执行 AI 智能标注",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:08.847Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-44f5f839f049317e0e2b",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 195,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-fe484761bebc8e630246",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 380,
+                  "column": 9
                 },
                 {
-                  "title": "效果评估",
+                  "title": "3.4 应该执行敏感数据扫描",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2995,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:11.829Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-fc2e2c6dc9221d6630fa",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 195,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-9b5bff6a4a85c6952630",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 406,
+                  "column": 9
                 },
                 {
-                  "title": "SFT训练",
+                  "title": "3.5 应该搜索表和字段",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2980,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:14.828Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-1ae9316722315a96a1fc",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 195,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-535962a137e06adfbc03",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 432,
+                  "column": 9
                 }
               ]
             },
             {
-              "title": "工作流管理模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 204,
+              "title": "阶段4: 数据利用",
+              "file": "data-ops/full-workflow.spec.ts",
+              "line": 470,
               "column": 8,
               "specs": [
                 {
-                  "title": "工作流列表",
+                  "title": "4.1 应该访问 Text-to-SQL 页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3013,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:17.812Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-b0580bf822ff3c05373e",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 208,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-5ec295b34c5b12fdadf7",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 471,
+                  "column": 9
                 },
                 {
-                  "title": "新建工作流",
+                  "title": "4.2 应该执行自然语言查询",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:20.830Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-933724f139bcd99abe12",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 208,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-4ae3b4711fe012f1532a",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 496,
+                  "column": 9
                 },
                 {
-                  "title": "执行监控",
+                  "title": "4.3 应该访问 BI 报表页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:23.812Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-0239236849ed2413c859",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 208,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-1421f8632e9a06e77352",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 546,
+                  "column": 9
                 },
                 {
-                  "title": "Text2SQL",
+                  "title": "4.4 应该访问数据服务页面",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:26.813Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-e8acbe0ebfcad74d2df4",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 208,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-686b720dfe098d91e0c4",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 560,
+                  "column": 9
                 }
               ]
             },
             {
-              "title": "元数据管理模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 217,
+              "title": "完整流程验证",
+              "file": "data-ops/full-workflow.spec.ts",
+              "line": 578,
               "column": 8,
               "specs": [
                 {
-                  "title": "元数据查询",
+                  "title": "应该生成完整流程报告",
                   "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
+                  "tags": [],
                   "tests": [
                     {
-                      "timeout": 120000,
+                      "timeout": 60000,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2998,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:29.795Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "data-ops-full",
+                      "projectName": "data-ops-full",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "a9b04c2d307bab384b2f-0b8de19ee194ac8ddd72",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 221,
-                  "column": 11
-                },
-                {
-                  "title": "元数据图谱",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2961,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:32.797Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-c044a10984474edf74e0",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 221,
-                  "column": 11
-                },
-                {
-                  "title": "版本对比",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2981,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:35.763Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-b3ca92988afcb33f6b5e",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 221,
-                  "column": 11
+                  "id": "e3dd53e1c8f35c7597d6-90e0ebaa148aaba05e29",
+                  "file": "data-ops/full-workflow.spec.ts",
+                  "line": 579,
+                  "column": 9
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "data-ops/kettle.spec.ts",
+      "file": "data-ops/kettle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Kettle ETL Engine",
+          "file": "data-ops/kettle.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "DE-KT-E-001: Generate Kettle job from ETL config",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4c9e61b5a52064d40914-8c2a9820f689bc8a47a3",
+              "file": "data-ops/kettle.spec.ts",
+              "line": 29,
+              "column": 7
             },
             {
-              "title": "管理后台模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 230,
-              "column": 8,
-              "specs": [
+              "title": "DE-KT-E-002: Execute Kettle job",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "用户管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:38.749Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-02e2ea5bbcdb22bdcdc1",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "角色管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2961,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:41.731Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-6d8603f671ac984e135d",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "权限管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2965,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:44.696Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-f86fa79872b5c78757a5",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "系统设置",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2959,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:47.666Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-d92cb4ff1147e6b2c496",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "审计日志",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2951,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:50.629Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-10b9fa78b2f40de6efa4",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "分组管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2972,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:53.587Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-6c104726a248f85af6a5",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "成本报告",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2975,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:56.565Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-b4bcb798264e1513287c",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "通知管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2964,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:09:59.545Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-0f65515a5e1e5b7cc952",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "内容管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2964,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:02.513Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-53e6514d069941cec94b",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "用户画像",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2982,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:05.482Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-fba3d74a1d964c7e4260",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "用户分群",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2954,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:08.470Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-8a1e114fe5d1ebe8bbcf",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "API测试器",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:11.430Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-3e8a53769a63f86151cf",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
-                },
-                {
-                  "title": "行为分析",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2948,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:14.411Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-628c37c31ecdad24f4c0",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 234,
-                  "column": 11
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
                 }
-              ]
+              ],
+              "id": "4c9e61b5a52064d40914-ffdad179bc50c46a95d7",
+              "file": "data-ops/kettle.spec.ts",
+              "line": 79,
+              "column": 7
             },
             {
-              "title": "门户模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 243,
-              "column": 8,
-              "specs": [
+              "title": "DE-KT-E-003: Schedule Kettle job",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "门户仪表板",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2996,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:17.363Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-e494dce5e386f1d9375a",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 247,
-                  "column": 11
-                },
-                {
-                  "title": "通知中心",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2957,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:20.364Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-5e14df16092601a7456e",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 247,
-                  "column": 11
-                },
-                {
-                  "title": "待办事项",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2950,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:23.325Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-7cbcfb8b9a875fabf1d0",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 247,
-                  "column": 11
-                },
-                {
-                  "title": "公告管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2961,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:26.280Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-c2110a4cf9a8ac0b990c",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 247,
-                  "column": 11
-                },
-                {
-                  "title": "个人中心",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2965,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:29.246Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-26bd22c1a472b2ac5d16",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 247,
-                  "column": 11
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
                 }
-              ]
+              ],
+              "id": "4c9e61b5a52064d40914-9c9f1dbd956edb40a864",
+              "file": "data-ops/kettle.spec.ts",
+              "line": 143,
+              "column": 7
             },
             {
-              "title": "通用模块",
-              "file": "ocr-validation.spec.ts",
-              "line": 256,
-              "column": 8,
-              "specs": [
+              "title": "DE-KT-E-004: Monitor Kettle job execution",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "数据集管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2977,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:32.215Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-649d8983eaa878ef0915",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 260,
-                  "column": 11
-                },
-                {
-                  "title": "文档管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2978,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:35.197Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-3b3d2631212670713d18",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 260,
-                  "column": 11
-                },
-                {
-                  "title": "调度管理",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2962,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:38.179Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-14696df884a52c8136e7",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 260,
-                  "column": 11
-                },
-                {
-                  "title": "智能调度",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2979,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:41.146Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-b2bf0fb65f25bc161234",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 260,
-                  "column": 11
-                },
-                {
-                  "title": "Agents列表",
-                  "ok": true,
-                  "tags": [
-                    "ocr-validation"
-                  ],
-                  "tests": [
-                    {
-                      "timeout": 120000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "@ocr-validation",
-                      "projectName": "@ocr-validation",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3023,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "JSON 报告已保存: test-results/ocr-validation/report.json\n"
-                            },
-                            {
-                              "text": "HTML 报告已保存: test-results/ocr-validation/report.html\n"
-                            },
-                            {
-                              "text": "Markdown 报告已保存: test-results/ocr-validation/report.md\n"
-                            },
-                            {
-                              "text": "\n============================================================\n"
-                            },
-                            {
-                              "text": "OCR 验证测试报告\n"
-                            },
-                            {
-                              "text": "============================================================\n"
-                            },
-                            {
-                              "text": "总测试数: 64\n"
-                            },
-                            {
-                              "text": "通过: 64\n"
-                            },
-                            {
-                              "text": "失败: 0\n"
-                            },
-                            {
-                              "text": "通过率: 100.00%\n"
-                            },
-                            {
-                              "text": "总耗时: 191s\n"
-                            },
-                            {
-                              "text": "\n按模块统计:\n"
-                            },
-                            {
-                              "text": "  data: 18/18 通过\n"
-                            },
-                            {
-                              "text": "  model: 11/11 通过\n"
-                            },
-                            {
-                              "text": "  agent-platform: 5/5 通过\n"
-                            },
-                            {
-                              "text": "  workflows: 2/2 通过\n"
-                            },
-                            {
-                              "text": "  executions: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  text2sql: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  metadata: 3/3 通过\n"
-                            },
-                            {
-                              "text": "  admin: 13/13 通过\n"
-                            },
-                            {
-                              "text": "  portal: 5/5 通过\n"
-                            },
-                            {
-                              "text": "  datasets: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  documents: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  schedules: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  scheduler: 1/1 通过\n"
-                            },
-                            {
-                              "text": "  agents: 1/1 通过\n"
-                            },
-                            {
-                              "text": "============================================================\n\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-07T16:10:44.130Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "a9b04c2d307bab384b2f-1a58aae5ce9f33a319da",
-                  "file": "ocr-validation.spec.ts",
-                  "line": 260,
-                  "column": 11
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
                 }
-              ]
+              ],
+              "id": "4c9e61b5a52064d40914-0a38569c6e84e04f4525",
+              "file": "data-ops/kettle.spec.ts",
+              "line": 189,
+              "column": 7
+            },
+            {
+              "title": "DE-KT-E-005: Handle Kettle job failure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4c9e61b5a52064d40914-02aa62f66376745f3c7f",
+              "file": "data-ops/kettle.spec.ts",
+              "line": 236,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "data-ops/services.spec.ts",
+      "file": "data-ops/services.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Data Services API",
+          "file": "data-ops/services.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "DA-SV-E-001: Create data service",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a6146cef71e816805252-63bfebdfb1cf390b6366",
+              "file": "data-ops/services.spec.ts",
+              "line": 29,
+              "column": 7
+            },
+            {
+              "title": "DA-SV-E-002: Generate API key",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a6146cef71e816805252-3a28180b479cd4534aae",
+              "file": "data-ops/services.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "DA-SV-E-003: View service statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a6146cef71e816805252-db31015af7dd6b2aa196",
+              "file": "data-ops/services.spec.ts",
+              "line": 138,
+              "column": 7
+            },
+            {
+              "title": "DA-SV-E-004: Revoke API key",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "data-ops-full",
+                  "projectName": "data-ops-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a6146cef71e816805252-416523aab33e4eca3c14",
+              "file": "data-ops/services.spec.ts",
+              "line": 179,
+              "column": 7
             }
           ]
         }
@@ -2758,10 +1008,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-07T16:07:33.853Z",
-    "duration": 193385.022,
-    "expected": 65,
-    "skipped": 0,
+    "startTime": "2026-02-08T15:48:31.157Z",
+    "duration": 115.28800000000001,
+    "expected": 0,
+    "skipped": 31,
     "unexpected": 0,
     "flaky": 0
   }

@@ -450,8 +450,9 @@ function HuggingFaceHub() {
 
             <Title level={5}>Model Card</Title>
             {cardLoading ? (
-              <div style={{ textAlign: 'center', padding: 40 }}>
-                <Spin tip="Loading model card..." />
+              <div style={{ textAlign: 'center', padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <Spin />
+                <div style={{ color: '#666' }}>Loading model card...</div>
               </div>
             ) : (
               <div style={{ maxHeight: 400, overflow: 'auto', padding: 16, background: '#f5f5f5', borderRadius: 8 }}>

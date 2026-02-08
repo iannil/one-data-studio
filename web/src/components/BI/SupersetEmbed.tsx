@@ -195,9 +195,12 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
             justifyContent: 'center',
             background: '#f5f5f5',
             zIndex: 1,
+            flexDirection: 'column',
+            gap: 12,
           }}
         >
-          <Spin tip="正在加载 Superset 仪表板..." size="large" />
+          <Spin size="large" />
+          <div style={{ color: '#666' }}>正在加载 Superset 仪表板...</div>
         </div>
       )}
 
@@ -209,9 +212,12 @@ const SupersetEmbed: React.FC<SupersetEmbedProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 12,
           }}
         >
-          <Spin tip="正在获取访问令牌..." size="large" />
+          <Spin size="large" />
+          <div style={{ color: '#666' }}>正在获取访问令牌...</div>
         </div>
       ) : (
         <iframe

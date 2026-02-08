@@ -246,9 +246,12 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              flexDirection: 'column',
+              gap: 12,
             }}
           >
-            <Spin size="large" tip="加载中..." />
+            <Spin size="large" />
+            <div style={{ color: '#666' }}>加载中...</div>
           </div>
         )}
         <img

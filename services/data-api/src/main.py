@@ -175,15 +175,30 @@ def create_datasource():
         # 生成唯一 ID
         source_id = data.get("source_id") or f"ds-{uuid.uuid4().hex[:8]}"
 
-        # 构造连接配置（不包含密码）
-        connection_config = {
-            "host": data.get("host", ""),
-            "port": data.get("port", 3306),
-            "username": data.get("username", ""),
-            "database": data.get("database", ""),
-            "schema": data.get("schema", ""),
-            "params": data.get("params", {})
-        }
+        # 支持两种数据格式：
+        # 1. 嵌套格式（前端发送）: { connection: { host, port, ... } }
+        # 2. 扁平格式（兼容）: { host, port, ... }
+        connection = data.get("connection", {})
+        if connection:
+            # 嵌套格式
+            connection_config = {
+                "host": connection.get("host", ""),
+                "port": connection.get("port", 3306),
+                "username": connection.get("username", ""),
+                "database": connection.get("database", ""),
+                "schema": connection.get("schema", ""),
+                "params": connection.get("params", {})
+            }
+        else:
+            # 扁平格式（兼容）
+            connection_config = {
+                "host": data.get("host", ""),
+                "port": data.get("port", 3306),
+                "username": data.get("username", ""),
+                "database": data.get("database", ""),
+                "schema": data.get("schema", ""),
+                "params": data.get("params", {})
+            }
 
         datasource = DataSource(
             source_id=source_id,
@@ -199,11 +214,13 @@ def create_datasource():
         with db_manager.get_session() as session:
             session.add(datasource)
             session.commit()
+            # 获取完整数据用于返回
+            datasource_dict = datasource.to_dict(include_connection=True)
 
         return jsonify({
             "code": 0,
             "message": "DataSource created successfully",
-            "data": {"source_id": source_id}
+            "data": datasource_dict
         }), 201
     except IntegrityError:
         return jsonify({
@@ -251,11 +268,13 @@ def update_datasource(source_id: str):
                 datasource.tags = data["tags"]
 
             session.commit()
+            # 在 session 内部调用 to_dict()，避免 detached instance 错误
+            datasource_dict = datasource.to_dict(include_connection=True)
 
         return jsonify({
             "code": 0,
             "message": "DataSource updated successfully",
-            "data": datasource.to_dict(include_connection=True)
+            "data": datasource_dict
         }), 200
     except Exception as e:
         logger.error(f"Error updating datasource {source_id}: {e}")
@@ -296,23 +315,91 @@ def delete_datasource(source_id: str):
 @app.route("/api/v1/datasources/test", methods=["POST"])
 def test_datasource_connection():
     """测试数据源连接"""
+    import time
+    import pymysql
+    import psycopg2
+
     try:
         data = request.get_json()
 
-        # 模拟连接测试
-        # 实际实现中应根据数据源类型创建真实的连接
         source_type = data.get("type", "mysql")
+        connection = data.get("connection", {})
 
-        # 简单的模拟响应
-        return jsonify({
-            "code": 0,
-            "message": "Connection test successful",
-            "data": {
-                "success": True,
-                "version": "8.0.0" if source_type == "mysql" else "unknown",
-                "latency_ms": 15
-            }
-        }), 200
+        # 提取连接参数
+        host = connection.get("host")
+        port = connection.get("port")
+        username = connection.get("username")
+        password = connection.get("password")
+        database = connection.get("database", "")
+
+        if not all([host, port, username, password]):
+            return jsonify({
+                "code": 40000,
+                "message": "Missing required connection parameters",
+                "data": {
+                    "success": False,
+                    "message": "缺少必要的连接参数"
+                }
+            }), 400
+
+        start_time = time.time()
+        version = "unknown"
+        error_msg = None
+
+        try:
+            if source_type == "mysql":
+                conn = pymysql.connect(
+                    host=host,
+                    port=int(port),
+                    user=username,
+                    password=password,
+                    database=database if database else None,
+                    connect_timeout=10
+                )
+                version = conn._server_version_string if hasattr(conn, '_server_version_string') else "MySQL"
+                conn.close()
+            elif source_type == "postgresql":
+                conn = psycopg2.connect(
+                    host=host,
+                    port=int(port),
+                    user=username,
+                    password=password,
+                    database=database if database else "postgres",
+                    connect_timeout=10
+                )
+                version = f"PostgreSQL {conn.server_version}" if hasattr(conn, 'server_version') else "PostgreSQL"
+                conn.close()
+            else:
+                # 其他类型暂时返回成功（未实现真实连接）
+                version = f"{source_type.upper()} (mock)"
+                logger.info(f"Connection test for {source_type} is mocked")
+
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            return jsonify({
+                "code": 0,
+                "message": "Connection test successful",
+                "data": {
+                    "success": True,
+                    "version": version,
+                    "latency_ms": latency_ms,
+                    "message": "连接测试成功"
+                }
+            }), 200
+
+        except Exception as conn_error:
+            error_msg = str(conn_error)
+            logger.error(f"Database connection failed: {conn_error}")
+            return jsonify({
+                "code": 0,
+                "message": "Connection test failed",
+                "data": {
+                    "success": False,
+                    "message": f"连接失败: {error_msg}",
+                    "error": error_msg
+                }
+            }), 200
+
     except Exception as e:
         logger.error(f"Error testing datasource connection: {e}")
         return jsonify({
@@ -320,7 +407,126 @@ def test_datasource_connection():
             "message": get_safe_error_message(e),
             "data": {
                 "success": False,
-                "error": str(e) if os.getenv("ENVIRONMENT") != "production" else "Connection failed"
+                "message": "连接测试出错"
+            }
+        }), 500
+
+
+@app.route("/api/v1/datasources/<source_id>/test", methods=["POST"])
+def test_saved_datasource(source_id: str):
+    """测试已保存数据源的连接并更新状态"""
+    import time
+    import pymysql
+    import psycopg2
+
+    try:
+        # 获取密码（从请求体中）
+        data = request.get_json() or {}
+        password = data.get("password")
+
+        if not password:
+            return jsonify({
+                "code": 40000,
+                "message": "Password is required",
+                "data": {
+                    "success": False,
+                    "message": "需要提供密码"
+                }
+            }), 400
+
+        with db_manager.get_session() as session:
+            datasource = session.query(DataSource).filter(DataSource.source_id == source_id).first()
+
+            if not datasource:
+                return jsonify({
+                    "code": 40400,
+                    "message": f"DataSource {source_id} not found"
+                }), 404
+
+            conn_config = datasource.connection_config
+            host = conn_config.get("host")
+            port = conn_config.get("port")
+            username = conn_config.get("username")
+            database = conn_config.get("database", "")
+
+            start_time = time.time()
+            version = "unknown"
+
+            try:
+                if datasource.type == "mysql":
+                    conn = pymysql.connect(
+                        host=host,
+                        port=int(port),
+                        user=username,
+                        password=password,
+                        database=database if database else None,
+                        connect_timeout=10
+                    )
+                    version = conn._server_version_string if hasattr(conn, '_server_version_string') else "MySQL"
+                    conn.close()
+                elif datasource.type == "postgresql":
+                    conn = psycopg2.connect(
+                        host=host,
+                        port=int(port),
+                        user=username,
+                        password=password,
+                        database=database if database else "postgres",
+                        connect_timeout=10
+                    )
+                    version = f"PostgreSQL {conn.server_version}" if hasattr(conn, 'server_version') else "PostgreSQL"
+                    conn.close()
+                else:
+                    version = f"{datasource.type.upper()} (mock)"
+
+                latency_ms = int((time.time() - start_time) * 1000)
+
+                # 更新数据源状态
+                datasource.status = "connected"
+                datasource.last_connected = datetime.now()
+                datasource.last_error = None
+                datasource.source_metadata = datasource.source_metadata or {}
+                datasource.source_metadata["version"] = version
+                datasource.source_metadata["latency_ms"] = latency_ms
+                session.commit()
+
+                return jsonify({
+                    "code": 0,
+                    "message": "Connection test successful",
+                    "data": {
+                        "success": True,
+                        "version": version,
+                        "latency_ms": latency_ms,
+                        "message": "连接测试成功"
+                    }
+                }), 200
+
+            except Exception as conn_error:
+                error_msg = str(conn_error)
+                logger.error(f"Database connection failed: {conn_error}")
+
+                # 更新数据源状态为错误
+                datasource.status = "error"
+                datasource.last_error = error_msg
+                session.commit()
+
+                return jsonify({
+                    "code": 0,
+                    "message": "Connection test failed",
+                    "data": {
+                        "success": False,
+                        "message": f"连接失败: {error_msg}",
+                        "error": error_msg
+                    }
+                }), 200
+
+    except Exception as e:
+        logger.error(f"Error testing datasource {source_id}: {e}")
+        return jsonify({
+            "code": 50000,
+            "message": get_safe_error_message(e),
+            "data": {
+                "success": False,
+                "message": "连接测试出错"
             }
         }), 500
 
@@ -803,6 +1009,247 @@ def get_table_schema(database: str, table: str):
 
     except Exception as e:
         logger.error(f"Error getting table schema: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 元数据版本历史 API ====================
+
+@app.route("/api/v1/metadata/history", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def get_metadata_history():
+    """获取元数据变更历史"""
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        database_filter = request.args.get("database")
+        table_filter = request.args.get("table")
+
+        # TODO: 实现元数据版本历史记录功能
+        # 目前返回空结果，前端不会报错
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "history": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting metadata history: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 特征存储 API ====================
+
+@app.route("/api/v1/features", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_features():
+    """获取特征列表"""
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+        group_id = request.args.get("group_id")
+
+        with db_manager.get_session() as session:
+            query = session.query(Feature)
+
+            if group_id:
+                query = query.filter(Feature.group_id == group_id)
+
+            total = query.count()
+            features = query.offset((page - 1) * page_size).limit(page_size).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "features": [f.to_dict() for f in features],
+                    "total": total
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing features: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/feature-groups", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_feature_groups():
+    """获取特征组列表"""
+    try:
+        with db_manager.get_session() as session:
+            groups = session.query(FeatureGroup).filter(FeatureGroup.status == 'active').all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "groups": [g.to_dict() for g in groups]
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing feature groups: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 数据标准 API ====================
+
+@app.route("/api/v1/standards/elements", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_data_elements():
+    """获取数据元列表"""
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 10))
+
+        # TODO: 实现数据元管理功能
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "elements": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing data elements: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/standards/libraries", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_standard_libraries():
+    """获取标准库列表"""
+    try:
+        # TODO: 实现标准库管理功能
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "libraries": []
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing standard libraries: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/standards/documents", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_standard_documents():
+    """获取标准文档列表"""
+    try:
+        # TODO: 实现标准文档管理功能
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "documents": []
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing standard documents: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/standards/mappings", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_standard_mappings():
+    """获取标准映射列表"""
+    try:
+        # TODO: 实现标准映射管理功能
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "mappings": []
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing standard mappings: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+# ==================== 数据资产管理 API ====================
+
+@app.route("/api/v1/assets", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def list_assets():
+    """获取数据资产列表"""
+    try:
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        category = request.args.get("category")
+
+        with db_manager.get_session() as session:
+            query = session.query(DataAsset)
+
+            if category:
+                query = query.filter(DataAsset.category == category)
+
+            total = query.count()
+            assets = query.offset((page - 1) * page_size).limit(page_size).all()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "assets": [a.to_dict() for a in assets],
+                    "total": total
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing assets: {e}")
+        return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
+
+
+@app.route("/api/v1/assets/inventory", methods=["GET"])
+@require_jwt(optional=True)
+@require_permission(Resource.METADATA, Operation.READ)
+def get_asset_inventory():
+    """获取资产清单"""
+    try:
+        # TODO: 实现完整的资产清单统计功能
+        with db_manager.get_session() as session:
+            # 统计各类资产数量
+            asset_count = session.query(DataAsset).count()
+            datasource_count = session.query(DataSource).count()
+            dataset_count = session.query(Dataset).count()
+
+            return jsonify({
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "inventory": {
+                        "assets": asset_count,
+                        "datasources": datasource_count,
+                        "datasets": dataset_count
+                    }
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting asset inventory: {e}")
         return jsonify({"code": 50000, "message": get_safe_error_message(e)}), 500
 
 

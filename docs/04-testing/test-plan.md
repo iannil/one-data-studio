@@ -806,7 +806,7 @@ trivy image one-data-studio:latest
 
 ### 7.4 实施状态记录
 
-**最后更新: 2026-01-28**
+**最后更新: 2026-02-08**
 
 | 任务 | 状态 | 完成日期 | 说明 |
 |------|------|----------|------|
@@ -820,16 +820,116 @@ trivy image one-data-studio:latest
 | 创建 test_data.py | ✅ 完成 | 2026-01-28 | 测试数据 fixtures |
 | 端口配置修复 | ✅ 完成 | 2026-01-28 | 修复各服务 API 端口映射 |
 | 测试执行完成 | ✅ 完成 | 2026-01-28 | E2E 测试全部执行完毕 |
+| 数据治理 UI 测试扩展 | ✅ 完成 | 2026-02-08 | 5 模块 100+ 新测试用例 |
+| BasePage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 20+ 通用辅助方法 |
+| DataGovernanceApiHelper.ts | ✅ 完成 | 2026-02-08 | 新建 API 测试辅助类 |
+| MetadataPage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 25+ 页面方法 |
+| VersionsPage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 15+ 页面方法 |
+| FeaturesPage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 35+ 页面方法 |
+| StandardsPage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 30+ 页面方法 |
+| AssetsPage.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 45+ 页面方法 |
+| data-governance-ui.spec.ts 扩展 | ✅ 完成 | 2026-02-08 | 新增 100+ 测试用例 |
 
 **新增文件列表:**
 1. `tests/e2e/fixtures/user-lifecycle.fixture.ts` - 用户生命周期测试 fixture
 2. `tests/e2e/helpers/user-management.ts` - 用户管理辅助函数
 3. `tests/fixtures/test_data.py` - 测试数据定义
 4. `docs/04-testing/test-execution-report.md` - 测试执行报告
+5. `tests/e2e/pom/DataGovernanceApiHelper.ts` - 数据治理 API 测试辅助类 (660+ 行)
+
+### 7.5 数据治理 UI E2E 测试覆盖详情
+
+**更新日期: 2026-02-08**
+
+#### 测试模块总览
+
+| 功能模块 | 测试用例数 | 测试 ID 前缀 | 覆盖功能 |
+|----------|-----------|--------------|----------|
+| 元数据管理 | 36 | DM-MD-* | 浏览、搜索、Text2SQL、AI 标注、敏感报告、AI 扫描、API |
+| 数据版本管理 | 25 | DM-MV-* | 快照管理、版本对比、版本历史、API |
+| 特征管理 | 44 | DM-FG-* | 特征列表、特征组、特征集、特征服务、API |
+| 数据标准 | 37 | DM-DS-* | 数据元、词根库、标准文档、标准映射、API |
+| 数据资产 | 47 | DM-DA-* | 资产目录树、资产列表、AI 搜索、资产盘点、价值评估、资产画像、API |
+| **总计** | **189** | - | - |
+
+#### 元数据管理测试 (DM-MD-*)
+
+| 类别 | 测试数 | 测试 ID 范围 |
+|------|--------|--------------|
+| 浏览功能 | 6 | DM-MD-BROWSE-001~009 |
+| 搜索功能 | 5 | DM-MD-SEARCH-001~005 |
+| Text2SQL | 5 | DM-MD-T2S-001~005 |
+| AI 标注 | 4 | DM-MD-AI-001~004 |
+| 敏感报告 | 4 | DM-MD-SENS-001~004 |
+| AI 扫描 | 4 | DM-MD-SCAN-001~004 |
+| API 测试 | 6 | DM-MD-API-001~006 |
+| **小计** | **36** | - |
+
+#### 数据版本管理测试 (DM-MV-*)
+
+| 类别 | 测试数 | 测试 ID 范围 |
+|------|--------|--------------|
+| 快照管理 | 7 | DM-MV-SNAP-001~007 |
+| 版本对比 | 8 | DM-MV-COMP-001~008 |
+| 版本历史 | 4 | DM-MV-HIST-001~004 |
+| API 测试 | 5 | DM-MV-API-001~005 |
+| **小计** | **25** | - |
+
+#### 特征管理测试 (DM-FG-*)
+
+| 类别 | 测试数 | 测试 ID 范围 |
+|------|--------|--------------|
+| 特征列表 | 10 | DM-FG-FEATURE-001~010 |
+| 特征组 | 7 | DM-FG-GROUP-001~007 |
+| 特征集 | 6 | DM-FG-SET-001~006 |
+| 特征服务 | 8 | DM-FG-SVC-001~008 |
+| API 测试 | 10 | DM-FG-API-001~010 |
+| **小计** | **44** | - |
+
+#### 数据标准测试 (DM-DS-*)
+
+| 类别 | 测试数 | 测试 ID 范围 |
+|------|--------|--------------|
+| 数据元 | 10 | DM-DS-ELEM-001~010 |
+| 词根库 | 8 | DM-DS-LIB-001~008 |
+| 标准文档 | 5 | DM-DS-DOC-001~005 |
+| 标准映射 | 5 | DM-DS-MAP-001~005 |
+| API 测试 | 10 | DM-DS-API-001~010 |
+| **小计** | **37** | - |
+
+#### 数据资产测试 (DM-DA-*)
+
+| 类别 | 测试数 | 测试 ID 范围 |
+|------|--------|--------------|
+| 资产目录树 | 5 | DM-DA-TREE-001~005 |
+| 资产列表 | 8 | DM-DA-LIST-001~008 |
+| AI 搜索 | 4 | DM-DA-AI-001~004 |
+| 资产盘点 | 7 | DM-DA-INV-001~007 |
+| 价值评估 | 5 | DM-DA-VAL-001~005 |
+| 资产画像 | 10 | DM-DA-PROFILE-001~010 |
+| API 测试 | 9 | DM-DA-API-001~009 |
+| **小计** | **47** | - |
+
+#### 执行命令
+
+```bash
+# 运行所有数据治理 UI 测试
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui
+
+# 按模块运行
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "DM-MD"  # 元数据
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "DM-MV"  # 版本管理
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "DM-FG"  # 特征管理
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "DM-DS"  # 数据标准
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "DM-DA"  # 数据资产
+
+# 仅运行 API 测试
+npx playwright test tests/e2e/data-governance-ui.spec.ts --project=data-governance-ui --grep "API"
+```
 
 ---
 
-### 7.5 测试执行结果 (2026-01-28)
+### 7.6 测试执行结果 (2026-01-28)
 
 | 角色 | 测试数 | 通过 | 失败 | 通过率 |
 |------|--------|------|------|--------|
@@ -851,7 +951,7 @@ trivy image one-data-studio:latest
 
 ---
 
-*文档版本: v1.2*
+*文档版本: v1.3*
 *创建日期: 2024*
-*最后更新: 2026-01-28*
+*最后更新: 2026-02-08*
 *维护团队: 测试团队*

@@ -49,11 +49,15 @@ export interface AuthState {
 // 优先使用环境变量配置的 Keycloak URL
 const getKeycloakUrl = () => {
   // 如果设置了 VITE_KEYCLOAK_URL，直接使用（开发和生产环境）
-  if (import.meta.env.VITE_KEYCLOAK_URL) {
-    return import.meta.env.VITE_KEYCLOAK_URL;
+  const envUrl = import.meta.env.VITE_KEYCLOAK_URL;
+  logDebug(`VITE_KEYCLOAK_URL from env: ${envUrl}`, 'Auth');
+  if (envUrl) {
+    return envUrl;
   }
   // 默认使用 nginx 代理
-  return window.location.origin + '/auth';
+  const fallbackUrl = window.location.origin + '/auth';
+  logDebug(`Using fallback Keycloak URL: ${fallbackUrl}`, 'Auth');
+  return fallbackUrl;
 };
 
 const KEYCLOAK_CONFIG: KeycloakConfig = {
@@ -269,7 +273,10 @@ export function buildLoginUrl(redirectUri?: string): string {
     state: state,
   });
 
-  return `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/auth?${params.toString()}`;
+  const loginUrl = `${KEYCLOAK_CONFIG.url}/realms/${KEYCLOAK_CONFIG.realm}/protocol/openid-connect/auth?${params.toString()}`;
+  logDebug(`Keycloak config - url: ${KEYCLOAK_CONFIG.url}, realm: ${KEYCLOAK_CONFIG.realm}, clientId: ${KEYCLOAK_CONFIG.clientId}`, 'Auth');
+  logDebug(`Generated login URL: ${loginUrl}`, 'Auth');
+  return loginUrl;
 }
 
 /**
@@ -298,6 +305,17 @@ export async function handleCallback(code: string, state: string): Promise<boole
     logError(`Invalid state parameter: received=${state}, stored=${storedState}`, 'Auth');
     return false;
   }
+
+  // 立即清除存储的状态，防止重复使用
+  sessionStorage.removeItem('oauth_state');
+
+  // 标记此 code 已被使用（防止并发调用）
+  const usedCodeKey = `used_code_${code}`;
+  if (sessionStorage.getItem(usedCodeKey)) {
+    logError('Authorization code already used', 'Auth');
+    return false;
+  }
+  sessionStorage.setItem(usedCodeKey, Date.now().toString());
 
   try {
     // 使用授权码交换 Token
@@ -338,12 +356,11 @@ export async function handleCallback(code: string, state: string): Promise<boole
       storeUserInfo(userInfo);
     }
 
-    // 清理
-    sessionStorage.removeItem('oauth_state');
-
     return true;
   } catch (e) {
     logError('Callback handling failed', 'Auth', e);
+    // 清理 used_code 标记，允许重试
+    sessionStorage.removeItem(usedCodeKey);
     return false;
   }
 }

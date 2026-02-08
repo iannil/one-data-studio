@@ -526,6 +526,14 @@ export async function testDataSource(data: TestConnectionRequest): Promise<ApiRe
   return apiClient.post('/api/v1/datasources/test', data);
 }
 
+/**
+ * 测试已保存数据源的连接（需要提供密码）
+ * 连接成功后会自动更新数据源状态
+ */
+export async function testSavedDataSource(sourceId: string, password: string): Promise<ApiResponse<TestConnectionResponse>> {
+  return apiClient.post(`/api/v1/datasources/${sourceId}/test`, { password });
+}
+
 // ============= Kettle ETL 引擎类型 =============
 
 export type KettleLogLevel = 'Nothing' | 'Error' | 'Minimal' | 'Basic' | 'Detailed' | 'Debug' | 'Rowlevel';
@@ -889,27 +897,36 @@ export interface ImpactAnalysis {
 // ============= 特征存储类型 =============
 
 export interface Feature {
-  feature_id: string;
+  id: string;  // API returns 'id' not 'feature_id'
   name: string;
   description?: string;
-  feature_group: string;
-  data_type: 'boolean' | 'integer' | 'float' | 'string' | 'array' | 'map';
-  value_type: 'continuous' | 'categorical' | 'ordinal';
-  source_table: string;
-  source_column: string;
+  feature_group?: string;
+  group_id?: string;
+  group_name?: string;
+  data_type?: string;
+  feature_type?: 'raw' | 'aggregated' | 'derived';
+  value_type?: 'continuous' | 'categorical' | 'ordinal';
+  source_table?: string;
+  source_column?: string;
   transform_sql?: string;
+  expression?: string;
+  aggregation_type?: string;
+  aggregation_window?: string;
   tags?: string[];
+  dependencies?: string[];
+  statistics?: Record<string, unknown>;
   metadata?: {
     domain?: string;
     category?: string;
     unit?: string;
     allowed_range?: [number, number];
   };
-  status: 'active' | 'deprecated' | 'draft';
-  version: number;
-  created_at: string;
+  status?: 'active' | 'deprecated' | 'draft';
+  version?: number;
+  created_at?: string;
   updated_at?: string;
-  created_by: string;
+  created_by?: string;
+  last_computed_at?: string;
 }
 
 export interface FeatureGroup {
@@ -4092,6 +4109,7 @@ export default {
   updateDataSource,
   deleteDataSource,
   testDataSource,
+  testSavedDataSource,
 
   // ETL
   getETLTasks,

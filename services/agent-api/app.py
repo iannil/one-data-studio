@@ -452,6 +452,44 @@ def stats_overview():
         db.close()
 
 
+@app.route("/api/v1/portal/dashboard", methods=["GET"])
+@require_jwt(optional=True)
+def portal_dashboard():
+    """获取门户仪表板数据（简化版本）"""
+    try:
+        # 获取当前用户信息（如果已登录）
+        from flask import g
+        user_id = getattr(g, 'user_id', None)
+
+        # 返回简化的仪表板数据
+        return jsonify({
+            "code": 0,
+            "message": "success",
+            "data": {
+                "stats": {
+                    "unread_notifications": 0,
+                    "pending_todos": 0,
+                    "overdue_todos": 0,
+                    "today_activities": 0
+                },
+                "todos": [],
+                "notifications": [],
+                "announcements": [],
+                "recent_activities": [],
+                "user": {
+                    "user_id": user_id,
+                    "username": getattr(g, 'user', None) if user_id else None
+                } if user_id else None
+            }
+        }), 200
+    except Exception as e:
+        logger.error(f"Error getting portal dashboard: {e}")
+        return jsonify({
+            "code": 50000,
+            "message": f"Internal error: {str(e)}"
+        }), 500
+
+
 # ==================== 应用 API ====================
 
 @app.route("/api/v1/apps", methods=["GET"])

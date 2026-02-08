@@ -343,7 +343,7 @@ function RolesPage() {
           size="small"
           title={getResourceLabel(resource)}
           style={{ marginBottom: 12 }}
-          bodyStyle={{ padding: '8px 16px' }}
+          styles={{ body: { padding: '8px 16px' }}
         >
           <Row gutter={[8, 8]}>
             {perms.map(perm => (

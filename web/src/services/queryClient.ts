@@ -12,7 +12,7 @@
  */
 
 import { QueryClient, MutationCache, QueryCache } from '@tanstack/react-query';
-import { message } from 'antd';
+import { showError as showErrorMsg, showSuccess as showSuccessMsg } from './message';
 import { logError } from './logger';
 
 /**
@@ -117,7 +117,7 @@ function createQueryCache() {
       // 只对非静默查询显示错误消息
       if (query.meta?.errorMessage !== false) {
         const errorMessage = (error as Error)?.message || '加载数据失败';
-        message.error(errorMessage);
+        showErrorMsg(errorMessage);
       }
     },
     onSuccess: (_data, _query) => {
@@ -172,13 +172,13 @@ function createMutationCache() {
 
       if (mutation.meta?.errorMessage !== false) {
         const errorMessage = (error as Error)?.message || '操作失败';
-        message.error(errorMessage);
+        showErrorMsg(errorMessage);
       }
     },
     onSuccess: (_data, _variables, _context, mutation) => {
       // 成功提示
       if (mutation.meta?.successMessage) {
-        message.success(mutation.meta.successMessage as string);
+        showSuccessMsg(mutation.meta.successMessage as string);
       }
 
       // 智能缓存失效：根据 mutation key 自动失效相关查询
