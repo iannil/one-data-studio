@@ -64,3 +64,5 @@ temp/
 *.tmp
 
 **/venv/
+.local-dev-pids/
+.local-dev-logs/

@@ -234,6 +234,78 @@ export default defineConfig({
       // 串行执行，确保资源状态一致
       workers: 1,
     },
+
+    // ==================== Visual Acceptance 可见浏览器验收测试 ====================
+    // 用于人工观察的功能验收测试
+    // 默认非 headless 模式，逐页面截图
+    // 覆盖 70+ 页面的完整验收
+    {
+      name: 'visual-acceptance',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于人工观察
+        headless: process.env.HEADLESS === 'true',
+        // 支持 slowMo 模式
+        launchOptions: {
+          slowMo: parseInt(process.env.SLOW_MO || '0', 10),
+        },
+        // 视频录制（可选）
+        video: process.env.RECORD_VIDEO === 'true' ? 'on' : 'off',
+      },
+      testMatch: /visual-acceptance\.spec\.ts$/,
+      retries: 0,
+      timeout: 600 * 1000, // 10 分钟测试超时
+      // 串行执行，确保页面顺序
+      workers: 1,
+    },
+
+    // ==================== Visual CRUD Acceptance 可见浏览器 CRUD 验收测试 ====================
+    // 用于 CRUD 操作的功能验收测试
+    // 覆盖 Create/Read/Update/Delete 四种操作
+    // 默认非 headless 模式，逐操作截图
+    {
+      name: 'visual-crud-acceptance',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于人工观察
+        headless: process.env.HEADLESS === 'true',
+        // 支持 slowMo 模式
+        launchOptions: {
+          slowMo: parseInt(process.env.SLOW_MO || '0', 10),
+        },
+        // 视频录制（可选）
+        video: process.env.RECORD_VIDEO === 'true' ? 'on' : 'off',
+      },
+      testMatch: /visual-crud-acceptance\.spec\.ts$/,
+      retries: 0,
+      timeout: 600 * 1000, // 10 分钟测试超时
+      // 串行执行，确保操作顺序
+      workers: 1,
+    },
+
+    // ==================== P0 CRUD Acceptance P0 核心功能 CRUD 验收测试 ====================
+    // 专门针对 P0 核心功能的 CRUD 验收测试
+    // 使用真实 API（非 Mock）
+    // 生成详细验收报告 + 截图 + 网络请求日志
+    {
+      name: 'p0-crud-acceptance',
+      use: {
+        ...devices['Desktop Chrome'],
+        // 默认非 headless 模式，便于人工观察
+        headless: process.env.HEADLESS === 'true',
+        // 支持 slowMo 模式
+        launchOptions: {
+          slowMo: parseInt(process.env.SLOW_MO || '0', 10),
+        },
+        // 视频录制（可选）
+        video: process.env.RECORD_VIDEO === 'true' ? 'on' : 'off',
+      },
+      testMatch: /p0-crud-acceptance\.spec\.ts$/,
+      retries: 0,
+      timeout: 600 * 1000, // 10 分钟测试超时
+      // 串行执行，确保操作顺序
+      workers: 1,
+    },
   ],
 
   // Web 服务器配置

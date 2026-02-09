@@ -4,11 +4,42 @@
 
 ## 已完成报告列表
 
+### 2026-02-08
+
+| 文档 | 说明 | 类型 |
+|------|------|------|
+| [2026-02-08-dataops-e2e-full-workflow.md](./2026-02-08-dataops-e2e-full-workflow.md) | DataOps E2E 全流程测试 | 测试验证 |
+| [dataops-e2e-validation-2026-02-08.md](./dataops-e2e-validation-2026-02-08.md) | DataOps E2E 验证报告 | 测试验证 |
+
+### 2026-02-07
+
+| 文档 | 说明 | 类型 |
+|------|------|------|
+| [2026-02-07-user-lifecycle-test-generation.md](./2026-02-07-user-lifecycle-test-generation.md) | 用户生命周期测试生成 | 测试开发 |
+| [2026-02-07-interactive-test-implementation.md](./2026-02-07-interactive-test-implementation.md) | 交互式测试实现 | 测试开发 |
+| [2026-02-07-ocr-validation-implementation.md](./2026-02-07-ocr-validation-implementation.md) | OCR 验证实现 | 功能验证 |
+| [2026-02-07-data-ops-live-validation.md](./2026-02-07-data-ops-live-validation.md) | DataOps 实时验证 | 功能验证 |
+
+### 2026-02-06
+
+| 文档 | 说明 | 类型 |
+|------|------|------|
+| [2026-02-06-data-ops-e2e-validation.md](./2026-02-06-data-ops-e2e-validation.md) | DataOps E2E 验证 | 测试验证 |
+| [doc-organization-2026-02-06.md](./doc-organization-2026-02-06.md) | 文档整理与代码清理 | 文档整理 |
+| [tech-stack-overview-2026-02-06.md](./tech-stack-overview-2026-02-06.md) | 技术栈概览 | 文档整理 |
+
 ### 2026-02-04
 
 | 文档 | 说明 | 类型 |
 |------|------|------|
-| [doc-update-source-truth-2026-02-04.md](./doc-update-source-truth-2026-02-04.md) | 文档更新：同步源码配置信息（package.json、.env.example、Makefile、CONTRIB.md、ENVIRONMENT.md、RUNBOOK.md） | 文档整理 |
+| [phased-testing-2026-02-04.md](./phased-testing-2026-02-04.md) | 分阶段测试计划实现 | 测试框架 |
+| [doc-update-source-truth-2026-02-04.md](./doc-update-source-truth-2026-02-04.md) | 文档更新：同步源码配置信息 | 文档整理 |
+
+### 2026-02-03
+
+| 文档 | 说明 | 类型 |
+|------|------|------|
+| [doc-cleanup-code-cleanup-2026-02-03.md](./doc-cleanup-code-cleanup-2026-02-03.md) | 文档和代码清理 | 代码清理 |
 
 ### 2026-01-31 - Phase 1: 补齐短板
 
@@ -49,15 +80,25 @@
 - 用户文档（phase123-components-guide.md）
 - 单元测试（36 个测试用例）
 
+### 2026-01-30
+
+| 文档 | 说明 | 类型 |
+|------|------|------|
+| [planning-tech-optimization-roadmap-2026-01-30.md](./planning-tech-optimization-roadmap-2026-01-30.md) | 技术优化路线图 | 规划文档 |
+
 ## 统计
 
-| 阶段 | 单元测试 | 集成测试 | 合计 |
-|------|----------|----------|------|
-| Phase 1 | 81 | - | 81 |
-| Phase 2 | 106 | - | 106 |
-| Phase 3 | 36 | 50 | 86 |
-| **合计** | **223** | **50** | **273** |
+| 阶段/日期 | 文档数 | 类型 |
+|-----------|--------|------|
+| 2026-02-08 | 2 | 测试验证 |
+| 2026-02-07 | 4 | 测试/功能验证 |
+| 2026-02-06 | 3 | 文档/验证 |
+| 2026-02-04 | 2 | 测试/文档 |
+| 2026-02-03 | 1 | 代码清理 |
+| 2026-01-31 | 3 | 功能实现 |
+| 2026-01-30 | 1 | 规划文档 |
+| **合计** | **16** | - |
 
 ---
 
-> 更新时间：2026-02-04
+> 更新时间：2026-02-09
