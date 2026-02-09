@@ -9,7 +9,7 @@
     "globalTimeout": 0,
     "grep": {},
     "grepInvert": null,
-    "maxFailures": 0,
+    "maxFailures": 1,
     "metadata": {
       "actualWorkers": 1
     },
@@ -29,7 +29,7 @@
         "testMatch": [
           "/core-pages\\.spec\\.ts$/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -45,7 +45,7 @@
         "testMatch": [
           "/.+-deep\\.spec\\.ts$/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -61,7 +61,7 @@
         "testMatch": [
           "/data-ops(-validation)?\\.spec\\.ts$/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -77,7 +77,7 @@
         "testMatch": [
           "/data-ops-live(-validation)?\\.spec\\.ts$/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -93,7 +93,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -109,7 +109,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -125,7 +125,7 @@
         "testMatch": [
           "/core-pages\\.spec\\.ts/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -141,7 +141,7 @@
         "testMatch": [
           "/core-pages\\.spec\\.ts/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -157,7 +157,7 @@
         "testMatch": [
           "/mobile\\.spec\\.ts/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -173,7 +173,7 @@
         "testMatch": [
           "/mobile\\.spec\\.ts/"
         ],
-        "timeout": 60000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -189,7 +189,7 @@
         "testMatch": [
           "/interactive-full-validation\\.spec\\.ts$/"
         ],
-        "timeout": 300000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -205,7 +205,7 @@
         "testMatch": [
           "/ocr-validation\\.spec\\.ts$/"
         ],
-        "timeout": 120000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -221,7 +221,7 @@
         "testMatch": [
           "/data-governance-ui\\.spec\\.ts$/"
         ],
-        "timeout": 300000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -237,7 +237,7 @@
         "testMatch": [
           "/manual-test-workflow\\.spec\\.ts$/"
         ],
-        "timeout": 600000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -253,7 +253,7 @@
         "testMatch": [
           "/persistent-full-workflow\\.spec\\.ts$/"
         ],
-        "timeout": 600000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -269,7 +269,7 @@
         "testMatch": [
           "/full-platform-test\\.spec\\.ts$/"
         ],
-        "timeout": 1800000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -285,7 +285,7 @@
         "testMatch": [
           "/visual-acceptance\\.spec\\.ts$/"
         ],
-        "timeout": 600000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -301,7 +301,7 @@
         "testMatch": [
           "/visual-crud-acceptance\\.spec\\.ts$/"
         ],
-        "timeout": 600000
+        "timeout": 0
       },
       {
         "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
@@ -317,7 +317,23 @@
         "testMatch": [
           "/p0-crud-acceptance\\.spec\\.ts$/"
         ],
-        "timeout": 600000
+        "timeout": 0
+      },
+      {
+        "outputDir": "/Users/iannil/Code/zproducts/one-data-studio/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "dataops-test-specs",
+        "name": "dataops-test-specs",
+        "testDir": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 0
       }
     ],
     "quiet": false,
@@ -349,7 +365,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.58.1",
-    "workers": 4,
+    "workers": 1,
     "webServer": {
       "command": "cd web && npm run dev",
       "port": 3001,
@@ -359,1388 +375,123 @@
   },
   "suites": [
     {
-      "title": "p0-crud-acceptance.spec.ts",
-      "file": "p0-crud-acceptance.spec.ts",
+      "title": "dataops-test-specs/01-data-ingestion.spec.ts",
+      "file": "dataops-test-specs/01-data-ingestion.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "P0 核心功能 CRUD 验收（真实 API）",
-          "file": "p0-crud-acceptance.spec.ts",
-          "line": 717,
+          "title": "1.1 数据源管理 (DS)",
+          "file": "dataops-test-specs/01-data-ingestion.spec.ts",
+          "line": 28,
+          "column": 6,
+          "specs": [
+            {
+              "title": "DS-001 数据源列表查询",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 0,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "dataops-test-specs",
+                  "projectName": "dataops-test-specs",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 531672,
+                      "error": {
+                        "message": "Error: page.goto: Target page, context or browser has been closed",
+                        "stack": "Error: page.goto: Target page, context or browser has been closed\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs/01-data-ingestion.spec.ts:62:18",
+                        "location": {
+                          "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs/01-data-ingestion.spec.ts",
+                          "column": 18,
+                          "line": 62
+                        },
+                        "snippet": "  60 |     const startTime = Date.now();\n  61 |     try {\n> 62 |       await page.goto(`${BASE_URL}/data/datasources`);\n     |                  ^\n  63 |\n  64 |       // 验证页面加载\n  65 |       await verifyPageLoaded(page);"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs/01-data-ingestion.spec.ts",
+                            "column": 18,
+                            "line": 62
+                          },
+                          "message": "Error: page.goto: Target page, context or browser has been closed\n\n  60 |     const startTime = Date.now();\n  61 |     try {\n> 62 |       await page.goto(`${BASE_URL}/data/datasources`);\n     |                  ^\n  63 |\n  64 |       // 验证页面加载\n  65 |       await verifyPageLoaded(page);\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs/01-data-ingestion.spec.ts:62:18"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\u001b[2m[2026-02-09T16:02:35.305Z]\u001b[0m \u001b[32m[INFO]\u001b[0m [DS-001] 数据源列表查询: FAILED\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-09T15:53:42.743Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/dataops-test-specs/01-data-ingestion.spec.ts",
+                        "column": 18,
+                        "line": 62
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "76172b130352b36d92ae-9e7c6485b1147b0ee11a",
+              "file": "dataops-test-specs/01-data-ingestion.spec.ts",
+              "line": 59,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dataops-test-specs/real-test.spec.ts",
+      "file": "dataops-test-specs/real-test.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "一、数据接入 - 真实功能测试",
+          "file": "dataops-test-specs/real-test.spec.ts",
+          "line": 65,
           "column": 6,
           "specs": [],
           "suites": [
             {
-              "title": "[P0] 数据源管理",
-              "file": "p0-crud-acceptance.spec.ts",
-              "line": 758,
-              "column": 10,
+              "title": "1.1 数据源管理 (DS)",
+              "file": "dataops-test-specs/real-test.spec.ts",
+              "line": 67,
+              "column": 8,
               "specs": [
                 {
-                  "title": "1-Read: 查看列表",
+                  "title": "DS-001 数据源列表查询",
                   "ok": true,
                   "tags": [],
                   "tests": [
                     {
-                      "timeout": 600000,
+                      "timeout": 0,
                       "annotations": [],
                       "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 2102,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据源管理] Read 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Read 操作: 数据源管理\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表格已加载\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:26:54.734Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "projectId": "dataops-test-specs",
+                      "projectName": "dataops-test-specs",
+                      "results": [],
+                      "status": "skipped"
                     }
                   ],
-                  "id": "96057bb79fa53568779d-39169bf7d74b11a949a5",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 803,
-                  "column": 11
-                },
-                {
-                  "title": "2-Create: 新建记录",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "failed",
-                          "duration": 7818,
-                          "error": {
-                            "message": "Error: 未检测到 POST /api/v1/datasources 请求",
-                            "stack": "Error: 未检测到 POST /api/v1/datasources 请求\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19",
-                            "location": {
-                              "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                              "column": 19,
-                              "line": 829
-                            },
-                            "snippet": "  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                                "column": 19,
-                                "line": 829
-                              },
-                              "message": "Error: 未检测到 POST /api/v1/datasources 请求\n\n  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19"
-                            }
-                          ],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据源管理] Create 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Create 操作: 数据源管理\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击新建按钮\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表单弹窗已打开\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #name\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #type\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #host\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #port\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击提交按钮: .ant-modal-footer button.ant-btn-primary\n"
-                            },
-                            {
-                              "text": "[WARN] 表单验证错误: 请输入密码\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:26:57.276Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-d6553-API）-P0-数据源管理-2-Create-新建记录-p0-crud-acceptance/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-d6553-API）-P0-数据源管理-2-Create-新建记录-p0-crud-acceptance/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                            "column": 19,
-                            "line": 829
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-91c00a84017dc173c6a6",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 819,
-                  "column": 13
-                },
-                {
-                  "title": "3-Update: 编辑记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1153,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据源管理] Update 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Update 操作: 数据源管理\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:05.866Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-9dfe01f1e5dee252b503",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 836,
-                  "column": 13
-                },
-                {
-                  "title": "4-Delete: 删除记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1067,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据源管理] Delete 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Delete 操作: 数据源管理\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:07.183Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-78da1cfe37342335cd72",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 853,
-                  "column": 13
-                }
-              ]
-            },
-            {
-              "title": "[P0] ETL流程",
-              "file": "p0-crud-acceptance.spec.ts",
-              "line": 758,
-              "column": 10,
-              "specs": [
-                {
-                  "title": "1-Read: 查看列表",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1609,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [ETL流程] Read 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Read 操作: ETL流程\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表格已加载\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:08.285Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-0030ac83d5e22e26fadc",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 803,
-                  "column": 11
-                },
-                {
-                  "title": "2-Create: 新建记录",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 0,
-                          "status": "failed",
-                          "duration": 4244,
-                          "error": {
-                            "message": "Error: 状态码 404 不在期望范围 [200, 201]",
-                            "stack": "Error: 状态码 404 不在期望范围 [200, 201]\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19",
-                            "location": {
-                              "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                              "column": 19,
-                              "line": 829
-                            },
-                            "snippet": "  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                                "column": 19,
-                                "line": 829
-                              },
-                              "message": "Error: 状态码 404 不在期望范围 [200, 201]\n\n  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19"
-                            }
-                          ],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [ETL流程] Create 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Create 操作: ETL流程\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击新建按钮\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表单弹窗已打开\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #name\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #description\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击提交按钮: .ant-modal-footer button.ant-btn-primary\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:09.904Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-788a0-API）-P0-ETL流程-2-Create-新建记录-p0-crud-acceptance/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-788a0-API）-P0-ETL流程-2-Create-新建记录-p0-crud-acceptance/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                            "column": 19,
-                            "line": 829
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-f966b87559375fcad106",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 819,
-                  "column": 13
-                },
-                {
-                  "title": "3-Update: 编辑记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1184,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [ETL流程] Update 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Update 操作: ETL流程\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:14.793Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-84865fbaf7d7d65c8be5",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 836,
-                  "column": 13
-                },
-                {
-                  "title": "4-Delete: 删除记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1065,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [ETL流程] Delete 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Delete 操作: ETL流程\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:16.137Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-098d77fdf3151d2dd2c6",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 853,
-                  "column": 13
-                }
-              ]
-            },
-            {
-              "title": "[P0] 数据质量",
-              "file": "p0-crud-acceptance.spec.ts",
-              "line": 758,
-              "column": 10,
-              "specs": [
-                {
-                  "title": "1-Read: 查看列表",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1599,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据质量] Read 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Read 操作: 数据质量\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表格已加载\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:17.230Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-38886aa133198831c087",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 803,
-                  "column": 11
-                },
-                {
-                  "title": "2-Create: 新建记录",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 0,
-                          "status": "failed",
-                          "duration": 4616,
-                          "error": {
-                            "message": "Error: 状态码 404 不在期望范围 [200, 201]",
-                            "stack": "Error: 状态码 404 不在期望范围 [200, 201]\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19",
-                            "location": {
-                              "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                              "column": 19,
-                              "line": 829
-                            },
-                            "snippet": "  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                                "column": 19,
-                                "line": 829
-                              },
-                              "message": "Error: 状态码 404 不在期望范围 [200, 201]\n\n  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19"
-                            }
-                          ],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据质量] Create 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Create 操作: 数据质量\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击新建按钮\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表单弹窗已打开\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #name\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #rule_type\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击提交按钮: .ant-modal-footer button.ant-btn-primary\n"
-                            },
-                            {
-                              "text": "[WARN] 表单验证错误: Request failed with status code 404\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:18.839Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-a4d5f--API）-P0-数据质量-2-Create-新建记录-p0-crud-acceptance/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-a4d5f--API）-P0-数据质量-2-Create-新建记录-p0-crud-acceptance/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                            "column": 19,
-                            "line": 829
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-4a77c186bf596abc2be3",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 819,
-                  "column": 13
-                },
-                {
-                  "title": "4-Delete: 删除记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 1103,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [数据质量] Delete 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Delete 操作: 数据质量\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:24.080Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-22b0be5bdfa889d1a20d",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 853,
-                  "column": 13
-                }
-              ]
-            },
-            {
-              "title": "[P0] 用户管理",
-              "file": "p0-crud-acceptance.spec.ts",
-              "line": 758,
-              "column": 10,
-              "specs": [
-                {
-                  "title": "1-Read: 查看列表",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 14936,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [用户管理] Read 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Read 操作: 用户管理\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表格已加载\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 搜索功能可用\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:25.348Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-880278d2ccc305497fc5",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 803,
-                  "column": 11
-                },
-                {
-                  "title": "2-Create: 新建记录",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 0,
-                          "status": "failed",
-                          "duration": 10077,
-                          "error": {
-                            "message": "Error: 未检测到 POST /api/v1/admin/users 请求",
-                            "stack": "Error: 未检测到 POST /api/v1/admin/users 请求\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19",
-                            "location": {
-                              "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                              "column": 19,
-                              "line": 829
-                            },
-                            "snippet": "  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                                "column": 19,
-                                "line": 829
-                              },
-                              "message": "Error: 未检测到 POST /api/v1/admin/users 请求\n\n  827 |\n  828 |           if (result.status === 'failed') {\n> 829 |             throw new Error(result.error);\n      |                   ^\n  830 |           }\n  831 |         });\n  832 |       }\n    at /Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts:829:19"
-                            }
-                          ],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [用户管理] Create 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Create 操作: 用户管理\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击新建按钮\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 表单弹窗已打开\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #username\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #email\n"
-                            },
-                            {
-                              "text": "[INFO] 已填写字段: #password\n"
-                            },
-                            {
-                              "text": "[SUCCESS] 已点击提交按钮: .ant-modal-footer button.ant-btn-primary\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:40.317Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-a2215--API）-P0-用户管理-2-Create-新建记录-p0-crud-acceptance/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/Users/iannil/Code/zproducts/one-data-studio/test-results/p0-crud-acceptance-P0-核心功能-a2215--API）-P0-用户管理-2-Create-新建记录-p0-crud-acceptance/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/Users/iannil/Code/zproducts/one-data-studio/tests/e2e/p0-crud-acceptance.spec.ts",
-                            "column": 19,
-                            "line": 829
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-e495a87e19ae8261c6b9",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 819,
-                  "column": 13
-                },
-                {
-                  "title": "3-Update: 编辑记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 4,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3938,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试开始\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 前端地址: http://localhost:3000\n"
-                            },
-                            {
-                              "text": "[INFO] 观察延迟: 500ms\n"
-                            },
-                            {
-                              "text": "[INFO] 报告目录: test-results/crud\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            },
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [用户管理] Update 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Update 操作: 用户管理\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:51.081Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-4cc5d1893efd6805e4f1",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 836,
-                  "column": 13
-                },
-                {
-                  "title": "4-Delete: 删除记录",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 600000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "p0-crud-acceptance",
-                      "projectName": "p0-crud-acceptance",
-                      "results": [
-                        {
-                          "workerIndex": 4,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 3836,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "[INFO] \n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 验收: [用户管理] Delete 操作\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 执行 Delete 操作: 用户管理\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] P0 核心功能 CRUD 验收测试完成\n"
-                            },
-                            {
-                              "text": "[INFO] ============================================\n"
-                            },
-                            {
-                              "text": "[INFO] 已生成报告:\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.md\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.html\n"
-                            },
-                            {
-                              "text": "[INFO]   - test-results/crud/acceptance-report.json\n"
-                            },
-                            {
-                              "text": "[INFO] --------------------------------------------\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-09T12:27:55.245Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "96057bb79fa53568779d-2889cd5a2912cd85fe22",
-                  "file": "p0-crud-acceptance.spec.ts",
-                  "line": 853,
-                  "column": 13
+                  "id": "c227058879a9808735e7-840b9aafa49652c9dafd",
+                  "file": "dataops-test-specs/real-test.spec.ts",
+                  "line": 69,
+                  "column": 9
                 }
               ]
             }
@@ -1749,13 +500,17 @@
       ]
     }
   ],
-  "errors": [],
+  "errors": [
+    {
+      "message": "\u001b[31mTesting stopped early after 1 maximum allowed failures.\u001b[39m"
+    }
+  ],
   "stats": {
-    "startTime": "2026-02-09T12:26:53.996Z",
-    "duration": 65136.351,
-    "expected": 11,
-    "skipped": 0,
-    "unexpected": 4,
+    "startTime": "2026-02-09T15:53:42.149Z",
+    "duration": 533255.319,
+    "expected": 0,
+    "skipped": 1,
+    "unexpected": 1,
     "flaky": 0
   }
 }

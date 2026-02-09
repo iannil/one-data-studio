@@ -306,6 +306,21 @@ export default defineConfig({
       // 串行执行，确保操作顺序
       workers: 1,
     },
+
+    // ==================== DataOps 功能测试规范 ====================
+    // 基于 docs/03-progress/test-specs/ 文档的 321 个功能测试
+    // 覆盖 6 大领域 28 个模块
+    {
+      name: 'dataops-test-specs',
+      use: {
+        ...devices['Desktop Chrome'],
+        headless: process.env.HEADLESS !== 'false',
+      },
+      testDir: './tests/e2e/dataops-test-specs',
+      retries: 0,
+      timeout: 120 * 1000, // 2 分钟单个测试超时
+      workers: process.env.CI ? 1 : 4,
+    },
   ],
 
   // Web 服务器配置
