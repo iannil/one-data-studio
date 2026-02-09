@@ -31,14 +31,30 @@ _db_session_factory = None
 
 class Resource(Enum):
     """资源类型枚举"""
-    DATASET = "dataset"
-    METADATA = "metadata"
-    WORKFLOW = "workflow"
-    CHAT = "chat"
-    MODEL = "model"
-    PROMPT_TEMPLATE = "prompt_template"
+    # 通用资源
     USER = "user"
     SYSTEM = "system"
+
+    # Data 资源 (data-api)
+    DATASET = "dataset"
+    METADATA = "metadata"
+    DATABASE = "database"
+    TABLE = "table"
+    COLUMN = "column"
+    STORAGE = "storage"
+
+    # Agent 资源 (agent-api)
+    WORKFLOW = "workflow"
+    CHAT = "chat"
+    AGENT = "agent"
+    SCHEDULE = "schedule"
+    DOCUMENT = "document"
+    EXECUTION = "execution"
+    TEMPLATE = "template"
+
+    # Model 资源
+    MODEL = "model"
+    PROMPT_TEMPLATE = "prompt_template"
 
 
 class Operation(Enum):
@@ -49,37 +65,64 @@ class Operation(Enum):
     DELETE = "delete"
     EXECUTE = "execute"
     MANAGE = "manage"
+    EXPORT = "export"
+    IMPORT = "import_"
 
 
 # 角色默认权限配置
+# 合并了 agent-api, data-api, admin-api 的权限矩阵
 ROLE_PERMISSIONS: Dict[str, Set[tuple]] = {
     # 管理员 - 全部权限
     "admin": {(r.value, o.value) for r in Resource for o in Operation},
 
     # 数据工程师 - 数据集和元数据权限
     "data_engineer": {
+        # Data 资源
         (Resource.DATASET.value, Operation.CREATE.value),
         (Resource.DATASET.value, Operation.READ.value),
         (Resource.DATASET.value, Operation.UPDATE.value),
-        (Resource.DATASET.value, Operation.DELETE.value),
+        (Resource.DATASET.value, Operation.EXPORT.value),
         (Resource.METADATA.value, Operation.READ.value),
         (Resource.METADATA.value, Operation.CREATE.value),
+        (Resource.METADATA.value, Operation.UPDATE.value),
+        (Resource.DATABASE.value, Operation.READ.value),
+        (Resource.TABLE.value, Operation.READ.value),
+        (Resource.COLUMN.value, Operation.READ.value),
+        (Resource.STORAGE.value, Operation.READ.value),
     },
 
-    # 数据分析师 - 只读权限
+    # 数据分析师 - 只读权限 + 导出
     "data_analyst": {
+        # Data 资源
         (Resource.DATASET.value, Operation.READ.value),
+        (Resource.DATASET.value, Operation.EXPORT.value),
         (Resource.METADATA.value, Operation.READ.value),
+        (Resource.DATABASE.value, Operation.READ.value),
+        (Resource.TABLE.value, Operation.READ.value),
+        (Resource.COLUMN.value, Operation.READ.value),
+        (Resource.STORAGE.value, Operation.READ.value),
+        # Agent 资源
         (Resource.WORKFLOW.value, Operation.READ.value),
     },
 
     # AI 开发者 - 工作流和聊天权限
     "ai_developer": {
+        # Agent 资源
         (Resource.WORKFLOW.value, Operation.CREATE.value),
         (Resource.WORKFLOW.value, Operation.READ.value),
         (Resource.WORKFLOW.value, Operation.UPDATE.value),
         (Resource.WORKFLOW.value, Operation.EXECUTE.value),
+        (Resource.CHAT.value, Operation.CREATE.value),
+        (Resource.CHAT.value, Operation.READ.value),
         (Resource.CHAT.value, Operation.EXECUTE.value),
+        (Resource.AGENT.value, Operation.CREATE.value),
+        (Resource.AGENT.value, Operation.READ.value),
+        (Resource.AGENT.value, Operation.EXECUTE.value),
+        (Resource.DOCUMENT.value, Operation.CREATE.value),
+        (Resource.DOCUMENT.value, Operation.READ.value),
+        (Resource.EXECUTION.value, Operation.READ.value),
+        (Resource.TEMPLATE.value, Operation.READ.value),
+        # Model 资源
         (Resource.MODEL.value, Operation.READ.value),
         (Resource.PROMPT_TEMPLATE.value, Operation.CREATE.value),
         (Resource.PROMPT_TEMPLATE.value, Operation.READ.value),
@@ -88,9 +131,43 @@ ROLE_PERMISSIONS: Dict[str, Set[tuple]] = {
 
     # 普通用户 - 基础权限
     "user": {
+        # Data 资源
         (Resource.DATASET.value, Operation.READ.value),
-        (Resource.CHAT.value, Operation.EXECUTE.value),
+        # Agent 资源
+        (Resource.WORKFLOW.value, Operation.CREATE.value),
         (Resource.WORKFLOW.value, Operation.READ.value),
+        (Resource.WORKFLOW.value, Operation.UPDATE.value),
+        (Resource.WORKFLOW.value, Operation.EXECUTE.value),
+        (Resource.CHAT.value, Operation.CREATE.value),
+        (Resource.CHAT.value, Operation.READ.value),
+        (Resource.CHAT.value, Operation.EXECUTE.value),
+        (Resource.AGENT.value, Operation.CREATE.value),
+        (Resource.AGENT.value, Operation.READ.value),
+        (Resource.AGENT.value, Operation.EXECUTE.value),
+        (Resource.SCHEDULE.value, Operation.READ.value),
+        (Resource.DOCUMENT.value, Operation.CREATE.value),
+        (Resource.DOCUMENT.value, Operation.READ.value),
+        (Resource.EXECUTION.value, Operation.READ.value),
+        (Resource.TEMPLATE.value, Operation.READ.value),
+    },
+
+    # 查看者 - 只读权限
+    "viewer": {
+        # Data 资源
+        (Resource.DATASET.value, Operation.READ.value),
+        (Resource.METADATA.value, Operation.READ.value),
+        (Resource.DATABASE.value, Operation.READ.value),
+        (Resource.TABLE.value, Operation.READ.value),
+        (Resource.COLUMN.value, Operation.READ.value),
+        (Resource.STORAGE.value, Operation.READ.value),
+        # Agent 资源
+        (Resource.WORKFLOW.value, Operation.READ.value),
+        (Resource.CHAT.value, Operation.READ.value),
+        (Resource.AGENT.value, Operation.READ.value),
+        (Resource.SCHEDULE.value, Operation.READ.value),
+        (Resource.DOCUMENT.value, Operation.READ.value),
+        (Resource.EXECUTION.value, Operation.READ.value),
+        (Resource.TEMPLATE.value, Operation.READ.value),
     },
 
     # 访客 - 只读部分资源

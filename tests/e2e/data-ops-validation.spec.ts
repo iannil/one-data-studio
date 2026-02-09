@@ -4,6 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { setupAuth, setupCommonMocks, BASE_URL } from './helpers';
 import {
   PageValidator,
@@ -22,40 +23,40 @@ const results: PageValidationResult[] = [];
  * 生成测试摘要报告
  */
 function generateSummaryReport(): void {
-  console.log('\n========================================');
-  console.log('DataOps 页面验证测试摘要');
-  console.log('========================================\n');
+  logger.info('\n========================================');
+  logger.info('DataOps 页面验证测试摘要');
+  logger.info('========================================\n');
 
   const passed = results.filter(r => r.passed);
   const failed = results.filter(r => !r.passed);
 
-  console.log(`总页面数: ${results.length}`);
-  console.log(`通过: ${passed.length}`);
-  console.log(`失败: ${failed.length}`);
-  console.log(`通过率: ${((passed.length / results.length) * 100).toFixed(1)}%\n`);
+  logger.info(`总页面数: ${results.length}`);
+  logger.info(`通过: ${passed.length}`);
+  logger.info(`失败: ${failed.length}`);
+  logger.info(`通过率: ${((passed.length / results.length) * 100).toFixed(1)}%\n`);
 
   // 失败页面详情
   if (failed.length > 0) {
-    console.log('----------------------------------------');
-    console.log('失败页面详情:');
-    console.log('----------------------------------------\n');
+    logger.info('----------------------------------------');
+    logger.info('失败页面详情:');
+    logger.info('----------------------------------------\n');
 
     for (const result of failed) {
-      console.log(`❌ ${result.pageName} (${result.route})`);
+      logger.info(`❌ ${result.pageName} (${result.route})`);
       for (const error of result.errors) {
-        console.log(`   - ${error}`);
+        logger.info(`   - ${error}`);
       }
-      console.log('');
+      logger.info('');
     }
   }
 
   // 通过页面列表
-  console.log('----------------------------------------');
-  console.log('通过页面列表:');
-  console.log('----------------------------------------\n');
+  logger.info('----------------------------------------');
+  logger.info('通过页面列表:');
+  logger.info('----------------------------------------\n');
 
   for (const result of passed) {
-    console.log(`✅ ${result.pageName} (${result.loadTime}ms)`);
+    logger.info(`✅ ${result.pageName} (${result.loadTime}ms)`);
   }
 
   // 加载时间统计
@@ -63,14 +64,14 @@ function generateSummaryReport(): void {
   const maxLoadTime = Math.max(...results.map(r => r.loadTime));
   const minLoadTime = Math.min(...results.map(r => r.loadTime));
 
-  console.log('\n----------------------------------------');
-  console.log('加载时间统计:');
-  console.log('----------------------------------------\n');
-  console.log(`平均: ${avgLoadTime.toFixed(0)}ms`);
-  console.log(`最快: ${minLoadTime}ms`);
-  console.log(`最慢: ${maxLoadTime}ms`);
+  logger.info('\n----------------------------------------');
+  logger.info('加载时间统计:');
+  logger.info('----------------------------------------\n');
+  logger.info(`平均: ${avgLoadTime.toFixed(0)}ms`);
+  logger.info(`最快: ${minLoadTime}ms`);
+  logger.info(`最慢: ${maxLoadTime}ms`);
 
-  console.log('\n========================================\n');
+  logger.info('\n========================================\n');
 }
 
 /**
@@ -311,7 +312,7 @@ test.describe('DataOps - 综合验证', () => {
       process.stdout.write(`\r${passedCount}/${allResults.length} 页面通过`);
     }
 
-    console.log(`\n\n最终结果: ${passedCount}/${DATA_OPS_PAGES.length} 页面通过`);
+    logger.info(`\n\n最终结果: ${passedCount}/${DATA_OPS_PAGES.length} 页面通过`);
 
     // 至少 75% 的页面应通过
     const passRate = passedCount / DATA_OPS_PAGES.length;
@@ -347,11 +348,11 @@ test.describe('DataOps - JavaScript 错误检测', () => {
     }
 
     if (pagesWithErrors.length > 0) {
-      console.log('\n检测到 JavaScript 错误的页面:');
+      logger.info('\n检测到 JavaScript 错误的页面:');
       for (const page of pagesWithErrors) {
-        console.log(`  - ${page.name} (${page.route})`);
+        logger.info(`  - ${page.name} (${page.route})`);
         for (const error of page.errors) {
-          console.log(`    ${error}`);
+          logger.info(`    ${error}`);
         }
       }
     }
@@ -387,9 +388,9 @@ test.describe('DataOps - 页面加载性能', () => {
     }
 
     if (slowPages.length > 0) {
-      console.log('\n加载较慢的页面:');
+      logger.info('\n加载较慢的页面:');
       for (const page of slowPages) {
-        console.log(`  - ${page.name}: ${page.loadTime}ms`);
+        logger.info(`  - ${page.name}: ${page.loadTime}ms`);
       }
     }
 

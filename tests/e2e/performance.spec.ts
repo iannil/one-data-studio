@@ -4,6 +4,7 @@
  */
 
 import { test, expect } from './fixtures/real-auth.fixture';
+import { logger } from './helpers/logger';
 import { createApiClient, clearRequestLogs, getRequestLogs, getFailedRequests } from './helpers/api-client';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -27,7 +28,7 @@ test.describe('性能 - 页面加载', () => {
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
-    console.log(`Home page load time: ${loadTime}ms`);
+    logger.info(`Home page load time: ${loadTime}ms`);
 
     expect(loadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
   });
@@ -39,7 +40,7 @@ test.describe('性能 - 页面加载', () => {
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
-    console.log(`Datasets page load time: ${loadTime}ms`);
+    logger.info(`Datasets page load time: ${loadTime}ms`);
 
     expect(loadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
   });
@@ -51,7 +52,7 @@ test.describe('性能 - 页面加载', () => {
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
-    console.log(`Workflows page load time: ${loadTime}ms`);
+    logger.info(`Workflows page load time: ${loadTime}ms`);
 
     expect(loadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
   });
@@ -68,7 +69,7 @@ test.describe('性能 - 页面加载', () => {
       });
     });
 
-    console.log('Performance metrics:', metrics);
+    logger.info('Performance metrics:', metrics);
 
     expect(metrics.fcp).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
   });
@@ -90,7 +91,7 @@ test.describe('性能 - 页面加载', () => {
     });
 
     if (lcp > 0) {
-      console.log(`Largest Contentful Paint: ${lcp}ms`);
+      logger.info(`Largest Contentful Paint: ${lcp}ms`);
       expect(lcp).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime * 2);
     }
   });
@@ -109,7 +110,7 @@ test.describe('性能 - API 响应时间', () => {
     await apiClient.get('/api/v1/health');
     const responseTime = Date.now() - startTime;
 
-    console.log(`Health check API response time: ${responseTime}ms`);
+    logger.info(`Health check API response time: ${responseTime}ms`);
     expect(responseTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP50ResponseTime);
   });
 
@@ -120,7 +121,7 @@ test.describe('性能 - API 响应时间', () => {
     await apiClient.get('/api/v1/user/info');
     const responseTime = Date.now() - startTime;
 
-    console.log(`User info API response time: ${responseTime}ms`);
+    logger.info(`User info API response time: ${responseTime}ms`);
     expect(responseTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP50ResponseTime);
   });
 
@@ -131,7 +132,7 @@ test.describe('性能 - API 响应时间', () => {
     await apiClient.get('/api/v1/datasets');
     const responseTime = Date.now() - startTime;
 
-    console.log(`Datasets list API response time: ${responseTime}ms`);
+    logger.info(`Datasets list API response time: ${responseTime}ms`);
     expect(responseTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP95ResponseTime);
   });
 
@@ -142,7 +143,7 @@ test.describe('性能 - API 响应时间', () => {
     await apiClient.get('/api/v1/workflows');
     const responseTime = Date.now() - startTime;
 
-    console.log(`Workflows list API response time: ${responseTime}ms`);
+    logger.info(`Workflows list API response time: ${responseTime}ms`);
     expect(responseTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP95ResponseTime);
   });
 
@@ -173,7 +174,7 @@ test.describe('性能 - API 响应时间', () => {
     const p95 = responseTimes[Math.floor(responseTimes.length * 0.95)];
     const p99 = responseTimes[Math.floor(responseTimes.length * 0.99)];
 
-    console.log(`Response times - P50: ${p50}ms, P95: ${p95}ms, P99: ${p99}ms`);
+    logger.info(`Response times - P50: ${p50}ms, P95: ${p95}ms, P99: ${p99}ms`);
 
     expect(p50).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP50ResponseTime);
     expect(p95).toBeLessThan(PERFORMANCE_THRESHOLDS.maxApiP95ResponseTime);
@@ -197,7 +198,7 @@ test.describe('性能 - 大数据量渲染', () => {
       const rows = table.locator('tr, [data-row-key]');
       const rowCount = await rows.count();
 
-      console.log(`Dataset list row count: ${rowCount}`);
+      logger.info(`Dataset list row count: ${rowCount}`);
 
       if (rowCount > 0) {
         // 测试滚动性能
@@ -207,7 +208,7 @@ test.describe('性能 - 大数据量渲染', () => {
         });
         const scrollTime = Date.now() - startTime;
 
-        console.log(`Scroll time: ${scrollTime}ms`);
+        logger.info(`Scroll time: ${scrollTime}ms`);
         expect(scrollTime).toBeLessThan(500);
       }
     }
@@ -223,7 +224,7 @@ test.describe('性能 - 大数据量渲染', () => {
     if (hasTable) {
       // 检查是否有虚拟滚动
       const hasVirtualScroll = await table.locator('.virtual-scroll, [class*="virtual"]').count() > 0;
-      console.log('Has virtual scroll:', hasVirtualScroll);
+      logger.info('Has virtual scroll:', hasVirtualScroll);
     }
   });
 
@@ -242,7 +243,7 @@ test.describe('性能 - 大数据量渲染', () => {
         await page.waitForLoadState('networkidle');
         const loadTime = Date.now() - startTime;
 
-        console.log(`Workflow detail load time: ${loadTime}ms`);
+        logger.info(`Workflow detail load time: ${loadTime}ms`);
         expect(loadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
       }
     }
@@ -267,8 +268,8 @@ test.describe('性能 - 并发操作', () => {
     await Promise.all(promises);
     const totalTime = Date.now() - startTime;
 
-    console.log(`Concurrent requests (10) total time: ${totalTime}ms`);
-    console.log(`Average time per request: ${totalTime / 10}ms`);
+    logger.info(`Concurrent requests (10) total time: ${totalTime}ms`);
+    logger.info(`Average time per request: ${totalTime / 10}ms`);
 
     // 并发请求应该比串行快
     expect(totalTime).toBeLessThan(10000);
@@ -293,7 +294,7 @@ test.describe('性能 - 并发操作', () => {
     await page.waitForLoadState('networkidle');
     const totalTime = Date.now() - startTime;
 
-    console.log(`Rapid navigation (5 pages) time: ${totalTime}ms`);
+    logger.info(`Rapid navigation (5 pages) time: ${totalTime}ms`);
     expect(totalTime).toBeLessThan(15000);
   });
 
@@ -332,7 +333,7 @@ test.describe('性能 - 内存泄漏检测', () => {
     };
 
     const initialMemory = await getMemoryUsage();
-    console.log(`Initial memory: ${initialMemory} bytes`);
+    logger.info(`Initial memory: ${initialMemory} bytes`);
 
     // 进行多次导航
     for (let i = 0; i < 5; i++) {
@@ -353,8 +354,8 @@ test.describe('性能 - 内存泄漏检测', () => {
     const memoryIncrease = finalMemory - initialMemory;
     const memoryIncreaseMB = memoryIncrease / (1024 * 1024);
 
-    console.log(`Final memory: ${finalMemory} bytes`);
-    console.log(`Memory increase: ${memoryIncreaseMB.toFixed(2)} MB`);
+    logger.info(`Final memory: ${finalMemory} bytes`);
+    logger.info(`Memory increase: ${memoryIncreaseMB.toFixed(2)} MB`);
 
     // 内存增长不应超过 50MB（这是一个宽松的阈值）
     expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
@@ -389,7 +390,7 @@ test.describe('性能 - 内存泄漏检测', () => {
     const finalMemory = await getMemoryUsage();
     const memoryIncrease = finalMemory - initialMemory;
 
-    console.log(`Memory increase after API calls: ${(memoryIncrease / (1024 * 1024)).toFixed(2)} MB`);
+    logger.info(`Memory increase after API calls: ${(memoryIncrease / (1024 * 1024)).toFixed(2)} MB`);
 
     expect(memoryIncrease).toBeLessThan(30 * 1024 * 1024);
   });
@@ -422,17 +423,17 @@ test.describe('性能 - 资源加载', () => {
     resources.sort((a, b) => b.size - a.size);
     const largest = resources.slice(0, 5);
 
-    console.log('Largest resources:');
+    logger.info('Largest resources:');
     for (const resource of largest) {
       const sizeKB = (resource.size / 1024).toFixed(2);
-      console.log(`  ${resource.name}: ${sizeKB} KB`);
+      logger.info(`  ${resource.name}: ${sizeKB} KB`);
     }
 
     // 主 bundle 不应过大（1MB 以下为佳）
     const mainBundleSize = resources.find(r => r.name.includes('main') || r.name.includes('index'));
     if (mainBundleSize) {
       const sizeMB = mainBundleSize.size / (1024 * 1024);
-      console.log(`Main bundle size: ${sizeMB.toFixed(2)} MB`);
+      logger.info(`Main bundle size: ${sizeMB.toFixed(2)} MB`);
     }
   });
 
@@ -457,9 +458,9 @@ test.describe('性能 - 资源加载', () => {
       return match && parseInt(match[1]) > 86400; // 超过1天
     });
 
-    console.log(`Cacheable resources: ${cacheableResources.length}`);
-    console.log(`With cache headers: ${withCache.length}`);
-    console.log(`With long-term cache (>1 day): ${withLongCache.length}`);
+    logger.info(`Cacheable resources: ${cacheableResources.length}`);
+    logger.info(`With cache headers: ${withCache.length}`);
+    logger.info(`With long-term cache (>1 day): ${withLongCache.length}`);
   });
 });
 
@@ -484,12 +485,12 @@ test.describe('性能 - 性能回归测试', () => {
       const loadTime = Date.now() - startTime;
 
       results.push({ name: pg.name, loadTime });
-      console.log(`${pg.name} page load time: ${loadTime}ms`);
+      logger.info(`${pg.name} page load time: ${loadTime}ms`);
     }
 
     // 计算平均加载时间
     const avgLoadTime = results.reduce((sum, r) => sum + r.loadTime, 0) / results.length;
-    console.log(`Average page load time: ${avgLoadTime.toFixed(2)}ms`);
+    logger.info(`Average page load time: ${avgLoadTime.toFixed(2)}ms`);
 
     expect(avgLoadTime).toBeLessThan(PERFORMANCE_THRESHOLDS.maxPageLoadTime);
   });

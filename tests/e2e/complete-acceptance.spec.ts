@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 
 // ============================================
 // 配置
@@ -102,20 +103,20 @@ const PAGES = {
  * 支持开发模式模拟登录和 Keycloak SSO 登录
  */
 async function performLogin(page: any) {
-  console.log('\n========================================');
-  console.log('[登录] 开始登录流程...');
-  console.log('========================================');
+  logger.info('\n========================================');
+  logger.info('[登录] 开始登录流程...');
+  logger.info('========================================');
 
   // 访问首页，会被重定向到登录页
   await page.goto(CONFIG.BASE_URL);
   await page.waitForLoadState('domcontentloaded');
 
   const currentUrl = page.url();
-  console.log(`[登录] 当前 URL: ${currentUrl}`);
+  logger.info(`[登录] 当前 URL: ${currentUrl}`);
 
   // 检查是否在登录页面
   if (currentUrl.includes('/login')) {
-    console.log('[登录] 检测到登录页面');
+    logger.info('[登录] 检测到登录页面');
 
     // 等待页面加载完成
     await page.waitForLoadState('networkidle');
@@ -125,17 +126,17 @@ async function performLogin(page: any) {
     const hasSSO = await ssoButton.count() > 0;
 
     if (hasSSO) {
-      console.log('[登录] 发现 SSO 登录按钮');
+      logger.info('[登录] 发现 SSO 登录按钮');
 
       // 先尝试使用开发模式登录（如果在开发环境）
       const devModeLink = page.locator('button:has-text("开发模式"), button:has-text("显示")');
       const hasDevMode = await devModeLink.count() > 0;
 
       if (hasDevMode) {
-        console.log('[登录] 使用开发模式模拟登录');
+        logger.info('[登录] 使用开发模式模拟登录');
         await devModeLogin(page);
       } else {
-        console.log('[登录] 使用 SSO 登录');
+        logger.info('[登录] 使用 SSO 登录');
         await ssoButton.click();
         // 等待跳转到 Keycloak 或直接登录成功
         await page.waitForTimeout(3000);
@@ -143,13 +144,13 @@ async function performLogin(page: any) {
         // 检查是否跳转到 Keycloak
         const newUrl = page.url();
         if (newUrl.includes('keycloak') || newUrl.includes('auth')) {
-          console.log('[登录] 跳转到 Keycloak，执行 Keycloak 登录');
+          logger.info('[登录] 跳转到 Keycloak，执行 Keycloak 登录');
           await keycloakLogin(page);
         }
       }
     } else {
       // 可能是 Keycloak 直接登录页面
-      console.log('[登录] 尝试 Keycloak 登录');
+      logger.info('[登录] 尝试 Keycloak 登录');
       await keycloakLogin(page);
     }
   }
@@ -157,11 +158,11 @@ async function performLogin(page: any) {
   // 验证登录成功 - 等待页面不再是登录页
   await page.waitForTimeout(2000);
   const finalUrl = page.url();
-  console.log(`[登录] 登录后 URL: ${finalUrl}`);
+  logger.info(`[登录] 登录后 URL: ${finalUrl}`);
 
   // 如果还在登录页，可能需要再次尝试
   if (finalUrl.includes('/login')) {
-    console.log('[登录] 仍在登录页，尝试开发模式登录');
+    logger.info('[登录] 仍在登录页，尝试开发模式登录');
 
     // 点击显示模拟登录表单
     const showMockBtn = page.locator('button:has-text("显示"), button:has-text("模拟")').first();
@@ -176,20 +177,20 @@ async function performLogin(page: any) {
   // 最终验证 - 等待页面跳转
   await page.waitForTimeout(2000);
   const finalUrl2 = page.url();
-  console.log(`[登录] 最终 URL: ${finalUrl2}`);
+  logger.info(`[登录] 最终 URL: ${finalUrl2}`);
 
   // 检查是否有登录后的页面内容
   const hasNav = await page.locator('nav, .sidebar, .menu, [class*="nav"], [class*="sidebar"], header').count() > 0;
-  console.log(`[登录] 检测到导航元素: ${hasNav}`);
+  logger.info(`[登录] 检测到导航元素: ${hasNav}`);
 
-  console.log('[登录] ✓ 登录流程完成\n');
+  logger.info('[登录] ✓ 登录流程完成\n');
 }
 
 /**
  * Keycloak SSO 登录
  */
 async function keycloakLogin(page: any) {
-  console.log(`[Keycloak] 填写登录表单...`);
+  logger.info(`[Keycloak] 填写登录表单...`);
 
   try {
     // 等待表单加载
@@ -198,7 +199,7 @@ async function keycloakLogin(page: any) {
     // 填写用户名
     const usernameInput = page.locator('#username, input[name="username"]').first();
     await usernameInput.fill(CONFIG.DEV_USER.username);
-    console.log(`[Keycloak] 用户名: ${CONFIG.DEV_USER.username}`);
+    logger.info(`[Keycloak] 用户名: ${CONFIG.DEV_USER.username}`);
 
     // 填写密码
     const passwordInput = page.locator('#password, input[name="password"]').first();
@@ -208,14 +209,14 @@ async function keycloakLogin(page: any) {
     const loginBtn = page.locator('#kc-login, input[name="login"], button[type="submit"]').first();
     await Promise.all([
       page.waitForNavigation({ timeout: 30000 }).catch(() => {
-        console.log('[Keycloak] 登录后没有页面跳转');
+        logger.info('[Keycloak] 登录后没有页面跳转');
       }),
       loginBtn.click(),
     ]);
 
     await page.waitForTimeout(2000);
   } catch (e) {
-    console.log(`[Keycloak] Keycloak 登录出错或不是 Keycloak 页面: ${e}`);
+    logger.info(`[Keycloak] Keycloak 登录出错或不是 Keycloak 页面: ${e}`);
   }
 }
 
@@ -223,7 +224,7 @@ async function keycloakLogin(page: any) {
  * 开发模式登录
  */
 async function devModeLogin(page: any) {
-  console.log(`[开发模式] 填写登录表单...`);
+  logger.info(`[开发模式] 填写登录表单...`);
 
   try {
     // 如果模拟登录表单隐藏，先展开
@@ -236,7 +237,7 @@ async function devModeLogin(page: any) {
     // 查找用户名输入框
     const usernameInput = page.locator('input[placeholder="用户名"], input[name="username"]').first();
     await usernameInput.fill(CONFIG.DEV_USER.username);
-    console.log(`[开发模式] 用户名: ${CONFIG.DEV_USER.username}`);
+    logger.info(`[开发模式] 用户名: ${CONFIG.DEV_USER.username}`);
 
     // 查找密码输入框
     const passwordInput = page.locator('input[placeholder="密码"], input[type="password"]').first();
@@ -248,9 +249,9 @@ async function devModeLogin(page: any) {
 
     // 等待登录完成和页面跳转
     await page.waitForTimeout(2000);
-    console.log('[开发模式] ✓ 登录表单已提交');
+    logger.info('[开发模式] ✓ 登录表单已提交');
   } catch (e) {
-    console.log(`[开发模式] 登录出错: ${e}`);
+    logger.info(`[开发模式] 登录出错: ${e}`);
   }
 }
 
@@ -262,31 +263,31 @@ const PageValidator = {
    * 验证页面基本结构
    */
   async validateBasicStructure(page: any, pageName: string) {
-    console.log(`\n[${pageName}] ========== 验证页面基本结构 ==========`);
+    logger.info(`\n[${pageName}] ========== 验证页面基本结构 ==========`);
 
     // 获取页面标题
     const title = await page.title();
-    console.log(`[${pageName}] 页面标题: ${title}`);
+    logger.info(`[${pageName}] 页面标题: ${title}`);
 
     // 检查是否有主要内容区域
     const mainContent = page.locator('main, .main-content, #app, [class*="content"], [class*="page"]');
     const hasMain = await mainContent.count() > 0;
-    console.log(`[${pageName}] 主内容区域: ${hasMain ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 主内容区域: ${hasMain ? '✓' : '✗'}`);
 
     // 检查是否有导航栏/侧边栏
     const nav = page.locator('nav, .navbar, .sidebar, .menu, [class*="nav"], [class*="sidebar"], [class*="header"]');
     const hasNav = await nav.count() > 0;
-    console.log(`[${pageName}] 导航元素: ${hasNav ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 导航元素: ${hasNav ? '✓' : '✗'}`);
 
     // 检查页面是否非空
     const bodyText = await page.locator('body').textContent() || '';
     const hasContent = bodyText.trim().length > 50;
-    console.log(`[${pageName}] 页面内容长度: ${bodyText.length} 字符 ${hasContent ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 页面内容长度: ${bodyText.length} 字符 ${hasContent ? '✓' : '✗'}`);
 
     // 检查是否有错误信息
     const hasError = bodyText.includes('Error') || bodyText.includes('错误') || bodyText.includes('404');
     if (hasError) {
-      console.log(`[${pageName}] ⚠️ 页面可能存在错误`);
+      logger.info(`[${pageName}] ⚠️ 页面可能存在错误`);
     }
 
     return hasMain || hasNav || hasContent;
@@ -296,27 +297,27 @@ const PageValidator = {
    * 验证列表类页面（表格、列表等）
    */
   async validateListPage(page: any, pageName: string) {
-    console.log(`\n[${pageName}] ========== 验证列表页面 ==========`);
+    logger.info(`\n[${pageName}] ========== 验证列表页面 ==========`);
 
     // 检查是否有表格或列表容器
     const table = page.locator('table, .table, .list, [class*="table"], [class*="list"], .data-table');
     const hasTable = await table.count() > 0;
-    console.log(`[${pageName}] 数据表格/列表: ${hasTable ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 数据表格/列表: ${hasTable ? '✓' : '✗'}`);
 
     // 检查是否有搜索/筛选功能
     const search = page.locator('input[placeholder*="搜索"], input[placeholder*="search"], .search, [class*="search"], [class*="filter"]');
     const hasSearch = await search.count() > 0;
-    console.log(`[${pageName}] 搜索/筛选: ${hasSearch ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 搜索/筛选: ${hasSearch ? '✓' : '✗'}`);
 
     // 检查是否有分页
     const pagination = page.locator('.pagination, .pager, [class*="pagination"]');
     const hasPagination = await pagination.count() > 0;
-    console.log(`[${pageName}] 分页控件: ${hasPagination ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 分页控件: ${hasPagination ? '✓' : '✗'}`);
 
     // 检查是否有操作按钮（新建、创建等）
     const actionBtns = page.locator('button:has-text("创建"), button:has-text("新建"), button:has-text("添加"), button:has-text("上传"), button:has-text("Create"), button:has-text("New"), button:has-text("Add")');
     const hasActionBtns = await actionBtns.count() > 0;
-    console.log(`[${pageName}] 操作按钮: ${hasActionBtns ? `✓ (${await actionBtns.count()}个)` : '✗'}`);
+    logger.info(`[${pageName}] 操作按钮: ${hasActionBtns ? `✓ (${await actionBtns.count()}个)` : '✗'}`);
 
     return hasTable || hasActionBtns;
   },
@@ -325,22 +326,22 @@ const PageValidator = {
    * 验证编辑器类页面（IDE、表单等）
    */
   async validateEditorPage(page: any, pageName: string) {
-    console.log(`\n[${pageName}] ========== 验证编辑器页面 ==========`);
+    logger.info(`\n[${pageName}] ========== 验证编辑器页面 ==========`);
 
     // 检查是否有编辑器或输入区域
     const editor = page.locator('textarea, .editor, [class*="editor"], .monaco, .ace, [contenteditable="true"]');
     const hasEditor = await editor.count() > 0;
-    console.log(`[${pageName}] 编辑器/输入区: ${hasEditor ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 编辑器/输入区: ${hasEditor ? '✓' : '✗'}`);
 
     // 检查是否有运行/执行按钮
     const runBtn = page.locator('button:has-text("运行"), button:has-text("执行"), button:has-text("Run"), button:has-text("Execute")');
     const hasRunBtn = await runBtn.count() > 0;
-    console.log(`[${pageName}] 运行按钮: ${hasRunBtn ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 运行按钮: ${hasRunBtn ? '✓' : '✗'}`);
 
     // 检查是否有保存按钮
     const saveBtn = page.locator('button:has-text("保存"), button:has-text("Save")');
     const hasSaveBtn = await saveBtn.count() > 0;
-    console.log(`[${pageName}] 保存按钮: ${hasSaveBtn ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 保存按钮: ${hasSaveBtn ? '✓' : '✗'}`);
 
     return hasEditor;
   },
@@ -349,22 +350,22 @@ const PageValidator = {
    * 验证表单类页面
    */
   async validateFormPage(page: any, pageName: string) {
-    console.log(`\n[${pageName}] ========== 验证表单页面 ==========`);
+    logger.info(`\n[${pageName}] ========== 验证表单页面 ==========`);
 
     // 检查是否有表单
     const form = page.locator('form, .form, [class*="form"]');
     const hasForm = await form.count() > 0;
-    console.log(`[${pageName}] 表单: ${hasForm ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 表单: ${hasForm ? '✓' : '✗'}`);
 
     // 检查是否有输入框
     const inputs = page.locator('input, select, textarea');
     const hasInputs = await inputs.count() > 0;
-    console.log(`[${pageName}] 输入控件: ${hasInputs ? `✓ (${await inputs.count()}个)` : '✗'}`);
+    logger.info(`[${pageName}] 输入控件: ${hasInputs ? `✓ (${await inputs.count()}个)` : '✗'}`);
 
     // 检查是否有提交按钮
     const submitBtn = page.locator('button[type="submit"], button:has-text("提交"), button:has-text("确定"), button:has-text("保存")');
     const hasSubmitBtn = await submitBtn.count() > 0;
-    console.log(`[${pageName}] 提交按钮: ${hasSubmitBtn ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 提交按钮: ${hasSubmitBtn ? '✓' : '✗'}`);
 
     return hasForm || hasInputs;
   },
@@ -382,9 +383,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
    * 在所有测试前执行登录
    */
   test.beforeAll(async ({ browser }) => {
-    console.log('\n' + '='.repeat(60));
-    console.log('ONE-DATA-STUDIO 验收测试开始');
-    console.log('='.repeat(60));
+    logger.info('\n' + '='.repeat(60));
+    logger.info('ONE-DATA-STUDIO 验收测试开始');
+    logger.info('='.repeat(60));
 
     // 创建浏览器上下文
     authContext = await browser.newContext({
@@ -404,9 +405,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     if (authContext) {
       await authContext.close();
     }
-    console.log('\n' + '='.repeat(60));
-    console.log('ONE-DATA-STUDIO 验收测试完成');
-    console.log('='.repeat(60) + '\n');
+    logger.info('\n' + '='.repeat(60));
+    logger.info('ONE-DATA-STUDIO 验收测试完成');
+    logger.info('='.repeat(60) + '\n');
   });
 
   // ============================================
@@ -424,11 +425,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
         // 验证首页特有元素
         const statCards = page.locator('.stat-card, .metric-card, [class*="stat"], [class*="metric"], [class*="card"]');
         const hasStats = await statCards.count() > 0;
-        console.log(`[首页] 统计卡片: ${hasStats ? `✓ (${await statCards.count()}个)` : '✗'}`);
+        logger.info(`[首页] 统计卡片: ${hasStats ? `✓ (${await statCards.count()}个)` : '✗'}`);
 
         const quickActions = page.locator('button:has-text("数据集"), button:has-text("聊天"), button:has-text("元数据"), [class*="quick"], [class*="shortcut"]');
         const hasQuick = await quickActions.count() > 0;
-        console.log(`[首页] 快捷操作: ${hasQuick ? `✓ (${await quickActions.count()}个)` : '✗'}`);
+        logger.info(`[首页] 快捷操作: ${hasQuick ? `✓ (${await quickActions.count()}个)` : '✗'}`);
 
         expect(valid || hasStats || hasQuick).toBeTruthy();
       } finally {
@@ -447,11 +448,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
         // 验证数据集特有元素
         const datasetItems = page.locator('tr, [class*="dataset"], [class*="data-item"]');
         const hasItems = await datasetItems.count() > 0;
-        console.log(`[数据集] 数据项: ${hasItems ? `✓ (${await datasetItems.count()}个)` : '✗'}`);
+        logger.info(`[数据集] 数据项: ${hasItems ? `✓ (${await datasetItems.count()}个)` : '✗'}`);
 
         const uploadBtn = page.locator('button:has-text("上传"), button:has-text("导入"), [class*="upload"]');
         const hasUpload = await uploadBtn.count() > 0;
-        console.log(`[数据集] 上传功能: ${hasUpload ? '✓' : '✗'}`);
+        logger.info(`[数据集] 上传功能: ${hasUpload ? '✓' : '✗'}`);
 
         expect(valid || hasItems).toBeTruthy();
       } finally {
@@ -469,7 +470,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const uploadBtn = page.locator('button:has-text("上传"), button:has-text("Upload"), [class*="upload"]');
         const hasUpload = await uploadBtn.count() > 0;
-        console.log(`[文档中心] 上传按钮: ${hasUpload ? '✓' : '✗'}`);
+        logger.info(`[文档中心] 上传按钮: ${hasUpload ? '✓' : '✗'}`);
 
         expect(valid || hasUpload).toBeTruthy();
       } finally {
@@ -488,19 +489,19 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
         // 验证聊天界面元素
         const chatArea = page.locator('.chat, [class*="chat"], .conversation, [class*="message"], [class*="dialog"]');
         const hasChat = await chatArea.count() > 0;
-        console.log(`[AI对话] 聊天区域: ${hasChat ? '✓' : '✗'}`);
+        logger.info(`[AI对话] 聊天区域: ${hasChat ? '✓' : '✗'}`);
 
         const inputBox = page.locator('textarea, input[placeholder*="输入"], input[placeholder*="message"], [contenteditable="true"]');
         const hasInput = await inputBox.count() > 0;
-        console.log(`[AI对话] 输入框: ${hasInput ? '✓' : '✗'}`);
+        logger.info(`[AI对话] 输入框: ${hasInput ? '✓' : '✗'}`);
 
         const sendBtn = page.locator('button:has-text("发送"), button:has-text("Send"), [class*="send"]');
         const hasSend = await sendBtn.count() > 0;
-        console.log(`[AI对话] 发送按钮: ${hasSend ? '✓' : '✗'}`);
+        logger.info(`[AI对话] 发送按钮: ${hasSend ? '✓' : '✗'}`);
 
         const modelSelect = page.locator('select, [class*="model"], .ant-select');
         const hasModel = await modelSelect.count() > 0;
-        console.log(`[AI对话] 模型选择: ${hasModel ? '✓' : '✗'}`);
+        logger.info(`[AI对话] 模型选择: ${hasModel ? '✓' : '✗'}`);
 
         expect(hasChat || hasInput).toBeTruthy();
       } finally {
@@ -518,7 +519,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const workflowItems = page.locator('[class*="workflow"], tr[data-row-key]');
         const hasWorkflows = await workflowItems.count() > 0;
-        console.log(`[工作流] 工作流项: ${hasWorkflows ? `✓ (${await workflowItems.count()}个)` : '✗'}`);
+        logger.info(`[工作流] 工作流项: ${hasWorkflows ? `✓ (${await workflowItems.count()}个)` : '✗'}`);
 
         expect(valid || hasWorkflows).toBeTruthy();
       } finally {
@@ -537,12 +538,12 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
         // 检查数据库树形结构
         const tree = page.locator('.tree, [class*="tree"], .database-list, [class*="database"]');
         const hasTree = await tree.count() > 0;
-        console.log(`[元数据] 数据库树: ${hasTree ? '✓' : '✗'}`);
+        logger.info(`[元数据] 数据库树: ${hasTree ? '✓' : '✗'}`);
 
         // 检查表列表
         const tableList = page.locator('table, [class*="table"]');
         const hasTables = await tableList.count() > 0;
-        console.log(`[元数据] 表列表: ${hasTables ? '✓' : '✗'}`);
+        logger.info(`[元数据] 表列表: ${hasTables ? '✓' : '✗'}`);
 
         expect(hasTree || hasTables).toBeTruthy();
       } finally {
@@ -586,11 +587,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const inputArea = page.locator('textarea, [class*="input"]');
         const hasInput = await inputArea.count() > 0;
-        console.log(`[Text2SQL] 输入区域: ${hasInput ? '✓' : '✗'}`);
+        logger.info(`[Text2SQL] 输入区域: ${hasInput ? '✓' : '✗'}`);
 
         const generateBtn = page.locator('button:has-text("生成"), button:has-text("执行"), button:has-text("Generate")');
         const hasBtn = await generateBtn.count() > 0;
-        console.log(`[Text2SQL] 生成按钮: ${hasBtn ? '✓' : '✗'}`);
+        logger.info(`[Text2SQL] 生成按钮: ${hasBtn ? '✓' : '✗'}`);
 
         expect(hasInput || hasBtn).toBeTruthy();
       } finally {
@@ -626,7 +627,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const testBtn = page.locator('button:has-text("测试连接"), button:has-text("Test")');
         const hasTest = await testBtn.count() > 0;
-        console.log(`[数据源] 测试连接按钮: ${hasTest ? '✓' : '✗'}`);
+        logger.info(`[数据源] 测试连接按钮: ${hasTest ? '✓' : '✗'}`);
 
         expect(valid || hasTest).toBeTruthy();
       } finally {
@@ -644,7 +645,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const etlCanvas = page.locator('.canvas, [class*="flow"], [class*="dag"], svg');
         const hasCanvas = await etlCanvas.count() > 0;
-        console.log(`[ETL] 流程画布: ${hasCanvas ? '✓' : '✗'}`);
+        logger.info(`[ETL] 流程画布: ${hasCanvas ? '✓' : '✗'}`);
 
         expect(valid || hasCanvas).toBeTruthy();
       } finally {
@@ -662,7 +663,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const qualityRules = page.locator('[class*="rule"], [class*="quality"]');
         const hasRules = await qualityRules.count() > 0;
-        console.log(`[数据质量] 质量规则: ${hasRules ? '✓' : '✗'}`);
+        logger.info(`[数据质量] 质量规则: ${hasRules ? '✓' : '✗'}`);
 
         expect(valid || hasRules).toBeTruthy();
       } finally {
@@ -680,7 +681,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const graph = page.locator('svg, canvas, [class*="graph"], [class*="dag"]');
         const hasGraph = await graph.count() > 0;
-        console.log(`[数据血缘] 关系图: ${hasGraph ? '✓' : '✗'}`);
+        logger.info(`[数据血缘] 关系图: ${hasGraph ? '✓' : '✗'}`);
 
         expect(hasGraph).toBeTruthy();
       } finally {
@@ -789,7 +790,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const charts = page.locator('canvas, [class*="chart"], [class*="report"]');
         const hasCharts = await charts.count() > 0;
-        console.log(`[BI报表] 图表: ${hasCharts ? '✓' : '✗'}`);
+        logger.info(`[BI报表] 图表: ${hasCharts ? '✓' : '✗'}`);
 
         expect(hasCharts).toBeTruthy();
       } finally {
@@ -807,7 +808,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const metrics = page.locator('canvas, [class*="metric"], [class*="chart"]');
         const hasMetrics = await metrics.count() > 0;
-        console.log(`[系统监控] 指标图表: ${hasMetrics ? '✓' : '✗'}`);
+        logger.info(`[系统监控] 指标图表: ${hasMetrics ? '✓' : '✗'}`);
 
         expect(hasMetrics).toBeTruthy();
       } finally {
@@ -843,7 +844,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const notebookItems = page.locator('[class*="notebook"], [class*="ipynb"]');
         const hasNotebooks = await notebookItems.count() > 0;
-        console.log(`[Notebook] 笔记本项: ${hasNotebooks ? `✓ (${await notebookItems.count()}个)` : '✗'}`);
+        logger.info(`[Notebook] 笔记本项: ${hasNotebooks ? `✓ (${await notebookItems.count()}个)` : '✗'}`);
 
         expect(valid || hasNotebooks).toBeTruthy();
       } finally {
@@ -861,7 +862,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const compareBtn = page.locator('button:has-text("对比"), button:has-text("Compare")');
         const hasCompare = await compareBtn.count() > 0;
-        console.log(`[实验管理] 对比功能: ${hasCompare ? '✓' : '✗'}`);
+        logger.info(`[实验管理] 对比功能: ${hasCompare ? '✓' : '✗'}`);
 
         expect(valid || hasCompare).toBeTruthy();
       } finally {
@@ -879,7 +880,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const modelItems = page.locator('[class*="model"]');
         const hasModels = await modelItems.count() > 0;
-        console.log(`[模型仓库] 模型项: ${hasModels ? `✓ (${await modelItems.count()}个)` : '✗'}`);
+        logger.info(`[模型仓库] 模型项: ${hasModels ? `✓ (${await modelItems.count()}个)` : '✗'}`);
 
         expect(valid || hasModels).toBeTruthy();
       } finally {
@@ -897,7 +898,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const progressBars = page.locator('.ant-progress, [class*="progress"]');
         const hasProgress = await progressBars.count() > 0;
-        console.log(`[训练任务] 进度条: ${hasProgress ? '✓' : '✗'}`);
+        logger.info(`[训练任务] 进度条: ${hasProgress ? '✓' : '✗'}`);
 
         expect(valid || hasProgress).toBeTruthy();
       } finally {
@@ -915,7 +916,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const deployBtn = page.locator('button:has-text("部署"), button:has-text("Deploy")');
         const hasDeploy = await deployBtn.count() > 0;
-        console.log(`[模型服务] 部署功能: ${hasDeploy ? '✓' : '✗'}`);
+        logger.info(`[模型服务] 部署功能: ${hasDeploy ? '✓' : '✗'}`);
 
         expect(valid || hasDeploy).toBeTruthy();
       } finally {
@@ -933,7 +934,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const resourceCards = page.locator('[class*="resource"], [class*="gpu"], [class*="usage"]');
         const hasResources = await resourceCards.count() > 0;
-        console.log(`[资源管理] 资源卡片: ${hasResources ? `✓ (${await resourceCards.count()}个)` : '✗'}`);
+        logger.info(`[资源管理] 资源卡片: ${hasResources ? `✓ (${await resourceCards.count()}个)` : '✗'}`);
 
         expect(hasResources).toBeTruthy();
       } finally {
@@ -951,7 +952,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const charts = page.locator('canvas, [class*="chart"], [class*="metric"]');
         const hasCharts = await charts.count() > 0;
-        console.log(`[监控告警] 监控图表: ${hasCharts ? '✓' : '✗'}`);
+        logger.info(`[监控告警] 监控图表: ${hasCharts ? '✓' : '✗'}`);
 
         expect(hasCharts).toBeTruthy();
       } finally {
@@ -969,7 +970,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const searchBox = page.locator('input[placeholder*="搜索"], input[placeholder*="search"]');
         const hasSearch = await searchBox.count() > 0;
-        console.log(`[AIHub] 搜索框: ${hasSearch ? '✓' : '✗'}`);
+        logger.info(`[AIHub] 搜索框: ${hasSearch ? '✓' : '✗'}`);
 
         expect(valid || hasSearch).toBeTruthy();
       } finally {
@@ -1013,7 +1014,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const sqlEditor = page.locator('textarea, [class*="sql"], [class*="editor"]');
         const hasEditor = await sqlEditor.count() > 0;
-        console.log(`[SQL Lab] SQL编辑器: ${hasEditor ? '✓' : '✗'}`);
+        logger.info(`[SQL Lab] SQL编辑器: ${hasEditor ? '✓' : '✗'}`);
 
         expect(hasEditor).toBeTruthy();
       } finally {
@@ -1036,7 +1037,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const promptItems = page.locator('[class*="prompt"]');
         const hasPrompts = await promptItems.count() > 0;
-        console.log(`[Prompt] 模板项: ${hasPrompts ? `✓ (${await promptItems.count()}个)` : '✗'}`);
+        logger.info(`[Prompt] 模板项: ${hasPrompts ? `✓ (${await promptItems.count()}个)` : '✗'}`);
 
         expect(valid || hasPrompts).toBeTruthy();
       } finally {
@@ -1054,11 +1055,11 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const kbItems = page.locator('[class*="knowledge"], [class*="kb"]');
         const hasKb = await kbItems.count() > 0;
-        console.log(`[知识库] 知识库项: ${hasKb ? `✓ (${await kbItems.count()}个)` : '✗'}`);
+        logger.info(`[知识库] 知识库项: ${hasKb ? `✓ (${await kbItems.count()}个)` : '✗'}`);
 
         const uploadBtn = page.locator('button:has-text("上传"), button:has-text("Upload"), [class*="upload"]');
         const hasUpload = await uploadBtn.count() > 0;
-        console.log(`[知识库] 上传功能: ${hasUpload ? '✓' : '✗'}`);
+        logger.info(`[知识库] 上传功能: ${hasUpload ? '✓' : '✗'}`);
 
         expect(valid || hasKb).toBeTruthy();
       } finally {
@@ -1076,7 +1077,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const appItems = page.locator('[class*="app"]');
         const hasApps = await appItems.count() > 0;
-        console.log(`[AI应用] 应用项: ${hasApps ? `✓ (${await appItems.count()}个)` : '✗'}`);
+        logger.info(`[AI应用] 应用项: ${hasApps ? `✓ (${await appItems.count()}个)` : '✗'}`);
 
         expect(valid || hasApps).toBeTruthy();
       } finally {
@@ -1125,7 +1126,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const userItems = page.locator('tr, [class*="user"]');
         const hasUsers = await userItems.count() > 0;
-        console.log(`[用户管理] 用户项: ${hasUsers ? `✓ (${await userItems.count()}个)` : '✗'}`);
+        logger.info(`[用户管理] 用户项: ${hasUsers ? `✓ (${await userItems.count()}个)` : '✗'}`);
 
         expect(valid || hasUsers).toBeTruthy();
       } finally {
@@ -1169,7 +1170,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const settingsPanel = page.locator('[class*="setting"], [class*="config"]');
         const hasSettings = await settingsPanel.count() > 0;
-        console.log(`[系统设置] 设置面板: ${hasSettings ? '✓' : '✗'}`);
+        logger.info(`[系统设置] 设置面板: ${hasSettings ? '✓' : '✗'}`);
 
         expect(hasSettings).toBeTruthy();
       } finally {
@@ -1187,7 +1188,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const logItems = page.locator('tr, [class*="log"], [class*="audit"]');
         const hasLogs = await logItems.count() > 0;
-        console.log(`[审计日志] 日志项: ${hasLogs ? `✓ (${await logItems.count()}个)` : '✗'}`);
+        logger.info(`[审计日志] 日志项: ${hasLogs ? `✓ (${await logItems.count()}个)` : '✗'}`);
 
         expect(valid || hasLogs).toBeTruthy();
       } finally {
@@ -1205,7 +1206,7 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 
         const charts = page.locator('canvas, [class*="chart"], [class*="cost"]');
         const hasCharts = await charts.count() > 0;
-        console.log(`[成本报告] 图表: ${hasCharts ? '✓' : '✗'}`);
+        logger.info(`[成本报告] 图表: ${hasCharts ? '✓' : '✗'}`);
 
         expect(hasCharts).toBeTruthy();
       } finally {
@@ -1220,30 +1221,30 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 // ============================================
 test.describe('API 服务健康检查', () => {
   test('agent API', async ({ request }) => {
-    console.log('\n[API] 检查 agent API...');
+    logger.info('\n[API] 检查 agent API...');
     const response = await request.get(`${CONFIG.AGENT_API}/api/v1/health`);
-    console.log(`[API] agent API 状态: ${response.status()}`);
+    logger.info(`[API] agent API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('data API', async ({ request }) => {
-    console.log('\n[API] 检查 data API...');
+    logger.info('\n[API] 检查 data API...');
     const response = await request.get(`${CONFIG.DATA_API}/api/v1/health`);
-    console.log(`[API] data API 状态: ${response.status()}`);
+    logger.info(`[API] data API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('Model API', async ({ request }) => {
-    console.log('\n[API] 检查 Model API...');
+    logger.info('\n[API] 检查 Model API...');
     const response = await request.get(`${CONFIG.MODEL_API}/api/v1/health`);
-    console.log(`[API] Model API 状态: ${response.status()}`);
+    logger.info(`[API] Model API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('OpenAI Proxy', async ({ request }) => {
-    console.log('\n[API] 检查 OpenAI Proxy...');
+    logger.info('\n[API] 检查 OpenAI Proxy...');
     const response = await request.get(`${CONFIG.OPENAI_API}/health`);
-    console.log(`[API] OpenAI Proxy 状态: ${response.status()}`);
+    logger.info(`[API] OpenAI Proxy 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { setupAuth, BASE_URL } from './helpers';
 import {
   PageValidator,
@@ -27,81 +28,81 @@ function printPageReport(result: PageValidationResult): void {
   const status = result.passed ? '✅' : '❌';
   const separator = '━'.repeat(50);
 
-  console.log(`\n${separator}`);
-  console.log(`${status} [${result.pageName}] ${result.route}`);
-  console.log(separator);
+  logger.info(`\n${separator}`);
+  logger.info(`${status} [${result.pageName}] ${result.route}`);
+  logger.info(separator);
 
   // 页面加载状态
   const loadStatus = result.validations.pageLoaded ? '✓' : '✗';
-  console.log(`页面加载: ${(result.loadTime / 1000).toFixed(1)}s ${loadStatus}`);
+  logger.info(`页面加载: ${(result.loadTime / 1000).toFixed(1)}s ${loadStatus}`);
 
   // 布局检查
   const layoutChecks = [
     result.validations.titleVisible ? '✓' : '✗',
     result.validations.layoutVisible ? '✓' : '✗',
   ];
-  console.log(`布局检查: ${layoutChecks.join(' ')}`);
+  logger.info(`布局检查: ${layoutChecks.join(' ')}`);
 
   // JS 错误
   const jsErrors = result.errors.filter(e => e.includes('JavaScript'));
-  console.log(`JS错误: ${jsErrors.length > 0 ? jsErrors.length + '个' : '无'}`);
+  logger.info(`JS错误: ${jsErrors.length > 0 ? jsErrors.length + '个' : '无'}`);
 
   // API 请求统计
   if (result.apiRequests && result.apiRequests.length > 0) {
     const successCount = result.apiRequests.filter(r => r.success).length;
     const failCount = result.apiRequests.length - successCount;
-    console.log(`API请求: ${result.apiRequests.length}个 (${successCount}成功, ${failCount}失败)`);
+    logger.info(`API请求: ${result.apiRequests.length}个 (${successCount}成功, ${failCount}失败)`);
 
     // 显示失败的请求
     if (failCount > 0) {
       for (const req of result.apiRequests.filter(r => !r.success)) {
-        console.log(`  ✗ ${req.method} ${req.url} (${req.status})`);
+        logger.info(`  ✗ ${req.method} ${req.url} (${req.status})`);
       }
     }
 
     // 显示成功的请求（最多 5 个）
     const successRequests = result.apiRequests.filter(r => r.success).slice(0, 5);
     for (const req of successRequests) {
-      console.log(`  ✓ ${req.method} ${req.url} (${req.status}, ${req.responseTime}ms)`);
+      logger.info(`  ✓ ${req.method} ${req.url} (${req.status}, ${req.responseTime}ms)`);
     }
 
     if (result.apiRequests.filter(r => r.success).length > 5) {
-      console.log(`  ... 还有 ${result.apiRequests.filter(r => r.success).length - 5} 个成功请求`);
+      logger.info(`  ... 还有 ${result.apiRequests.filter(r => r.success).length - 5} 个成功请求`);
     }
   } else {
-    console.log('API请求: 无');
+    logger.info('API请求: 无');
   }
 
   // Console 日志
   if (result.consoleLogs && result.consoleLogs.length > 0) {
     const errorCount = result.consoleLogs.filter(l => l.level === 'error').length;
     const warnCount = result.consoleLogs.filter(l => l.level === 'warn').length;
-    console.log(`Console日志: ${result.consoleLogs.length}条 (错误:${errorCount}, 警告:${warnCount})`);
+    logger.info(`Console日志: ${result.consoleLogs.length}条 (错误:${errorCount}, 警告:${warnCount})`);
 
     // 显示错误日志
     for (const log of result.consoleLogs.filter(l => l.level === 'error')) {
-      console.log(`  ✗ [Error] ${log.message.substring(0, 100)}`);
+      logger.info(`  ✗ [Error] ${log.message.substring(0, 100)}`);
     }
 
     // 显示警告日志（最多 3 个）
     const warnings = result.consoleLogs.filter(l => l.level === 'warn').slice(0, 3);
     for (const log of warnings) {
-      console.log(`  ⚠ [Warn] ${log.message.substring(0, 100)}`);
+      logger.info(`  ⚠ [Warn] ${log.message.substring(0, 100)}`);
     }
   } else {
-    console.log('Console日志: 无');
+    logger.info('Console日志: 无');
   }
 
   // 截图路径
   if (result.screenshotPath) {
-    console.log(`截图: ${result.screenshotPath}`);
+    logger.info(`截图: ${result.screenshotPath}`);
   }
 
   // 错误详情
   if (result.errors.length > 0) {
-    console.log('\n错误详情:');
+    logger.info('\n错误详情:');
     for (const error of result.errors) {
-      console.log(`  - ${error.substring(0, 150)}`);
+      logger.info(`  - ${error.substring(0, 150)}`);
     }
   }
 }
@@ -110,30 +111,30 @@ function printPageReport(result: PageValidationResult): void {
  * 生成最终汇总报告
  */
 function generateSummaryReport(): void {
-  console.log('\n' + '━'.repeat(60));
-  console.log('DataOps 真实 API 验证测试汇总报告');
-  console.log('━'.repeat(60) + '\n');
+  logger.info('\n' + '━'.repeat(60));
+  logger.info('DataOps 真实 API 验证测试汇总报告');
+  logger.info('━'.repeat(60) + '\n');
 
   const passed = results.filter(r => r.passed);
   const failed = results.filter(r => !r.passed);
 
-  console.log(`总页面数: ${results.length}`);
-  console.log(`通过: ${passed.length}`);
-  console.log(`失败: ${failed.length}`);
-  console.log(`通过率: ${((passed.length / results.length) * 100).toFixed(1)}%\n`);
+  logger.info(`总页面数: ${results.length}`);
+  logger.info(`通过: ${passed.length}`);
+  logger.info(`失败: ${failed.length}`);
+  logger.info(`通过率: ${((passed.length / results.length) * 100).toFixed(1)}%\n`);
 
   // 失败页面详情
   if (failed.length > 0) {
-    console.log('─'.repeat(60));
-    console.log('失败页面详情:');
-    console.log('─'.repeat(60) + '\n');
+    logger.info('─'.repeat(60));
+    logger.info('失败页面详情:');
+    logger.info('─'.repeat(60) + '\n');
 
     for (const result of failed) {
-      console.log(`❌ ${result.pageName} (${result.route})`);
+      logger.info(`❌ ${result.pageName} (${result.route})`);
       for (const error of result.errors) {
-        console.log(`   - ${error}`);
+        logger.info(`   - ${error}`);
       }
-      console.log('');
+      logger.info('');
     }
   }
 
@@ -143,15 +144,15 @@ function generateSummaryReport(): void {
     const successRequests = allApiRequests.filter(r => r.success);
     const failedRequests = allApiRequests.filter(r => !r.success);
 
-    console.log('─'.repeat(60));
-    console.log('API 请求统计:');
-    console.log('─'.repeat(60) + '\n');
-    console.log(`总请求数: ${allApiRequests.length}`);
-    console.log(`成功: ${successRequests.length}`);
-    console.log(`失败: ${failedRequests.length}`);
+    logger.info('─'.repeat(60));
+    logger.info('API 请求统计:');
+    logger.info('─'.repeat(60) + '\n');
+    logger.info(`总请求数: ${allApiRequests.length}`);
+    logger.info(`成功: ${successRequests.length}`);
+    logger.info(`失败: ${failedRequests.length}`);
 
     if (failedRequests.length > 0) {
-      console.log('\n失败的 API 请求:');
+      logger.info('\n失败的 API 请求:');
       const failedByUrl = new Map<string, ApiRequestRecord[]>();
       for (const req of failedRequests) {
         const url = req.url.split('?')[0]; // 移除查询参数
@@ -162,13 +163,13 @@ function generateSummaryReport(): void {
       }
 
       for (const [url, reqs] of failedByUrl) {
-        console.log(`  - ${url} (${reqs.length}次失败)`);
+        logger.info(`  - ${url} (${reqs.length}次失败)`);
       }
     }
 
     // 平均响应时间
     const avgResponseTime = successRequests.reduce((sum, r) => sum + r.responseTime, 0) / successRequests.length;
-    console.log(`\n平均响应时间: ${avgResponseTime.toFixed(0)}ms`);
+    logger.info(`\n平均响应时间: ${avgResponseTime.toFixed(0)}ms`);
   }
 
   // Console 错误汇总
@@ -177,15 +178,15 @@ function generateSummaryReport(): void {
     const errorLogs = allConsoleLogs.filter(l => l.level === 'error');
     const warnLogs = allConsoleLogs.filter(l => l.level === 'warn');
 
-    console.log('\n─'.repeat(60));
-    console.log('Console 日志统计:');
-    console.log('─'.repeat(60) + '\n');
-    console.log(`总日志数: ${allConsoleLogs.length}`);
-    console.log(`错误: ${errorLogs.length}`);
-    console.log(`警告: ${warnLogs.length}`);
+    logger.info('\n─'.repeat(60));
+    logger.info('Console 日志统计:');
+    logger.info('─'.repeat(60) + '\n');
+    logger.info(`总日志数: ${allConsoleLogs.length}`);
+    logger.info(`错误: ${errorLogs.length}`);
+    logger.info(`警告: ${warnLogs.length}`);
 
     if (errorLogs.length > 0) {
-      console.log('\n错误日志汇总:');
+      logger.info('\n错误日志汇总:');
       const errorMessages = new Map<string, number>();
       for (const log of errorLogs) {
         const msg = log.message.substring(0, 100);
@@ -193,31 +194,31 @@ function generateSummaryReport(): void {
       }
 
       for (const [msg, count] of errorMessages) {
-        console.log(`  - ${msg} (${count}次)`);
+        logger.info(`  - ${msg} (${count}次)`);
       }
     }
   }
 
   // 加载时间排名
-  console.log('\n─'.repeat(60));
-  console.log('页面加载时间排名:');
-  console.log('─'.repeat(60) + '\n');
+  logger.info('\n─'.repeat(60));
+  logger.info('页面加载时间排名:');
+  logger.info('─'.repeat(60) + '\n');
 
   const sortedByLoadTime = [...results].sort((a, b) => a.loadTime - b.loadTime);
-  console.log('最快的前 5 个:');
+  logger.info('最快的前 5 个:');
   for (const result of sortedByLoadTime.slice(0, 5)) {
-    console.log(`  ${(result.loadTime / 1000).toFixed(1)}s - ${result.pageName}`);
+    logger.info(`  ${(result.loadTime / 1000).toFixed(1)}s - ${result.pageName}`);
   }
 
-  console.log('\n最慢的前 5 个:');
+  logger.info('\n最慢的前 5 个:');
   for (const result of sortedByLoadTime.slice(-5).reverse()) {
-    console.log(`  ${(result.loadTime / 1000).toFixed(1)}s - ${result.pageName}`);
+    logger.info(`  ${(result.loadTime / 1000).toFixed(1)}s - ${result.pageName}`);
   }
 
   const avgLoadTime = results.reduce((sum, r) => sum + r.loadTime, 0) / results.length;
-  console.log(`\n平均加载时间: ${avgLoadTime.toFixed(0)}ms`);
+  logger.info(`\n平均加载时间: ${avgLoadTime.toFixed(0)}ms`);
 
-  console.log('\n' + '━'.repeat(60) + '\n');
+  logger.info('\n' + '━'.repeat(60) + '\n');
 }
 
 /**
@@ -412,7 +413,7 @@ test.describe('DataOps Live - 综合验证', () => {
       process.stdout.write(`\r${passedCount}/${allResults.length} 页面通过`);
     }
 
-    console.log(`\n\n最终结果: ${passedCount}/${DATA_OPS_LIVE_PAGES.length} 页面通过`);
+    logger.info(`\n\n最终结果: ${passedCount}/${DATA_OPS_LIVE_PAGES.length} 页面通过`);
 
     // 至少 60% 的页面应通过（真实 API 模式下更宽松）
     const passRate = passedCount / DATA_OPS_LIVE_PAGES.length;

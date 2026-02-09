@@ -8,6 +8,7 @@
  */
 
 import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { logger } from './logger';
 import { join } from 'path';
 
 export interface DatasourceInfo {
@@ -57,7 +58,7 @@ export class TestDataManager {
       try {
         const content = readFileSync(STATE_FILE_PATH, 'utf-8');
         this.state = JSON.parse(content);
-        console.log('Test data state loaded from:', STATE_FILE_PATH);
+        logger.info('Test data state loaded from:', STATE_FILE_PATH);
       } catch (error) {
         console.error('Failed to load test data state:', error);
       }
@@ -81,7 +82,7 @@ export class TestDataManager {
         if (err) {
           console.error('Failed to save test data state:', err);
         } else {
-          console.log('Test data state saved to:', STATE_FILE_PATH);
+          logger.info('Test data state saved to:', STATE_FILE_PATH);
         }
       });
     } catch (error) {
@@ -243,7 +244,7 @@ export class TestDataManager {
    * 打印报告到控制台
    */
   printReport(): void {
-    console.log(this.generateReport());
+    logger.info(this.generateReport());
   }
 
   /**
@@ -252,6 +253,6 @@ export class TestDataManager {
   async saveReport(filePath: string): Promise<void> {
     const { writeFile } = await import('fs/promises');
     await writeFile(filePath, this.generateReport(), 'utf-8');
-    console.log(`Test data report saved to: ${filePath}`);
+    logger.info(`Test data report saved to: ${filePath}`);
   }
 }

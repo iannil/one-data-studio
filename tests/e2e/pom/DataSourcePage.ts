@@ -6,6 +6,7 @@
  */
 
 import { Page, Locator } from '@playwright/test';
+import { logger } from '../helpers/logger';
 import { BasePage } from './BasePage';
 
 export class DataSourcePage extends BasePage {
@@ -162,7 +163,7 @@ export class DataSourcePage extends BasePage {
     if (data.testConnection !== false) {
       const success = await this.testConnection();
       if (!success) {
-        console.warn('[DataSourcePage] Connection test failed, but continuing...');
+        logger.warn('[DataSourcePage] Connection test failed, but continuing...');
       }
     }
 

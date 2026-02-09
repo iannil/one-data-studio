@@ -14,6 +14,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { join } from 'path';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 
@@ -82,11 +83,11 @@ test.describe(`ONE-DATA-STUDIO 全平台 E2E 测试 - ${TEST_ID}`, () => {
   // ============================================================================
 
   test.beforeAll(async () => {
-    console.log('\n' + '='.repeat(70));
-    console.log(`[TEST START] ${TEST_NAME}`);
-    console.log(`[TEST ID] ${TEST_ID}`);
-    console.log(`[BASE URL] ${BASE_URL}`);
-    console.log('='.repeat(70) + '\n');
+    logger.info('\n' + '='.repeat(70));
+    logger.info(`[TEST START] ${TEST_NAME}`);
+    logger.info(`[TEST ID] ${TEST_ID}`);
+    logger.info(`[BASE URL] ${BASE_URL}`);
+    logger.info('='.repeat(70) + '\n');
 
     // Initialize data persistence
     dataPersistence = createTestDataPersistence(TEST_ID, TEST_NAME);
@@ -133,7 +134,7 @@ test.describe(`ONE-DATA-STUDIO 全平台 E2E 测试 - ${TEST_ID}`, () => {
     const { networkIssues, consoleErrors } = await monitor.stop();
 
     if (networkIssues.length > 0 || consoleErrors.length > 0) {
-      console.warn(`\n[AfterEach] Found ${networkIssues.length} network issues and ${consoleErrors.length} console errors`);
+      logger.warn(`\n[AfterEach] Found ${networkIssues.length} network issues and ${consoleErrors.length} console errors`);
     }
 
     // Save state
@@ -147,9 +148,9 @@ test.describe(`ONE-DATA-STUDIO 全平台 E2E 测试 - ${TEST_ID}`, () => {
     await dataPersistence.saveCleanupScript();
     dataPersistence.printSummary();
 
-    console.log('\n' + '='.repeat(70));
-    console.log('[TEST END] 测试完成');
-    console.log('='.repeat(70) + '\n');
+    logger.info('\n' + '='.repeat(70));
+    logger.info('[TEST END] 测试完成');
+    logger.info('='.repeat(70) + '\n');
   });
 
   // ============================================================================

@@ -6,6 +6,7 @@
  */
 
 import { test as base, APIRequestContext, Page } from '@playwright/test';
+import { logger } from '../helpers/logger';
 
 // ==================== 类型定义 ====================
 
@@ -171,7 +172,7 @@ export class UserManager {
       }
     } else {
       // API 失败时返回本地构造的用户
-      console.warn(`Failed to create user via API: ${response.status()}`);
+      logger.warn(`Failed to create user via API: ${response.status()}`);
     }
 
     return user;

@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -106,11 +107,11 @@ interface TestReport {
 async function ensureOCRServiceReady(page?: any): Promise<void> {
   // 简化方案：跳过显式健康检查，在实际 OCR 调用时处理错误
   if (OCR_TEST_CONFIG.skipOCRServiceCheck) {
-    console.log('OCR 服务检查已跳过（配置模式）');
+    logger.info('OCR 服务检查已跳过（配置模式）');
     return;
   }
 
-  console.log('OCR 服务检查已启用（将在实际调用时验证）');
+  logger.info('OCR 服务检查已启用（将在实际调用时验证）');
 }
 
 /**
@@ -153,9 +154,9 @@ test.describe('OCR 验证测试', () => {
     // 如果 OCR 服务可用，验证识别结果
     if (!OCR_TEST_CONFIG.skipOCRServiceCheck && result.status === 'completed') {
       expect(result.rawText.length).toBeGreaterThan(0);
-      console.log(`OCR 识别成功，文本长度: ${result.rawText.length}`);
+      logger.info(`OCR 识别成功，文本长度: ${result.rawText.length}`);
     } else if (!OCR_TEST_CONFIG.skipOCRServiceCheck) {
-      console.log(`OCR 服务调用失败: ${result.errorMessage ?? '未知错误'}`);
+      logger.info(`OCR 服务调用失败: ${result.errorMessage ?? '未知错误'}`);
     }
   });
 
@@ -343,7 +344,7 @@ async function testPageWithOCR(
         title: { passed: true, message: `页面加载成功，OCR 调用失败: ${ocrError instanceof Error ? ocrError.message : String(ocrError)}` },
         noErrors: { passed: true, message: '页面加载成功（跳过错误检查）' },
       };
-      console.warn(`页面 ${pageConfig.name} OCR 验证失败（但页面已加载）:`, ocrError);
+      logger.warn(`页面 ${pageConfig.name} OCR 验证失败（但页面已加载）:`, ocrError);
     }
 
     result.duration = Date.now() - startTime;
@@ -418,19 +419,19 @@ async function generateTestReport(): Promise<void> {
   await writeMarkdownReport(report);
 
   // 输出摘要
-  console.log('\n' + '='.repeat(60));
-  console.log('OCR 验证测试报告');
-  console.log('='.repeat(60));
-  console.log(`总测试数: ${stats.total}`);
-  console.log(`通过: ${stats.passed}`);
-  console.log(`失败: ${stats.failed}`);
-  console.log(`通过率: ${stats.passRate.toFixed(2)}%`);
-  console.log(`总耗时: ${Math.round(report.totalDuration / 1000)}s`);
-  console.log('\n按模块统计:');
+  logger.info('\n' + '='.repeat(60));
+  logger.info('OCR 验证测试报告');
+  logger.info('='.repeat(60));
+  logger.info(`总测试数: ${stats.total}`);
+  logger.info(`通过: ${stats.passed}`);
+  logger.info(`失败: ${stats.failed}`);
+  logger.info(`通过率: ${stats.passRate.toFixed(2)}%`);
+  logger.info(`总耗时: ${Math.round(report.totalDuration / 1000)}s`);
+  logger.info('\n按模块统计:');
   for (const [module, moduleStats] of Object.entries(byModule)) {
-    console.log(`  ${module}: ${moduleStats.passed}/${moduleStats.total} 通过`);
+    logger.info(`  ${module}: ${moduleStats.passed}/${moduleStats.total} 通过`);
   }
-  console.log('='.repeat(60) + '\n');
+  logger.info('='.repeat(60) + '\n');
 }
 
 /**
@@ -439,7 +440,7 @@ async function generateTestReport(): Promise<void> {
 async function writeJSONReport(report: TestReport): Promise<void> {
   const filepath = path.join(reportDir, 'report.json');
   await fs.writeFile(filepath, JSON.stringify(report, null, 2), 'utf-8');
-  console.log(`JSON 报告已保存: ${filepath}`);
+  logger.info(`JSON 报告已保存: ${filepath}`);
 }
 
 /**
@@ -449,7 +450,7 @@ async function writeHTMLReport(report: TestReport): Promise<void> {
   const html = generateHTMLReport(report);
   const filepath = path.join(reportDir, 'report.html');
   await fs.writeFile(filepath, html, 'utf-8');
-  console.log(`HTML 报告已保存: ${filepath}`);
+  logger.info(`HTML 报告已保存: ${filepath}`);
 }
 
 /**
@@ -459,7 +460,7 @@ async function writeMarkdownReport(report: TestReport): Promise<void> {
   const markdown = generateMarkdownReport(report);
   const filepath = path.join(reportDir, 'report.md');
   await fs.writeFile(filepath, markdown, 'utf-8');
-  console.log(`Markdown 报告已保存: ${filepath}`);
+  logger.info(`Markdown 报告已保存: ${filepath}`);
 }
 
 /**

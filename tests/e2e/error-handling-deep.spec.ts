@@ -4,6 +4,7 @@
  */
 
 import { test, expect } from './fixtures/real-auth.fixture';
+import { logger } from './helpers/logger';
 import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -49,7 +50,7 @@ test.describe('错误处理 - 网络错误', () => {
       // 应该显示离线或网络错误提示
       const offlineIndicator = page.locator('.offline, .network-error, [class*="offline"]');
       const hasOffline = await offlineIndicator.count() > 0;
-      console.log('Has offline indicator:', hasOffline);
+      logger.info('Has offline indicator:', hasOffline);
     }
 
     // 恢复网络
@@ -68,12 +69,12 @@ test.describe('错误处理 - 网络错误', () => {
     await page.waitForLoadState('networkidle');
     const loadTime = Date.now() - startTime;
 
-    console.log(`Slow network load time: ${loadTime}ms`);
+    logger.info(`Slow network load time: ${loadTime}ms`);
 
     // 应该显示加载指示器
     const loadingIndicator = page.locator('.loading, .spinner, [class*="loading"]');
     const hasLoading = await loadingIndicator.count() > 0;
-    console.log('Has loading indicator:', hasLoading);
+    logger.info('Has loading indicator:', hasLoading);
 
     await context.unroute('**/*');
   });
@@ -126,7 +127,7 @@ test.describe('错误处理 - API 错误', () => {
 
     const errorMessage = page.locator('.error-message, .ant-message-error, [class*="error"]');
     const hasError = await errorMessage.count() > 0;
-    console.log('Has 400 error message:', hasError);
+    logger.info('Has 400 error message:', hasError);
 
     await context.unroute('**/api/v1/datasets');
   });
@@ -154,7 +155,7 @@ test.describe('错误处理 - API 错误', () => {
     // 应该重定向到登录页或显示未授权提示
     const loginRequired = page.locator('.login-required, .unauthorized, [class*="login"]');
     const hasLoginRequired = await loginRequired.count() > 0;
-    console.log('Has login required indicator:', hasLoginRequired);
+    logger.info('Has login required indicator:', hasLoginRequired);
 
     await context.unroute('**/api/v1/user/info');
   });
@@ -181,7 +182,7 @@ test.describe('错误处理 - API 错误', () => {
 
     const forbiddenMessage = page.locator('.forbidden, .access-denied, [class*="forbidden"]');
     const hasForbidden = await forbiddenMessage.count() > 0;
-    console.log('Has forbidden message:', hasForbidden);
+    logger.info('Has forbidden message:', hasForbidden);
 
     await context.unroute('**/api/v1/admin/**');
   });
@@ -206,7 +207,7 @@ test.describe('错误处理 - API 错误', () => {
     // 应该显示 404 页面
     const notFoundPage = page.locator('.not-found, .error-page, [class*="404"]');
     const hasNotFound = await notFoundPage.count() > 0;
-    console.log('Has 404 page:', hasNotFound);
+    logger.info('Has 404 page:', hasNotFound);
 
     await context.unroute('**/api/v1/nonexistent');
   });
@@ -233,7 +234,7 @@ test.describe('错误处理 - API 错误', () => {
 
     const errorMessage = page.locator('.error-message, .server-error, [class*="error"]');
     const hasError = await errorMessage.count() > 0;
-    console.log('Has 500 error message:', hasError);
+    logger.info('Has 500 error message:', hasError);
 
     await context.unroute('**/api/v1/datasets');
   });
@@ -256,7 +257,7 @@ test.describe('错误处理 - API 错误', () => {
 
     const unavailableMessage = page.locator('.service-unavailable, .maintenance, [class*="unavailable"]');
     const hasUnavailable = await unavailableMessage.count() > 0;
-    console.log('Has service unavailable message:', hasUnavailable);
+    logger.info('Has service unavailable message:', hasUnavailable);
 
     await context.unroute('**/api/v1/health');
   });
@@ -284,7 +285,7 @@ test.describe('错误处理 - 表单验证', () => {
         // 应该显示验证错误
         const validationError = page.locator('.ant-form-item-explain-error, .validation-error, [class*="error"]');
         const hasError = await validationError.count() > 0;
-        console.log('Has validation error:', hasError);
+        logger.info('Has validation error:', hasError);
       }
     }
   });
@@ -310,7 +311,7 @@ test.describe('错误处理 - 表单验证', () => {
 
           const emailError = page.locator('.ant-form-item-explain-error').filter({ hasText: /邮箱|email/i });
           const hasEmailError = await emailError.count() > 0;
-          console.log('Has email validation error:', hasEmailError);
+          logger.info('Has email validation error:', hasEmailError);
         }
       }
     }
@@ -361,7 +362,7 @@ test.describe('错误处理 - 表单验证', () => {
 
           const lengthError = page.locator('.ant-form-item-explain-error').filter({ hasText: /长度|length/i });
           const hasLengthError = await lengthError.count() > 0;
-          console.log('Has length validation error:', hasLengthError);
+          logger.info('Has length validation error:', hasLengthError);
         }
       }
     }
@@ -384,7 +385,7 @@ test.describe('错误处理 - 表单验证', () => {
 
       const validationError = page.locator('.ant-form-item-explain-error');
       const hasError = await validationError.count() > 0;
-      console.log('Has numeric validation error:', hasError);
+      logger.info('Has numeric validation error:', hasError);
     }
   });
 });
@@ -400,7 +401,7 @@ test.describe('错误处理 - 权限错误', () => {
     // 非管理员用户应该看到权限不足提示
     const accessDenied = authenticatedPage.locator('.access-denied, .forbidden, [class*="forbidden"]');
     const hasAccessDenied = await accessDenied.count() > 0;
-    console.log('Non-admin user sees access denied:', hasAccessDenied);
+    logger.info('Non-admin user sees access denied:', hasAccessDenied);
   });
 
   test('should hide restricted menu items', async ({ authenticatedPage }) => {
@@ -412,7 +413,7 @@ test.describe('错误处理 - 权限错误', () => {
     const count = await adminMenuItems.count();
 
     // 普通用户不应该看到管理菜单
-    console.log('Admin menu items visible to regular user:', count);
+    logger.info('Admin menu items visible to regular user:', count);
   });
 
   test('should show permission error on restricted action', async ({ authenticatedPage, context }) => {
@@ -451,7 +452,7 @@ test.describe('错误处理 - 权限错误', () => {
 
           const permissionError = authenticatedPage.locator('.ant-message-error, .permission-error');
           const hasError = await permissionError.count() > 0;
-          console.log('Has permission error message:', hasError);
+          logger.info('Has permission error message:', hasError);
         }
       }
     }
@@ -501,7 +502,7 @@ test.describe('错误处理 - 服务降级', () => {
 
     const degradedIndicator = page.locator('.degraded-mode, .partial-outage, [class*="degraded"]');
     const hasIndicator = await degradedIndicator.count() > 0;
-    console.log('Has degraded mode indicator:', hasIndicator);
+    logger.info('Has degraded mode indicator:', hasIndicator);
 
     await context.unroute('**/api/v1/workflows');
     await context.unroute('**/api/v1/agents');
@@ -528,7 +529,7 @@ test.describe('错误处理 - 服务降级', () => {
     // 检查是否有缓存的数据显示
     const cachedDataIndicator = page.locator('.cached-data, [class*="cache"]');
     const hasCached = await cachedDataIndicator.count() > 0;
-    console.log('Has cached data indicator:', hasCached);
+    logger.info('Has cached data indicator:', hasCached);
 
     await context.unroute('**/api/v1/datasets');
   });
@@ -652,7 +653,7 @@ test.describe('错误处理 - 错误恢复', () => {
 
     const errorMessage = page.locator('.error-message');
     const hasError = await errorMessage.count() > 0;
-    console.log('Error cleared after navigation:', !hasError);
+    logger.info('Error cleared after navigation:', !hasError);
   });
 
   test('should provide helpful error messages', async ({ page, context }) => {
@@ -674,7 +675,7 @@ test.describe('错误处理 - 错误恢复', () => {
     const errorMessage = page.locator('.error-message, .ant-message-error');
     if (await errorMessage.count() > 0) {
       const text = await errorMessage.textContent();
-      console.log('Error message:', text);
+      logger.info('Error message:', text);
 
       // 错误消息应该有意义
       expect(text).toBeTruthy();

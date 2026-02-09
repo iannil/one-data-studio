@@ -6,6 +6,7 @@
  */
 
 import { Page, Locator } from '@playwright/test';
+import { logger } from '../helpers/logger';
 import { BasePage } from './BasePage';
 
 export class VersionsPage extends BasePage {
@@ -209,7 +210,7 @@ export class VersionsPage extends BasePage {
       await this.page.waitForTimeout(1000);
       return true;
     } catch (error) {
-      console.log('⚠ 创建快照失败:', (error as Error).message);
+      logger.info('⚠ 创建快照失败:', (error as Error).message);
       return false;
     }
   }

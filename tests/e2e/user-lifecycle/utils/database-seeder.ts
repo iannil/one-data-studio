@@ -4,6 +4,7 @@
  */
 
 import { APIRequestContext } from '@playwright/test';
+import { logger } from '../../helpers/logger';
 import type { TestRole, UserStatus } from '../fixtures/user-lifecycle.fixture';
 
 // ============================================
@@ -123,13 +124,13 @@ export class DatabaseSeeder {
    * 种子用户
    */
   async seedUsers(): Promise<void> {
-    console.log('开始种子用户...');
+    logger.info('开始种子用户...');
 
     for (const user of SEED_USERS) {
       await this.ensureUser(user);
     }
 
-    console.log('种子用户完成');
+    logger.info('种子用户完成');
   }
 
   /**
@@ -144,7 +145,7 @@ export class DatabaseSeeder {
     if (checkResponse.ok()) {
       const json = await checkResponse.json();
       if (json.code === 0 && json.data) {
-        console.log(`  用户 ${user.username} 已存在`);
+        logger.info(`  用户 ${user.username} 已存在`);
         return;
       }
     }
@@ -161,7 +162,7 @@ export class DatabaseSeeder {
     });
 
     if (createResponse.ok()) {
-      console.log(`  ✓ 用户 ${user.username} 创建成功`);
+      logger.info(`  ✓ 用户 ${user.username} 创建成功`);
     } else {
       console.error(`  ✗ 用户 ${user.username} 创建失败`);
     }
@@ -171,7 +172,7 @@ export class DatabaseSeeder {
    * 种子角色
    */
   async seedRoles(): Promise<void> {
-    console.log('开始种子角色...');
+    logger.info('开始种子角色...');
 
     const roles = [
       { name: 'admin', description: '系统管理员', permissions: ['*'] },
@@ -186,7 +187,7 @@ export class DatabaseSeeder {
       await this.ensureRole(role);
     }
 
-    console.log('种子角色完成');
+    logger.info('种子角色完成');
   }
 
   /**
@@ -198,7 +199,7 @@ export class DatabaseSeeder {
     if (checkResponse.ok()) {
       const json = await checkResponse.json();
       if (json.code === 0 && json.data) {
-        console.log(`  角色 ${role.name} 已存在`);
+        logger.info(`  角色 ${role.name} 已存在`);
         return;
       }
     }
@@ -208,7 +209,7 @@ export class DatabaseSeeder {
     });
 
     if (createResponse.ok()) {
-      console.log(`  ✓ 角色 ${role.name} 创建成功`);
+      logger.info(`  ✓ 角色 ${role.name} 创建成功`);
     } else {
       console.error(`  ✗ 角色 ${role.name} 创建失败`);
     }
@@ -218,7 +219,7 @@ export class DatabaseSeeder {
    * 种子数据集
    */
   async seedDatasets(): Promise<void> {
-    console.log('开始种子数据集...');
+    logger.info('开始种子数据集...');
 
     const datasets = [
       { name: '种子数据集 A', description: '用于 E2E 测试的数据集 A', type: 'table' },
@@ -230,7 +231,7 @@ export class DatabaseSeeder {
       await this.ensureDataset(dataset);
     }
 
-    console.log('种子数据集完成');
+    logger.info('种子数据集完成');
   }
 
   /**
@@ -242,7 +243,7 @@ export class DatabaseSeeder {
     if (checkResponse.ok()) {
       const json = await checkResponse.json();
       if (json.code === 0 && json.data) {
-        console.log(`  数据集 ${dataset.name} 已存在`);
+        logger.info(`  数据集 ${dataset.name} 已存在`);
         return;
       }
     }
@@ -252,7 +253,7 @@ export class DatabaseSeeder {
     });
 
     if (createResponse.ok()) {
-      console.log(`  ✓ 数据集 ${dataset.name} 创建成功`);
+      logger.info(`  ✓ 数据集 ${dataset.name} 创建成功`);
     }
   }
 
@@ -260,7 +261,7 @@ export class DatabaseSeeder {
    * 种子工作流
    */
   async seedWorkflows(): Promise<void> {
-    console.log('开始种子工作流...');
+    logger.info('开始种子工作流...');
 
     const workflows = [
       { name: '种子工作流 A', description: '用于 E2E 测试的工作流 A', type: 'rag' },
@@ -272,7 +273,7 @@ export class DatabaseSeeder {
       await this.ensureWorkflow(workflow);
     }
 
-    console.log('种子工作流完成');
+    logger.info('种子工作流完成');
   }
 
   /**
@@ -284,7 +285,7 @@ export class DatabaseSeeder {
     if (checkResponse.ok()) {
       const json = await checkResponse.json();
       if (json.code === 0 && json.data) {
-        console.log(`  工作流 ${workflow.name} 已存在`);
+        logger.info(`  工作流 ${workflow.name} 已存在`);
         return;
       }
     }
@@ -297,7 +298,7 @@ export class DatabaseSeeder {
     });
 
     if (createResponse.ok()) {
-      console.log(`  ✓ 工作流 ${workflow.name} 创建成功`);
+      logger.info(`  ✓ 工作流 ${workflow.name} 创建成功`);
     }
   }
 
@@ -305,7 +306,7 @@ export class DatabaseSeeder {
    * 种子模型
    */
   async seedModels(): Promise<void> {
-    console.log('开始种子模型...');
+    logger.info('开始种子模型...');
 
     const models = [
       { name: '种子模型 A', version: '1.0.0', type: 'llm' },
@@ -317,7 +318,7 @@ export class DatabaseSeeder {
       await this.ensureModel(model);
     }
 
-    console.log('种子模型完成');
+    logger.info('种子模型完成');
   }
 
   /**
@@ -329,7 +330,7 @@ export class DatabaseSeeder {
     if (checkResponse.ok()) {
       const json = await checkResponse.json();
       if (json.code === 0 && json.data) {
-        console.log(`  模型 ${model.name} 已存在`);
+        logger.info(`  模型 ${model.name} 已存在`);
         return;
       }
     }
@@ -339,7 +340,7 @@ export class DatabaseSeeder {
     });
 
     if (createResponse.ok()) {
-      console.log(`  ✓ 模型 ${model.name} 创建成功`);
+      logger.info(`  ✓ 模型 ${model.name} 创建成功`);
     }
   }
 
@@ -377,7 +378,7 @@ export class DatabaseSeeder {
    * 清理种子用户
    */
   async cleanupUsers(): Promise<void> {
-    console.log('开始清理种子用户...');
+    logger.info('开始清理种子用户...');
 
     for (const user of SEED_USERS) {
       const response = await this.request.get(
@@ -388,19 +389,19 @@ export class DatabaseSeeder {
         const json = await response.json();
         if (json.code === 0 && json.data) {
           await this.request.delete(`${this.baseUrl}/api/v1/users/${json.data.id}`);
-          console.log(`  ✓ 用户 ${user.username} 已删除`);
+          logger.info(`  ✓ 用户 ${user.username} 已删除`);
         }
       }
     }
 
-    console.log('清理种子用户完成');
+    logger.info('清理种子用户完成');
   }
 
   /**
    * 清理种子数据集
    */
   async cleanupDatasets(): Promise<void> {
-    console.log('开始清理种子数据集...');
+    logger.info('开始清理种子数据集...');
 
     const response = await this.request.get(`${this.baseUrl}/api/v1/datasets`);
     if (response.ok()) {
@@ -409,20 +410,20 @@ export class DatabaseSeeder {
         for (const dataset of json.data.datasets) {
           if (dataset.name.startsWith('种子数据集')) {
             await this.request.delete(`${this.baseUrl}/api/v1/datasets/${dataset.id}`);
-            console.log(`  ✓ 数据集 ${dataset.name} 已删除`);
+            logger.info(`  ✓ 数据集 ${dataset.name} 已删除`);
           }
         }
       }
     }
 
-    console.log('清理种子数据集完成');
+    logger.info('清理种子数据集完成');
   }
 
   /**
    * 清理种子工作流
    */
   async cleanupWorkflows(): Promise<void> {
-    console.log('开始清理种子工作流...');
+    logger.info('开始清理种子工作流...');
 
     const response = await this.request.get(`${this.baseUrl}/api/v1/workflows`);
     if (response.ok()) {
@@ -431,20 +432,20 @@ export class DatabaseSeeder {
         for (const workflow of json.data.workflows) {
           if (workflow.name.startsWith('种子工作流')) {
             await this.request.delete(`${this.baseUrl}/api/v1/workflows/${workflow.id}`);
-            console.log(`  ✓ 工作流 ${workflow.name} 已删除`);
+            logger.info(`  ✓ 工作流 ${workflow.name} 已删除`);
           }
         }
       }
     }
 
-    console.log('清理种子工作流完成');
+    logger.info('清理种子工作流完成');
   }
 
   /**
    * 清理种子模型
    */
   async cleanupModels(): Promise<void> {
-    console.log('开始清理种子模型...');
+    logger.info('开始清理种子模型...');
 
     const response = await this.request.get(`${this.baseUrl}/api/v1/models`);
     if (response.ok()) {
@@ -453,24 +454,24 @@ export class DatabaseSeeder {
         for (const model of json.data.models) {
           if (model.name.startsWith('种子模型')) {
             await this.request.delete(`${this.baseUrl}/api/v1/models/${model.id}`);
-            console.log(`  ✓ 模型 ${model.name} 已删除`);
+            logger.info(`  ✓ 模型 ${model.name} 已删除`);
           }
         }
       }
     }
 
-    console.log('清理种子模型完成');
+    logger.info('清理种子模型完成');
   }
 
   /**
    * 重置种子数据（先清理再创建）
    */
   async reset(config: SeedConfig = {}): Promise<void> {
-    console.log('开始重置种子数据...');
+    logger.info('开始重置种子数据...');
     await this.cleanup(config);
-    console.log('');
+    logger.info('');
     await this.seed(config);
-    console.log('重置种子数据完成');
+    logger.info('重置种子数据完成');
   }
 }
 

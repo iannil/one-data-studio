@@ -5,6 +5,7 @@
  */
 
 import { test, expect } from './fixtures/real-auth.fixture';
+import { logger } from './helpers/logger';
 import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
 import type { AgentApiClient } from './helpers/api-client';
 
@@ -129,7 +130,7 @@ test.describe('管理后台 - 用户管理', () => {
 
       const filteredResults = adminPage.locator('tr[data-row-key], .user-item');
       const count = await filteredResults.count();
-      console.log('Filtered users count:', count);
+      logger.info('Filtered users count:', count);
     }
   });
 });
@@ -208,7 +209,7 @@ test.describe('管理后台 - 角色权限', () => {
 
         const detailPanel = adminPage.locator('.role-detail, .detail-panel');
         const hasDetail = await detailPanel.count() > 0;
-        console.log('Has role detail panel:', hasDetail);
+        logger.info('Has role detail panel:', hasDetail);
       }
     }
   });
@@ -355,7 +356,7 @@ test.describe('管理后台 - 审计日志', () => {
 
       const filteredResults = adminPage.locator('tr[data-row-key], .log-item');
       const count = await filteredResults.count();
-      console.log('Filtered logs count:', count);
+      logger.info('Filtered logs count:', count);
     }
   });
 
@@ -457,7 +458,7 @@ test.describe('管理后台 - 系统设置', () => {
       // 验证保存成功提示
       const successMessage = adminPage.locator('.ant-message-success, .success-message');
       const hasSuccess = await successMessage.count() > 0;
-      console.log('Has success message:', hasSuccess);
+      logger.info('Has success message:', hasSuccess);
     }
   });
 });
@@ -640,7 +641,7 @@ test.describe('管理后台 - 边界条件', () => {
 
     const emptyState = adminPage.locator('.empty-state, .no-data');
     const hasEmpty = await emptyState.count() > 0;
-    console.log('Has empty state for users:', hasEmpty);
+    logger.info('Has empty state for users:', hasEmpty);
   });
 
   test('should handle long user name', async ({ adminPage }) => {

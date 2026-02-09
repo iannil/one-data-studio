@@ -15,6 +15,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { setupAuth, setupCommonMocks, BASE_URL } from './helpers';
 
 // 配置：每个页面停留时间（毫秒），便于人工观察
@@ -177,7 +178,7 @@ function safeFileName(name: string): string {
  * 输出分隔线
  */
 function logSeparator(): void {
-  console.log('\n' + '='.repeat(60) + '\n');
+  logger.info('\n' + '='.repeat(60) + '\n');
 }
 
 test.describe('可见浏览器功能验收', () => {
@@ -189,17 +190,17 @@ test.describe('可见浏览器功能验收', () => {
   test.afterAll(async () => {
     // 输出验收汇总报告
     logSeparator();
-    console.log('验收汇总报告');
+    logger.info('验收汇总报告');
     logSeparator();
-    console.log(`总计: ${ACCEPTANCE_PAGES.length} 个页面`);
-    console.log(`通过: ${acceptanceResults.passed.length} 个`);
-    console.log(`失败: ${acceptanceResults.failed.length} 个`);
-    console.log(`跳过: ${acceptanceResults.skipped.length} 个`);
+    logger.info(`总计: ${ACCEPTANCE_PAGES.length} 个页面`);
+    logger.info(`通过: ${acceptanceResults.passed.length} 个`);
+    logger.info(`失败: ${acceptanceResults.failed.length} 个`);
+    logger.info(`跳过: ${acceptanceResults.skipped.length} 个`);
 
     if (acceptanceResults.failed.length > 0) {
-      console.log('\n失败详情:');
+      logger.info('\n失败详情:');
       acceptanceResults.failed.forEach(({ name, error }) => {
-        console.log(`  - ${name}: ${error}`);
+        logger.info(`  - ${name}: ${error}`);
       });
     }
 
@@ -210,14 +211,14 @@ test.describe('可见浏览器功能验收', () => {
   for (const pageConfig of ACCEPTANCE_PAGES) {
     test(`验收 [${pageConfig.module}] ${pageConfig.name}`, async ({ page }) => {
       logSeparator();
-      console.log(`正在验收: ${pageConfig.name}`);
-      console.log(`模块: ${pageConfig.module}`);
-      console.log(`路由: ${pageConfig.route}`);
+      logger.info(`正在验收: ${pageConfig.name}`);
+      logger.info(`模块: ${pageConfig.module}`);
+      logger.info(`路由: ${pageConfig.route}`);
       logSeparator();
 
       // 检查是否跳过
       if (pageConfig.skipReason) {
-        console.log(`跳过原因: ${pageConfig.skipReason}`);
+        logger.info(`跳过原因: ${pageConfig.skipReason}`);
         acceptanceResults.skipped.push(pageConfig.name);
         test.skip();
         return;
@@ -242,7 +243,7 @@ test.describe('可见浏览器功能验收', () => {
         // 检查响应状态
         if (response) {
           const status = response.status();
-          console.log(`HTTP 状态: ${status}`);
+          logger.info(`HTTP 状态: ${status}`);
 
           if (status >= 400) {
             throw new Error(`HTTP ${status} 错误`);
@@ -251,7 +252,7 @@ test.describe('可见浏览器功能验收', () => {
 
         // 等待页面初始加载
         await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
-          console.log('警告: networkidle 超时，继续执行');
+          logger.info('警告: networkidle 超时，继续执行');
         });
 
         // 验证页面基本渲染
@@ -261,14 +262,14 @@ test.describe('可见浏览器功能验收', () => {
         const errorBoundary = page.locator('.error-boundary, .ant-result-error');
         const hasError = await errorBoundary.isVisible().catch(() => false);
         if (hasError) {
-          console.log('警告: 页面可能存在错误边界');
+          logger.info('警告: 页面可能存在错误边界');
         }
 
         // 检查错误弹窗
         const errorModal = page.locator('.ant-modal-confirm-error');
         const hasErrorModal = await errorModal.isVisible().catch(() => false);
         if (hasErrorModal) {
-          console.log('警告: 页面存在错误弹窗');
+          logger.info('警告: 页面存在错误弹窗');
         }
 
         // 截图保存
@@ -277,14 +278,14 @@ test.describe('可见浏览器功能验收', () => {
           path: screenshotPath,
           fullPage: true,
         });
-        console.log(`截图保存: ${screenshotPath}`);
+        logger.info(`截图保存: ${screenshotPath}`);
 
         // 停留观察
         await page.waitForTimeout(OBSERVE_DELAY);
 
         // 记录成功
         acceptanceResults.passed.push(pageConfig.name);
-        console.log(`✓ ${pageConfig.name} 验收通过`);
+        logger.info(`✓ ${pageConfig.name} 验收通过`);
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -301,9 +302,9 @@ test.describe('可见浏览器功能验收', () => {
             path: failScreenshotPath,
             fullPage: true,
           });
-          console.log(`失败截图保存: ${failScreenshotPath}`);
+          logger.info(`失败截图保存: ${failScreenshotPath}`);
         } catch {
-          console.log('无法保存失败截图');
+          logger.info('无法保存失败截图');
         }
 
         throw error;

@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from '../fixtures/user-lifecycle.fixture';
+import { logger } from '../helpers/logger';
 import { navigateToUserManagement, generateTestUserData } from '../helpers/user-management';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -228,7 +229,7 @@ test.describe('系统管理员完整流程', () => {
           }
         } catch (e) {
           // 某些服务可能未运行，仅记录不抛出错误
-          console.log(`Service ${service.name} health check skipped: ${e}`);
+          logger.info(`Service ${service.name} health check skipped: ${e}`);
         }
       }
     });

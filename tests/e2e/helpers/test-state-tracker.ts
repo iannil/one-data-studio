@@ -8,6 +8,7 @@
  */
 
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { logger } from './logger';
 import { join } from 'path';
 
 export interface TestResource {
@@ -39,7 +40,7 @@ export class TestStateTracker {
   startPhase(phaseName: string): void {
     this.currentPhase = phaseName;
     this.phaseStartTime = Date.now();
-    console.log(`\n========== [START] ${phaseName} ==========`);
+    logger.info(`\n========== [START] ${phaseName} ==========`);
   }
 
   /**
@@ -57,7 +58,7 @@ export class TestStateTracker {
     });
 
     const icon = status === 'passed' ? '✓' : status === 'failed' ? '✗' : '○';
-    console.log(`${icon} [END] ${this.currentPhase} (${duration}ms)`);
+    logger.info(`${icon} [END] ${this.currentPhase} (${duration}ms)`);
 
     this.currentPhase = '';
   }
@@ -74,7 +75,7 @@ export class TestStateTracker {
       metadata,
     });
 
-    console.log(`  + Tracked resource: [${type}] ${name} (ID: ${id})`);
+    logger.info(`  + Tracked resource: [${type}] ${name} (ID: ${id})`);
   }
 
   /**
@@ -154,7 +155,7 @@ export class TestStateTracker {
     const reportPath = filePath || join(dir, 'persistent-test-report.txt');
     const { writeFile } = await import('fs/promises');
     await writeFile(reportPath, this.getReport(), 'utf-8');
-    console.log(`\n📄 Test report saved: ${reportPath}`);
+    logger.info(`\n📄 Test report saved: ${reportPath}`);
   }
 
   /**
@@ -177,7 +178,7 @@ export class TestStateTracker {
     };
 
     await writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8');
-    console.log(`📊 Test state saved: ${statePath}`);
+    logger.info(`📊 Test state saved: ${statePath}`);
   }
 
   /**
@@ -194,25 +195,25 @@ export class TestStateTracker {
    * 打印摘要到控制台
    */
   printSummary(): void {
-    console.log('\n' + '='.repeat(50));
-    console.log('Test Summary');
-    console.log('='.repeat(50));
-    console.log(`Resources Created: ${this.resources.length}`);
-    console.log(`Phases Completed: ${this.phaseResults.length}`);
-    console.log('');
+    logger.info('\n' + '='.repeat(50));
+    logger.info('Test Summary');
+    logger.info('='.repeat(50));
+    logger.info(`Resources Created: ${this.resources.length}`);
+    logger.info(`Phases Completed: ${this.phaseResults.length}`);
+    logger.info('');
 
     if (this.resources.length > 0) {
-      console.log('Resources by Type:');
+      logger.info('Resources by Type:');
       const byType: Record<string, number> = {};
       for (const r of this.resources) {
         byType[r.type] = (byType[r.type] || 0) + 1;
       }
       for (const [type, count] of Object.entries(byType)) {
-        console.log(`  - ${type}: ${count}`);
+        logger.info(`  - ${type}: ${count}`);
       }
     }
 
-    console.log('');
-    console.log('='.repeat(50));
+    logger.info('');
+    logger.info('='.repeat(50));
   }
 }

@@ -9,6 +9,7 @@
  */
 
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { logger } from './logger';
 import { join } from 'path';
 
 // ============================================================================
@@ -214,7 +215,7 @@ export class TestDataPersistence {
         const loadedState = JSON.parse(content) as TestDataManagerState;
         // 合并状态，保留当前的 testInfo
         this.state = { ...loadedState, testInfo: this.state.testInfo };
-        console.log(`[TestDataPersistence] State loaded from: ${this.stateFilePath}`);
+        logger.info(`[TestDataPersistence] State loaded from: ${this.stateFilePath}`);
         return true;
       } catch (error) {
         console.error('[TestDataPersistence] Failed to load state:', error);
@@ -235,7 +236,7 @@ export class TestDataPersistence {
       }
 
       writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2), 'utf-8');
-      console.log(`[TestDataPersistence] State saved to: ${this.stateFilePath}`);
+      logger.info(`[TestDataPersistence] State saved to: ${this.stateFilePath}`);
     } catch (error) {
       console.error('[TestDataPersistence] Failed to save state:', error);
     }
@@ -265,7 +266,7 @@ export class TestDataPersistence {
       createdAt: user.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked user: ${user.username} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked user: ${user.username} (${key})`);
   }
 
   /**
@@ -277,7 +278,7 @@ export class TestDataPersistence {
       createdAt: datasource.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked datasource: ${datasource.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked datasource: ${datasource.name} (${key})`);
   }
 
   /**
@@ -289,7 +290,7 @@ export class TestDataPersistence {
       createdAt: dataset.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked dataset: ${dataset.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked dataset: ${dataset.name} (${key})`);
   }
 
   /**
@@ -301,7 +302,7 @@ export class TestDataPersistence {
       createdAt: agent.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked agent: ${agent.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked agent: ${agent.name} (${key})`);
   }
 
   /**
@@ -313,7 +314,7 @@ export class TestDataPersistence {
       createdAt: workflow.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked workflow: ${workflow.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked workflow: ${workflow.name} (${key})`);
   }
 
   /**
@@ -325,7 +326,7 @@ export class TestDataPersistence {
       createdAt: model.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked model: ${model.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked model: ${model.name} (${key})`);
   }
 
   /**
@@ -337,7 +338,7 @@ export class TestDataPersistence {
       createdAt: notebook.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked notebook: ${notebook.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked notebook: ${notebook.name} (${key})`);
   }
 
   /**
@@ -349,7 +350,7 @@ export class TestDataPersistence {
       createdAt: experiment.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked experiment: ${experiment.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked experiment: ${experiment.name} (${key})`);
   }
 
   /**
@@ -361,7 +362,7 @@ export class TestDataPersistence {
       createdAt: document.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked document: ${document.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked document: ${document.name} (${key})`);
   }
 
   /**
@@ -373,7 +374,7 @@ export class TestDataPersistence {
       createdAt: rule.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked quality rule: ${rule.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked quality rule: ${rule.name} (${key})`);
   }
 
   /**
@@ -385,7 +386,7 @@ export class TestDataPersistence {
       createdAt: task.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked ETL task: ${task.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked ETL task: ${task.name} (${key})`);
   }
 
   /**
@@ -397,7 +398,7 @@ export class TestDataPersistence {
       createdAt: feature.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked feature: ${feature.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked feature: ${feature.name} (${key})`);
   }
 
   /**
@@ -409,7 +410,7 @@ export class TestDataPersistence {
       createdAt: standard.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked standard: ${standard.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked standard: ${standard.name} (${key})`);
   }
 
   /**
@@ -421,7 +422,7 @@ export class TestDataPersistence {
       createdAt: asset.createdAt || new Date().toISOString(),
     };
     this.saveState();
-    console.log(`[TestDataPersistence] Tracked asset: ${asset.name} (${key})`);
+    logger.info(`[TestDataPersistence] Tracked asset: ${asset.name} (${key})`);
   }
 
   // ============================================================================
@@ -782,7 +783,7 @@ export class TestDataPersistence {
 
     const guide = this.generateVerificationGuide();
     writeFileSync(this.verificationGuidePath, guide, 'utf-8');
-    console.log(`[TestDataPersistence] Verification guide saved to: ${this.verificationGuidePath}`);
+    logger.info(`[TestDataPersistence] Verification guide saved to: ${this.verificationGuidePath}`);
 
     return this.verificationGuidePath;
   }
@@ -950,7 +951,7 @@ export class TestDataPersistence {
 
     const script = this.generateCleanupScript();
     writeFileSync(CLEANUP_SCRIPT_PATH, script, 'utf-8');
-    console.log(`[TestDataPersistence] Cleanup script saved to: ${CLEANUP_SCRIPT_PATH}`);
+    logger.info(`[TestDataPersistence] Cleanup script saved to: ${CLEANUP_SCRIPT_PATH}`);
 
     return CLEANUP_SCRIPT_PATH;
   }
@@ -959,29 +960,29 @@ export class TestDataPersistence {
    * 打印摘要
    */
   printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('Test Data Summary');
-    console.log('='.repeat(60));
-    console.log(`Test ID: ${this.state.testInfo.testId}`);
-    console.log(`Test Name: ${this.state.testInfo.testName}`);
-    console.log(`Base URL: ${this.state.testInfo.baseUrl}`);
-    console.log('');
-    console.log('Created Resources:');
-    console.log(`  Users: ${Object.keys(this.state.users).length}`);
-    console.log(`  Datasources: ${Object.keys(this.state.datasources).length}`);
-    console.log(`  Datasets: ${Object.keys(this.state.datasets).length}`);
-    console.log(`  Agents: ${Object.keys(this.state.agents).length}`);
-    console.log(`  Workflows: ${Object.keys(this.state.workflows).length}`);
-    console.log(`  Models: ${Object.keys(this.state.models).length}`);
-    console.log(`  Notebooks: ${Object.keys(this.state.notebooks).length}`);
-    console.log(`  Experiments: ${Object.keys(this.state.experiments).length}`);
-    console.log(`  Documents: ${Object.keys(this.state.documents).length}`);
-    console.log(`  Quality Rules: ${Object.keys(this.state.qualityRules).length}`);
-    console.log(`  ETL Tasks: ${Object.keys(this.state.etlTasks).length}`);
-    console.log(`  Features: ${Object.keys(this.state.features).length}`);
-    console.log(`  Standards: ${Object.keys(this.state.standards).length}`);
-    console.log(`  Assets: ${Object.keys(this.state.assets).length}`);
-    console.log('='.repeat(60));
+    logger.info('\n' + '='.repeat(60));
+    logger.info('Test Data Summary');
+    logger.info('='.repeat(60));
+    logger.info(`Test ID: ${this.state.testInfo.testId}`);
+    logger.info(`Test Name: ${this.state.testInfo.testName}`);
+    logger.info(`Base URL: ${this.state.testInfo.baseUrl}`);
+    logger.info('');
+    logger.info('Created Resources:');
+    logger.info(`  Users: ${Object.keys(this.state.users).length}`);
+    logger.info(`  Datasources: ${Object.keys(this.state.datasources).length}`);
+    logger.info(`  Datasets: ${Object.keys(this.state.datasets).length}`);
+    logger.info(`  Agents: ${Object.keys(this.state.agents).length}`);
+    logger.info(`  Workflows: ${Object.keys(this.state.workflows).length}`);
+    logger.info(`  Models: ${Object.keys(this.state.models).length}`);
+    logger.info(`  Notebooks: ${Object.keys(this.state.notebooks).length}`);
+    logger.info(`  Experiments: ${Object.keys(this.state.experiments).length}`);
+    logger.info(`  Documents: ${Object.keys(this.state.documents).length}`);
+    logger.info(`  Quality Rules: ${Object.keys(this.state.qualityRules).length}`);
+    logger.info(`  ETL Tasks: ${Object.keys(this.state.etlTasks).length}`);
+    logger.info(`  Features: ${Object.keys(this.state.features).length}`);
+    logger.info(`  Standards: ${Object.keys(this.state.standards).length}`);
+    logger.info(`  Assets: ${Object.keys(this.state.assets).length}`);
+    logger.info('='.repeat(60));
   }
 }
 

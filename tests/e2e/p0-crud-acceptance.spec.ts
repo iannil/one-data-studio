@@ -23,6 +23,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { setupAuth, waitForPageLoad } from './helpers';
 import { CrudNetworkMonitor, createCrudNetworkMonitor } from './helpers/crud-network-monitor';
 import {
@@ -222,7 +223,7 @@ function log(message: string, type: 'info' | 'success' | 'warn' | 'error' = 'inf
     warn: '[WARN]',
     error: '[ERROR]',
   };
-  console.log(`${prefix[type]} ${message}`);
+  logger.info(`${prefix[type]} ${message}`);
 }
 
 /**

@@ -4,6 +4,7 @@
  */
 
 import { Page, Locator } from '@playwright/test';
+import { logger } from './logger';
 import path from 'path';
 import fs from 'fs/promises';
 import { extractImage, OCRResult, getPageClient } from './ocr-api-client';
@@ -89,7 +90,7 @@ const DEFAULT_CONFIG: OCRValidatorConfig = {
  * ```typescript
  * const validator = new OCRValidator(page);
  * const result = await validator.verifyPageTitle('数据源管理');
- * console.log(result.passed, result.message);
+ * logger.info(result.passed, result.message);
  * ```
  */
 export class OCRValidator {

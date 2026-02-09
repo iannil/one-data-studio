@@ -9,6 +9,7 @@
  */
 
 import { Page, Response } from '@playwright/test';
+import { logger } from './logger';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -132,7 +133,7 @@ export class ComprehensiveMonitor {
       this.setupPerformanceMonitoring();
     }
 
-    console.log(`[ComprehensiveMonitor] Started monitoring at ${new Date().toISOString()}`);
+    logger.info(`[ComprehensiveMonitor] Started monitoring at ${new Date().toISOString()}`);
   }
 
   /**
@@ -150,7 +151,7 @@ export class ComprehensiveMonitor {
       this.performanceObserver.disconnect();
     }
 
-    console.log(`[ComprehensiveMonitor] Stopped monitoring at ${new Date().toISOString()}`);
+    logger.info(`[ComprehensiveMonitor] Stopped monitoring at ${new Date().toISOString()}`);
 
     return {
       networkIssues: [...this.networkIssues],
@@ -169,9 +170,9 @@ export class ComprehensiveMonitor {
   startPhase(phaseName: string): void {
     this.currentPhase = phaseName;
     this.phaseStartTime = Date.now();
-    console.log(`\n${'='.repeat(70)}`);
-    console.log(`[PHASE] ${phaseName}`);
-    console.log('='.repeat(70));
+    logger.info(`\n${'='.repeat(70)}`);
+    logger.info(`[PHASE] ${phaseName}`);
+    logger.info('='.repeat(70));
   }
 
   /**
@@ -261,7 +262,7 @@ export class ComprehensiveMonitor {
       // 总是记录响应（用于分析）
       if (status >= 400) {
         this.networkIssues.push(issue);
-        console.warn(`[Network] ${method} ${url} - ${status} (${duration}ms)`);
+        logger.warn(`[Network] ${method} ${url} - ${status} (${duration}ms)`);
       }
     });
 
@@ -456,16 +457,16 @@ export class ComprehensiveMonitor {
     const icon = stepLog.status === 'passed' ? '✓' : stepLog.status === 'failed' ? '✗' : '○';
     const warningIcon = hasErrors ? ' ⚠' : '';
 
-    console.log(`${icon} [STEP] ${stepLog.step}${warningIcon} (${stepLog.duration}ms)`);
+    logger.info(`${icon} [STEP] ${stepLog.step}${warningIcon} (${stepLog.duration}ms)`);
 
     if (stepLog.consoleErrors.length > 0) {
-      console.log(`  ⚠ Console Errors: ${stepLog.consoleErrors.length}`);
+      logger.info(`  ⚠ Console Errors: ${stepLog.consoleErrors.length}`);
     }
     if (stepLog.networkIssues.length > 0) {
-      console.log(`  ⚠ Network Issues: ${stepLog.networkIssues.length}`);
+      logger.info(`  ⚠ Network Issues: ${stepLog.networkIssues.length}`);
     }
     if (stepLog.details) {
-      console.log(`  ℹ ${stepLog.details}`);
+      logger.info(`  ℹ ${stepLog.details}`);
     }
   }
 
@@ -481,7 +482,7 @@ export class ComprehensiveMonitor {
     const filepath = join(process.cwd(), this.logDir, filename);
 
     await this.page.screenshot({ path: filepath, fullPage: true });
-    console.log(`  📸 Screenshot saved: ${filepath}`);
+    logger.info(`  📸 Screenshot saved: ${filepath}`);
     return filepath;
   }
 
@@ -676,8 +677,8 @@ export class ComprehensiveMonitor {
     writeFileSync(textPath, textReport, 'utf-8');
     writeFileSync(jsonPath, JSON.stringify(jsonReport, null, 2), 'utf-8');
 
-    console.log(`\n📄 Text report saved: ${textPath}`);
-    console.log(`📊 JSON report saved: ${jsonPath}`);
+    logger.info(`\n📄 Text report saved: ${textPath}`);
+    logger.info(`📊 JSON report saved: ${jsonPath}`);
 
     return { textPath, jsonPath };
   }
@@ -688,16 +689,16 @@ export class ComprehensiveMonitor {
   printSummary(): void {
     const { summary } = this.generateReport();
 
-    console.log('\n' + '='.repeat(50));
-    console.log('Test Summary');
-    console.log('='.repeat(50));
-    console.log(`Duration: ${summary.totalDurationSec}s`);
-    console.log(`Steps: ${summary.passedSteps}/${summary.totalSteps} passed`);
+    logger.info('\n' + '='.repeat(50));
+    logger.info('Test Summary');
+    logger.info('='.repeat(50));
+    logger.info(`Duration: ${summary.totalDurationSec}s`);
+    logger.info(`Steps: ${summary.passedSteps}/${summary.totalSteps} passed`);
     if (summary.failedSteps > 0) {
-      console.log(`Failed: ${summary.failedSteps}`);
+      logger.info(`Failed: ${summary.failedSteps}`);
     }
-    console.log(`Errors: ${summary.totalConsoleErrors + summary.totalNetworkIssues}`);
-    console.log('='.repeat(50));
+    logger.info(`Errors: ${summary.totalConsoleErrors + summary.totalNetworkIssues}`);
+    logger.info('='.repeat(50));
   }
 
   // ============================================================================

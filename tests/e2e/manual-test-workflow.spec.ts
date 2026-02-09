@@ -22,6 +22,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { ConsoleLogger } from './helpers/console-logger';
 import { TestDataManager } from './helpers/test-data-helper';
 
@@ -110,7 +111,7 @@ test.describe('Phase 1: 数据源管理', () => {
 
     // 如果有错误，输出到测试报告
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -166,7 +167,7 @@ test.describe('Phase 1: 数据源管理', () => {
 
     // 保存数据源 ID
     const datasourceId = await testDataManager.saveDatasource('mysql', MYSQL_CONFIG.name);
-    console.log(`MySQL 数据源已创建，ID: ${datasourceId}`);
+    logger.info(`MySQL 数据源已创建，ID: ${datasourceId}`);
   });
 
   test('1.3 验证 MySQL 数据源显示在列表中', async ({ page }) => {
@@ -225,7 +226,7 @@ test.describe('Phase 1: 数据源管理', () => {
 
     // 保存数据源 ID
     const datasourceId = await testDataManager.saveDatasource('postgresql', POSTGRES_CONFIG.name);
-    console.log(`PostgreSQL 数据源已创建，ID: ${datasourceId}`);
+    logger.info(`PostgreSQL 数据源已创建，ID: ${datasourceId}`);
   });
 
   test('1.5 验证两个数据源都显示在列表中', async ({ page }) => {
@@ -259,7 +260,7 @@ test.describe('Phase 1: 数据源管理', () => {
       // 验证连接成功提示
       const successMessage = page.locator('.ant-message-success, .ant-notification-notice-success');
       if (await successMessage.isVisible({ timeout: 5000 }).catch(() => false)) {
-        console.log('MySQL 数据源连接测试成功');
+        logger.info('MySQL 数据源连接测试成功');
       }
     }
   });
@@ -283,7 +284,7 @@ test.describe('Phase 1: 数据源管理', () => {
       // 验证连接成功提示
       const successMessage = page.locator('.ant-message-success, .ant-notification-notice-success');
       if (await successMessage.isVisible({ timeout: 5000 }).catch(() => false)) {
-        console.log('PostgreSQL 数据源连接测试成功');
+        logger.info('PostgreSQL 数据源连接测试成功');
       }
     }
   });
@@ -352,7 +353,7 @@ test.describe('Phase 2: 元数据管理', () => {
   test.afterEach(async ({ page }) => {
     const errors = await consoleLogger.stop();
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -413,7 +414,7 @@ test.describe('Phase 2: 元数据管理', () => {
     // 验证至少有一些表显示
     const tableOrTree = page.locator('.ant-table-tbody .ant-table-row, .ant-tree-treenode');
     const count = await tableOrTree.count();
-    console.log(`Found ${count} tables/nodes`);
+    logger.info(`Found ${count} tables/nodes`);
 
     // 如果使用表格形式，检查核心表名
     const table = page.locator('.ant-table-tbody');
@@ -422,7 +423,7 @@ test.describe('Phase 2: 元数据管理', () => {
       for (const tableName of expectedTables) {
         const tableExists = await page.locator('.ant-table-tbody').getByText(tableName, { exact: false }).isVisible().catch(() => false);
         if (tableExists) {
-          console.log(`Found table: ${tableName}`);
+          logger.info(`Found table: ${tableName}`);
         }
       }
     }
@@ -444,7 +445,7 @@ test.describe('Phase 2: 元数据管理', () => {
       // 验证详情页面显示
       const detailPanel = page.locator('.ant-drawer, .ant-modal, .detail-panel');
       if (await detailPanel.first().isVisible({ timeout: 5000 }).catch(() => false)) {
-        console.log('Table detail panel opened');
+        logger.info('Table detail panel opened');
       }
     }
   });
@@ -462,7 +463,7 @@ test.describe('Phase 2: 元数据管理', () => {
       // 验证搜索结果
       const results = page.locator('.ant-table-tbody .ant-table-row, .ant-tree-treenode');
       const count = await results.count();
-      console.log(`Search results for "users": ${count}`);
+      logger.info(`Search results for "users": ${count}`);
     }
   });
 });
@@ -483,7 +484,7 @@ test.describe('Phase 3: 数据版本管理', () => {
   test.afterEach(async ({ page }) => {
     const errors = await consoleLogger.stop();
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -536,7 +537,7 @@ test.describe('Phase 3: 数据版本管理', () => {
     // 验证版本列表显示
     const versionList = page.locator('.ant-table-tbody .ant-table-row, .ant-timeline-item, .version-item');
     const count = await versionList.count();
-    console.log(`Found ${count} versions`);
+    logger.info(`Found ${count} versions`);
   });
 });
 
@@ -556,7 +557,7 @@ test.describe('Phase 4: 特征管理', () => {
   test.afterEach(async ({ page }) => {
     const errors = await consoleLogger.stop();
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -616,7 +617,7 @@ test.describe('Phase 4: 特征管理', () => {
     // 验证特征列表显示
     const featureList = page.locator('.ant-table-tbody .ant-table-row, .feature-card, .feature-item');
     const count = await featureList.count();
-    console.log(`Found ${count} features/feature groups`);
+    logger.info(`Found ${count} features/feature groups`);
   });
 });
 
@@ -636,7 +637,7 @@ test.describe('Phase 5: 数据标准', () => {
   test.afterEach(async ({ page }) => {
     const errors = await consoleLogger.stop();
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -693,7 +694,7 @@ test.describe('Phase 5: 数据标准', () => {
     if (await runButton.first().isVisible()) {
       await runButton.first().click();
       await page.waitForTimeout(3000);
-      console.log('Standard check executed');
+      logger.info('Standard check executed');
     }
   });
 });
@@ -714,7 +715,7 @@ test.describe('Phase 6: 数据资产', () => {
   test.afterEach(async ({ page }) => {
     const errors = await consoleLogger.stop();
     if (errors.length > 0) {
-      console.log('Console errors detected:', errors);
+      logger.info('Console errors detected:', errors);
     }
   });
 
@@ -777,7 +778,7 @@ test.describe('Phase 6: 数据资产', () => {
       // 验证搜索结果
       const results = page.locator('.ant-table-tbody .ant-table-row, .asset-card');
       const count = await results.count();
-      console.log(`Asset search results for "E2E": ${count}`);
+      logger.info(`Asset search results for "E2E": ${count}`);
     }
   });
 });
@@ -788,20 +789,20 @@ test.describe('Phase 6: 数据资产', () => {
 
 test.describe('测试总结', () => {
   test('生成测试总结', async () => {
-    console.log('='.repeat(60));
-    console.log('数据治理 Manual E2E 测试完成');
-    console.log('='.repeat(60));
-    console.log('创建的资源:');
-    console.log(`  - MySQL 数据源: ${MYSQL_CONFIG.name} (端口 ${MYSQL_CONFIG.port})`);
-    console.log(`  - PostgreSQL 数据源: ${POSTGRES_CONFIG.name} (端口 ${POSTGRES_CONFIG.port})`);
-    console.log('='.repeat(60));
-    console.log('测试数据已保留，可用于手动验证');
-    console.log('='.repeat(60));
-    console.log('手动验证步骤:');
-    console.log('1. 访问 http://localhost:3000/');
-    console.log('2. 检查数据源管理 → 验证两个数据源存在且可连接');
-    console.log('3. 检查元数据管理 → 验证表已扫描');
-    console.log('4. 检查各功能模块的数据完整性');
-    console.log('='.repeat(60));
+    logger.info('='.repeat(60));
+    logger.info('数据治理 Manual E2E 测试完成');
+    logger.info('='.repeat(60));
+    logger.info('创建的资源:');
+    logger.info(`  - MySQL 数据源: ${MYSQL_CONFIG.name} (端口 ${MYSQL_CONFIG.port})`);
+    logger.info(`  - PostgreSQL 数据源: ${POSTGRES_CONFIG.name} (端口 ${POSTGRES_CONFIG.port})`);
+    logger.info('='.repeat(60));
+    logger.info('测试数据已保留，可用于手动验证');
+    logger.info('='.repeat(60));
+    logger.info('手动验证步骤:');
+    logger.info('1. 访问 http://localhost:3000/');
+    logger.info('2. 检查数据源管理 → 验证两个数据源存在且可连接');
+    logger.info('3. 检查元数据管理 → 验证表已扫描');
+    logger.info('4. 检查各功能模块的数据完整性');
+    logger.info('='.repeat(60));
   });
 });

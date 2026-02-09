@@ -7,6 +7,7 @@
  */
 
 import { readFile } from 'fs/promises';
+import { logger } from './logger';
 import { Page } from '@playwright/test';
 
 // ==================== 类型定义 ====================
@@ -196,7 +197,7 @@ async function fetchWithTimeout(
  * ```typescript
  * const client = new OCRPageClient(page);
  * const result = await client.extractImage('/path/to/screenshot.png');
- * console.log(result.rawText);
+ * logger.info(result.rawText);
  * ```
  */
 export class OCRPageClient {

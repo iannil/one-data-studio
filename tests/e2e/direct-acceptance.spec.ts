@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 
 // ============================================
 // 配置
@@ -38,9 +39,9 @@ const CONFIG = {
  * 在页面加载前设置认证状态
  */
 async function createAuthenticatedContext(browser: any) {
-  console.log('\n========================================');
-  console.log('[认证] 创建认证浏览器上下文...');
-  console.log('========================================');
+  logger.info('\n========================================');
+  logger.info('[认证] 创建认证浏览器上下文...');
+  logger.info('========================================');
 
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
@@ -80,7 +81,7 @@ async function createAuthenticatedContext(browser: any) {
     }));
   });
 
-  console.log('[认证] ✓ 认证脚本已添加到上下文\n');
+  logger.info('[认证] ✓ 认证脚本已添加到上下文\n');
   return context;
 }
 
@@ -92,27 +93,27 @@ const PageValidator = {
    * 基础页面验证
    */
   async validate(page: any, pageName: string) {
-    console.log(`\n[${pageName}] ========== 验证页面 ==========`);
+    logger.info(`\n[${pageName}] ========== 验证页面 ==========`);
 
     const url = page.url();
-    console.log(`[${pageName}] URL: ${url}`);
+    logger.info(`[${pageName}] URL: ${url}`);
 
     // 页面标题
     const title = await page.title();
-    console.log(`[${pageName}] 标题: ${title}`);
+    logger.info(`[${pageName}] 标题: ${title}`);
 
     // 页面内容长度
     const bodyText = await page.locator('body').textContent() || '';
-    console.log(`[${pageName}] 内容长度: ${bodyText.length} 字符`);
+    logger.info(`[${pageName}] 内容长度: ${bodyText.length} 字符`);
 
     // 检查是否有主要内容
     const hasMainContent = bodyText.length > 100;
-    console.log(`[${pageName}] 有内容: ${hasMainContent ? '✓' : '✗'}`);
+    logger.info(`[${pageName}] 有内容: ${hasMainContent ? '✓' : '✗'}`);
 
     // 检查是否有错误
     const hasError = bodyText.includes('404') || bodyText.includes('500') || bodyText.includes('Error') || bodyText.includes('错误');
     if (hasError) {
-      console.log(`[${pageName}] ⚠️ 检测到错误信息`);
+      logger.info(`[${pageName}] ⚠️ 检测到错误信息`);
     }
 
     // 检查常见页面元素
@@ -123,23 +124,23 @@ const PageValidator = {
     const button = await page.locator('button').count() > 0;
     const input = await page.locator('input, textarea, select').count() > 0;
 
-    console.log(`[${pageName}] 页面元素:`);
-    console.log(`  - main容器: ${main ? '✓' : '✗'}`);
-    console.log(`  - 导航栏: ${nav ? '✓' : '✗'}`);
-    console.log(`  - 表格: ${table ? '✓' : '✗'}`);
-    console.log(`  - 卡片: ${card ? '✓' : '✗'}`);
-    console.log(`  - 按钮: ${button}个`);
-    console.log(`  - 输入框: ${input}个`);
+    logger.info(`[${pageName}] 页面元素:`);
+    logger.info(`  - main容器: ${main ? '✓' : '✗'}`);
+    logger.info(`  - 导航栏: ${nav ? '✓' : '✗'}`);
+    logger.info(`  - 表格: ${table ? '✓' : '✗'}`);
+    logger.info(`  - 卡片: ${card ? '✓' : '✗'}`);
+    logger.info(`  - 按钮: ${button}个`);
+    logger.info(`  - 输入框: ${input}个`);
 
     // 如果被重定向到登录页
     const isLoginPage = url.includes('/login');
     if (isLoginPage) {
-      console.log(`[${pageName}] ⚠️ 被重定向到登录页（需要认证）`);
+      logger.info(`[${pageName}] ⚠️ 被重定向到登录页（需要认证）`);
     }
 
     // 判断页面是否正常
     const isNormal = hasMainContent && !isLoginPage && !hasError;
-    console.log(`[${pageName}] ${isNormal ? '✓ 通过' : '✗ 需要检查'}`);
+    logger.info(`[${pageName}] ${isNormal ? '✓ 通过' : '✗ 需要检查'}`);
 
     return { isNormal, hasMainContent, isLoginPage, hasError };
   },
@@ -157,9 +158,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
    * 在所有测试前设置认证
    */
   test.beforeAll(async ({ browser }) => {
-    console.log('\n' + '='.repeat(60));
-    console.log('ONE-DATA-STUDIO 验收测试开始');
-    console.log('='.repeat(60));
+    logger.info('\n' + '='.repeat(60));
+    logger.info('ONE-DATA-STUDIO 验收测试开始');
+    logger.info('='.repeat(60));
 
     // 创建已认证的浏览器上下文
     authContext = await createAuthenticatedContext(browser);
@@ -170,8 +171,8 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     await page.waitForLoadState('networkidle');
 
     const url = page.url();
-    console.log(`[认证] 首页 URL: ${url}`);
-    console.log(`[认证] 是否仍在登录页: ${url.includes('/login') ? '是' : '否'}`);
+    logger.info(`[认证] 首页 URL: ${url}`);
+    logger.info(`[认证] 是否仍在登录页: ${url.includes('/login') ? '是' : '否'}`);
 
     await page.close();
   });
@@ -180,9 +181,9 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
     if (authContext) {
       await authContext.close();
     }
-    console.log('\n' + '='.repeat(60));
-    console.log('ONE-DATA-STUDIO 验收测试完成');
-    console.log('='.repeat(60) + '\n');
+    logger.info('\n' + '='.repeat(60));
+    logger.info('ONE-DATA-STUDIO 验收测试完成');
+    logger.info('='.repeat(60) + '\n');
   });
 
   // ============================================
@@ -341,30 +342,30 @@ test.describe('ONE-DATA-STUDIO 完整验收测试', () => {
 // ============================================
 test.describe('API 服务健康检查', () => {
   test('agent API', async ({ request }) => {
-    console.log('\n[API] 检查 agent API...');
+    logger.info('\n[API] 检查 agent API...');
     const response = await request.get(`${CONFIG.agent_API}/api/v1/health`);
-    console.log(`[API] agent API 状态: ${response.status()}`);
+    logger.info(`[API] agent API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('data API', async ({ request }) => {
-    console.log('\n[API] 检查 data API...');
+    logger.info('\n[API] 检查 data API...');
     const response = await request.get(`${CONFIG.data_API}/api/v1/health`);
-    console.log(`[API] data API 状态: ${response.status()}`);
+    logger.info(`[API] data API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('Model API', async ({ request }) => {
-    console.log('\n[API] 检查 Model API...');
+    logger.info('\n[API] 检查 Model API...');
     const response = await request.get(`${CONFIG.MODEL_API}/api/v1/health`);
-    console.log(`[API] Model API 状态: ${response.status()}`);
+    logger.info(`[API] Model API 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 
   test('OpenAI Proxy', async ({ request }) => {
-    console.log('\n[API] 检查 OpenAI Proxy...');
+    logger.info('\n[API] 检查 OpenAI Proxy...');
     const response = await request.get(`${CONFIG.OPENAI_API}/health`);
-    console.log(`[API] OpenAI Proxy 状态: ${response.status()}`);
+    logger.info(`[API] OpenAI Proxy 状态: ${response.status()}`);
     expect(response.status()).toBe(200);
   });
 });

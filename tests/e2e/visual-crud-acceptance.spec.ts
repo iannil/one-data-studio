@@ -23,6 +23,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { setupAuth, waitForPageLoad } from './helpers';
 
 // 配置：每个页面停留时间（毫秒），便于人工观察
@@ -460,7 +461,7 @@ function safeFileName(name: string): string {
  * 输出分隔线
  */
 function logSeparator(): void {
-  console.log('\n' + '='.repeat(60) + '\n');
+  logger.info('\n' + '='.repeat(60) + '\n');
 }
 
 /**
@@ -539,24 +540,24 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
   test.afterAll(async () => {
     // 输出验收汇总报告
     logSeparator();
-    console.log('CRUD 验收汇总报告');
+    logger.info('CRUD 验收汇总报告');
     logSeparator();
 
     const passed = acceptanceResults.filter(r => r.status === 'passed').length;
     const failed = acceptanceResults.filter(r => r.status === 'failed').length;
     const skipped = acceptanceResults.filter(r => r.status === 'skipped').length;
 
-    console.log(`总计: ${acceptanceResults.length} 项操作`);
-    console.log(`通过: ${passed} 项`);
-    console.log(`失败: ${failed} 项`);
-    console.log(`跳过: ${skipped} 项`);
+    logger.info(`总计: ${acceptanceResults.length} 项操作`);
+    logger.info(`通过: ${passed} 项`);
+    logger.info(`失败: ${failed} 项`);
+    logger.info(`跳过: ${skipped} 项`);
 
     if (failed > 0) {
-      console.log('\n失败详情:');
+      logger.info('\n失败详情:');
       acceptanceResults
         .filter(r => r.status === 'failed')
         .forEach(r => {
-          console.log(`  - [${r.config.module}] ${r.config.name} - ${r.operation}: ${r.error}`);
+          logger.info(`  - [${r.config.module}] ${r.config.name} - ${r.operation}: ${r.error}`);
         });
     }
 
@@ -570,7 +571,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
       // ==================== Read 操作 ====================
       test('1-Read: 查看列表', async ({ page }) => {
         logSeparator();
-        console.log(`正在验收: [${config.name}] Read 操作`);
+        logger.info(`正在验收: [${config.name}] Read 操作`);
         logSeparator();
 
         try {
@@ -585,7 +586,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
             // 验证表格存在
             const table = page.locator(config.read.tableSelector);
             await expect(table).toBeVisible({ timeout: 15000 });
-            console.log('✓ 表格已加载');
+            logger.info('✓ 表格已加载');
 
             // 尝试搜索功能（如果配置了）
             if (config.read.searchPlaceholder) {
@@ -593,7 +594,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
                 await searchInput.fill('test');
                 await page.waitForTimeout(500);
-                console.log('✓ 搜索功能可用');
+                logger.info('✓ 搜索功能可用');
               }
             }
           }
@@ -607,7 +608,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
             status: 'passed',
             screenshot: screenshotPath,
           });
-          console.log(`✓ [${config.name}] Read 验收通过`);
+          logger.info(`✓ [${config.name}] Read 验收通过`);
 
           await page.waitForTimeout(OBSERVE_DELAY);
 
@@ -628,7 +629,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
       if (config.create) {
         test('2-Create: 新建记录', async ({ page }) => {
           logSeparator();
-          console.log(`正在验收: [${config.name}] Create 操作`);
+          logger.info(`正在验收: [${config.name}] Create 操作`);
           logSeparator();
 
           try {
@@ -642,7 +643,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
             // 点击新建按钮
             const clicked = await clickButton(page, config.create!.buttonText);
             if (!clicked) {
-              console.log('警告: 未找到新建按钮');
+              logger.info('警告: 未找到新建按钮');
               acceptanceResults.push({
                 config,
                 operation: 'create',
@@ -651,12 +652,12 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               });
               return;
             }
-            console.log('✓ 已点击新建按钮');
+            logger.info('✓ 已点击新建按钮');
 
             // 等待弹窗/抽屉出现
             const modalOrDrawer = page.locator('.ant-modal, .ant-drawer');
             await expect(modalOrDrawer).toBeVisible({ timeout: 5000 });
-            console.log('✓ 表单弹窗已打开');
+            logger.info('✓ 表单弹窗已打开');
 
             // 截图：表单打开状态
             await page.screenshot({
@@ -667,9 +668,9 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
             for (const field of config.create!.formFields) {
               const filled = await fillFormField(page, field);
               if (filled) {
-                console.log(`✓ 已填写字段: ${field.selector.split(',')[0]}`);
+                logger.info(`✓ 已填写字段: ${field.selector.split(',')[0]}`);
               } else {
-                console.log(`警告: 未找到字段: ${field.selector.split(',')[0]}`);
+                logger.info(`警告: 未找到字段: ${field.selector.split(',')[0]}`);
               }
             }
 
@@ -681,13 +682,13 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
             // 提交表单
             const submitClicked = await clickButton(page, [config.create!.submitText, '确定', '提交', '保存']);
             if (submitClicked) {
-              console.log('✓ 已点击提交按钮');
+              logger.info('✓ 已点击提交按钮');
               await page.waitForTimeout(1000);
 
               // 检查是否有成功提示
               const successMsg = page.locator('.ant-message-success');
               if (await successMsg.isVisible({ timeout: 3000 }).catch(() => false)) {
-                console.log('✓ 显示成功提示');
+                logger.info('✓ 显示成功提示');
               }
             }
 
@@ -700,7 +701,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               status: 'passed',
               screenshot: screenshotPath,
             });
-            console.log(`✓ [${config.name}] Create 验收通过`);
+            logger.info(`✓ [${config.name}] Create 验收通过`);
 
             await page.waitForTimeout(OBSERVE_DELAY);
 
@@ -729,7 +730,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
       if (config.update) {
         test('3-Update: 编辑记录', async ({ page }) => {
           logSeparator();
-          console.log(`正在验收: [${config.name}] Update 操作`);
+          logger.info(`正在验收: [${config.name}] Update 操作`);
           logSeparator();
 
           try {
@@ -745,12 +746,12 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
 
             if (await editBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
               await editBtn.click();
-              console.log('✓ 已点击编辑按钮');
+              logger.info('✓ 已点击编辑按钮');
 
               // 等待弹窗出现
               const modalOrDrawer = page.locator('.ant-modal, .ant-drawer');
               await expect(modalOrDrawer).toBeVisible({ timeout: 5000 });
-              console.log('✓ 编辑表单已打开');
+              logger.info('✓ 编辑表单已打开');
 
               // 修改字段
               for (const field of config.update!.updateFields) {
@@ -761,7 +762,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
                     if (await el.isVisible({ timeout: 2000 })) {
                       await el.clear();
                       await el.fill(field.value);
-                      console.log(`✓ 已更新字段: ${selector}`);
+                      logger.info(`✓ 已更新字段: ${selector}`);
                       break;
                     }
                   } catch {
@@ -778,11 +779,11 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               // 保存
               const saveClicked = await clickButton(page, [config.update!.saveText, '保存', '确定']);
               if (saveClicked) {
-                console.log('✓ 已点击保存按钮');
+                logger.info('✓ 已点击保存按钮');
                 await page.waitForTimeout(1000);
               }
             } else {
-              console.log('警告: 未找到编辑按钮，可能没有数据');
+              logger.info('警告: 未找到编辑按钮，可能没有数据');
               acceptanceResults.push({
                 config,
                 operation: 'update',
@@ -801,7 +802,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               status: 'passed',
               screenshot: screenshotPath,
             });
-            console.log(`✓ [${config.name}] Update 验收通过`);
+            logger.info(`✓ [${config.name}] Update 验收通过`);
 
             await page.waitForTimeout(OBSERVE_DELAY);
 
@@ -823,7 +824,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
       if (config.delete) {
         test('4-Delete: 删除记录', async ({ page }) => {
           logSeparator();
-          console.log(`正在验收: [${config.name}] Delete 操作`);
+          logger.info(`正在验收: [${config.name}] Delete 操作`);
           logSeparator();
 
           try {
@@ -839,7 +840,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
 
             if (await deleteBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
               await deleteBtn.click();
-              console.log('✓ 已点击删除按钮');
+              logger.info('✓ 已点击删除按钮');
 
               // 等待确认弹窗
               await page.waitForTimeout(500);
@@ -861,13 +862,13 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
                 const confirmBtn = page.locator(selector).first();
                 if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
                   await confirmBtn.click();
-                  console.log('✓ 已确认删除');
+                  logger.info('✓ 已确认删除');
                   await page.waitForTimeout(1000);
                   break;
                 }
               }
             } else {
-              console.log('警告: 未找到删除按钮，可能没有数据');
+              logger.info('警告: 未找到删除按钮，可能没有数据');
               acceptanceResults.push({
                 config,
                 operation: 'delete',
@@ -886,7 +887,7 @@ test.describe('可见浏览器 CRUD 验收（真实API）', () => {
               status: 'passed',
               screenshot: screenshotPath,
             });
-            console.log(`✓ [${config.name}] Delete 验收通过`);
+            logger.info(`✓ [${config.name}] Delete 验收通过`);
 
             await page.waitForTimeout(OBSERVE_DELAY);
 

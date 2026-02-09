@@ -35,6 +35,34 @@ KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "web-frontend")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "").lower()
 IS_PRODUCTION = ENVIRONMENT in ("production", "prod")
 
+# AUTH_MODE: Enable/disable authentication (development only)
+AUTH_MODE = os.getenv("AUTH_MODE", "true").lower() == "true"
+
+# SSL verification for external requests
+# In production, this should always be True. Only disable for local development with self-signed certs.
+VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
+
+# SECURITY: Critical checks for production environment
+if IS_PRODUCTION:
+    if not AUTH_MODE:
+        raise ValueError(
+            "CRITICAL: AUTH_MODE cannot be disabled in production environment. "
+            "Remove AUTH_MODE=false or set ENVIRONMENT to a non-production value."
+        )
+    if not VERIFY_SSL:
+        raise ValueError(
+            "CRITICAL: VERIFY_SSL cannot be disabled in production environment."
+        )
+elif not AUTH_MODE:
+    logger.warning(
+        "SECURITY WARNING: AUTH_MODE is disabled. All requests will bypass authentication. "
+        "This should ONLY be used for local development."
+    )
+elif not VERIFY_SSL:
+    logger.warning(
+        "SECURITY WARNING: SSL verification is disabled. This should ONLY be used for local development."
+    )
+
 # SECURITY: In production, optional=True only applies to explicitly whitelisted endpoints
 # Configure via environment variable (comma-separated paths)
 # Example: PUBLIC_API_ENDPOINTS=/api/v1/health,/api/v1/public/*
@@ -260,6 +288,16 @@ def require_jwt(optional: bool = False):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
+            # 开发模式: 跳过认证检查
+            if not AUTH_MODE:
+                g.user = "dev_user"
+                g.user_id = "dev_user_001"
+                g.email = "dev@example.com"
+                g.name = "Development User"
+                g.roles = ["admin"]
+                g.payload = {"sub": "dev_user_001"}
+                return fn(*args, **kwargs)
+
             # Determine if authentication is truly optional
             # In strict mode, optional is only honored for explicit public endpoints
             is_optional = optional
@@ -336,6 +374,10 @@ def require_role(*required_roles: str):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
+            # 开发模式: 跳过角色检查
+            if not AUTH_MODE:
+                return fn(*args, **kwargs)
+
             if not hasattr(g, 'roles'):
                 return jsonify({
                     "code": 40100,
@@ -380,7 +422,7 @@ def get_current_user() -> Optional[Dict]:
 
 
 # 健康检查 - 不需要认证
-HEALTH_CHECK_ENDPOINTS = ["/health", "/readiness", "/metrics"]
+HEALTH_CHECK_ENDPOINTS = ["/health", "/readiness", "/metrics", "/api/v1/health"]
 
 
 def is_health_check_endpoint(request_obj) -> bool:
@@ -390,3 +432,130 @@ def is_health_check_endpoint(request_obj) -> bool:
         if path.startswith(endpoint):
             return True
     return False
+
+
+def check_permission(resource: str, operation: str, roles: List[str]) -> bool:
+    """
+    检查角色是否有指定资源的操作权限
+
+    Args:
+        resource: 资源类型
+        operation: 操作类型
+        roles: 用户角色列表
+
+    Returns:
+        是否有权限
+    """
+    if "admin" in roles:
+        return True
+
+    from .permissions import ROLE_PERMISSIONS
+    for role in roles:
+        if role in ROLE_PERMISSIONS:
+            if (resource, operation) in ROLE_PERMISSIONS[role]:
+                return True
+
+    return False
+
+
+# ============= Token 管理端点辅助函数 =============
+
+def refresh_token(refresh_token_str: str) -> Optional[Dict]:
+    """
+    刷新访问 Token
+
+    Args:
+        refresh_token_str: 刷新令牌
+
+    Returns:
+        新的 Token 信息或 None
+    """
+    try:
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "web-frontend")
+        client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+        if not client_secret:
+            logger.warning("KEYCLOAK_CLIENT_SECRET not set, token refresh may fail")
+
+        response = requests.post(
+            f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token_str,
+                "client_id": client_id,
+                "client_secret": client_secret,
+            } if client_secret else {
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token_str,
+                "client_id": client_id,
+            },
+            timeout=5,
+            verify=VERIFY_SSL
+        )
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        logger.warning(f"Token refresh failed: {e}")
+    return None
+
+
+def logout_user(token: str) -> bool:
+    """
+    登出用户（使 Token 失效）
+
+    Args:
+        token: 刷新令牌
+
+    Returns:
+        是否成功
+    """
+    try:
+        client_id = os.getenv("KEYCLOAK_CLIENT_ID", "web-frontend")
+        response = requests.post(
+            f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/logout",
+            data={
+                "client_id": client_id,
+                "refresh_token": token,
+            },
+            timeout=5,
+            verify=VERIFY_SSL
+        )
+        return response.status_code == 204
+    except Exception as e:
+        logger.warning(f"Logout failed: {e}")
+    return False
+
+
+def introspect_token(token: str, client_id: Optional[str] = None) -> Optional[Dict]:
+    """
+    Token 内省 (降级方案)
+
+    使用 Keycloak token introspection 端点验证 token
+
+    Args:
+        token: JWT token
+        client_id: 客户端 ID (可选，默认从环境变量获取)
+
+    Returns:
+        Token payload 或 None
+    """
+    try:
+        _client_id = client_id or os.getenv("KEYCLOAK_CLIENT_ID", "web-frontend")
+        client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+        if not client_secret:
+            logger.warning("KEYCLOAK_CLIENT_SECRET not set, token introspection may fail")
+            return None
+        response = requests.post(
+            f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token/introspect",
+            data={
+                "token": token,
+                "client_id": _client_id,
+                "client_secret": client_secret,
+            },
+            timeout=5,
+            verify=VERIFY_SSL
+        )
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        logger.warning(f"Token introspection failed: {e}")
+    return None

@@ -22,6 +22,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { MetadataPage } from './pom/MetadataPage';
 import { VersionsPage } from './pom/VersionsPage';
 import { FeaturesPage } from './pom/FeaturesPage';
@@ -140,7 +141,7 @@ test.describe('Phase 0: 前置条件 - 数据源管理', () => {
     if (await existingRow.count() > 0) {
       const isVisible = await existingRow.isVisible().catch(() => false);
       if (isVisible) {
-        console.log('MySQL 数据源已存在，跳过创建');
+        logger.info('MySQL 数据源已存在，跳过创建');
         return;
       }
     }
@@ -233,7 +234,7 @@ test.describe('Phase 0: 前置条件 - 数据源管理', () => {
     if (buttonCount === 0) {
       // 尝试更简单的选择器
       await page.locator('button.ant-btn-primary:visible').click({ timeout: 5000 }).catch(() => {
-        console.log('无法点击确定按钮，可能按钮被禁用或表单验证失败');
+        logger.info('无法点击确定按钮，可能按钮被禁用或表单验证失败');
       });
     } else {
       await confirmButton.click({ timeout: 5000 });
@@ -241,7 +242,7 @@ test.describe('Phase 0: 前置条件 - 数据源管理', () => {
 
     await page.waitForTimeout(2000);
 
-    console.log('MySQL 数据源创建完成');
+    logger.info('MySQL 数据源创建完成');
   });
 
   test('0.3 验证 MySQL 数据源显示在列表中', async ({ page }) => {
@@ -256,13 +257,13 @@ test.describe('Phase 0: 前置条件 - 数据源管理', () => {
 
     const rowCount = await mysqlRow.count();
     if (rowCount === 0) {
-      console.log('⚠ MySQL 数据源未在列表中找到');
+      logger.info('⚠ MySQL 数据源未在列表中找到');
     } else {
       const isVisible = await mysqlRow.isVisible().catch(() => false);
       if (isVisible) {
-        console.log('✓ MySQL 数据源已显示在列表中');
+        logger.info('✓ MySQL 数据源已显示在列表中');
       } else {
-        console.log('⚠ MySQL 数据源行存在但不可见');
+        logger.info('⚠ MySQL 数据源行存在但不可见');
       }
     }
   });
@@ -294,7 +295,7 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
       const treeCount = await tree.count();
 
       if (treeCount === 0) {
-        console.log('元数据页面：树形结构未实现或无数据');
+        logger.info('元数据页面：树形结构未实现或无数据');
         // 验证页面有基本内容
         await expect(page.locator('.ant-tabs, body')).toBeVisible();
         return;
@@ -303,12 +304,12 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
       // 验证树节点可能存在
       const treeNodes = page.locator('.ant-tree-treenode');
       const nodeCount = await treeNodes.count();
-      console.log(`发现 ${nodeCount} 个树节点`);
+      logger.info(`发现 ${nodeCount} 个树节点`);
 
       if (nodeCount > 0) {
-        console.log('✓ 数据库树已显示');
+        logger.info('✓ 数据库树已显示');
       } else {
-        console.log('⚠ 树组件存在但无节点（可能无数据源）');
+        logger.info('⚠ 树组件存在但无节点（可能无数据源）');
       }
     });
 
@@ -323,11 +324,11 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
       const nodeCount = await treeNodes.count();
 
       if (nodeCount === 0) {
-        console.log('⚠ 无树节点，跳过选择测试（可能需要先创建数据源）');
+        logger.info('⚠ 无树节点，跳过选择测试（可能需要先创建数据源）');
         return;
       }
 
-      console.log(`发现 ${nodeCount} 个树节点`);
+      logger.info(`发现 ${nodeCount} 个树节点`);
 
       // 查找数据库节点
       const dbNodes = treeNodes.filter({ hasText: /mysql|postgres|ecommerce|ui_test|persistent/i });
@@ -341,9 +342,9 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
           try {
             await nodeContent.first().click({ timeout: 5000 });
             await page.waitForTimeout(2000);
-            console.log('✓ 已选择数据库节点');
+            logger.info('✓ 已选择数据库节点');
           } catch {
-            console.log('⚠ 点击节点内容失败');
+            logger.info('⚠ 点击节点内容失败');
           }
         }
 
@@ -353,17 +354,17 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
           try {
             await switcher.click({ timeout: 5000 });
             await page.waitForTimeout(2000);
-            console.log('✓ 节点已展开');
+            logger.info('✓ 节点已展开');
 
             // 检查是否有子节点（表）
             const childNodes = await treeNodes.count();
-            console.log(`展开后有 ${childNodes} 个节点`);
+            logger.info(`展开后有 ${childNodes} 个节点`);
           } catch {
-            console.log('⚠ 展开节点失败');
+            logger.info('⚠ 展开节点失败');
           }
         }
       } else {
-        console.log('⚠ 未找到匹配的数据库节点');
+        logger.info('⚠ 未找到匹配的数据库节点');
       }
     });
 
@@ -379,7 +380,7 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
       });
 
       if (await tableNodes.count() === 0) {
-        console.log('⚠ 无表节点，跳过表详情测试（可能需要先创建数据源和元数据）');
+        logger.info('⚠ 无表节点，跳过表详情测试（可能需要先创建数据源和元数据）');
         return;
       }
 
@@ -392,11 +393,11 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
       const panelCount = await detailPanel.count();
 
       if (panelCount > 0) {
-        console.log('✓ 表详情面板已显示');
+        logger.info('✓ 表详情面板已显示');
 
         // 验证基本信息
         const hasTableName = await detailPanel.first().locator('*:has-text("表名")').count() > 0;
-        console.log(`表名显示: ${hasTableName ? '是' : '否'}`);
+        logger.info(`表名显示: ${hasTableName ? '是' : '否'}`);
       }
     });
   });
@@ -427,9 +428,9 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
         const results = page.locator('.search-results, .search-result-item, .ant-table-tbody .ant-table-row');
         const resultCount = await results.count();
 
-        console.log(`搜索结果数量: ${resultCount}`);
+        logger.info(`搜索结果数量: ${resultCount}`);
       } else {
-        console.log('搜索输入框未找到，可能页面未实现搜索功能');
+        logger.info('搜索输入框未找到，可能页面未实现搜索功能');
       }
     });
   });
@@ -454,17 +455,17 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
         // 验证 SQL 模态框
         const sqlModal = page.locator('.ant-modal:has-text("SQL"), .ant-modal:has-text("sql")');
         if (await sqlModal.isVisible()) {
-          console.log('SQL 模态框已显示');
+          logger.info('SQL 模态框已显示');
 
           // 验证 SQL 内容
           const sqlContent = sqlModal.locator('code, pre, .sql-content');
           if (await sqlContent.isVisible()) {
             const sql = await sqlContent.textContent();
-            console.log(`生成的 SQL: ${sql}`);
+            logger.info(`生成的 SQL: ${sql}`);
           }
         }
       } else {
-        console.log('Text-to-SQL 功能未找到');
+        logger.info('Text-to-SQL 功能未找到');
       }
     });
   });
@@ -484,9 +485,9 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
         await aiAnnotateButton.click();
         await page.waitForTimeout(3000);
 
-        console.log('AI 标注已触发');
+        logger.info('AI 标注已触发');
       } else {
-        console.log('AI 标注按钮未找到');
+        logger.info('AI 标注按钮未找到');
       }
     });
   });
@@ -509,15 +510,15 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
         // 验证报告模态框
         const reportModal = page.locator('.ant-modal:has-text("敏感"), .ant-modal:has-text("报告")');
         if (await reportModal.isVisible()) {
-          console.log('敏感字段报告模态框已显示');
+          logger.info('敏感字段报告模态框已显示');
 
           // 验证统计信息
           const stats = reportModal.locator('.ant-statistic, .ant-descriptions-item');
           const statCount = await stats.count();
-          console.log(`报告统计项数量: ${statCount}`);
+          logger.info(`报告统计项数量: ${statCount}`);
         }
       } else {
-        console.log('敏感报告按钮未找到');
+        logger.info('敏感报告按钮未找到');
       }
     });
   });
@@ -537,15 +538,15 @@ test.describe('1. 元数据管理页面 - Metadata Management', () => {
         await aiScanButton.click();
         await page.waitForTimeout(1000);
 
-        console.log('AI 扫描面板已打开');
+        logger.info('AI 扫描面板已打开');
 
         // 查找扫描列选择和执行按钮
         const executeScanButton = page.locator('button:has-text("扫描"), button:has-text("执行"), button:has-text("Scan")');
         if (await executeScanButton.isVisible()) {
-          console.log('扫描执行按钮已找到');
+          logger.info('扫描执行按钮已找到');
         }
       } else {
-        console.log('AI 扫描按钮未找到');
+        logger.info('AI 扫描按钮未找到');
       }
     });
   });
@@ -577,7 +578,7 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       const tableCount = await snapshotTable.count();
 
       if (tableCount === 0) {
-        console.log('⚠ 快照表格未找到，可能功能未实现');
+        logger.info('⚠ 快照表格未找到，可能功能未实现');
         return;
       }
 
@@ -586,7 +587,7 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       // 获取快照数量
       const rows = snapshotTable.locator('.ant-table-tbody .ant-table-row');
       const rowCount = await rows.count();
-      console.log(`快照数量: ${rowCount}`);
+      logger.info(`快照数量: ${rowCount}`);
     });
 
     test('DM-MV-SNAP-002: 选择快照进行对比', async ({ page }) => {
@@ -605,10 +606,10 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
         // 验证对比按钮
         const compareButton = page.locator('button:has-text("对比选中"), button:has-text("Compare")');
         if (await compareButton.isEnabled()) {
-          console.log('对比按钮已启用');
+          logger.info('对比按钮已启用');
         }
       } else {
-        console.log('快照数量不足，跳过对比测试');
+        logger.info('快照数量不足，跳过对比测试');
       }
     });
 
@@ -621,10 +622,10 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
         .locator('button:has(.anticon-delete), button[aria-label*="delete"]');
 
       if (await deleteButton.isVisible()) {
-        console.log('找到删除按钮');
+        logger.info('找到删除按钮');
         // 不实际点击删除，只验证按钮存在
       } else {
-        console.log('删除按钮未找到');
+        logger.info('删除按钮未找到');
       }
     });
   });
@@ -641,7 +642,7 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       const compareButton = page.locator('button:has-text("对比"), button:has-text("Compare")');
 
       if (await compareButton.isVisible()) {
-        console.log('找到对比按钮');
+        logger.info('找到对比按钮');
       }
     });
 
@@ -653,12 +654,12 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       const diffSection = page.locator('.diff-section, .comparison-result, [data-testid="diff-result"]');
 
       if (await diffSection.isVisible()) {
-        console.log('差异显示区域已找到');
+        logger.info('差异显示区域已找到');
 
         // 查找新增/删除/修改标签
         const tags = diffSection.locator('.ant-tag');
         const tagCount = await tags.count();
-        console.log(`差异标签数量: ${tagCount}`);
+        logger.info(`差异标签数量: ${tagCount}`);
       }
     });
 
@@ -670,7 +671,7 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       const columnDiff = page.locator('.column-diff, .field-change, [data-testid="column-diff"]');
 
       if (await columnDiff.isVisible()) {
-        console.log('列变更详情已找到');
+        logger.info('列变更详情已找到');
       }
     });
 
@@ -682,7 +683,7 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
       const viewSqlButton = page.locator('button:has-text("查看 SQL"), button:has-text("View SQL")');
 
       if (await viewSqlButton.isVisible()) {
-        console.log('查看 SQL 按钮已找到');
+        logger.info('查看 SQL 按钮已找到');
 
         // 点击查看 SQL
         await viewSqlButton.click();
@@ -691,12 +692,12 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
         // 查找 SQL 模态框
         const sqlModal = page.locator('.ant-modal:has-text("SQL")');
         if (await sqlModal.isVisible()) {
-          console.log('SQL 模态框已显示');
+          logger.info('SQL 模态框已显示');
 
           // 查找复制按钮
           const copyButton = sqlModal.locator('button:has-text("复制"), button:has-text("Copy")');
           if (await copyButton.isVisible()) {
-            console.log('复制按钮已找到');
+            logger.info('复制按钮已找到');
           }
 
           // 关闭模态框
@@ -724,15 +725,15 @@ test.describe('2. 数据版本管理页面 - Data Version Management', () => {
         // 验证时间线
         const timeline = page.locator('.ant-timeline, [data-testid="version-timeline"]');
         if (await timeline.isVisible()) {
-          console.log('版本历史时间线已显示');
+          logger.info('版本历史时间线已显示');
 
           // 统计时间线项目
           const timelineItems = timeline.locator('.ant-timeline-item');
           const itemCount = await timelineItems.count();
-          console.log(`时间线项目数量: ${itemCount}`);
+          logger.info(`时间线项目数量: ${itemCount}`);
         }
       } else {
-        console.log('历史标签未找到');
+        logger.info('历史标签未找到');
       }
     });
   });
@@ -764,7 +765,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
 
       // 获取特征数量
       const featureCount = await featuresPage.getFeatureCount();
-      console.log(`特征数量: ${featureCount}`);
+      logger.info(`特征数量: ${featureCount}`);
     });
 
     test('DM-FG-FEATURE-002: 注册新特征', async ({ page }) => {
@@ -776,7 +777,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const createButton = page.locator('button:has-text("注册特征"), button:has-text("注册"), button:has-text("新建")');
 
       if (await createButton.count() === 0) {
-        console.log('⚠ 注册特征按钮未找到，可能功能未实现');
+        logger.info('⚠ 注册特征按钮未找到，可能功能未实现');
         return;
       }
 
@@ -786,7 +787,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       // 检查模态框是否打开
       const modal = page.locator('.ant-modal:visible');
       if (await modal.count() === 0) {
-        console.log('⚠ 模态框未打开，可能功能未实现');
+        logger.info('⚠ 模态框未打开，可能功能未实现');
         return;
       }
 
@@ -811,9 +812,9 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         await submitButton.click();
         await page.waitForTimeout(2000);
 
-        console.log(`✓ 已创建特征: test_feature_${timestamp}`);
+        logger.info(`✓ 已创建特征: test_feature_${timestamp}`);
       } catch (e) {
-        console.log('填写表单失败:', e);
+        logger.info('填写表单失败:', e);
         // 关闭模态框
         await modal.locator('.ant-modal-close').click();
       }
@@ -829,7 +830,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const rowCount = await firstRow.count();
 
       if (rowCount === 0) {
-        console.log('⚠ 无特征数据，跳过详情查看测试');
+        logger.info('⚠ 无特征数据，跳过详情查看测试');
         return;
       }
 
@@ -843,16 +844,16 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
           // 验证详情抽屉
           const drawer = page.locator('.ant-drawer:visible');
           if (await drawer.count() > 0) {
-            console.log(`✓ 特征详情已显示: ${featureName.trim()}`);
+            logger.info(`✓ 特征详情已显示: ${featureName.trim()}`);
 
             // 关闭详情抽屉
             await drawer.locator('.ant-drawer-close').click();
           }
         } else {
-          console.log('⚠ 特征名称为空');
+          logger.info('⚠ 特征名称为空');
         }
       } catch (e) {
-        console.log('查看特征详情失败:', e);
+        logger.info('查看特征详情失败:', e);
       }
     });
 
@@ -868,12 +869,12 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
 
       if (await testFeatureRow.isVisible()) {
         const featureName = await testFeatureRow.locator('.ant-table-cell').nth(0).textContent();
-        console.log(`找到测试特征: ${featureName}`);
+        logger.info(`找到测试特征: ${featureName}`);
 
         // 不实际删除，只验证删除按钮存在
         const deleteButton = testFeatureRow.locator('button:has(.anticon-delete), button[danger]');
         if (await deleteButton.isVisible()) {
-          console.log('删除按钮已找到');
+          logger.info('删除按钮已找到');
         }
       }
     });
@@ -893,13 +894,13 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const tableCount = await groupTable.count();
 
       if (tableCount > 0) {
-        console.log('✓ 特征组表格已显示');
+        logger.info('✓ 特征组表格已显示');
 
         const rows = groupTable.locator('.ant-table-body .ant-table-row');
         const groupCount = await rows.count();
-        console.log(`特征组数量: ${groupCount}`);
+        logger.info(`特征组数量: ${groupCount}`);
       } else {
-        console.log('⚠ 特征组表格未找到');
+        logger.info('⚠ 特征组表格未找到');
       }
     });
 
@@ -912,7 +913,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const createButton = page.locator('button:has-text("创建特征组"), button:has-text("创建")');
 
       if (await createButton.count() === 0) {
-        console.log('⚠ 创建特征组按钮未找到');
+        logger.info('⚠ 创建特征组按钮未找到');
         return;
       }
 
@@ -922,7 +923,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       // 检查模态框
       const modal = page.locator('.ant-modal:visible');
       if (await modal.count() === 0) {
-        console.log('⚠ 模态框未打开');
+        logger.info('⚠ 模态框未打开');
         return;
       }
 
@@ -941,9 +942,9 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         await modal.locator('button:has-text("确定"), button[type="submit"]').first().click();
         await page.waitForTimeout(1000);
 
-        console.log(`✓ 已创建特征组: test_group_${timestamp}`);
+        logger.info(`✓ 已创建特征组: test_group_${timestamp}`);
       } catch (e) {
-        console.log('填写表单失败:', e);
+        logger.info('填写表单失败:', e);
         await modal.locator('.ant-modal-close').click();
       }
     });
@@ -960,9 +961,9 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         });
 
       if (await testGroupRow.count() > 0) {
-        console.log('✓ 找到测试特征组');
+        logger.info('✓ 找到测试特征组');
       } else {
-        console.log('⚠ 测试特征组未找到');
+        logger.info('⚠ 测试特征组未找到');
       }
     });
   });
@@ -987,16 +988,16 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         const tableCount = await setTable.count();
 
         if (tableCount > 0) {
-          console.log('✓ 特征集表格已显示');
+          logger.info('✓ 特征集表格已显示');
 
           const rows = setTable.locator('.ant-table-body .ant-table-row');
           const setCount = await rows.count();
-          console.log(`特征集数量: ${setCount}`);
+          logger.info(`特征集数量: ${setCount}`);
         } else {
-          console.log('⚠ 特征集表格未找到');
+          logger.info('⚠ 特征集表格未找到');
         }
       } else {
-        console.log('⚠ 特征集标签未找到');
+        logger.info('⚠ 特征集标签未找到');
       }
     });
 
@@ -1008,7 +1009,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const setsTab = page.locator('.ant-tabs-tab:has-text("特征集"), .ant-tabs-tab:has-text("Sets")');
 
       if (await setsTab.count() === 0) {
-        console.log('⚠ 特征集标签未找到');
+        logger.info('⚠ 特征集标签未找到');
         return;
       }
 
@@ -1019,7 +1020,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const createButton = page.locator('button:has-text("创建特征集"), button:has-text("创建")');
 
       if (await createButton.count() === 0) {
-        console.log('⚠ 创建特征集按钮未找到');
+        logger.info('⚠ 创建特征集按钮未找到');
         return;
       }
 
@@ -1029,7 +1030,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       // 检查模态框
       const modal = page.locator('.ant-modal:visible');
       if (await modal.count() === 0) {
-        console.log('⚠ 模态框未打开');
+        logger.info('⚠ 模态框未打开');
         return;
       }
 
@@ -1043,9 +1044,9 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         await modal.locator('button:has-text("确定"), button[type="submit"]').first().click();
         await page.waitForTimeout(1000);
 
-        console.log(`✓ 已创建特征集: test_set_${timestamp}`);
+        logger.info(`✓ 已创建特征集: test_set_${timestamp}`);
       } catch (e) {
-        console.log('填写表单失败:', e);
+        logger.info('填写表单失败:', e);
         await modal.locator('.ant-modal-close').click();
       }
     });
@@ -1071,16 +1072,16 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         const tableCount = await serviceTable.count();
 
         if (tableCount > 0) {
-          console.log('✓ 特征服务表格已显示');
+          logger.info('✓ 特征服务表格已显示');
 
           const rows = serviceTable.locator('.ant-table-body .ant-table-row');
           const serviceCount = await rows.count();
-          console.log(`特征服务数量: ${serviceCount}`);
+          logger.info(`特征服务数量: ${serviceCount}`);
         } else {
-          console.log('⚠ 特征服务表格未找到');
+          logger.info('⚠ 特征服务表格未找到');
         }
       } else {
-        console.log('⚠ 特征服务标签未找到');
+        logger.info('⚠ 特征服务标签未找到');
       }
     });
 
@@ -1092,7 +1093,7 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
       const servicesTab = page.locator('.ant-tabs-tab:has-text("特征服务"), .ant-tabs-tab:has-text("Services")');
 
       if (await servicesTab.count() === 0) {
-        console.log('⚠ 特征服务标签未找到');
+        logger.info('⚠ 特征服务标签未找到');
         return;
       }
 
@@ -1108,13 +1109,13 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
 
         const modal = page.locator('.ant-modal:visible');
         if (await modal.count() > 0) {
-          console.log('✓ 发布服务模态框已打开');
+          logger.info('✓ 发布服务模态框已打开');
 
           // 关闭模态框
           await modal.locator('.ant-modal-close, button:has-text("取消")').first().click();
         }
       } else {
-        console.log('⚠ 发布服务按钮未找到');
+        logger.info('⚠ 发布服务按钮未找到');
       }
     });
 
@@ -1133,9 +1134,9 @@ test.describe('3. 特征管理页面 - Feature Management', () => {
         const copyButtons = page.locator('button:has-text("复制"), button:has(.anticon-copy)');
 
         if (await copyButtons.count() > 0) {
-          console.log('✓ 复制端点按钮已找到');
+          logger.info('✓ 复制端点按钮已找到');
         } else {
-          console.log('⚠ 复制按钮未找到');
+          logger.info('⚠ 复制按钮未找到');
         }
       }
     });
@@ -1166,13 +1167,13 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       const tableCount = await elementTable.count();
 
       if (tableCount > 0) {
-        console.log('✓ 数据元表格已显示');
+        logger.info('✓ 数据元表格已显示');
 
         const rows = elementTable.locator('.ant-table-body .ant-table-row');
         const elementCount = await rows.count();
-        console.log(`数据元数量: ${elementCount}`);
+        logger.info(`数据元数量: ${elementCount}`);
       } else {
-        console.log('⚠ 数据元表格未找到');
+        logger.info('⚠ 数据元表格未找到');
       }
     });
 
@@ -1185,7 +1186,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       const createButton = page.locator('button:has-text("新建数据元"), button:has-text("新建")');
 
       if (await createButton.count() === 0) {
-        console.log('⚠ 新建数据元按钮未找到');
+        logger.info('⚠ 新建数据元按钮未找到');
         return;
       }
 
@@ -1195,7 +1196,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       // 检查模态框
       const modal = page.locator('.ant-modal:visible');
       if (await modal.count() === 0) {
-        console.log('⚠ 模态框未打开');
+        logger.info('⚠ 模态框未打开');
         return;
       }
 
@@ -1214,9 +1215,9 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         await modal.locator('button:has-text("确定"), button[type="submit"]').first().click();
         await page.waitForTimeout(2000);
 
-        console.log(`✓ 已创建数据元: 测试数据元_${timestamp}`);
+        logger.info(`✓ 已创建数据元: 测试数据元_${timestamp}`);
       } catch (e) {
-        console.log('填写表单失败:', e);
+        logger.info('填写表单失败:', e);
         await modal.locator('.ant-modal-close').click();
       }
     });
@@ -1231,7 +1232,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       const rowCount = await firstRow.count();
 
       if (rowCount === 0) {
-        console.log('⚠ 无数据元数据，跳过详情查看测试');
+        logger.info('⚠ 无数据元数据，跳过详情查看测试');
         return;
       }
 
@@ -1245,16 +1246,16 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
           // 验证详情抽屉
           const drawer = page.locator('.ant-drawer:visible');
           if (await drawer.count() > 0) {
-            console.log(`✓ 数据元详情已显示: ${elementName.trim()}`);
+            logger.info(`✓ 数据元详情已显示: ${elementName.trim()}`);
 
             // 关闭详情抽屉
             await drawer.locator('.ant-drawer-close').click();
           }
         } else {
-          console.log('⚠ 数据元名称为空');
+          logger.info('⚠ 数据元名称为空');
         }
       } catch (e) {
-        console.log('查看数据元详情失败:', e);
+        logger.info('查看数据元详情失败:', e);
       }
     });
 
@@ -1268,7 +1269,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         .locator('button:has(.anticon-edit), button[aria-label*="edit"]');
 
       if (await editButton.isVisible()) {
-        console.log('编辑按钮已找到');
+        logger.info('编辑按钮已找到');
       }
     });
 
@@ -1284,12 +1285,12 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
 
       if (await testElementRow.isVisible()) {
         const elementName = await testElementRow.locator('.ant-table-cell').nth(0).textContent();
-        console.log(`找到测试数据元: ${elementName}`);
+        logger.info(`找到测试数据元: ${elementName}`);
 
         // 验证删除按钮
         const deleteButton = testElementRow.locator('button:has(.anticon-delete), button[danger]');
         if (await deleteButton.isVisible()) {
-          console.log('删除按钮已找到');
+          logger.info('删除按钮已找到');
         }
       }
     });
@@ -1315,16 +1316,16 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         const tableCount = await libraryTable.count();
 
         if (tableCount > 0) {
-          console.log('✓ 词根库表格已显示');
+          logger.info('✓ 词根库表格已显示');
 
           const rows = libraryTable.locator('.ant-table-body .ant-table-row');
           const libraryCount = await rows.count();
-          console.log(`词根库数量: ${libraryCount}`);
+          logger.info(`词根库数量: ${libraryCount}`);
         } else {
-          console.log('⚠ 词根库表格未找到');
+          logger.info('⚠ 词根库表格未找到');
         }
       } else {
-        console.log('⚠ 词根库标签未找到');
+        logger.info('⚠ 词根库标签未找到');
       }
     });
 
@@ -1336,7 +1337,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       const librariesTab = page.locator('.ant-tabs-tab:has-text("词根库"), .ant-tabs-tab:has-text("Libraries")');
 
       if (await librariesTab.count() === 0) {
-        console.log('⚠ 词根库标签未找到');
+        logger.info('⚠ 词根库标签未找到');
         return;
       }
 
@@ -1347,13 +1348,13 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       const createButton = page.locator('button:has-text("新建词根库"), button:has-text("新建")');
 
       if (await createButton.count() === 0) {
-        console.log('⚠ 新建词根库按钮未找到');
+        logger.info('⚠ 新建词根库按钮未找到');
         return;
       }
 
       const buttonVisible = await createButton.first().isVisible().catch(() => false);
       if (!buttonVisible) {
-        console.log('⚠ 新建词根库按钮不可见，可能功能未实现');
+        logger.info('⚠ 新建词根库按钮不可见，可能功能未实现');
         return;
       }
 
@@ -1363,7 +1364,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
       // 检查模态框
       const modal = page.locator('.ant-modal:visible');
       if (await modal.count() === 0) {
-        console.log('⚠ 模态框未打开');
+        logger.info('⚠ 模态框未打开');
         return;
       }
 
@@ -1387,9 +1388,9 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         await modal.locator('button:has-text("确定"), button[type="submit"]').first().click();
         await page.waitForTimeout(2000);
 
-        console.log(`✓ 已创建词根库: 测试词根库_${timestamp}`);
+        logger.info(`✓ 已创建词根库: 测试词根库_${timestamp}`);
       } catch (e) {
-        console.log('填写表单失败:', e);
+        logger.info('填写表单失败:', e);
         // 尝试关闭模态框
         await modal.locator('.ant-modal-close').click().catch(() => {});
       }
@@ -1409,7 +1410,7 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         // 验证删除按钮
         const deleteButton = testLibraryRow.locator('button:has(.anticon-delete), button[danger]');
         if (await deleteButton.isVisible()) {
-          console.log('删除按钮已找到');
+          logger.info('删除按钮已找到');
         }
       }
     });
@@ -1435,21 +1436,21 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         const tableCount = await documentTable.count();
 
         if (tableCount > 0) {
-          console.log('✓ 标准文档表格已显示');
+          logger.info('✓ 标准文档表格已显示');
         } else {
-          console.log('⚠ 标准文档表格未找到，可能功能未实现');
+          logger.info('⚠ 标准文档表格未找到，可能功能未实现');
         }
 
         // 查找上传文档按钮
         const uploadButton = page.locator('button:has-text("上传文档"), button:has-text("上传")');
         if (await uploadButton.count() > 0) {
           const isDisabled = await uploadButton.first().isDisabled();
-          console.log(`上传文档按钮状态: ${isDisabled ? '禁用' : '可用'}`);
+          logger.info(`上传文档按钮状态: ${isDisabled ? '禁用' : '可用'}`);
         } else {
-          console.log('上传文档按钮未找到');
+          logger.info('上传文档按钮未找到');
         }
       } else {
-        console.log('标准文档标签未找到，可能功能未实现');
+        logger.info('标准文档标签未找到，可能功能未实现');
       }
     });
   });
@@ -1474,21 +1475,21 @@ test.describe('4. 数据标准页面 - Data Standards', () => {
         const tableCount = await mappingTable.count();
 
         if (tableCount > 0) {
-          console.log('✓ 标准映射表格已显示');
+          logger.info('✓ 标准映射表格已显示');
         } else {
-          console.log('⚠ 标准映射表格未找到，可能功能未实现');
+          logger.info('⚠ 标准映射表格未找到，可能功能未实现');
         }
 
         // 查找新建映射按钮
         const createButton = page.locator('button:has-text("新建映射"), button:has-text("新建")');
         if (await createButton.count() > 0) {
           const isDisabled = await createButton.first().isDisabled();
-          console.log(`新建映射按钮状态: ${isDisabled ? '禁用' : '可用'}`);
+          logger.info(`新建映射按钮状态: ${isDisabled ? '禁用' : '可用'}`);
         } else {
-          console.log('新建映射按钮未找到');
+          logger.info('新建映射按钮未找到');
         }
       } else {
-        console.log('标准映射标签未找到，可能功能未实现');
+        logger.info('标准映射标签未找到，可能功能未实现');
       }
     });
   });
@@ -1517,21 +1518,21 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
       const treeCount = await assetTree.count();
 
       if (treeCount === 0) {
-        console.log('⚠ 资产目录树未找到，可能功能未实现或无数据');
+        logger.info('⚠ 资产目录树未找到，可能功能未实现或无数据');
         return;
       }
 
-      console.log('✓ 资产目录树已显示');
+      logger.info('✓ 资产目录树已显示');
 
       // 验证树节点
       const treeNodes = page.locator('.ant-tree-treenode');
       const nodeCount = await treeNodes.count();
-      console.log(`资产树节点数量: ${nodeCount}`);
+      logger.info(`资产树节点数量: ${nodeCount}`);
 
       // 验证图标
       const icons = page.locator('.ant-tree-node-content .anticon');
       const iconCount = await icons.count();
-      console.log(`树图标数量: ${iconCount}`);
+      logger.info(`树图标数量: ${iconCount}`);
     });
 
     test('DM-DA-TREE-002: 树节点选择', async ({ page }) => {
@@ -1543,7 +1544,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
       const treeCount = await assetTree.count();
 
       if (treeCount === 0) {
-        console.log('⚠ 资产目录树未找到，跳过选择测试');
+        logger.info('⚠ 资产目录树未找到，跳过选择测试');
         return;
       }
 
@@ -1555,9 +1556,9 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         await treeNodes.first().click();
         await page.waitForTimeout(1000);
 
-        console.log('✓ 已点击第一个树节点');
+        logger.info('✓ 已点击第一个树节点');
       } else {
-        console.log('⚠ 无树节点可点击');
+        logger.info('⚠ 无树节点可点击');
       }
     });
   });
@@ -1575,12 +1576,12 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
 
       // 获取资产数量
       const assetCount = await assetsPage.getAssetCount();
-      console.log(`资产数量: ${assetCount}`);
+      logger.info(`资产数量: ${assetCount}`);
 
       // 验证列头
       const columns = page.locator('.ant-table-thead .ant-table-cell');
       const columnCount = await columns.count();
-      console.log(`表格列数: ${columnCount}`);
+      logger.info(`表格列数: ${columnCount}`);
     });
 
     test('DM-DA-LIST-002: 类型筛选', async ({ page }) => {
@@ -1591,7 +1592,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
       const typeFilter = page.locator('select[placeholder*="类型"], .ant-select[placeholder*="类型"]');
 
       if (await typeFilter.isVisible()) {
-        console.log('类型筛选器已找到');
+        logger.info('类型筛选器已找到');
 
         // 尝试选择筛选类型
         await typeFilter.click();
@@ -1600,7 +1601,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 查找下拉选项
         const options = page.locator('.ant-select-item');
         const optionCount = await options.count();
-        console.log(`类型选项数量: ${optionCount}`);
+        logger.info(`类型选项数量: ${optionCount}`);
 
         // 关闭下拉
         await page.locator('body').click();
@@ -1616,7 +1617,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
       const rowCount = await firstRow.count();
 
       if (rowCount === 0) {
-        console.log('⚠ 无资产数据，跳过详情查看测试');
+        logger.info('⚠ 无资产数据，跳过详情查看测试');
         return;
       }
 
@@ -1630,17 +1631,17 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
           // 验证资产画像抽屉
           const drawer = page.locator('.ant-drawer:visible');
           if (await drawer.count() > 0) {
-            console.log(`✓ 资产画像已显示: ${assetName.trim()}`);
+            logger.info(`✓ 资产画像已显示: ${assetName.trim()}`);
 
             // 关闭抽屉
             await drawer.locator('.ant-drawer-close').click();
             await page.waitForTimeout(500);
           }
         } else {
-          console.log('⚠ 资产名称为空，无法查看详情');
+          logger.info('⚠ 资产名称为空，无法查看详情');
         }
       } catch (e) {
-        console.log('查看资产详情失败:', e);
+        logger.info('查看资产详情失败:', e);
       }
     });
   });
@@ -1674,12 +1675,12 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
             await page.waitForTimeout(1000);
           }
 
-          console.log('✓ AI 搜索已执行');
+          logger.info('✓ AI 搜索已执行');
         } else {
-          console.log('⚠ 搜索输入框未找到');
+          logger.info('⚠ 搜索输入框未找到');
         }
       } else {
-        console.log('⚠ AI 搜索标签未找到，可能功能未实现');
+        logger.info('⚠ AI 搜索标签未找到，可能功能未实现');
       }
     });
   });
@@ -1710,10 +1711,10 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
           // 获取盘点任务数量
           const taskRows = page.locator('.ant-tabs-tabpane:visible .ant-table-tbody .ant-table-row');
           const taskCount = await taskRows.count();
-          console.log(`盘点任务数量: ${taskCount}`);
+          logger.info(`盘点任务数量: ${taskCount}`);
         }
       } else {
-        console.log('资产盘点标签未找到');
+        logger.info('资产盘点标签未找到');
       }
     });
 
@@ -1751,18 +1752,18 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
               await modal.locator('button:has-text("确定"), button[type="submit"]').first().click();
               await page.waitForTimeout(1000);
 
-              console.log(`已创建盘点任务: 测试盘点任务_${timestamp}`);
+              logger.info(`已创建盘点任务: 测试盘点任务_${timestamp}`);
             } catch (e) {
-              console.log('填写表单失败，可能模态框结构不同:', e);
+              logger.info('填写表单失败，可能模态框结构不同:', e);
             }
           } else {
-            console.log('模态框未出现，可能功能未实现');
+            logger.info('模态框未出现，可能功能未实现');
           }
         } else {
-          console.log('创建盘点任务按钮未找到');
+          logger.info('创建盘点任务按钮未找到');
         }
       } else {
-        console.log('资产盘点标签未找到');
+        logger.info('资产盘点标签未找到');
       }
     });
 
@@ -1782,7 +1783,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
           .locator('.ant-tag');
 
         if (await statusTags.count() > 0) {
-          console.log('盘点任务状态标签已找到');
+          logger.info('盘点任务状态标签已找到');
         }
       }
     });
@@ -1806,10 +1807,10 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证价值评估面板
         const valuePanel = page.locator('[data-testid="value-assessment-panel"], .value-assessment');
         if (await valuePanel.isVisible()) {
-          console.log('价值评估面板已显示');
+          logger.info('价值评估面板已显示');
         }
       } else {
-        console.log('价值评估标签未找到');
+        logger.info('价值评估标签未找到');
       }
     });
   });
@@ -1833,7 +1834,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证基本信息
         const basicInfo = page.locator('.ant-descriptions, [data-testid="profile-basic-info"]');
         if (await basicInfo.isVisible()) {
-          console.log('资产画像基本信息已显示');
+          logger.info('资产画像基本信息已显示');
         }
 
         // 关闭抽屉
@@ -1856,7 +1857,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证数据统计
         const statistics = page.locator('.ant-statistic, [data-testid="profile-statistics"]');
         if (await statistics.count() > 0) {
-          console.log('数据统计已显示');
+          logger.info('数据统计已显示');
         }
 
         // 关闭抽屉
@@ -1879,12 +1880,12 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证数据质量
         const quality = page.locator('[data-testid="profile-quality"], .quality-progress');
         if (await quality.isVisible()) {
-          console.log('数据质量已显示');
+          logger.info('数据质量已显示');
 
           // 查找质量进度条
           const progressBars = quality.locator('.ant-progress');
           const progressCount = await progressBars.count();
-          console.log(`质量指标数量: ${progressCount}`);
+          logger.info(`质量指标数量: ${progressCount}`);
         }
 
         // 关闭抽屉
@@ -1907,7 +1908,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证血缘关系
         const lineage = page.locator('[data-testid="profile-lineage"], .lineage-info');
         if (await lineage.isVisible()) {
-          console.log('血缘关系已显示');
+          logger.info('血缘关系已显示');
         }
 
         // 关闭抽屉
@@ -1930,7 +1931,7 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证标签
         const tags = page.locator('.ant-tag');
         const tagCount = await tags.count();
-        console.log(`资产标签数量: ${tagCount}`);
+        logger.info(`资产标签数量: ${tagCount}`);
 
         // 关闭抽屉
         await page.locator('.ant-drawer-close').click();
@@ -1956,13 +1957,13 @@ test.describe('5. 数据资产页面 - Data Assets', () => {
         // 验证评估模态框
         const valueModal = page.locator('.ant-modal:has-text("价值评估")');
         if (await valueModal.isVisible()) {
-          console.log('AI 价值评估模态框已显示');
+          logger.info('AI 价值评估模态框已显示');
         }
 
         // 关闭模态框
         await page.locator('.ant-modal:visible .ant-modal-close, .ant-modal:visible button:has-text("取消")').click();
       } else {
-        console.log('AI 评估按钮未找到');
+        logger.info('AI 评估按钮未找到');
       }
     });
   });
@@ -1994,11 +1995,11 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         if (await switcher.isVisible()) {
           await switcher.click();
           await page.waitForTimeout(500);
-          console.log('✓ 节点已展开');
+          logger.info('✓ 节点已展开');
 
           await switcher.click();
           await page.waitForTimeout(500);
-          console.log('✓ 节点已收起');
+          logger.info('✓ 节点已收起');
         }
       }
     });
@@ -2009,12 +2010,12 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
       await page.waitForTimeout(1000);
 
       const databases = await metadataPage.getDatabaseList();
-      console.log(`可用数据库: ${databases.join(', ')}`);
+      logger.info(`可用数据库: ${databases.join(', ')}`);
 
       if (databases.length >= 2) {
         await metadataPage.switchDatabase(databases[0]);
         await page.waitForTimeout(500);
-        console.log('✓ 已切换到数据库:', databases[0]);
+        logger.info('✓ 已切换到数据库:', databases[0]);
       }
     });
 
@@ -2031,9 +2032,9 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(1000);
 
         const columns = await metadataPage.getColumnDetails();
-        console.log(`列数量: ${columns.length}`);
+        logger.info(`列数量: ${columns.length}`);
         if (columns.length > 0) {
-          console.log('第一列:', columns[0]);
+          logger.info('第一列:', columns[0]);
         }
       }
     });
@@ -2051,7 +2052,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(1000);
 
         const relationships = await metadataPage.getRelationships();
-        console.log(`关系数量: ${relationships.length}`);
+        logger.info(`关系数量: ${relationships.length}`);
       }
     });
 
@@ -2068,7 +2069,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(1000);
 
         const sampleData = await metadataPage.getSampleData(5);
-        console.log(`示例数据行数: ${sampleData.length}`);
+        logger.info(`示例数据行数: ${sampleData.length}`);
       }
     });
 
@@ -2085,7 +2086,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(1000);
 
         const stats = await metadataPage.getTableStatistics();
-        console.log('表统计:', stats);
+        logger.info('表统计:', stats);
       }
     });
   });
@@ -2110,12 +2111,12 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
           const results = page.locator('.ant-table-tbody .ant-table-row');
           const count = await results.count();
-          console.log(`搜索结果数量: ${count}`);
+          logger.info(`搜索结果数量: ${count}`);
         } else {
-          console.log('⚠ 搜索输入框未找到，搜索功能可能未实现');
+          logger.info('⚠ 搜索输入框未找到，搜索功能可能未实现');
         }
       } else {
-        console.log('⚠ 搜索标签未找到，使用默认浏览页');
+        logger.info('⚠ 搜索标签未找到，使用默认浏览页');
       }
     });
 
@@ -2143,12 +2144,12 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
           const results = page.locator('.ant-table-tbody .ant-table-row');
           const count = await results.count();
-          console.log(`列搜索结果数量: ${count}`);
+          logger.info(`列搜索结果数量: ${count}`);
         } else {
-          console.log('⚠ 搜索输入框未找到，搜索功能可能未实现');
+          logger.info('⚠ 搜索输入框未找到，搜索功能可能未实现');
         }
       } else {
-        console.log('⚠ 搜索标签未找到，使用默认浏览页');
+        logger.info('⚠ 搜索标签未找到，使用默认浏览页');
       }
     });
 
@@ -2169,12 +2170,12 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
           const highlightedText = page.locator('.ant-table-tbody mark, .ant-table-tbody .highlight');
           const highlightCount = await highlightedText.count();
-          console.log(`高亮结果数量: ${highlightCount}`);
+          logger.info(`高亮结果数量: ${highlightCount}`);
         } else {
-          console.log('⚠ 搜索输入框未找到，搜索功能可能未实现');
+          logger.info('⚠ 搜索输入框未找到，搜索功能可能未实现');
         }
       } else {
-        console.log('⚠ 搜索标签未找到，使用默认浏览页');
+        logger.info('⚠ 搜索标签未找到，使用默认浏览页');
       }
     });
 
@@ -2196,15 +2197,15 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
           const exportButton = page.locator('button:has-text("导出"), button:has-text("export")');
           if (await exportButton.count() > 0) {
             await exportButton.click();
-            console.log('✓ 搜索结果导出已触发');
+            logger.info('✓ 搜索结果导出已触发');
           } else {
-            console.log('⚠ 导出按钮未找到');
+            logger.info('⚠ 导出按钮未找到');
           }
         } else {
-          console.log('⚠ 搜索输入框未找到，搜索功能可能未实现');
+          logger.info('⚠ 搜索输入框未找到，搜索功能可能未实现');
         }
       } else {
-        console.log('⚠ 搜索标签未找到，使用默认浏览页');
+        logger.info('⚠ 搜索标签未找到，使用默认浏览页');
       }
     });
   });
@@ -2224,7 +2225,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         const sqlModal = page.locator('.ant-modal:has-text("SQL")');
         if (await sqlModal.isVisible()) {
           const sql = await sqlModal.locator('code, pre').textContent() || '';
-          console.log('生成的SQL包含JOIN:', sql.includes('JOIN') || sql.includes('join'));
+          logger.info('生成的SQL包含JOIN:', sql.includes('JOIN') || sql.includes('join'));
         }
       }
     });
@@ -2242,7 +2243,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         const sqlModal = page.locator('.ant-modal:has-text("SQL")');
         if (await sqlModal.isVisible()) {
           const sql = await sqlModal.locator('code, pre').textContent() || '';
-          console.log('生成的SQL包含GROUP BY:', sql.includes('GROUP BY') || sql.includes('group by'));
+          logger.info('生成的SQL包含GROUP BY:', sql.includes('GROUP BY') || sql.includes('group by'));
         }
       }
     });
@@ -2258,7 +2259,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(2000);
 
         await metadataPage.clickCopySql();
-        console.log('✓ SQL复制已执行');
+        logger.info('✓ SQL复制已执行');
       }
     });
 
@@ -2273,7 +2274,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
         await page.waitForTimeout(2000);
 
         await metadataPage.executeSql();
-        console.log('✓ SQL执行已触发');
+        logger.info('✓ SQL执行已触发');
       }
     });
   });
@@ -2287,7 +2288,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
       const tables = await metadataPage.getTableList();
       if (tables.length >= 2) {
         await metadataPage.batchAiAnnotate(tables.slice(0, 2));
-        console.log('✓ 批量AI标注已执行');
+        logger.info('✓ 批量AI标注已执行');
       }
     });
 
@@ -2297,13 +2298,13 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickAiAnnotate();
       if (!clicked) {
-        console.log('⚠ AI标注按钮未找到，功能可能未实现');
+        logger.info('⚠ AI标注按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(3000);
 
       await metadataPage.saveAnnotation();
-      console.log('✓ 标注结果保存已执行');
+      logger.info('✓ 标注结果保存已执行');
     });
 
     test('DM-MD-AI-004: 重新标注', async ({ page }) => {
@@ -2311,7 +2312,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
       await metadataPage.goto();
 
       await metadataPage.reAnnotate();
-      console.log('✓ 重新标注已执行');
+      logger.info('✓ 重新标注已执行');
     });
   });
 
@@ -2323,15 +2324,15 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickSensitiveReport();
       if (!clicked) {
-        console.log('⚠ 敏感报告按钮未找到，功能可能未实现');
+        logger.info('⚠ 敏感报告按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(1000);
 
       const sensitiveFields = await metadataPage.getSensitiveFields();
-      console.log(`敏感字段数量: ${sensitiveFields.length}`);
+      logger.info(`敏感字段数量: ${sensitiveFields.length}`);
       sensitiveFields.forEach(field => {
-        console.log(`  - ${field.name}: ${field.level}`);
+        logger.info(`  - ${field.name}: ${field.level}`);
       });
     });
 
@@ -2341,13 +2342,13 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickSensitiveReport();
       if (!clicked) {
-        console.log('⚠ 敏感报告按钮未找到，功能可能未实现');
+        logger.info('⚠ 敏感报告按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(1000);
 
       await metadataPage.exportSensitiveReport('pdf');
-      console.log('✓ 敏感报告导出已执行');
+      logger.info('✓ 敏感报告导出已执行');
     });
 
     test('DM-MD-SENS-004: 脱敏规则配置', async ({ page }) => {
@@ -2356,7 +2357,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickSensitiveReport();
       if (!clicked) {
-        console.log('⚠ 敏感报告按钮未找到，功能可能未实现');
+        logger.info('⚠ 敏感报告按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(1000);
@@ -2364,7 +2365,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
       const sensitiveFields = await metadataPage.getSensitiveFields();
       if (sensitiveFields.length > 0) {
         await metadataPage.configureMaskingRule(sensitiveFields[0].name, 'mask');
-        console.log('✓ 脱敏规则配置已执行');
+        logger.info('✓ 脱敏规则配置已执行');
       }
     });
   });
@@ -2377,13 +2378,13 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickAiScan();
       if (!clicked) {
-        console.log('⚠ AI扫描按钮未找到，功能可能未实现');
+        logger.info('⚠ AI扫描按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(1000);
 
       const progress = await metadataPage.getScanProgress();
-      console.log('扫描进度:', progress);
+      logger.info('扫描进度:', progress);
     });
 
     test('DM-MD-SCAN-003: 扫描结果查看', async ({ page }) => {
@@ -2392,13 +2393,13 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickAiScan();
       if (!clicked) {
-        console.log('⚠ AI扫描按钮未找到，功能可能未实现');
+        logger.info('⚠ AI扫描按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(2000);
 
       await metadataPage.viewScanResults();
-      console.log('✓ 扫描结果查看已执行');
+      logger.info('✓ 扫描结果查看已执行');
     });
 
     test('DM-MD-SCAN-004: 批量脱敏', async ({ page }) => {
@@ -2407,7 +2408,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
 
       const clicked = await metadataPage.clickSensitiveReport();
       if (!clicked) {
-        console.log('⚠ 敏感报告按钮未找到，功能可能未实现');
+        logger.info('⚠ 敏感报告按钮未找到，功能可能未实现');
         return;
       }
       await page.waitForTimeout(1000);
@@ -2416,7 +2417,7 @@ test.describe('1. 元数据管理 - 扩展测试 (Extended Metadata)', () => {
       if (sensitiveFields.length > 0) {
         const fieldNames = sensitiveFields.slice(0, 2).map(f => f.name);
         await metadataPage.batchApplyMasking(fieldNames);
-        console.log('✓ 批量脱敏已执行');
+        logger.info('✓ 批量脱敏已执行');
       }
     });
   });
@@ -2440,9 +2441,9 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const snapshotName = `test_snapshot_${Date.now()}`;
       const created = await versionsPage.createSnapshot(snapshotName, 'E2E测试快照');
       if (created) {
-        console.log(`✓ 已创建快照: ${snapshotName}`);
+        logger.info(`✓ 已创建快照: ${snapshotName}`);
       } else {
-        console.log('⚠ 创建快照功能可能未实现或按钮未找到');
+        logger.info('⚠ 创建快照功能可能未实现或按钮未找到');
       }
     });
 
@@ -2453,7 +2454,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const snapshots = await versionsPage.getSnapshotList();
       if (snapshots.length > 0) {
         await versionsPage.viewSnapshotDetails(snapshots[0].name);
-        console.log('✓ 快照详情已查看');
+        logger.info('✓ 快照详情已查看');
       }
     });
 
@@ -2464,7 +2465,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const snapshots = await versionsPage.getSnapshotList();
       if (snapshots.length > 0) {
         await versionsPage.editSnapshotRemark(snapshots[0].name, '更新的备注信息');
-        console.log('✓ 快照备注已编辑');
+        logger.info('✓ 快照备注已编辑');
       }
     });
 
@@ -2475,7 +2476,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const snapshots = await versionsPage.getSnapshotList();
       if (snapshots.length > 0) {
         await versionsPage.downloadSnapshot(snapshots[0].name);
-        console.log('✓ 快照下载已触发');
+        logger.info('✓ 快照下载已触发');
       }
     });
   });
@@ -2492,7 +2493,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
         await versionsPage.compareSelectedSnapshots();
 
         await versionsPage.expandDiffItem(snapshots[0].name);
-        console.log('✓ 差异详情已展开');
+        logger.info('✓ 差异详情已展开');
       }
     });
 
@@ -2506,7 +2507,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
         await versionsPage.compareSelectedSnapshots();
 
         const diffDetails = await versionsPage.getComparisonDiffDetails();
-        console.log('差异详情:', diffDetails);
+        logger.info('差异详情:', diffDetails);
       }
     });
 
@@ -2520,7 +2521,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
         await versionsPage.compareSelectedSnapshots();
 
         await versionsPage.filterDiffByType('new');
-        console.log('✓ 差异筛选已执行');
+        logger.info('✓ 差异筛选已执行');
       }
     });
 
@@ -2534,7 +2535,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
         await versionsPage.compareSelectedSnapshots();
 
         await versionsPage.exportComparisonResult();
-        console.log('✓ 对比结果导出已执行');
+        logger.info('✓ 对比结果导出已执行');
       }
     });
   });
@@ -2548,7 +2549,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const startDate = new Date('2024-01-01');
       const endDate = new Date();
       await versionsPage.filterTimelineByDate(startDate, endDate);
-      console.log('✓ 时间线筛选已执行');
+      logger.info('✓ 时间线筛选已执行');
     });
 
     test('DM-MV-HIST-003: 版本回滚', async ({ page }) => {
@@ -2556,7 +2557,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       await versionsPage.switchToHistory();
 
       const timelineItems = await versionsPage.getTimelineItems();
-      console.log(`时间线项目数量: ${timelineItems.length}`);
+      logger.info(`时间线项目数量: ${timelineItems.length}`);
     });
 
     test('DM-MV-HIST-004: 回滚确认', async ({ page }) => {
@@ -2566,7 +2567,7 @@ test.describe('2. 数据版本管理 - 扩展测试 (Extended Versions)', () => 
       const snapshots = await versionsPage.getSnapshotList();
       if (snapshots.length > 1) {
         await versionsPage.compareWithCurrent(snapshots[0].name);
-        console.log('✓ 已准备与当前版本对比');
+        logger.info('✓ 已准备与当前版本对比');
       }
     });
   });
@@ -2592,7 +2593,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
       await page.waitForTimeout(1000);
 
       const featureCount = await featuresPage.getFeatureCount();
-      console.log(`搜索后特征数量: ${featureCount}`);
+      logger.info(`搜索后特征数量: ${featureCount}`);
     });
 
     test('DM-FG-FEATURE-006: 特征筛选', async ({ page }) => {
@@ -2603,7 +2604,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
       await featuresPage.filterFeatures({ dataType: 'string' });
       await page.waitForTimeout(1000);
 
-      console.log('✓ 特征筛选已执行');
+      logger.info('✓ 特征筛选已执行');
     });
 
     test('DM-FG-FEATURE-007: 特征排序', async ({ page }) => {
@@ -2614,7 +2615,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
       await featuresPage.sortFeatures('名称');
       await page.waitForTimeout(500);
 
-      console.log('✓ 特征排序已执行');
+      logger.info('✓ 特征排序已执行');
     });
 
     test('DM-FG-FEATURE-008: 批量删除特征', async ({ page }) => {
@@ -2627,7 +2628,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
       const rowCount = await firstRow.count();
 
       if (rowCount < 2) {
-        console.log('⚠ 没有足够的特征进行批量删除测试');
+        logger.info('⚠ 没有足够的特征进行批量删除测试');
         return;
       }
 
@@ -2638,9 +2639,9 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
       if (testFeatures.length > 0) {
         await featuresPage.batchDeleteFeatures(testFeatures);
-        console.log('✓ 批量删除已触发');
+        logger.info('✓ 批量删除已触发');
       } else {
-        console.log('⚠ 无法获取特征名称');
+        logger.info('⚠ 无法获取特征名称');
       }
     });
 
@@ -2654,7 +2655,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
         const featureName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (featureName && featureName.trim()) {
           await featuresPage.viewFeatureVersions(featureName.trim());
-          console.log('✓ 特征版本历史已查看');
+          logger.info('✓ 特征版本历史已查看');
         }
       }
     });
@@ -2669,7 +2670,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
         const featureName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (featureName && featureName.trim()) {
           await featuresPage.manageFeatureTags(featureName.trim(), ['重要', '核心']);
-          console.log('✓ 特征标签管理已执行');
+          logger.info('✓ 特征标签管理已执行');
         }
       }
     });
@@ -2687,7 +2688,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
         const groupName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (groupName && groupName.trim()) {
           const details = await featuresPage.getGroupDetails(groupName.trim());
-          console.log('特征组详情:', details);
+          logger.info('特征组详情:', details);
         }
       }
     });
@@ -2706,7 +2707,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
         if (groupName && groupName.trim()) {
           await featuresPage.editGroup(groupName.trim(), { description: '更新的描述' });
-          console.log('✓ 特征组编辑已执行');
+          logger.info('✓ 特征组编辑已执行');
         }
       }
     });
@@ -2721,7 +2722,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
       if (await testGroupRow.count() > 0) {
         const groupName = await testGroupRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
-        console.log('找到测试特征组:', groupName);
+        logger.info('找到测试特征组:', groupName);
       }
     });
 
@@ -2735,7 +2736,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
         const groupName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (groupName && groupName.trim()) {
           await featuresPage.viewGroupDetails(groupName.trim());
-          console.log('✓ 组内特征已查看');
+          logger.info('✓ 组内特征已查看');
         }
       }
     });
@@ -2756,7 +2757,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
           const setName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
           if (setName && setName.trim()) {
             const details = await featuresPage.viewSetDetails(setName.trim());
-            console.log('特征集详情:', details);
+            logger.info('特征集详情:', details);
           }
         }
       }
@@ -2775,7 +2776,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
           const setName = await setTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
 
           await featuresPage.addFeatureToSet(setName.trim(), 'test_feature');
-          console.log('✓ 添加特征到特征集已触发');
+          logger.info('✓ 添加特征到特征集已触发');
         }
       }
     });
@@ -2793,7 +2794,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
           const setName = await setTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
 
           await featuresPage.removeFeatureFromSet(setName.trim(), 'test_feature');
-          console.log('✓ 从特征集移除特征已触发');
+          logger.info('✓ 从特征集移除特征已触发');
         }
       }
     });
@@ -2805,7 +2806,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
       const setsTab = page.locator('.ant-tabs-tab:has-text("特征集")');
       if (await setsTab.isVisible()) {
         await featuresPage.switchToSets();
-        console.log('✓ 特征集版本管理已准备');
+        logger.info('✓ 特征集版本管理已准备');
       }
     });
   });
@@ -2823,7 +2824,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
         const serviceTable = page.locator('.ant-tabs-tabpane').nth(3).locator('.ant-table-tbody .ant-table-row');
         if (await serviceTable.count() > 0) {
           const serviceName = await serviceTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
-          console.log('特征服务:', serviceName);
+          logger.info('特征服务:', serviceName);
         }
       }
     });
@@ -2844,7 +2845,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
             await featuresPage.enableService(serviceName.trim());
             await page.waitForTimeout(500);
             await featuresPage.disableService(serviceName.trim());
-            console.log('✓ 服务启用/禁用已执行');
+            logger.info('✓ 服务启用/禁用已执行');
           }
         }
       }
@@ -2864,7 +2865,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
           if (serviceName && serviceName.trim()) {
             await featuresPage.testServiceCall(serviceName.trim(), { user_id: '123' });
-            console.log('✓ 服务调用测试已执行');
+            logger.info('✓ 服务调用测试已执行');
           }
         }
       }
@@ -2884,7 +2885,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
           if (serviceName && serviceName.trim()) {
             await featuresPage.copyServiceEndpoint(serviceName.trim());
-            console.log('✓ API端点复制已执行');
+            logger.info('✓ API端点复制已执行');
           }
         }
       }
@@ -2904,7 +2905,7 @@ test.describe('3. 特征管理 - 扩展测试 (Extended Features)', () => {
 
           if (serviceName && serviceName.trim()) {
             const stats = await featuresPage.getServiceStats(serviceName.trim());
-            console.log('服务统计:', stats);
+            logger.info('服务统计:', stats);
           }
         }
       }
@@ -2932,7 +2933,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
       await page.waitForTimeout(1000);
 
       const elementCount = await standardsPage.getElementCount();
-      console.log(`搜索后数据元数量: ${elementCount}`);
+      logger.info(`搜索后数据元数量: ${elementCount}`);
     });
 
     test('DM-DS-ELEM-007: 数据元筛选', async ({ page }) => {
@@ -2943,7 +2944,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
       await standardsPage.filterElements({ dataType: 'string' });
       await page.waitForTimeout(1000);
 
-      console.log('✓ 数据元筛选已执行');
+      logger.info('✓ 数据元筛选已执行');
     });
 
     test('DM-DS-ELEM-008: 数据元详情-字段映射', async ({ page }) => {
@@ -2956,7 +2957,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         const elementName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (elementName && elementName.trim()) {
           await standardsPage.viewElementMappings(elementName.trim());
-          console.log('✓ 数据元映射已查看');
+          logger.info('✓ 数据元映射已查看');
         }
       }
     });
@@ -2968,7 +2969,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
 
       const importButton = page.locator('button:has-text("导入")');
       if (await importButton.isVisible()) {
-        console.log('✓ 导入按钮已找到');
+        logger.info('✓ 导入按钮已找到');
       }
     });
 
@@ -2978,7 +2979,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
       await standardsPage.switchToElements();
 
       await standardsPage.exportElements('excel');
-      console.log('✓ 数据元导出已触发');
+      logger.info('✓ 数据元导出已触发');
     });
   });
 
@@ -2994,7 +2995,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         const libraryName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (libraryName && libraryName.trim()) {
           const details = await standardsPage.viewLibraryDetails(libraryName.trim());
-          console.log('词根库详情:', details);
+          logger.info('词根库详情:', details);
         }
       }
     });
@@ -3009,7 +3010,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         const libraryName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (libraryName && libraryName.trim()) {
           await standardsPage.editLibrary(libraryName.trim(), { description: '更新的描述' });
-          console.log('✓ 词根库编辑已执行');
+          logger.info('✓ 词根库编辑已执行');
         }
       }
     });
@@ -3024,7 +3025,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         const libraryName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (libraryName && libraryName.trim()) {
           await standardsPage.addWordRoot(libraryName.trim(), 'testword', '测试词根');
-          console.log('✓ 添加词根已触发');
+          logger.info('✓ 添加词根已触发');
         }
       }
     });
@@ -3037,7 +3038,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
       await standardsPage.searchWordRoots('test');
       await page.waitForTimeout(500);
 
-      console.log('✓ 词根搜索已执行');
+      logger.info('✓ 词根搜索已执行');
     });
 
     test('DM-DS-LIB-008: 词根推荐', async ({ page }) => {
@@ -3046,7 +3047,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
       await standardsPage.switchToElements();
 
       const recommendations = await standardsPage.getWordRootRecommendation('user_name');
-      console.log(`词根推荐数量: ${recommendations.length}`);
+      logger.info(`词根推荐数量: ${recommendations.length}`);
     });
   });
 
@@ -3062,7 +3063,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
 
         const uploadButton = page.locator('button:has-text("上传")');
         if (await uploadButton.isVisible()) {
-          console.log('✓ 上传文档按钮已找到');
+          logger.info('✓ 上传文档按钮已找到');
         }
       }
     });
@@ -3080,7 +3081,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
           const docName = await docTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
           if (docName && docName.trim()) {
             await standardsPage.previewDocument(docName.trim());
-            console.log('✓ 文档预览已触发');
+            logger.info('✓ 文档预览已触发');
           }
         }
       }
@@ -3099,7 +3100,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
           const docName = await docTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
           if (docName && docName.trim()) {
             await standardsPage.downloadDocument(docName.trim());
-            console.log('✓ 文档下载已触发');
+            logger.info('✓ 文档下载已触发');
           }
         }
       }
@@ -3114,7 +3115,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         await standardsPage.switchToDocuments();
 
         await standardsPage.manageDocumentCategories();
-        console.log('✓ 文档分类管理已触发');
+        logger.info('✓ 文档分类管理已触发');
       }
     });
   });
@@ -3131,7 +3132,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
 
         const createButton = page.locator('button:has-text("新建映射")');
         if (await createButton.isVisible()) {
-          console.log('✓ 创建映射按钮已找到');
+          logger.info('✓ 创建映射按钮已找到');
         }
       }
     });
@@ -3146,7 +3147,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
 
         const batchButton = page.locator('button:has-text("批量映射")');
         if (await batchButton.isVisible()) {
-          console.log('✓ 批量映射按钮已找到');
+          logger.info('✓ 批量映射按钮已找到');
         }
       }
     });
@@ -3161,7 +3162,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
 
         const checkButton = page.locator('button:has-text("检查冲突")');
         if (await checkButton.isVisible()) {
-          console.log('✓ 冲突检测按钮已找到');
+          logger.info('✓ 冲突检测按钮已找到');
         }
       }
     });
@@ -3175,7 +3176,7 @@ test.describe('4. 数据标准 - 扩展测试 (Extended Standards)', () => {
         await standardsPage.switchToMappings();
 
         await standardsPage.exportMappingRules();
-        console.log('✓ 映射规则导出已触发');
+        logger.info('✓ 映射规则导出已触发');
       }
     });
   });
@@ -3206,11 +3207,11 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         if (await switcher.isVisible()) {
           await switcher.click();
           await page.waitForTimeout(500);
-          console.log('✓ 节点已展开');
+          logger.info('✓ 节点已展开');
 
           await assetsPage.collapseTreeNode('test');
           await page.waitForTimeout(500);
-          console.log('✓ 节点收起已触发');
+          logger.info('✓ 节点收起已触发');
         }
       }
     });
@@ -3222,7 +3223,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       await assetsPage.searchInTree('user');
       await page.waitForTimeout(1000);
 
-      console.log('✓ 树搜索已执行');
+      logger.info('✓ 树搜索已执行');
     });
 
     test('DM-DA-TREE-005: 树刷新', async ({ page }) => {
@@ -3230,7 +3231,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       await assetsPage.goto();
 
       await assetsPage.refreshAssetTree();
-      console.log('✓ 资产树刷新已执行');
+      logger.info('✓ 资产树刷新已执行');
     });
   });
 
@@ -3245,7 +3246,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
 
       if (count >= 2) {
         await assetsPage.multiSelectAssets(['asset1', 'asset2']);
-        console.log('✓ 资产多选已触发');
+        logger.info('✓ 资产多选已触发');
       }
     });
 
@@ -3256,7 +3257,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       await assetsPage.sortAssets('名称');
       await page.waitForTimeout(500);
 
-      console.log('✓ 资产排序已执行');
+      logger.info('✓ 资产排序已执行');
     });
 
     test('DM-DA-LIST-006: 资产高级筛选', async ({ page }) => {
@@ -3266,7 +3267,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       await assetsPage.advancedFilter({ type: 'table', owner: 'admin' });
       await page.waitForTimeout(1000);
 
-      console.log('✓ 高级筛选已触发');
+      logger.info('✓ 高级筛选已触发');
     });
 
     test('DM-DA-LIST-007: 资产标签管理', async ({ page }) => {
@@ -3278,7 +3279,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           await assetsPage.manageAssetTags(assetName.trim(), ['重要', '核心']);
-          console.log('✓ 资产标签管理已触发');
+          logger.info('✓ 资产标签管理已触发');
         }
       }
     });
@@ -3292,7 +3293,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           await assetsPage.changeAssetOwner(assetName.trim(), 'new_owner');
-          console.log('✓ 所有者变更已触发');
+          logger.info('✓ 所有者变更已触发');
         }
       }
     });
@@ -3306,13 +3307,13 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
 
       const searched = await assetsPage.aiSearch('用户信息表');
       if (!searched) {
-        console.log('⚠ AI搜索功能未找到，可能未实现');
+        logger.info('⚠ AI搜索功能未找到，可能未实现');
         return;
       }
       await page.waitForTimeout(2000);
 
       const resultCount = await assetsPage.getAiSearchResultCount();
-      console.log(`AI搜索结果数量: ${resultCount}`);
+      logger.info(`AI搜索结果数量: ${resultCount}`);
     });
 
     test('DM-DA-AI-003: 搜索历史', async ({ page }) => {
@@ -3320,12 +3321,12 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       const switched = await assetsPage.switchToAISearch();
 
       if (!switched) {
-        console.log('⚠ AI搜索标签未找到，功能可能未实现');
+        logger.info('⚠ AI搜索标签未找到，功能可能未实现');
         return;
       }
 
       const history = await assetsPage.getSearchHistory();
-      console.log(`搜索历史记录: ${history.length}`);
+      logger.info(`搜索历史记录: ${history.length}`);
     });
 
     test('DM-DA-AI-004: 自然语言筛选', async ({ page }) => {
@@ -3335,7 +3336,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
       await assetsPage.naturalLanguageFilter('显示所有包含用户信息的表');
       await page.waitForTimeout(2000);
 
-      console.log('✓ 自然语言筛选已执行');
+      logger.info('✓ 自然语言筛选已执行');
     });
   });
 
@@ -3351,7 +3352,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const taskName = await inventoryTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (taskName && taskName.trim()) {
           await assetsPage.executeInventory(taskName.trim());
-          console.log('✓ 盘点任务执行已触发');
+          logger.info('✓ 盘点任务执行已触发');
         }
       }
     });
@@ -3366,7 +3367,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const taskName = await inventoryTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (taskName && taskName.trim()) {
           await assetsPage.viewInventoryResults(taskName.trim());
-          console.log('✓ 盘点结果查看已触发');
+          logger.info('✓ 盘点结果查看已触发');
         }
       }
     });
@@ -3382,7 +3383,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
 
       if (await testTaskRow.count() > 0) {
         const taskName = await testTaskRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
-        console.log('找到测试盘点任务:', taskName);
+        logger.info('找到测试盘点任务:', taskName);
       }
     });
 
@@ -3396,7 +3397,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const taskName = await inventoryTable.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (taskName && taskName.trim()) {
           await assetsPage.exportInventoryReport(taskName.trim(), 'pdf');
-          console.log('✓ 盘点报告导出已触发');
+          logger.info('✓ 盘点报告导出已触发');
         }
       }
     });
@@ -3417,7 +3418,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
           const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
           if (assetName && assetName.trim()) {
             await assetsPage.manualAssessValue(assetName.trim(), 80);
-            console.log('✓ 手动评估已触发');
+            logger.info('✓ 手动评估已触发');
           }
         }
       }
@@ -3436,7 +3437,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
           usageWeight: 40,
           freshnessWeight: 30
         });
-        console.log('✓ 评估规则配置已触发');
+        logger.info('✓ 评估规则配置已触发');
       }
     });
 
@@ -3453,7 +3454,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
           const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
           if (assetName && assetName.trim()) {
             const trend = await assetsPage.getValueTrend(assetName.trim());
-            console.log('价值趋势数据点:', trend.length);
+            logger.info('价值趋势数据点:', trend.length);
           }
         }
       }
@@ -3478,7 +3479,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
           }
 
           await assetsPage.batchAssessValues(assetNames, 75);
-          console.log('✓ 批量评估已触发');
+          logger.info('✓ 批量评估已触发');
         }
       }
     });
@@ -3498,7 +3499,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
             description: '更新的描述信息',
             businessOwner: 'new_owner'
           });
-          console.log('✓ 资产信息编辑已触发');
+          logger.info('✓ 资产信息编辑已触发');
         }
       }
     });
@@ -3512,7 +3513,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           await assetsPage.viewAssetRelations(assetName.trim());
-          console.log('✓ 资产关联已查看');
+          logger.info('✓ 资产关联已查看');
         }
       }
     });
@@ -3526,7 +3527,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           const stats = await assetsPage.getAssetUsageStats(assetName.trim());
-          console.log('资产使用统计:', stats);
+          logger.info('资产使用统计:', stats);
         }
       }
     });
@@ -3540,7 +3541,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           await assetsPage.viewAssetHistory(assetName.trim());
-          console.log('✓ 资产历史已查看');
+          logger.info('✓ 资产历史已查看');
         }
       }
     });
@@ -3554,7 +3555,7 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
         const assetName = await firstRow.first().locator('.ant-table-cell').nth(0).textContent() || '';
         if (assetName && assetName.trim()) {
           await assetsPage.subscribeAsset(assetName.trim(), 'webhook');
-          console.log('✓ 资产订阅已触发');
+          logger.info('✓ 资产订阅已触发');
         }
       }
     });
@@ -3567,17 +3568,17 @@ test.describe('5. 数据资产 - 扩展测试 (Extended Assets)', () => {
 
 test.describe('测试总结', () => {
   test('生成测试总结', async () => {
-    console.log('='.repeat(60));
-    console.log('数据治理 UI E2E 测试完成');
-    console.log('='.repeat(60));
-    console.log('测试的功能:');
-    console.log('  1. 元数据管理页面 - Metadata Management');
-    console.log('  2. 数据版本管理页面 - Data Version Management');
-    console.log('  3. 特征管理页面 - Feature Management');
-    console.log('  4. 数据标准页面 - Data Standards');
-    console.log('  5. 数据资产页面 - Data Assets');
-    console.log('='.repeat(60));
-    console.log('测试数据已保留，可用于手动验证');
-    console.log('='.repeat(60));
+    logger.info('='.repeat(60));
+    logger.info('数据治理 UI E2E 测试完成');
+    logger.info('='.repeat(60));
+    logger.info('测试的功能:');
+    logger.info('  1. 元数据管理页面 - Metadata Management');
+    logger.info('  2. 数据版本管理页面 - Data Version Management');
+    logger.info('  3. 特征管理页面 - Feature Management');
+    logger.info('  4. 数据标准页面 - Data Standards');
+    logger.info('  5. 数据资产页面 - Data Assets');
+    logger.info('='.repeat(60));
+    logger.info('测试数据已保留，可用于手动验证');
+    logger.info('='.repeat(60));
   });
 });

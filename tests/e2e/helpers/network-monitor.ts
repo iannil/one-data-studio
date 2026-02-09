@@ -8,6 +8,7 @@
  */
 
 import { Page, Response } from '@playwright/test';
+import { logger } from './logger';
 
 export interface NetworkIssue {
   url: string;
@@ -141,14 +142,14 @@ export class NetworkMonitor {
    */
   printSummary(): void {
     if (this.issues.length === 0) {
-      console.log('Network: No errors detected');
+      logger.info('Network: No errors detected');
       return;
     }
 
     const apiErrors = this.getAPIErrors();
     const staticErrors = this.issues.length - apiErrors.length;
 
-    console.log(`Network: ${this.issues.length} errors (${apiErrors.length} API, ${staticErrors} static)`);
+    logger.info(`Network: ${this.issues.length} errors (${apiErrors.length} API, ${staticErrors} static)`);
 
     // 按 HTTP 状态码分组
     const byStatus: Record<number, number> = {};
@@ -157,7 +158,7 @@ export class NetworkMonitor {
     }
 
     for (const [status, count] of Object.entries(byStatus)) {
-      console.log(`  ${status}: ${count} requests`);
+      logger.info(`  ${status}: ${count} requests`);
     }
   }
 
@@ -168,6 +169,6 @@ export class NetworkMonitor {
     const { writeFile } = await import('fs/promises');
     const content = this.formatErrors();
     await writeFile(filePath, content, 'utf-8');
-    console.log(`Network errors saved to: ${filePath}`);
+    logger.info(`Network errors saved to: ${filePath}`);
   }
 }

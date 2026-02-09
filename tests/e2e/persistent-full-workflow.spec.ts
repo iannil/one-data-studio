@@ -21,6 +21,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from './helpers/logger';
 import { ConsoleLogger } from './helpers/console-logger';
 import { NetworkMonitor } from './helpers/network-monitor';
 import { CombinedLogger } from './helpers/combined-logger';
@@ -92,15 +93,15 @@ let stateTracker: TestStateTracker;
 
 test.beforeAll(async () => {
   stateTracker = new TestStateTracker();
-  console.log('\n' + '='.repeat(70));
-  console.log('Persistent E2E Test Suite Started');
-  console.log('='.repeat(70));
+  logger.info('\n' + '='.repeat(70));
+  logger.info('Persistent E2E Test Suite Started');
+  logger.info('='.repeat(70));
 });
 
 test.afterAll(async () => {
-  console.log('\n' + '='.repeat(70));
-  console.log('Persistent E2E Test Suite Completed');
-  console.log('='.repeat(70));
+  logger.info('\n' + '='.repeat(70));
+  logger.info('Persistent E2E Test Suite Completed');
+  logger.info('='.repeat(70));
   await stateTracker.saveReport();
   await stateTracker.saveState();
   stateTracker.printSummary();
@@ -192,7 +193,7 @@ test.describe('Phase 1: 数据源管理', () => {
     await page.waitForTimeout(3000);
 
     stateTracker.trackResource('datasource', 'mysql-persistent', MYSQL_CONFIG.name);
-    console.log(`✓ MySQL 数据源 ${MYSQL_CONFIG.name} 创建成功`);
+    logger.info(`✓ MySQL 数据源 ${MYSQL_CONFIG.name} 创建成功`);
   });
 
   test('1.3 创建 PostgreSQL 数据源', async ({ page }) => {
@@ -242,7 +243,7 @@ test.describe('Phase 1: 数据源管理', () => {
     await page.waitForTimeout(3000);
 
     stateTracker.trackResource('datasource', 'postgres-persistent', POSTGRES_CONFIG.name);
-    console.log(`✓ PostgreSQL 数据源 ${POSTGRES_CONFIG.name} 创建成功`);
+    logger.info(`✓ PostgreSQL 数据源 ${POSTGRES_CONFIG.name} 创建成功`);
   });
 
   test('1.4 验证数据源显示在列表中', async ({ page }) => {
@@ -258,11 +259,11 @@ test.describe('Phase 1: 数据源管理', () => {
     const hasMySQL = pageContent.includes(MYSQL_CONFIG.name);
     const hasPostgres = pageContent.includes(POSTGRES_CONFIG.name);
 
-    console.log(`MySQL 数据源在列表中: ${hasMySQL}`);
-    console.log(`PostgreSQL 数据源在列表中: ${hasPostgres}`);
+    logger.info(`MySQL 数据源在列表中: ${hasMySQL}`);
+    logger.info(`PostgreSQL 数据源在列表中: ${hasPostgres}`);
 
     if (hasMySQL || hasPostgres) {
-      console.log('✓ 至少一个数据源已在列表中显示');
+      logger.info('✓ 至少一个数据源已在列表中显示');
     }
   });
 });
@@ -309,7 +310,7 @@ for (const pageInfo of pages) {
 
       // 验证页面已加载
       await expect(page.locator('body')).toBeVisible();
-      console.log(`✓ ${pageInfo.name}页面已加载`);
+      logger.info(`✓ ${pageInfo.name}页面已加载`);
     });
   });
 }
@@ -320,22 +321,22 @@ for (const pageInfo of pages) {
 
 test.describe('测试总结', () => {
   test('生成测试总结报告', async () => {
-    console.log('\n' + '='.repeat(60));
-    console.log('Persistent E2E 测试完成');
-    console.log('='.repeat(60));
-    console.log('');
-    console.log('创建的资源:');
-    console.log(`  - MySQL 数据源: ${MYSQL_CONFIG.name} (端口 ${MYSQL_CONFIG.port})`);
-    console.log(`  - PostgreSQL 数据源: ${POSTGRES_CONFIG.name} (端口 ${POSTGRES_CONFIG.port})`);
-    console.log('');
+    logger.info('\n' + '='.repeat(60));
+    logger.info('Persistent E2E 测试完成');
+    logger.info('='.repeat(60));
+    logger.info('');
+    logger.info('创建的资源:');
+    logger.info(`  - MySQL 数据源: ${MYSQL_CONFIG.name} (端口 ${MYSQL_CONFIG.port})`);
+    logger.info(`  - PostgreSQL 数据源: ${POSTGRES_CONFIG.name} (端口 ${POSTGRES_CONFIG.port})`);
+    logger.info('');
 
     const allResources = stateTracker.getAllResources();
-    console.log('  所有追踪的资源:');
+    logger.info('  所有追踪的资源:');
     for (const resource of allResources) {
-      console.log(`    - [${resource.type}] ${resource.name}`);
+      logger.info(`    - [${resource.type}] ${resource.name}`);
     }
 
-    console.log('');
-    console.log('='.repeat(60));
+    logger.info('');
+    logger.info('='.repeat(60));
   });
 });

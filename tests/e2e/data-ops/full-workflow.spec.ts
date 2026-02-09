@@ -26,6 +26,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { logger } from '../helpers/logger';
 
 // 测试配置
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -79,7 +80,7 @@ test.describe('DataOps 全流程测试', () => {
     try {
       await apiRequest('/api/v1/health');
     } catch (error) {
-      console.warn('后端服务未运行，测试将使用 mock 数据');
+      logger.warn('后端服务未运行，测试将使用 mock 数据');
     }
   });
 
@@ -100,7 +101,7 @@ test.describe('DataOps 全流程测试', () => {
 
       // 截图保存当前状态
       await page.screenshot({ path: 'test-results/dataops/01-datasources-page.png' });
-      console.log('✓ 步骤 1.1: 成功访问数据源管理页面');
+      logger.info('✓ 步骤 1.1: 成功访问数据源管理页面');
     });
 
     test('1.2 应该打开新建数据源对话框', async ({ page }) => {
@@ -128,7 +129,7 @@ test.describe('DataOps 全流程测试', () => {
       await expect(modalTitle.first()).toBeVisible();
 
       await page.screenshot({ path: 'test-results/dataops/02-create-datasource-modal.png' });
-      console.log('✓ 步骤 1.2: 成功打开新建数据源对话框');
+      logger.info('✓ 步骤 1.2: 成功打开新建数据源对话框');
     });
 
     test('1.3 应该填写数据源配置信息', async ({ page }) => {
@@ -182,7 +183,7 @@ test.describe('DataOps 全流程测试', () => {
       await databaseInput.fill(testDataSource.database);
 
       await page.screenshot({ path: 'test-results/dataops/03-datasource-form-filled.png' });
-      console.log('✓ 步骤 1.3: 成功填写数据源配置信息');
+      logger.info('✓ 步骤 1.3: 成功填写数据源配置信息');
     });
 
     test('1.4 应该测试数据源连接', async ({ page }) => {
@@ -227,9 +228,9 @@ test.describe('DataOps 全流程测试', () => {
       await page.screenshot({ path: 'test-results/dataops/04-connection-test-result.png' });
 
       if (hasResult) {
-        console.log('✓ 步骤 1.4: 连接测试已执行');
+        logger.info('✓ 步骤 1.4: 连接测试已执行');
       } else {
-        console.log('⚠ 步骤 1.4: 连接测试结果未显示（可能是后端未运行）');
+        logger.info('⚠ 步骤 1.4: 连接测试结果未显示（可能是后端未运行）');
       }
     });
 
@@ -267,7 +268,7 @@ test.describe('DataOps 全流程测试', () => {
       await page.waitForTimeout(2000);
 
       await page.screenshot({ path: 'test-results/dataops/05-datasource-created.png' });
-      console.log('✓ 步骤 1.5: 数据源创建请求已发送');
+      logger.info('✓ 步骤 1.5: 数据源创建请求已发送');
     });
   });
 
@@ -286,7 +287,7 @@ test.describe('DataOps 全流程测试', () => {
       await expect(title.first()).toBeVisible();
 
       await page.screenshot({ path: 'test-results/dataops/06-etl-page.png' });
-      console.log('✓ 步骤 2.1: 成功访问 ETL 管理页面');
+      logger.info('✓ 步骤 2.1: 成功访问 ETL 管理页面');
     });
 
     test('2.2 应该创建 ETL 任务', async ({ page }) => {
@@ -310,9 +311,9 @@ test.describe('DataOps 全流程测试', () => {
         await nameInput.fill(testETLJob.name);
 
         await page.screenshot({ path: 'test-results/dataops/07-etl-create-form.png' });
-        console.log('✓ 步骤 2.2: 成功打开 ETL 任务创建表单');
+        logger.info('✓ 步骤 2.2: 成功打开 ETL 任务创建表单');
       } else {
-        console.log('⚠ 步骤 2.2: ETL 创建按钮未找到，页面可能尚未实现');
+        logger.info('⚠ 步骤 2.2: ETL 创建按钮未找到，页面可能尚未实现');
       }
     });
 
@@ -325,9 +326,9 @@ test.describe('DataOps 全流程测试', () => {
 
       const hasMapping = await mappingArea.count() > 0;
       if (hasMapping) {
-        console.log('✓ 步骤 2.3: 字段映射配置区域存在');
+        logger.info('✓ 步骤 2.3: 字段映射配置区域存在');
       } else {
-        console.log('⚠ 步骤 2.3: 字段映射配置区域未找到');
+        logger.info('⚠ 步骤 2.3: 字段映射配置区域未找到');
       }
 
       await page.screenshot({ path: 'test-results/dataops/08-etl-field-mapping.png' });
@@ -349,7 +350,7 @@ test.describe('DataOps 全流程测试', () => {
       await expect(title.first()).toBeVisible();
 
       await page.screenshot({ path: 'test-results/dataops/09-metadata-page.png' });
-      console.log('✓ 步骤 3.1: 成功访问元数据管理页面');
+      logger.info('✓ 步骤 3.1: 成功访问元数据管理页面');
     });
 
     test('3.2 应该浏览数据库和表结构', async ({ page }) => {
@@ -369,9 +370,9 @@ test.describe('DataOps 全流程测试', () => {
         await dbNode.click();
         await page.waitForTimeout(500);
 
-        console.log('✓ 步骤 3.2: 成功浏览数据库结构');
+        logger.info('✓ 步骤 3.2: 成功浏览数据库结构');
       } else {
-        console.log('⚠ 步骤 3.2: 数据库树未找到（可能没有数据源连接）');
+        logger.info('⚠ 步骤 3.2: 数据库树未找到（可能没有数据源连接）');
       }
 
       await page.screenshot({ path: 'test-results/dataops/10-metadata-tree.png' });
@@ -395,9 +396,9 @@ test.describe('DataOps 全流程测试', () => {
         await aiButton.first().click();
         await page.waitForTimeout(2000);
 
-        console.log('✓ 步骤 3.3: AI 标注功能已触发');
+        logger.info('✓ 步骤 3.3: AI 标注功能已触发');
       } else {
-        console.log('⚠ 步骤 3.3: AI 标注按钮未找到（可能需要先选择表）');
+        logger.info('⚠ 步骤 3.3: AI 标注按钮未找到（可能需要先选择表）');
       }
 
       await page.screenshot({ path: 'test-results/dataops/11-ai-annotation.png' });
@@ -421,9 +422,9 @@ test.describe('DataOps 全流程测试', () => {
         await scanButton.first().click();
         await page.waitForTimeout(1000);
 
-        console.log('✓ 步骤 3.4: 敏感数据扫描已触发');
+        logger.info('✓ 步骤 3.4: 敏感数据扫描已触发');
       } else {
-        console.log('⚠ 步骤 3.4: 敏感扫描按钮未找到');
+        logger.info('⚠ 步骤 3.4: 敏感扫描按钮未找到');
       }
 
       await page.screenshot({ path: 'test-results/dataops/12-sensitivity-scan.png' });
@@ -455,9 +456,9 @@ test.describe('DataOps 全流程测试', () => {
         await page.keyboard.press('Enter');
         await page.waitForTimeout(1000);
 
-        console.log('✓ 步骤 3.5: 表搜索功能已执行');
+        logger.info('✓ 步骤 3.5: 表搜索功能已执行');
       } else {
-        console.log('⚠ 步骤 3.5: 搜索标签页未找到');
+        logger.info('⚠ 步骤 3.5: 搜索标签页未找到');
       }
 
       await page.screenshot({ path: 'test-results/dataops/13-metadata-search.png' });
@@ -485,9 +486,9 @@ test.describe('DataOps 全流程测试', () => {
         await text2sqlTab.first().click();
         await page.waitForTimeout(500);
 
-        console.log('✓ 步骤 4.1: 成功访问 Text-to-SQL 功能');
+        logger.info('✓ 步骤 4.1: 成功访问 Text-to-SQL 功能');
       } else {
-        console.log('⚠ 步骤 4.1: Text-to-SQL 标签页未找到');
+        logger.info('⚠ 步骤 4.1: Text-to-SQL 标签页未找到');
       }
 
       await page.screenshot({ path: 'test-results/dataops/14-text2sql-page.png' });
@@ -532,12 +533,12 @@ test.describe('DataOps 全流程测试', () => {
           await generateButton.first().click();
           await page.waitForTimeout(2000);
 
-          console.log('✓ 步骤 4.2: 自然语言查询已执行');
+          logger.info('✓ 步骤 4.2: 自然语言查询已执行');
         } else {
-          console.log('⚠ 步骤 4.2: 生成按钮未找到');
+          logger.info('⚠ 步骤 4.2: 生成按钮未找到');
         }
       } else {
-        console.log('⚠ 步骤 4.2: 查询输入框未找到');
+        logger.info('⚠ 步骤 4.2: 查询输入框未找到');
       }
 
       await page.screenshot({ path: 'test-results/dataops/15-text2sql-query.png' });
@@ -554,7 +555,7 @@ test.describe('DataOps 全流程测试', () => {
       await expect(title.first()).toBeVisible();
 
       await page.screenshot({ path: 'test-results/dataops/16-bi-page.png' });
-      console.log('✓ 步骤 4.3: 成功访问 BI 报表页面');
+      logger.info('✓ 步骤 4.3: 成功访问 BI 报表页面');
     });
 
     test('4.4 应该访问数据服务页面', async ({ page }) => {
@@ -568,7 +569,7 @@ test.describe('DataOps 全流程测试', () => {
       await expect(title.first()).toBeVisible();
 
       await page.screenshot({ path: 'test-results/dataops/17-data-services.png' });
-      console.log('✓ 步骤 4.4: 成功访问数据服务页面');
+      logger.info('✓ 步骤 4.4: 成功访问数据服务页面');
     });
   });
 
@@ -604,20 +605,20 @@ test.describe('DataOps 全流程测试', () => {
       }
 
       // 打印汇总
-      console.log('\n=================================');
-      console.log('DataOps 全流程测试汇总');
-      console.log('=================================');
+      logger.info('\n=================================');
+      logger.info('DataOps 全流程测试汇总');
+      logger.info('=================================');
       for (const [name, status] of Object.entries(summary)) {
-        console.log(`${status} ${name}`);
+        logger.info(`${status} ${name}`);
       }
-      console.log('=================================\n');
+      logger.info('=================================\n');
 
       // 生成最终截图
       await page.goto(`${BASE_URL}`);
       await page.waitForLoadState('networkidle');
       await page.screenshot({ path: 'test-results/dataops/00-homepage.png', fullPage: true });
 
-      console.log('✓ 完整流程验证完成');
+      logger.info('✓ 完整流程验证完成');
     });
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import { test, expect } from './fixtures/real-auth.fixture';
+import { logger } from './helpers/logger';
 import { createApiClient, clearRequestLogs, getFailedRequests } from './helpers/api-client';
 import type { AgentApiClient, DataApiClient } from './helpers/api-client';
 
@@ -130,7 +131,7 @@ test.describe('核心页面 - 数据集列表', () => {
     if (await pagination.isVisible()) {
       // 检查总页数
       const totalText = await pagination.locator('.ant-pagination-total, .total').textContent();
-      console.log('Total datasets:', totalText);
+      logger.info('Total datasets:', totalText);
     }
   });
 });
@@ -287,7 +288,7 @@ test.describe('核心页面 - AI 对话', () => {
     if (await inputBox.isVisible()) {
       const specialMessages = [
         'Test with emoji 🎉🔥',
-        'Test with code: `console.log("hello")`',
+        'Test with code: `logger.info("hello")`',
         'Test with link: https://example.com',
         'Test with quote: "Hello World"',
       ];
@@ -319,7 +320,7 @@ test.describe('核心页面 - 工作流', () => {
     // 检查状态标签
     const statusLabels = page.locator('.status-badge, .tag, [class*="status"]');
     const statusCount = await statusLabels.count();
-    console.log(`Found ${statusCount} status labels`);
+    logger.info(`Found ${statusCount} status labels`);
   });
 
   test('should create new workflow with drag and drop', async ({ page }) => {
@@ -421,7 +422,7 @@ test.describe('核心页面 - 导航', () => {
 
     // 验证有高亮的导航项
     const hasActive = await activeItem.count() > 0;
-    console.log('Has active navigation item:', hasActive);
+    logger.info('Has active navigation item:', hasActive);
   });
 
   test('should support browser back and forward', async ({ page }) => {

@@ -5,6 +5,7 @@
  */
 
 import { test as base, Page, BrowserContext } from '@playwright/test';
+import { logger } from '../helpers/logger';
 
 // 加载环境变量
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://localhost:8080';
@@ -439,7 +440,7 @@ export async function setupAuth(
       return;
     }
   } catch (error) {
-    console.warn('Direct token fetch failed, trying browser login:', error);
+    logger.warn('Direct token fetch failed, trying browser login:', error);
   }
 
   // 备用方案：尝试浏览器登录流程
@@ -447,7 +448,7 @@ export async function setupAuth(
     const session = await performKeycloakLogin(page, role);
     await setupAuthInPage(page, session);
   } catch (error) {
-    console.warn('Keycloak login failed, trying simple form login:', error);
+    logger.warn('Keycloak login failed, trying simple form login:', error);
     await simpleFormLogin(page, creds.username, creds.password);
   }
 }

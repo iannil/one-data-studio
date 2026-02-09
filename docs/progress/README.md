@@ -25,7 +25,6 @@
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [test_data_init_progress.md](./test_data_init_progress.md) | 测试数据初始化 | 🔄 进行中 |
 | [ui_e2e_test_progress.md](./ui_e2e_test_progress.md) | UI E2E 测试开发 | 🔄 进行中 |
 | [full_platform_e2e_test_progress.md](./full_platform_e2e_test_progress.md) | 全平台 E2E 测试 | 🔄 进行中 |
 
@@ -35,6 +34,7 @@
 
 | 日期 | 文档 | 移动日期 |
 |------|------|----------|
+| 2026-02-08 | `test-data-init-2026-02-08.md` | 2026-02-09 |
 | 2026-02-08 | `2026-02-08-dataops-e2e-full-workflow.md` | 2026-02-09 |
 | 2026-02-07 | `2026-02-07-*.md` (4 个文件) | 2026-02-09 |
 | 2026-02-06 | `2026-02-06-data-ops-e2e-validation.md` | 2026-02-09 |
