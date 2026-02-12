@@ -11,8 +11,36 @@
 ├── README.md                    # 本文件
 ├── helm-chart-backup/           # Helm Chart 备份
 ├── k8s-config-backup/           # K8s 配置备份
-└── testing-2025/                # 2025 年测试文档归档
+├── testing-2025/                # 2025 年测试文档归档
+├── status-reports/              # 历史项目状态报告
+│   └── project-status-2026-01-30.md
+└── progress-reports/            # 历史进展报告
+    └── project-progress-2026-02-09.md
 ```
+
+---
+
+## 归档文档说明
+
+### status-reports/
+
+历史项目状态报告，已被最新的 `docs/PROJECT_STATUS.md` 替代。
+
+| 文件 | 归档日期 | 原因 |
+|------|----------|------|
+| `project-status-2026-01-30.md` | 2026-02-12 | 被更新的 PROJECT_STATUS.md (2026-02-12) 替代 |
+
+### progress-reports/
+
+历史进展报告，内容已整合到 `docs/PROJECT_STATUS.md`。
+
+| 文件 | 归档日期 | 原因 |
+|------|----------|------|
+| `project-progress-2026-02-09.md` | 2026-02-12 | 内容已整合，避免重复 |
+
+### current-status-2026-02-04-archived.md
+
+2026-02-04 的项目状态快照，保留作为历史参考。
 
 ---
 
@@ -106,6 +134,8 @@ git checkout <commit-hash> -- docs/99-archived/<file>
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-02-12 | 添加 status-reports/ 和 progress-reports/ 归档说明 |
+| 2026-02-12 | 归档 project-status-2026-01-30.md 和 project-progress-2026-02-09.md |
 | 2026-01-29 | 删除 code-audit-2026-01-28.md（内容已合并到 current-status.md）|
 | 2026-01-29 | 记录 FEATURES-2.md 删除（重复内容）|
 | 2026-01-29 | 更新目录结构说明 |

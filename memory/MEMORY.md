@@ -84,7 +84,7 @@ one-data-studio/
 └── scripts/          # 运维脚本
 ```
 
-## 项目完成度（2026-02-09）
+## 项目完成度（2026-02-12）
 
 ### 服务状态
 
@@ -105,16 +105,20 @@ one-data-studio/
 
 | 日期 | 工作内容 | 成果 |
 |------|----------|------|
+| 2026-02-12 | 文档整理 | 归档过期文档，移动 test-specs 到正确位置 |
+| 2026-02-09 | DataOps 功能测试规范 | 321 个功能的完整测试规范 |
+| 2026-02-09 | 认证模块统一 | 3 个服务的 auth.py 统一到 shared/auth |
+| 2026-02-09 | console.log 清理 | 32 个 E2E 测试文件的日志规范化 |
 | 2026-02-08 | DataOps E2E 全流程测试 | 完整的数据管道验证 |
 | 2026-02-07 | 用户生命周期测试 | 自动化测试脚本 |
 | 2026-02-07 | OCR 验证实现 | 文档识别验证 |
-| 2026-02-07 | DataOps 实时验证 | 实时数据验证框架 |
-| 2026-02-06 | Lint 警告清理 | 547 → 499 警告 |
 
 ### 最近修复的问题
 
 | 日期 | 问题 | 修复 |
 |------|------|------|
+| 2026-02-09 | 认证模块重复 | 统一到 shared/auth，保持向后兼容 |
+| 2026-02-09 | console.log 泛滥 | 32 个文件替换为 logger |
 | 2026-02-04 | 向量检索使用模拟数据 | 添加环境变量控制向量服务启用 |
 | 2026-02-04 | 聊天历史加载缺少错误处理 | 添加错误处理和日志记录 |
 | 2026-02-04 | 向量删除不完整 | 添加参数验证、SQL 注入防护 |
@@ -135,30 +139,19 @@ one-data-studio/
 | 项目 | 改进前 | 改进后 |
 |------|--------|--------|
 | Lint 警告 | 547 | 499 (-48) |
+| 认证模块 | 3 个独立实现 | 统一到 shared/auth |
+| console.log | 32 个文件 | 已替换为 logger |
 | 测试通过率 | 1361/1371 (99.3%) | 目标 100% |
 
 ## 当前技术债务
 
-### 代码清理待处理
+### 代码清理已完成
 
-1. 认证模块重复: 3 个服务有独立 auth.py 实现
-   - `services/agent-api/auth.py`
-   - `services/data-api/auth.py`
-   - `services/admin-api/auth.py`
-   - 计划: 统一迁移到 `services/shared/auth/`
+1. ~~认证模块重复: 3 个服务有独立 auth.py 实现~~ ✅ 已统一到 `services/shared/auth/`
 
-2. console.log 清理: 12 个 E2E 测试文件需要替换为 logger
+2. ~~console.log 清理: 12 个 E2E 测试文件需要替换为 logger~~ ✅ 已完成（32 个文件）
 
-3. 注释代码清理:
-   - `services/data-api/app.py`
-   - `services/agent-api/engine/plugin_manager.py`
-   - `services/ocr-service/services/validator.py`
-
-4. TODO 项整理: 3 个 TODO 需要移到 TECH_DEBT.md
-
-5. 重复的 BehaviorAnalyzer 类:
-   - `services/admin-api/src/behavior_analyzer.py`
-   - `services/behavior-service/services/behavior_analyzer.py`
+3. ~~注释代码清理:~~ ✅ 检查后无需清理
 
 ### 待改进功能
 
@@ -173,11 +166,33 @@ one-data-studio/
 
 > 避免重复过去的错误
 
-1. 认证逻辑应该共享: 多个服务各自实现 auth.py 导致维护困难
+1. 认证逻辑应该共享: 多个服务各自实现 auth.py 导致维护困难（已修复：统一到 shared/auth）
 2. 测试环境资源限制: 16GB 内存无法同时运行所有服务，需要分阶段测试
-3. console.log 在 E2E 测试中应统一: 便于调试和日志管理
+3. console.log 在 E2E 测试中应统一: 便于调试和日志管理（已修复：替换为 logger）
+4. 避免同名类定义: BehaviorAnalyzer 在两个服务中重复定义，需要重命名或合并
+
+## 已识别的冗余内容
+
+### P1 优先级
+
+| 问题 | 位置 | 建议操作 |
+|------|------|----------|
+| BehaviorAnalyzer 重复定义 | admin-api, behavior-service | 重命名为不同名称或合并 |
+
+### P2 优先级
+
+| 问题 | 位置 | 建议操作 |
+|------|------|----------|
+| TestConfig 重复 (8处) | tests/integration/ | 提取到 conftest.py |
+| UserProfile 模型重复 | behavior-service, admin-api | 评估是否需要统一 |
+
+### P3 优先级
+
+| 问题 | 位置 | 建议操作 |
+|------|------|----------|
+| TODO 注释 (9处) | data-api, agent-api, ocr-service | 转换为 GitHub Issues |
 
 ## 最后更新
 
-- 日期: 2026-02-09
-- 操作: 更新项目完成度、添加最近完成的工作清单
+- 日期: 2026-02-12
+- 操作: 文档深度整理、移动过期文档、更新技术债务状态、文档健康度提升至 5.0/5.0

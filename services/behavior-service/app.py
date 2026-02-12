@@ -10,7 +10,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, Column, String, Integer, Text, DateTime, Float, JSON, Boolean, Index
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Integer,
+    Text,
+    DateTime,
+    Float,
+    JSON,
+    Boolean,
+    Index,
+)
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.mysql import BIGINT
 import redis
@@ -22,14 +33,15 @@ from api.behaviors import router as behaviors_router
 from api.profiles import router as profiles_router
 from api.audit import router as audit_router
 from services.behavior_collector import BehaviorCollector
-from services.behavior_analyzer import BehaviorAnalyzer
+from services.behavior_analyzer import (
+    BehaviorMetricsAnalyzer,
+)  # renamed from BehaviorAnalyzer
 from services.profile_builder import ProfileBuilder
 from services.anomaly_detector import AnomalyDetector
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -45,6 +57,7 @@ async def lifespan(app: FastAPI):
 
     # 创建数据库表
     from models.base import Base
+
     Base.metadata.create_all(bind=engine)
     logger.info("数据库表初始化完成")
 
@@ -65,7 +78,7 @@ app = FastAPI(
     title="用户行为管理服务",
     description="采集用户行为并生成画像，提供行为审计功能",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # 配置CORS
@@ -90,18 +103,14 @@ async def root():
         "service": "用户行为管理服务",
         "version": "1.0.0",
         "status": "running",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
 @app.get("/health")
 async def health_check():
     """健康检查详情"""
-    return {
-        "status": "healthy",
-        "database": check_database(),
-        "redis": check_redis()
-    }
+    return {"status": "healthy", "database": check_database(), "redis": check_redis()}
 
 
 def check_database():
@@ -128,6 +137,7 @@ def check_redis():
 async def log_requests(request, call_next):
     """记录所有API请求"""
     import time
+
     start_time = time.time()
 
     # 获取用户信息（从header或token）
@@ -140,16 +150,18 @@ async def log_requests(request, call_next):
     process_time = time.time() - start_time
     try:
         collector = BehaviorCollector()
-        collector.collect_api_call({
-            "user_id": user_id,
-            "tenant_id": tenant_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration": process_time,
-            "user_agent": request.headers.get("user-agent"),
-            "ip": request.client.host if request.client else None
-        })
+        collector.collect_api_call(
+            {
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration": process_time,
+                "user_agent": request.headers.get("user-agent"),
+                "ip": request.client.host if request.client else None,
+            }
+        )
     except Exception as e:
         logger.error(f"Failed to log API call: {e}")
 
@@ -158,10 +170,5 @@ async def log_requests(request, call_next):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8008,
-        reload=True,
-        log_level="info"
-    )
+
+    uvicorn.run("app:app", host="0.0.0.0", port=8008, reload=True, log_level="info")

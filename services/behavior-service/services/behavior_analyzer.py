@@ -1,6 +1,10 @@
 """
-行为分析服务
-分析用户行为模式，生成统计指标
+行为统计指标分析服务
+
+原名: BehaviorAnalyzer
+
+职责: 分析用户行为模式，生成统计指标（活跃度、留存率、漏斗分析等）
+区别于 admin-api 的 UserProfileAnalyzer（用户画像特征提取）
 """
 
 import logging
@@ -15,18 +19,21 @@ from models.user_profile import BehaviorMetric
 logger = logging.getLogger(__name__)
 
 
-class BehaviorAnalyzer:
-    """行为分析器"""
+class BehaviorMetricsAnalyzer:
+    """
+    行为统计指标分析器
+
+    原名: BehaviorAnalyzer
+
+    职责: 分析用户行为模式，生成统计指标
+    提供功能: 活跃度分析、模块使用分析、漏斗分析、留存分析
+    """
 
     def __init__(self):
         pass
 
     def analyze_user_activity(
-        self,
-        db: Session,
-        user_id: str,
-        tenant_id: str,
-        days: int = 30
+        self, db: Session, user_id: str, tenant_id: str, days: int = 30
     ) -> Dict:
         """
         分析用户活跃度
@@ -45,20 +52,32 @@ class BehaviorAnalyzer:
         since = datetime.now() - timedelta(days=days)
 
         # 基础统计
-        behaviors = db.query(UserBehavior).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.user_id == user_id,
-            UserBehavior.occurred_at >= since
-        ).all()
+        behaviors = (
+            db.query(UserBehavior)
+            .filter(
+                UserBehavior.tenant_id == tenant_id,
+                UserBehavior.user_id == user_id,
+                UserBehavior.occurred_at >= since,
+            )
+            .all()
+        )
 
-        sessions = db.query(UserSession).filter(
-            UserSession.tenant_id == tenant_id,
-            UserSession.user_id == user_id,
-            UserSession.start_time >= since
-        ).all()
+        sessions = (
+            db.query(UserSession)
+            .filter(
+                UserSession.tenant_id == tenant_id,
+                UserSession.user_id == user_id,
+                UserSession.start_time >= since,
+            )
+            .all()
+        )
 
         page_views = [b for b in behaviors if b.behavior_type == "page_view"]
-        actions = [b for b in behaviors if b.behavior_type in ["click", "submit", "form_submit"]]
+        actions = [
+            b
+            for b in behaviors
+            if b.behavior_type in ["click", "submit", "form_submit"]
+        ]
 
         # 计算统计指标
         total_duration = sum([s.duration or 0 for s in sessions])
@@ -69,14 +88,18 @@ class BehaviorAnalyzer:
         for b in behaviors:
             hour = b.occurred_at.hour
             hour_counts[hour] = hour_counts.get(hour, 0) + 1
-        most_active_hour = max(hour_counts.items(), key=lambda x: x[1])[0] if hour_counts else None
+        most_active_hour = (
+            max(hour_counts.items(), key=lambda x: x[1])[0] if hour_counts else None
+        )
 
         # 最常访问页面
         page_counts = {}
         for pv in page_views:
             url = pv.page_url or "unknown"
             page_counts[url] = page_counts.get(url, 0) + 1
-        most_visited_pages = sorted(page_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        most_visited_pages = sorted(
+            page_counts.items(), key=lambda x: x[1], reverse=True
+        )[:10]
 
         # 活跃趋势（按天统计）
         daily_counts = {}
@@ -96,15 +119,14 @@ class BehaviorAnalyzer:
             "avg_daily_sessions": len(sessions) / days if days > 0 else 0,
             "avg_daily_duration": round(avg_daily_duration / 60, 2),  # 转换为分钟
             "most_active_hour": most_active_hour,
-            "most_visited_pages": [{"url": url, "count": count} for url, count in most_visited_pages],
+            "most_visited_pages": [
+                {"url": url, "count": count} for url, count in most_visited_pages
+            ],
             "activity_trend": activity_trend,
         }
 
     def analyze_module_usage(
-        self,
-        db: Session,
-        tenant_id: str,
-        days: int = 30
+        self, db: Session, tenant_id: str, days: int = 30
     ) -> List[Dict]:
         """
         分析功能模块使用情况
@@ -121,10 +143,13 @@ class BehaviorAnalyzer:
         """
         since = datetime.now() - timedelta(days=days)
 
-        behaviors = db.query(UserBehavior).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= since
-        ).all()
+        behaviors = (
+            db.query(UserBehavior)
+            .filter(
+                UserBehavior.tenant_id == tenant_id, UserBehavior.occurred_at >= since
+            )
+            .all()
+        )
 
         # 按模块分组统计
         module_stats = {}
@@ -152,24 +177,24 @@ class BehaviorAnalyzer:
         for stats in module_stats.values():
             avg_duration = (
                 sum(stats["durations"]) / len(stats["durations"])
-                if stats["durations"] else 0
+                if stats["durations"]
+                else 0
             )
 
-            result.append({
-                "module": stats["module"],
-                "page_views": stats["page_views"],
-                "unique_users": len(stats["users"]),
-                "avg_duration": round(avg_duration, 2),
-                "total_actions": stats["actions"],
-            })
+            result.append(
+                {
+                    "module": stats["module"],
+                    "page_views": stats["page_views"],
+                    "unique_users": len(stats["users"]),
+                    "avg_duration": round(avg_duration, 2),
+                    "total_actions": stats["actions"],
+                }
+            )
 
         return sorted(result, key=lambda x: x["page_views"], reverse=True)
 
     def get_active_users(
-        self,
-        db: Session,
-        tenant_id: str,
-        days: int = 7
+        self, db: Session, tenant_id: str, days: int = 7
     ) -> List[Dict]:
         """
         获取活跃用户列表
@@ -186,15 +211,19 @@ class BehaviorAnalyzer:
         since = datetime.now() - timedelta(days=days)
 
         # 查询活跃用户
-        active_users = db.query(
-            UserBehavior.user_id,
-            func.count(func.distinct(UserBehavior.session_id)).label("sessions"),
-            func.count(func.distinct(UserBehavior.page_url)).label("pages"),
-            func.max(UserBehavior.occurred_at).label("last_active")
-        ).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= since
-        ).group_by(UserBehavior.user_id).all()
+        active_users = (
+            db.query(
+                UserBehavior.user_id,
+                func.count(func.distinct(UserBehavior.session_id)).label("sessions"),
+                func.count(func.distinct(UserBehavior.page_url)).label("pages"),
+                func.max(UserBehavior.occurred_at).label("last_active"),
+            )
+            .filter(
+                UserBehavior.tenant_id == tenant_id, UserBehavior.occurred_at >= since
+            )
+            .group_by(UserBehavior.user_id)
+            .all()
+        )
 
         return [
             {
@@ -207,10 +236,7 @@ class BehaviorAnalyzer:
         ]
 
     def get_hourly_activity(
-        self,
-        db: Session,
-        tenant_id: str,
-        days: int = 7
+        self, db: Session, tenant_id: str, days: int = 7
     ) -> List[Dict]:
         """
         获取按小时统计的活动量
@@ -223,14 +249,18 @@ class BehaviorAnalyzer:
         """
         since = datetime.now() - timedelta(days=days)
 
-        hourly_data = db.query(
-            func.hour(UserBehavior.occurred_at).label("hour"),
-            func.count(UserBehavior.id).label("count"),
-            func.count(func.distinct(UserBehavior.user_id)).label("users")
-        ).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= since
-        ).group_by(func.hour(UserBehavior.occurred_at)).all()
+        hourly_data = (
+            db.query(
+                func.hour(UserBehavior.occurred_at).label("hour"),
+                func.count(UserBehavior.id).label("count"),
+                func.count(func.distinct(UserBehavior.user_id)).label("users"),
+            )
+            .filter(
+                UserBehavior.tenant_id == tenant_id, UserBehavior.occurred_at >= since
+            )
+            .group_by(func.hour(UserBehavior.occurred_at))
+            .all()
+        )
 
         return [
             {
@@ -242,11 +272,7 @@ class BehaviorAnalyzer:
         ]
 
     def get_behavior_funnel(
-        self,
-        db: Session,
-        tenant_id: str,
-        steps: List[str],
-        days: int = 30
+        self, db: Session, tenant_id: str, steps: List[str], days: int = 30
     ) -> Dict:
         """
         分析行为漏斗
@@ -263,11 +289,15 @@ class BehaviorAnalyzer:
 
         counts = []
         for step in steps:
-            count = db.query(func.count(func.distinct(UserBehavior.user_id))).filter(
-                UserBehavior.tenant_id == tenant_id,
-                UserBehavior.behavior_type == step,
-                UserBehavior.occurred_at >= since
-            ).scalar()
+            count = (
+                db.query(func.count(func.distinct(UserBehavior.user_id)))
+                .filter(
+                    UserBehavior.tenant_id == tenant_id,
+                    UserBehavior.behavior_type == step,
+                    UserBehavior.occurred_at >= since,
+                )
+                .scalar()
+            )
             counts.append(count or 0)
 
         # 计算转化率
@@ -285,10 +315,7 @@ class BehaviorAnalyzer:
         }
 
     def calculate_retention(
-        self,
-        db: Session,
-        tenant_id: str,
-        cohort_days: int = 7
+        self, db: Session, tenant_id: str, cohort_days: int = 7
     ) -> List[Dict]:
         """
         计算用户留存率
@@ -304,14 +331,19 @@ class BehaviorAnalyzer:
         cohort_end = datetime.now() - timedelta(days=cohort_days)
 
         # 找到cohort用户
-        cohort_users = db.query(
-            UserBehavior.user_id,
-            func.min(UserBehavior.occurred_at).label("first_active")
-        ).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= cohort_start,
-            UserBehavior.occurred_at < cohort_end
-        ).group_by(UserBehavior.user_id).all()
+        cohort_users = (
+            db.query(
+                UserBehavior.user_id,
+                func.min(UserBehavior.occurred_at).label("first_active"),
+            )
+            .filter(
+                UserBehavior.tenant_id == tenant_id,
+                UserBehavior.occurred_at >= cohort_start,
+                UserBehavior.occurred_at < cohort_end,
+            )
+            .group_by(UserBehavior.user_id)
+            .all()
+        )
 
         if not cohort_users:
             return []
@@ -326,28 +358,31 @@ class BehaviorAnalyzer:
             day_start = cohort_end + timedelta(days=day)
             day_end = day_start + timedelta(days=1)
 
-            retained = db.query(func.count(func.distinct(UserBehavior.user_id))).filter(
-                UserBehavior.tenant_id == tenant_id,
-                UserBehavior.user_id.in_(cohort_user_ids),
-                UserBehavior.occurred_at >= day_start,
-                UserBehavior.occurred_at < day_end
-            ).scalar()
+            retained = (
+                db.query(func.count(func.distinct(UserBehavior.user_id)))
+                .filter(
+                    UserBehavior.tenant_id == tenant_id,
+                    UserBehavior.user_id.in_(cohort_user_ids),
+                    UserBehavior.occurred_at >= day_start,
+                    UserBehavior.occurred_at < day_end,
+                )
+                .scalar()
+            )
 
             retention_rate = (retained / cohort_size * 100) if cohort_size > 0 else 0
 
-            retention_data.append({
-                "day": day,
-                "retained_users": retained or 0,
-                "retention_rate": round(retention_rate, 2),
-            })
+            retention_data.append(
+                {
+                    "day": day,
+                    "retained_users": retained or 0,
+                    "retention_rate": round(retention_rate, 2),
+                }
+            )
 
         return retention_data
 
     def generate_daily_metrics(
-        self,
-        db: Session,
-        tenant_id: str,
-        date: datetime = None
+        self, db: Session, tenant_id: str, date: datetime = None
     ) -> List[BehaviorMetric]:
         """
         生成每日指标
@@ -362,24 +397,36 @@ class BehaviorAnalyzer:
         created_metrics = []
 
         # 总体活跃度指标
-        total_behaviors = db.query(func.count(UserBehavior.id)).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= date,
-            UserBehavior.occurred_at < next_day
-        ).scalar()
+        total_behaviors = (
+            db.query(func.count(UserBehavior.id))
+            .filter(
+                UserBehavior.tenant_id == tenant_id,
+                UserBehavior.occurred_at >= date,
+                UserBehavior.occurred_at < next_day,
+            )
+            .scalar()
+        )
 
-        unique_users = db.query(func.count(func.distinct(UserBehavior.user_id))).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= date,
-            UserBehavior.occurred_at < next_day
-        ).scalar()
+        unique_users = (
+            db.query(func.count(func.distinct(UserBehavior.user_id)))
+            .filter(
+                UserBehavior.tenant_id == tenant_id,
+                UserBehavior.occurred_at >= date,
+                UserBehavior.occurred_at < next_day,
+            )
+            .scalar()
+        )
 
         # 总会话数
-        total_sessions = db.query(func.count(UserSession.id)).filter(
-            UserSession.tenant_id == tenant_id,
-            UserSession.start_time >= date,
-            UserSession.start_time < next_day
-        ).scalar()
+        total_sessions = (
+            db.query(func.count(UserSession.id))
+            .filter(
+                UserSession.tenant_id == tenant_id,
+                UserSession.start_time >= date,
+                UserSession.start_time < next_day,
+            )
+            .scalar()
+        )
 
         # 创建总体指标
         overall_metric = BehaviorMetric(
@@ -396,15 +443,20 @@ class BehaviorAnalyzer:
         created_metrics.append(overall_metric)
 
         # 按模块统计
-        module_stats = db.query(
-            UserBehavior.module,
-            func.count(UserBehavior.id).label("count"),
-            func.count(func.distinct(UserBehavior.user_id)).label("users")
-        ).filter(
-            UserBehavior.tenant_id == tenant_id,
-            UserBehavior.occurred_at >= date,
-            UserBehavior.occurred_at < next_day
-        ).group_by(UserBehavior.module).all()
+        module_stats = (
+            db.query(
+                UserBehavior.module,
+                func.count(UserBehavior.id).label("count"),
+                func.count(func.distinct(UserBehavior.user_id)).label("users"),
+            )
+            .filter(
+                UserBehavior.tenant_id == tenant_id,
+                UserBehavior.occurred_at >= date,
+                UserBehavior.occurred_at < next_day,
+            )
+            .group_by(UserBehavior.module)
+            .all()
+        )
 
         for stat in module_stats:
             module_metric = BehaviorMetric(
@@ -423,3 +475,7 @@ class BehaviorAnalyzer:
 
         db.commit()
         return created_metrics
+
+
+# 向后兼容别名
+BehaviorAnalyzer = BehaviorMetricsAnalyzer

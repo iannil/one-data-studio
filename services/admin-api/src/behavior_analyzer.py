@@ -29,8 +29,15 @@ DEFAULT_BEHAVIOR_TAGS = {
 }
 
 
-class BehaviorAnalyzer:
-    """用户行为特征分析器"""
+class UserProfileAnalyzer:
+    """
+    用户画像分析器
+
+    原名: BehaviorAnalyzer
+
+    职责: 分析用户活动日志，提取行为特征，生成用户画像
+    区别于 behavior-service 的 BehaviorMetricsAnalyzer（行为统计指标分析）
+    """
 
     def __init__(self):
         self.tags_definition = DEFAULT_BEHAVIOR_TAGS
@@ -54,9 +61,11 @@ class BehaviorAnalyzer:
         """
         with db_manager.get_session() as session:
             # 获取或创建用户画像
-            profile = session.query(UserProfile).filter(
-                UserProfile.user_id == user_id
-            ).first()
+            profile = (
+                session.query(UserProfile)
+                .filter(UserProfile.user_id == user_id)
+                .first()
+            )
 
             if not profile:
                 profile = UserProfile(
@@ -67,7 +76,9 @@ class BehaviorAnalyzer:
             elif not force_refresh:
                 # 检查是否需要更新
                 if profile.last_analyzed_at:
-                    days_since_update = (datetime.utcnow() - profile.last_analyzed_at).days
+                    days_since_update = (
+                        datetime.utcnow() - profile.last_analyzed_at
+                    ).days
                     if days_since_update < 7:  # 7天内不重复分析
                         return profile
 
@@ -76,13 +87,17 @@ class BehaviorAnalyzer:
             start_time = end_time - timedelta(days=days)
 
             # 获取用户活动日志
-            activities = session.query(UserActivityLog).filter(
-                and_(
-                    UserActivityLog.user_id == user_id,
-                    UserActivityLog.created_at >= start_time,
-                    UserActivityLog.created_at < end_time,
+            activities = (
+                session.query(UserActivityLog)
+                .filter(
+                    and_(
+                        UserActivityLog.user_id == user_id,
+                        UserActivityLog.created_at >= start_time,
+                        UserActivityLog.created_at < end_time,
+                    )
                 )
-            ).all()
+                .all()
+            )
 
             if not activities:
                 profile.activity_score = 0
@@ -125,18 +140,26 @@ class BehaviorAnalyzer:
 
         with db_manager.get_session() as session:
             # 获取所有活跃用户
-            active_users = session.query(UserActivityLog.user_id).filter(
-                UserActivityLog.created_at >= datetime.utcnow() - timedelta(days=days)
-            ).distinct().all()
+            active_users = (
+                session.query(UserActivityLog.user_id)
+                .filter(
+                    UserActivityLog.created_at
+                    >= datetime.utcnow() - timedelta(days=days)
+                )
+                .distinct()
+                .all()
+            )
 
             stats["total_users"] = len(active_users)
 
         # 批量分析
         for i in range(0, len(active_users), batch_size):
-            batch = active_users[i:i + batch_size]
+            batch = active_users[i : i + batch_size]
             for (user_id,) in batch:
                 try:
-                    profile = self.analyze_user(user_id[0], days=days, force_refresh=True)
+                    profile = self.analyze_user(
+                        user_id[0], days=days, force_refresh=True
+                    )
                     if profile:
                         stats["analyzed_users"] += 1
                 except Exception as e:
@@ -231,9 +254,12 @@ class BehaviorAnalyzer:
 
         # 获取用户名
         if features["unique_days"]:
-            last_activity = session.query(UserActivityLog).filter(
-                UserActivityLog.user_id == profile.user_id
-            ).order_by(UserActivityLog.created_at.desc()).first()
+            last_activity = (
+                session.query(UserActivityLog)
+                .filter(UserActivityLog.user_id == profile.user_id)
+                .order_by(UserActivityLog.created_at.desc())
+                .first()
+            )
             if last_activity:
                 profile.username = last_activity.username
                 profile.last_login_at = last_activity.created_at
@@ -242,12 +268,16 @@ class BehaviorAnalyzer:
         profile.activity_score = self._calculate_activity_score(features)
 
         # 更新时段偏好
-        peak_hours = [{"hour": h, "count": c} for h, c in features["hour_distribution"].items()]
+        peak_hours = [
+            {"hour": h, "count": c} for h, c in features["hour_distribution"].items()
+        ]
         peak_hours.sort(key=lambda x: x["count"], reverse=True)
         profile.set_peak_hours(peak_hours[:10])  # 保留前10个
 
         # 更新星期偏好
-        peak_days = [{"day": d, "count": c} for d, c in features["day_distribution"].items()]
+        peak_days = [
+            {"day": d, "count": c} for d, c in features["day_distribution"].items()
+        ]
         peak_days.sort(key=lambda x: x["count"], reverse=True)
         profile.set_peak_days(peak_days)
 
@@ -281,9 +311,9 @@ class BehaviorAnalyzer:
 
         # 操作分数 (0-40分)
         total_actions = (
-            features["query_count"] +
-            features["create_count"] +
-            features["export_count"]
+            features["query_count"]
+            + features["create_count"]
+            + features["export_count"]
         )
         action_score = min(total_actions / 100 * 40, 40)
         score += action_score
@@ -312,7 +342,9 @@ class BehaviorAnalyzer:
             total = sum(hour_dist.values())
             day_hours = sum(c for h, c in hour_dist.items() if 6 <= h < 18)
             night_hours = sum(c for h, c in hour_dist.items() if h >= 18 or h < 6)
-            preference["time_preference"] = "day" if day_hours > night_hours else "night"
+            preference["time_preference"] = (
+                "day" if day_hours > night_hours else "night"
+            )
 
         # 模块偏好
         module_usage = features["module_usage"]
@@ -321,7 +353,11 @@ class BehaviorAnalyzer:
             preference["preferred_module"] = top_module[0]
 
         # 操作偏好
-        total_ops = features["query_count"] + features["create_count"] + features["export_count"]
+        total_ops = (
+            features["query_count"]
+            + features["create_count"]
+            + features["export_count"]
+        )
         if total_ops > 0:
             preference["operation_preference"] = {
                 "query": features["query_count"] / total_ops,
@@ -358,7 +394,9 @@ class BehaviorAnalyzer:
         # 数据消费者标签（查询多，创建少）
         if features["query_count"] >= 20 and features["create_count"] < 5:
             if "data_consumer" not in existing_tag_names:
-                profile.add_tag("data_consumer", min(features["query_count"] / 100, 1.0))
+                profile.add_tag(
+                    "data_consumer", min(features["query_count"] / 100, 1.0)
+                )
 
         # 数据创建者标签（创建多）
         if features["create_count"] >= 10:
@@ -416,13 +454,19 @@ class BehaviorAnalyzer:
         action_distribution = Counter(a.action for a in activities)
 
         # 时段分布
-        hour_distribution = Counter(a.created_at.hour for a in activities if a.created_at)
+        hour_distribution = Counter(
+            a.created_at.hour for a in activities if a.created_at
+        )
 
         # 模块使用分布
-        module_distribution = Counter(a.resource_type for a in activities if a.resource_type)
+        module_distribution = Counter(
+            a.resource_type for a in activities if a.resource_type
+        )
 
         # 资源类型分布
-        resource_distribution = Counter(a.resource_type for a in activities if a.resource_type)
+        resource_distribution = Counter(
+            a.resource_type for a in activities if a.resource_type
+        )
 
         # 每日活跃趋势
         daily_trend = defaultdict(int)
@@ -445,8 +489,7 @@ class BehaviorAnalyzer:
             "module_distribution": dict(module_distribution.most_common(10)),
             "resource_distribution": dict(resource_distribution.most_common(10)),
             "daily_trend": {
-                date.isoformat(): count
-                for date, count in sorted(daily_trend.items())
+                date.isoformat(): count for date, count in sorted(daily_trend.items())
             },
         }
 
@@ -470,16 +513,25 @@ class BehaviorAnalyzer:
         # 确保用户画像是最新的
         with db_manager.get_session() as session:
             # 获取最近活跃的用户
-            active_users = session.query(UserActivityLog.user_id).filter(
-                UserActivityLog.created_at >= datetime.utcnow() - timedelta(days=days)
-            ).distinct().limit(500).all()
+            active_users = (
+                session.query(UserActivityLog.user_id)
+                .filter(
+                    UserActivityLog.created_at
+                    >= datetime.utcnow() - timedelta(days=days)
+                )
+                .distinct()
+                .limit(500)
+                .all()
+            )
 
             user_ids = [u[0] for u in active_users]
 
             # 获取这些用户的画像
-            profiles = session.query(UserProfile).filter(
-                UserProfile.user_id.in_(user_ids)
-            ).all()
+            profiles = (
+                session.query(UserProfile)
+                .filter(UserProfile.user_id.in_(user_ids))
+                .all()
+            )
 
             # 排序
             if metric == "activity_score":
@@ -510,9 +562,14 @@ class BehaviorAnalyzer:
 _behavior_analyzer: Optional[BehaviorAnalyzer] = None
 
 
-def get_behavior_analyzer() -> BehaviorAnalyzer:
-    """获取行为分析器单例"""
+def get_user_profile_analyzer() -> UserProfileAnalyzer:
+    """获取用户画像分析器单例"""
     global _behavior_analyzer
     if _behavior_analyzer is None:
-        _behavior_analyzer = BehaviorAnalyzer()
+        _behavior_analyzer = UserProfileAnalyzer()
     return _behavior_analyzer
+
+
+# 向后兼容别名
+BehaviorAnalyzer = UserProfileAnalyzer
+get_behavior_analyzer = get_user_profile_analyzer

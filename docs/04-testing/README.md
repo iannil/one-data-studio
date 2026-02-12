@@ -9,6 +9,21 @@
 | [测试计划](./test-plan.md) | 测试策略和测试计划 |
 | [用户生命周期测试用例](./user-lifecycle-test-cases.md) | 各角色用户生命周期的端到端测试场景 |
 | [最终改进建议](./final-improvements.md) | 测试改进建议总结 |
+| [功能测试规范](./test-specs/) | DataOps 平台功能测试规范（321 个功能） |
+
+## 功能测试规范 (test-specs/)
+
+DataOps 平台功能测试规范目录，包含 321 个功能的完整测试规范：
+
+| 文件 | 领域 | 功能数 |
+|------|------|--------|
+| [01-data-ingestion.md](./test-specs/01-data-ingestion.md) | 数据接入 | 20 |
+| [02-data-processing.md](./test-specs/02-data-processing.md) | 数据处理 | 52 |
+| [03-data-governance.md](./test-specs/03-data-governance.md) | 数据治理 | 112 |
+| [04-monitoring-ops.md](./test-specs/04-monitoring-ops.md) | 监控运维 | 47 |
+| [05-data-utilization.md](./test-specs/05-data-utilization.md) | 数据利用 | 55 |
+| [06-platform-support.md](./test-specs/06-platform-support.md) | 平台支撑 | 35 |
+| **总计** | **6 领域** | **321** |
 
 ## 测试目录结构
 

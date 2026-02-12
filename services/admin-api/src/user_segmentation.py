@@ -11,7 +11,9 @@ from sqlalchemy import and_, or_
 
 from database import db_manager
 from models.user_profile import UserProfile, UserSegment, generate_segment_id
-from behavior_analyzer import get_behavior_analyzer
+from behavior_analyzer import (
+    get_user_profile_analyzer,
+)  # renamed from get_behavior_analyzer
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class UserSegmentation:
     """用户分群管理器"""
 
     def __init__(self):
-        self.analyzer = get_behavior_analyzer()
+        self.analyzer = get_user_profile_analyzer()
         self.predefined_segments = PREDEFINED_SEGMENTS
 
     def initialize_segments(self) -> int:
@@ -96,9 +98,11 @@ class UserSegmentation:
         with db_manager.get_session() as session:
             for key, config in self.predefined_segments.items():
                 # 检查是否已存在
-                existing = session.query(UserSegment).filter(
-                    UserSegment.segment_type == config["segment_type"]
-                ).first()
+                existing = (
+                    session.query(UserSegment)
+                    .filter(UserSegment.segment_type == config["segment_type"])
+                    .first()
+                )
 
                 if not existing:
                     segment = UserSegment(
@@ -163,9 +167,11 @@ class UserSegmentation:
 
             # 更新分群统计
             for segment in segments:
-                user_count = session.query(UserProfile).filter(
-                    UserProfile.segment_id == segment.segment_id
-                ).count()
+                user_count = (
+                    session.query(UserProfile)
+                    .filter(UserProfile.segment_id == segment.segment_id)
+                    .count()
+                )
                 segment.user_count = user_count
                 segment.last_rebuilt_at = datetime.utcnow()
 
@@ -282,9 +288,11 @@ class UserSegmentation:
         Returns:
             分群特征字典
         """
-        profiles = session.query(UserProfile).filter(
-            UserProfile.segment_id == segment_id
-        ).all()
+        profiles = (
+            session.query(UserProfile)
+            .filter(UserProfile.segment_id == segment_id)
+            .all()
+        )
 
         if not profiles:
             return {}
@@ -300,6 +308,7 @@ class UserSegmentation:
             all_tags.extend([t["tag"] for t in p.get_behavior_tags()])
 
         from collections import Counter
+
         common_tags = dict(Counter(all_tags).most_common(5))
 
         # 统计常见模块偏好
@@ -346,9 +355,12 @@ class UserSegmentation:
                 seg_dict = segment.to_dict()
 
                 if include_users:
-                    users = session.query(UserProfile).filter(
-                        UserProfile.segment_id == segment.segment_id
-                    ).limit(100).all()
+                    users = (
+                        session.query(UserProfile)
+                        .filter(UserProfile.segment_id == segment.segment_id)
+                        .limit(100)
+                        .all()
+                    )
 
                     seg_dict["users"] = [
                         {
@@ -418,9 +430,11 @@ class UserSegmentation:
             是否成功
         """
         with db_manager.get_session() as session:
-            segment = session.query(UserSegment).filter(
-                UserSegment.segment_id == segment_id
-            ).first()
+            segment = (
+                session.query(UserSegment)
+                .filter(UserSegment.segment_id == segment_id)
+                .first()
+            )
 
             if not segment:
                 return False
@@ -452,9 +466,11 @@ class UserSegmentation:
             是否成功
         """
         with db_manager.get_session() as session:
-            segment = session.query(UserSegment).filter(
-                UserSegment.segment_id == segment_id
-            ).first()
+            segment = (
+                session.query(UserSegment)
+                .filter(UserSegment.segment_id == segment_id)
+                .first()
+            )
 
             if not segment:
                 return False

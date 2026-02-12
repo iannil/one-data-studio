@@ -15,7 +15,9 @@ from sqlalchemy import and_, or_, func
 from database import db_manager
 from models.user_profile import UserProfile, BehaviorAnomaly
 from models.portal import UserActivityLog
-from behavior_analyzer import get_behavior_analyzer
+from behavior_analyzer import (
+    get_user_profile_analyzer,
+)  # renamed from get_behavior_analyzer
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ class AnomalyDetector:
     """用户行为异常检测器"""
 
     def __init__(self):
-        self.analyzer = get_behavior_analyzer()
+        self.analyzer = get_user_profile_analyzer()
         self.thresholds = ANOMALY_THRESHOLDS
 
     def detect_anomalies(
@@ -87,7 +89,9 @@ class AnomalyDetector:
 
             # 逐个用户检测
             for uid in user_ids:
-                user_anomalies = self._detect_user_anomalies(uid, start_time, end_time, session)
+                user_anomalies = self._detect_user_anomalies(
+                    uid, start_time, end_time, session
+                )
                 anomalies.extend(user_anomalies)
 
                 # 自动创建异常记录
@@ -121,13 +125,17 @@ class AnomalyDetector:
         anomalies = []
 
         # 获取用户活动
-        activities = session.query(UserActivityLog).filter(
-            and_(
-                UserActivityLog.user_id == user_id,
-                UserActivityLog.created_at >= start_time,
-                UserActivityLog.created_at < end_time,
+        activities = (
+            session.query(UserActivityLog)
+            .filter(
+                and_(
+                    UserActivityLog.user_id == user_id,
+                    UserActivityLog.created_at >= start_time,
+                    UserActivityLog.created_at < end_time,
+                )
             )
-        ).all()
+            .all()
+        )
 
         if not activities:
             return anomalies
@@ -137,10 +145,14 @@ class AnomalyDetector:
 
         # 检测各种异常类型
         anomalies.extend(self._detect_login_anomalies(user_id, username, activities))
-        anomalies.extend(self._detect_query_volume_anomalies(user_id, username, activities))
+        anomalies.extend(
+            self._detect_query_volume_anomalies(user_id, username, activities)
+        )
         anomalies.extend(self._detect_export_anomalies(user_id, username, activities))
         anomalies.extend(self._detect_time_anomalies(user_id, username, activities))
-        anomalies.extend(self._detect_frequency_surge(user_id, username, activities, session))
+        anomalies.extend(
+            self._detect_frequency_surge(user_id, username, activities, session)
+        )
 
         return anomalies
 
@@ -165,32 +177,41 @@ class AnomalyDetector:
         # 检查每小时登录频率
         for hour, count in hourly_logins.items():
             if count > self.thresholds["login_frequency"]["max_per_hour"]:
-                anomalies.append({
-                    "user_id": user_id,
-                    "username": username,
-                    "anomaly_type": "login_anomaly",
-                    "severity": "high" if count > self.thresholds["login_frequency"]["max_per_hour"] * 2 else "medium",
-                    "description": f"在 {hour}:00-{hour+1}:00 时段内登录 {count} 次，超过正常阈值",
-                    "details": {
-                        "hour": hour,
-                        "login_count": count,
-                        "threshold": self.thresholds["login_frequency"]["max_per_hour"],
-                    },
-                })
+                anomalies.append(
+                    {
+                        "user_id": user_id,
+                        "username": username,
+                        "anomaly_type": "login_anomaly",
+                        "severity": "high"
+                        if count
+                        > self.thresholds["login_frequency"]["max_per_hour"] * 2
+                        else "medium",
+                        "description": f"在 {hour}:00-{hour + 1}:00 时段内登录 {count} 次，超过正常阈值",
+                        "details": {
+                            "hour": hour,
+                            "login_count": count,
+                            "threshold": self.thresholds["login_frequency"][
+                                "max_per_hour"
+                            ],
+                        },
+                    }
+                )
 
         # 检查每天登录频率
         if len(logins) > self.thresholds["login_frequency"]["max_per_day"]:
-            anomalies.append({
-                "user_id": user_id,
-                "username": username,
-                "anomaly_type": "login_anomaly",
-                "severity": "medium",
-                "description": f"24小时内登录 {len(logins)} 次，超过正常阈值",
-                "details": {
-                    "login_count": len(logins),
-                    "threshold": self.thresholds["login_frequency"]["max_per_day"],
-                },
-            })
+            anomalies.append(
+                {
+                    "user_id": user_id,
+                    "username": username,
+                    "anomaly_type": "login_anomaly",
+                    "severity": "medium",
+                    "description": f"24小时内登录 {len(logins)} 次，超过正常阈值",
+                    "details": {
+                        "login_count": len(logins),
+                        "threshold": self.thresholds["login_frequency"]["max_per_day"],
+                    },
+                }
+            )
 
         return anomalies
 
@@ -204,7 +225,9 @@ class AnomalyDetector:
         anomalies = []
 
         # 统计查询操作
-        queries = [a for a in activities if a.action.lower() in ["query", "search", "execute"]]
+        queries = [
+            a for a in activities if a.action.lower() in ["query", "search", "execute"]
+        ]
 
         # 按小时统计
         hourly_queries = defaultdict(int)
@@ -215,32 +238,40 @@ class AnomalyDetector:
         # 检查每小时查询频率
         for hour, count in hourly_queries.items():
             if count > self.thresholds["query_volume"]["max_per_hour"]:
-                anomalies.append({
-                    "user_id": user_id,
-                    "username": username,
-                    "anomaly_type": "query_volume",
-                    "severity": "high" if count > self.thresholds["query_volume"]["max_per_hour"] * 2 else "medium",
-                    "description": f"在 {hour}:00-{hour+1}:00 时段内执行查询 {count} 次，超过正常阈值",
-                    "details": {
-                        "hour": hour,
-                        "query_count": count,
-                        "threshold": self.thresholds["query_volume"]["max_per_hour"],
-                    },
-                })
+                anomalies.append(
+                    {
+                        "user_id": user_id,
+                        "username": username,
+                        "anomaly_type": "query_volume",
+                        "severity": "high"
+                        if count > self.thresholds["query_volume"]["max_per_hour"] * 2
+                        else "medium",
+                        "description": f"在 {hour}:00-{hour + 1}:00 时段内执行查询 {count} 次，超过正常阈值",
+                        "details": {
+                            "hour": hour,
+                            "query_count": count,
+                            "threshold": self.thresholds["query_volume"][
+                                "max_per_hour"
+                            ],
+                        },
+                    }
+                )
 
         # 检查每天查询总量
         if len(queries) > self.thresholds["query_volume"]["max_per_day"]:
-            anomalies.append({
-                "user_id": user_id,
-                "username": username,
-                "anomaly_type": "query_volume",
-                "severity": "medium",
-                "description": f"24小时内执行查询 {len(queries)} 次，超过正常阈值",
-                "details": {
-                    "query_count": len(queries),
-                    "threshold": self.thresholds["query_volume"]["max_per_day"],
-                },
-            })
+            anomalies.append(
+                {
+                    "user_id": user_id,
+                    "username": username,
+                    "anomaly_type": "query_volume",
+                    "severity": "medium",
+                    "description": f"24小时内执行查询 {len(queries)} 次，超过正常阈值",
+                    "details": {
+                        "query_count": len(queries),
+                        "threshold": self.thresholds["query_volume"]["max_per_day"],
+                    },
+                }
+            )
 
         return anomalies
 
@@ -258,36 +289,50 @@ class AnomalyDetector:
 
         # 检查每天导出次数
         if len(exports) > self.thresholds["export_volume"]["max_per_day"]:
-            anomalies.append({
-                "user_id": user_id,
-                "username": username,
-                "anomaly_type": "data_export",
-                "severity": "high",
-                "description": f"24小时内导出数据 {len(exports)} 次，超过正常阈值，可能存在数据泄露风险",
-                "details": {
-                    "export_count": len(exports),
-                    "threshold": self.thresholds["export_volume"]["max_per_day"],
-                },
-            })
+            anomalies.append(
+                {
+                    "user_id": user_id,
+                    "username": username,
+                    "anomaly_type": "data_export",
+                    "severity": "high",
+                    "description": f"24小时内导出数据 {len(exports)} 次，超过正常阈值，可能存在数据泄露风险",
+                    "details": {
+                        "export_count": len(exports),
+                        "threshold": self.thresholds["export_volume"]["max_per_day"],
+                    },
+                }
+            )
 
         # 检查单次导出行数（如果有）
         for export in exports:
-            request_body = export.get_request_body() if hasattr(export, 'get_request_body') else None
+            request_body = (
+                export.get_request_body()
+                if hasattr(export, "get_request_body")
+                else None
+            )
             if request_body and isinstance(request_body, dict):
                 row_count = request_body.get("row_count") or request_body.get("limit")
-                if row_count and row_count > self.thresholds["export_volume"]["max_rows_per_export"]:
-                    anomalies.append({
-                        "user_id": user_id,
-                        "username": username,
-                        "anomaly_type": "data_export",
-                        "severity": "high",
-                        "description": f"单次导出数据量过大 ({row_count} 行)，可能存在数据泄露风险",
-                        "details": {
-                            "row_count": row_count,
-                            "threshold": self.thresholds["export_volume"]["max_rows_per_export"],
-                            "resource": export.resource_name,
-                        },
-                    })
+                if (
+                    row_count
+                    and row_count
+                    > self.thresholds["export_volume"]["max_rows_per_export"]
+                ):
+                    anomalies.append(
+                        {
+                            "user_id": user_id,
+                            "username": username,
+                            "anomaly_type": "data_export",
+                            "severity": "high",
+                            "description": f"单次导出数据量过大 ({row_count} 行)，可能存在数据泄露风险",
+                            "details": {
+                                "row_count": row_count,
+                                "threshold": self.thresholds["export_volume"][
+                                    "max_rows_per_export"
+                                ],
+                                "resource": export.resource_name,
+                            },
+                        }
+                    )
 
         return anomalies
 
@@ -313,17 +358,19 @@ class AnomalyDetector:
 
         # 检查夜间操作频率
         if len(night_activities) > self.thresholds["unusual_time"]["night_threshold"]:
-            anomalies.append({
-                "user_id": user_id,
-                "username": username,
-                "anomaly_type": "unusual_access",
-                "severity": "medium",
-                "description": f"在夜间时段 ({night_start}:00-{night_end}:00) 有 {len(night_activities)} 次操作",
-                "details": {
-                    "night_activity_count": len(night_activities),
-                    "threshold": self.thresholds["unusual_time"]["night_threshold"],
-                },
-            })
+            anomalies.append(
+                {
+                    "user_id": user_id,
+                    "username": username,
+                    "anomaly_type": "unusual_access",
+                    "severity": "medium",
+                    "description": f"在夜间时段 ({night_start}:00-{night_end}:00) 有 {len(night_activities)} 次操作",
+                    "details": {
+                        "night_activity_count": len(night_activities),
+                        "threshold": self.thresholds["unusual_time"]["night_threshold"],
+                    },
+                }
+            )
 
         return anomalies
 
@@ -341,38 +388,57 @@ class AnomalyDetector:
             return anomalies
 
         # 获取历史平均操作频率
-        end_time = activities[-1].created_at if activities[-1].created_at else datetime.utcnow()
+        end_time = (
+            activities[-1].created_at
+            if activities[-1].created_at
+            else datetime.utcnow()
+        )
         start_time = end_time - timedelta(days=30)
 
-        historical_activities = session.query(func.count(UserActivityLog.id)).filter(
-            and_(
-                UserActivityLog.user_id == user_id,
-                UserActivityLog.created_at >= start_time,
-                UserActivityLog.created_at < end_time,
+        historical_activities = (
+            session.query(func.count(UserActivityLog.id))
+            .filter(
+                and_(
+                    UserActivityLog.user_id == user_id,
+                    UserActivityLog.created_at >= start_time,
+                    UserActivityLog.created_at < end_time,
+                )
             )
-        ).scalar() or 0
+            .scalar()
+            or 0
+        )
 
         # 计算平均每天操作次数
         avg_daily = historical_activities / 30
 
         # 当前窗口的操作次数
         current_window_start = end_time - timedelta(hours=24)
-        current_count = len([a for a in activities if a.created_at and a.created_at >= current_window_start])
+        current_count = len(
+            [
+                a
+                for a in activities
+                if a.created_at and a.created_at >= current_window_start
+            ]
+        )
 
         # 检查是否激增
         if avg_daily > 0 and current_count > avg_daily * 5:  # 超过平均5倍
-            anomalies.append({
-                "user_id": user_id,
-                "username": username,
-                "anomaly_type": "frequency_surge",
-                "severity": "medium",
-                "description": f"操作频率激增，24小时内操作 {current_count} 次，是历史平均值 ({avg_daily:.1f} 次/天) 的 {current_count / avg_daily:.1f} 倍",
-                "details": {
-                    "current_count": current_count,
-                    "historical_avg": avg_daily,
-                    "surge_ratio": current_count / avg_daily if avg_daily > 0 else 0,
-                },
-            })
+            anomalies.append(
+                {
+                    "user_id": user_id,
+                    "username": username,
+                    "anomaly_type": "frequency_surge",
+                    "severity": "medium",
+                    "description": f"操作频率激增，24小时内操作 {current_count} 次，是历史平均值 ({avg_daily:.1f} 次/天) 的 {current_count / avg_daily:.1f} 倍",
+                    "details": {
+                        "current_count": current_count,
+                        "historical_avg": avg_daily,
+                        "surge_ratio": current_count / avg_daily
+                        if avg_daily > 0
+                        else 0,
+                    },
+                }
+            )
 
         return anomalies
 
@@ -383,14 +449,19 @@ class AnomalyDetector:
     ) -> Optional[BehaviorAnomaly]:
         """创建异常记录"""
         # 检查是否已存在类似的未解决异常
-        existing = session.query(BehaviorAnomaly).filter(
-            and_(
-                BehaviorAnomaly.user_id == anomaly_data["user_id"],
-                BehaviorAnomaly.anomaly_type == anomaly_data["anomaly_type"],
-                BehaviorAnomaly.status == "open",
-                BehaviorAnomaly.created_at >= datetime.utcnow() - timedelta(hours=24),
+        existing = (
+            session.query(BehaviorAnomaly)
+            .filter(
+                and_(
+                    BehaviorAnomaly.user_id == anomaly_data["user_id"],
+                    BehaviorAnomaly.anomaly_type == anomaly_data["anomaly_type"],
+                    BehaviorAnomaly.status == "open",
+                    BehaviorAnomaly.created_at
+                    >= datetime.utcnow() - timedelta(hours=24),
+                )
             )
-        ).first()
+            .first()
+        )
 
         if existing:
             return None
@@ -410,9 +481,11 @@ class AnomalyDetector:
 
         # 标记用户为风险用户
         if anomaly_data["severity"] == "high":
-            profile = session.query(UserProfile).filter(
-                UserProfile.user_id == anomaly_data["user_id"]
-            ).first()
+            profile = (
+                session.query(UserProfile)
+                .filter(UserProfile.user_id == anomaly_data["user_id"])
+                .first()
+            )
             if profile:
                 profile.is_risk_user = True
                 profile.risk_reason = anomaly_data["description"]
@@ -448,9 +521,9 @@ class AnomalyDetector:
             if severity:
                 query = query.filter(BehaviorAnomaly.severity == severity)
 
-            anomalies = query.order_by(
-                BehaviorAnomaly.detected_at.desc()
-            ).limit(limit).all()
+            anomalies = (
+                query.order_by(BehaviorAnomaly.detected_at.desc()).limit(limit).all()
+            )
 
             return [a.to_dict() for a in anomalies]
 
@@ -472,9 +545,11 @@ class AnomalyDetector:
             是否成功
         """
         with db_manager.get_session() as session:
-            anomaly = session.query(BehaviorAnomaly).filter(
-                BehaviorAnomaly.anomaly_id == anomaly_id
-            ).first()
+            anomaly = (
+                session.query(BehaviorAnomaly)
+                .filter(BehaviorAnomaly.anomaly_id == anomaly_id)
+                .first()
+            )
 
             if not anomaly:
                 return False
@@ -485,18 +560,24 @@ class AnomalyDetector:
             anomaly.handled_at = datetime.utcnow()
 
             # 如果该用户没有其他未解决的高风险异常，移除风险标记
-            high_risk_count = session.query(func.count(BehaviorAnomaly.id)).filter(
-                and_(
-                    BehaviorAnomaly.user_id == anomaly.user_id,
-                    BehaviorAnomaly.severity == "high",
-                    BehaviorAnomaly.status == "open",
+            high_risk_count = (
+                session.query(func.count(BehaviorAnomaly.id))
+                .filter(
+                    and_(
+                        BehaviorAnomaly.user_id == anomaly.user_id,
+                        BehaviorAnomaly.severity == "high",
+                        BehaviorAnomaly.status == "open",
+                    )
                 )
-            ).scalar()
+                .scalar()
+            )
 
             if high_risk_count == 0:
-                profile = session.query(UserProfile).filter(
-                    UserProfile.user_id == anomaly.user_id
-                ).first()
+                profile = (
+                    session.query(UserProfile)
+                    .filter(UserProfile.user_id == anomaly.user_id)
+                    .first()
+                )
                 if profile:
                     profile.is_risk_user = False
                     profile.risk_reason = None
